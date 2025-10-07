@@ -1,5 +1,5 @@
 #![no_std]
-#![warn(
+#![deny(
     missing_docs,
     clippy::missing_docs_in_private_items,
     clippy::missing_safety_doc,

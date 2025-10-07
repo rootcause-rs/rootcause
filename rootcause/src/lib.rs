@@ -1,7 +1,7 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![warn(
-    // missing_docs,
-    // missing_doc_code_examples,
+    missing_docs,
+    missing_doc_code_examples,
     clippy::missing_safety_doc,
     clippy::undocumented_unsafe_blocks,
     clippy::missing_docs_in_private_items
