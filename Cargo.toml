@@ -1,0 +1,7 @@
+[workspace]
+members = ["rootcause", "rootcause-internals"]
+resolver = "3"
+
+[profile.release]
+# debug = "line-tables-only"
+debug = "limited"

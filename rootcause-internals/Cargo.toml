@@ -1,0 +1,13 @@
+[package]
+name = "rootcause-internals"
+version = "0.2.0"
+edition = "2024"
+license = "MIT/Apache-2.0"
+description = "A flexible, ergonomic, and inspectable error reporting library for Rust"
+repository = "https://github.com/rootcause-rs/rootcause"
+
+[dependencies]
+triomphe = "0.1.14"
+
+[package.metadata.docs.rs]
+rustdoc-args = ["--document-private-items"]

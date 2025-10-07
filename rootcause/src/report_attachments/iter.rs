@@ -1,0 +1,115 @@
+use core::{any::Any, iter::FusedIterator, marker::PhantomData};
+
+use rootcause_internals::RawAttachment;
+
+use crate::{
+    markers,
+    report_attachment::{ReportAttachment, ReportAttachmentRef},
+};
+
+pub struct ReportAttachmentsIter<'a> {
+    iter: core::slice::Iter<'a, RawAttachment>,
+}
+
+impl<'a> ReportAttachmentsIter<'a> {
+    /// Creates a new `AttachmentsIter` from an iterator of raw attachments
+    ///
+    /// # Safety
+    ///
+    /// The thread safety marker must match the contents of the attachments. More specifically if the marker is `SendSync`, then
+    /// all of the inner attachments must be `Send+Sync`
+    pub(crate) unsafe fn from_raw(iter: core::slice::Iter<'a, RawAttachment>) -> Self {
+        Self { iter }
+    }
+}
+
+impl<'a> Iterator for ReportAttachmentsIter<'a> {
+    type Item = ReportAttachmentRef<'a, dyn Any>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let attachment = self.iter.next()?.as_ref();
+        unsafe { Some(ReportAttachmentRef::from_raw(attachment)) }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+impl<'a> DoubleEndedIterator for ReportAttachmentsIter<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let attachment = self.iter.next_back()?.as_ref();
+        unsafe { Some(ReportAttachmentRef::from_raw(attachment)) }
+    }
+}
+
+impl<'a> ExactSizeIterator for ReportAttachmentsIter<'a> {
+    fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
+
+impl<'a> FusedIterator for ReportAttachmentsIter<'a> {}
+
+pub struct ReportAttachmentsIntoIter<T>
+where
+    T: markers::ThreadSafetyMarker,
+{
+    iter: alloc::vec::IntoIter<RawAttachment>,
+    _thread_safety: PhantomData<T>,
+}
+
+impl<T> ReportAttachmentsIntoIter<T>
+where
+    T: markers::ThreadSafetyMarker,
+{
+    /// Creates a new `AttachmentsIntoIter` from an iterator of raw attachments
+    ///
+    /// # Safety
+    ///
+    /// The thread safety marker must match the contents of the attachments. More specifically if the marker is `SendSync`, then
+    /// all of the inner attachments must be `Send+Sync`
+    pub(crate) unsafe fn from_raw(iter: alloc::vec::IntoIter<RawAttachment>) -> Self {
+        Self {
+            iter,
+            _thread_safety: PhantomData,
+        }
+    }
+}
+
+impl<T> Iterator for ReportAttachmentsIntoIter<T>
+where
+    T: markers::ThreadSafetyMarker,
+{
+    type Item = ReportAttachment<dyn Any, T>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let attachment = self.iter.next()?;
+        unsafe { Some(ReportAttachment::from_raw(attachment)) }
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.iter.size_hint()
+    }
+}
+
+impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T>
+where
+    T: markers::ThreadSafetyMarker,
+{
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let attachment = self.iter.next_back()?;
+        unsafe { Some(ReportAttachment::from_raw(attachment)) }
+    }
+}
+
+impl<T> ExactSizeIterator for ReportAttachmentsIntoIter<T>
+where
+    T: markers::ThreadSafetyMarker,
+{
+    fn len(&self) -> usize {
+        self.iter.len()
+    }
+}
+
+impl<T> FusedIterator for ReportAttachmentsIntoIter<T> where T: markers::ThreadSafetyMarker {}
