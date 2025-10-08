@@ -41,8 +41,7 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// use rootcause::prelude::*;
     ///
     /// let result: Result<i32, SomeError> = Err(SomeError::new("something went wrong"));
-    /// let report_result = result.into_report();
-    /// assert!(report_result.is_err());
+    /// let report_result: Result<i32, Report<SomeError>> = result.into_report();
     /// ```
     #[track_caller]
     #[must_use]
@@ -105,7 +104,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
     /// let report_result: Result<Vec<u8>, Report<String>> = result.context_lazy(|| format!("Failed at {}", "12:34:56"));
-    /// assert!(report_result.is_err());
     /// ```
     #[track_caller]
     #[must_use]
@@ -275,7 +273,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # }
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result = result.attach_with_handler::<handlers::Debug, _>(MyAttachment::new());
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error>> =
+    ///     result.attach_with_handler::<handlers::Debug, _>(MyAttachment::new());
     /// ```
     #[track_caller]
     #[must_use]
@@ -314,7 +313,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// }
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result = result.attach_with_handler_lazy::<handlers::Debug, _, _>(|| MyAttachment::new());
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error>> =
+    ///     result.attach_with_handler_lazy::<handlers::Debug, _, _>(|| MyAttachment::new());
     /// ```
     #[track_caller]
     #[must_use]
@@ -355,7 +355,7 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// impl std::error::Error for MyError {}
     ///
     /// let result: Result<String, MyError> = some_function();
-    /// let report_result: Result<String, Report<MyError, _, Local>> = result.local_into_report();
+    /// let report_result: Result<String, Report<MyError, _, markers::Local>> = result.local_into_report();
     /// ```
     #[track_caller]
     #[must_use]
@@ -382,11 +382,13 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
+    /// # type NetworkError = std::io::Error;
+    /// # fn fetch_data(path: &str) -> Result<Vec<u8>, NetworkError> { Ok(Vec::new()) }
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
     ///
-    /// let result: Result<i32, &str> = Err("network error");
-    /// let report_result = result.local_context(Rc::from("Failed to fetch user data"));
+    /// let result: Result<Vec<u8>, NetworkError> = fetch_data("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<Rc<&str>, _, markers::Local>> = result.local_context(Rc::from("This context is thread-local context"));
     /// ```
     #[track_caller]
     #[must_use]
@@ -413,11 +415,28 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
+    /// # #[derive(Debug)]
+    /// # struct Expensive;
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
     ///
-    /// let result: Result<i32, &str> = Err("network error");
-    /// let report_result = result.local_context_lazy(|| Rc::from("Failed at specific time"));
+    /// #[derive(Debug)]
+    /// struct SomeObject(Rc<Expensive>);
+    ///
+    /// impl SomeObject {
+    ///     fn compute_or_get_cached() -> Self {
+    ///         // ...
+    /// #       Self(Rc::new(Expensive))
+    ///     }
+    /// }
+    ///
+    /// impl std::fmt::Display for SomeObject {
+    ///     // ...
+    /// #   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { todo!() }
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<SomeObject, _, markers::Local>> = result.local_context_lazy(|| SomeObject::compute_or_get_cached());
     /// ```
     #[track_caller]
     #[must_use]
@@ -447,9 +466,16 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// ```
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
-    /// // Assuming you have a custom handler implementation
-    /// // let result: Result<i32, &str> = Err("network error");
-    /// // let report_result = result.local_context_with_handler::<_, MyHandler>(Rc::from("custom context"));
+    ///
+    /// #[derive(Debug)]
+    /// enum ErrorContext {
+    ///     DeserializationError,
+    ///     IoError,
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<Rc<ErrorContext>, _, markers::Local>> =
+    ///     result.local_context_with_handler::<handlers::Debug, _>(Rc::new(ErrorContext::IoError));
     /// ```
     #[track_caller]
     #[must_use]
@@ -476,11 +502,24 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
+    /// # fn expensive_computation() -> Rc<ErrorContext> { Rc::new(ErrorContext {}) }
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
-    /// // Assuming you have a custom handler implementation
-    /// // let result: Result<i32, &str> = Err("network error");
-    /// // let report_result = result.local_context_with_handler_lazy::<_, _, MyHandler>(|| Rc::from("expensive context"));
+    ///
+    /// #[derive(Debug)]
+    /// struct ErrorContext {
+    ///     // ...
+    /// }
+    ///
+    /// impl ErrorContext {
+    ///     pub fn new() -> Rc<Self> {
+    ///         expensive_computation()
+    ///     }
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<Rc<ErrorContext>, _, markers::Local>> =
+    ///     result.local_context_with_handler_lazy::<handlers::Debug, _, _>(|| ErrorContext::new());
     /// ```
     #[track_caller]
     #[must_use]
@@ -509,9 +548,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
     ///
-    /// let result: Result<i32, &str> = Err("parsing failed");
-    /// let report_result = result.local_attach(Rc::from("debug info"));
-    /// assert!(report_result.is_err());
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
+    ///     result.local_attach(Rc::new("input: invalid_data"));
     /// ```
     #[track_caller]
     #[must_use]
@@ -535,9 +574,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
     ///
-    /// let result: Result<i32, &str> = Err("parsing failed");
-    /// let report_result = result.local_attach_lazy(|| Rc::from("expensive debug info"));
-    /// assert!(report_result.is_err());
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
+    ///     result.local_attach_lazy(|| Rc::new(format!("debug info: {}", "complex computation")));
     /// ```
     #[track_caller]
     #[must_use]
@@ -565,9 +604,18 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// ```
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
-    /// // Assuming you have a custom handler implementation
-    /// // let result: Result<i32, &str> = Err("parsing failed");
-    /// // let report_result = result.local_attach_with_handler::<_, MyHandler>(Rc::from("debug data"));
+    ///
+    /// #[derive(Debug)]
+    /// struct MyAttachment {
+    ///     // ...
+    /// }
+    /// # impl MyAttachment {
+    /// #     fn new() -> Self { MyAttachment {} }
+    /// # }
+    ///
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
+    ///     result.local_attach_with_handler::<handlers::Debug, _>(Rc::new(MyAttachment::new()));
     /// ```
     #[track_caller]
     #[must_use]
@@ -591,11 +639,24 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
+    /// # fn expensive_computation() -> MyAttachment { MyAttachment {} }
     /// use rootcause::prelude::*;
     /// use std::rc::Rc;
-    /// // Assuming you have a custom handler implementation
-    /// // let result: Result<i32, &str> = Err("parsing failed");
-    /// // let report_result = result.local_attach_with_handler_lazy::<_, _, MyHandler>(|| Rc::from("expensive debug data"));
+    ///
+    /// #[derive(Debug)]
+    /// struct MyAttachment {
+    ///     // ...
+    /// }
+    ///
+    /// impl MyAttachment {
+    ///     pub fn new() -> Self {
+    ///         expensive_computation()
+    ///     }
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
+    ///     result.local_attach_with_handler_lazy::<handlers::Debug, _, _>(|| Rc::new(MyAttachment::new()));
     /// ```
     #[track_caller]
     #[must_use]
