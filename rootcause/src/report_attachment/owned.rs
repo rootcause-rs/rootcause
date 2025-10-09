@@ -16,6 +16,11 @@ use crate::{
     util::format_helper,
 };
 
+/// An attachment to be attached to a [`Report`](crate::report::Report).
+///
+/// Attachments can hold any type of data, and can be formatted using custom handlers.
+/// The attachment can be marked as either `SendSync` or `Local`, indicating whether it is safe to
+/// send the attachment across threads or not.
 #[repr(transparent)]
 pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
 where
@@ -54,6 +59,19 @@ where
         self.raw.as_ref()
     }
 
+    /// Allocates a new [`ReportAttachment`] with the given attachment as the data.
+    ///
+    /// The new attachment will use the [`handlers::Display`] handler to format the attachment.
+    /// See [`ReportAttachment::new_with_handler`] if you want to control the handler used.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    ///
+    /// let attachment = ReportAttachment::new("This is an attachment");
+    /// let mut report = report!("An error occurred");
+    /// report.attachments_mut().push(attachment.into_dyn_any());
+    /// ```
     pub fn new(attachment: A) -> Self
     where
         A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug + Sized,
@@ -61,6 +79,22 @@ where
         Self::new_with_handler::<handlers::Display>(attachment)
     }
 
+    /// Allocates a new [`ReportAttachment`] with the given attachment as the data and the given handler to format it.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    ///
+    /// #[derive(Debug)]
+    /// struct MyAttachmentType {
+    ///     data: String,
+    /// }
+    /// let attachment = ReportAttachment::new_with_handler::<handlers::Debug>(MyAttachmentType {
+    ///     data: "Important data".to_string(),
+    /// });
+    /// let mut report = report!("An error occurred");
+    /// report.attachments_mut().push(attachment.into_dyn_any());
+    /// ```
     pub fn new_with_handler<H>(attachment: A) -> Self
     where
         A: markers::ObjectMarkerFor<T> + Sized,

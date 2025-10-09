@@ -455,7 +455,8 @@ where
     /// # use rootcause::{Report, report, handlers};
     /// #
     /// let report: Report = report!("initial error");
-    /// let contextual_report: Report<&str> = report.context_with_handler::<handlers::Debug, _>("context");
+    /// let contextual_report: Report<&str> =
+    ///     report.context_with_handler::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]
@@ -902,7 +903,8 @@ where
     /// ```
     /// # use rootcause::{Report, report, handlers::FormattingFunction};
     /// let report: Report = report!("error message");
-    /// let style = report.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
+    /// let style =
+    ///     report.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,

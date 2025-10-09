@@ -105,7 +105,9 @@ where
     /// # Example
     /// ```
     /// # use rootcause::{Report, report_collection::ReportCollection, report};
-    /// let report_collection: ReportCollection = [report!("error A"), report!("error B")].into_iter().collect();
+    /// let report_collection: ReportCollection = [report!("error A"), report!("error B")]
+    ///     .into_iter()
+    ///     .collect();
     /// let report: Report<&str> = report_collection.context("additional context");
     /// ```
     #[track_caller]
@@ -127,8 +129,11 @@ where
     /// # Example
     /// ```
     /// # use rootcause::{Report, report_collection::ReportCollection, report, handlers};
-    /// let report_collection: ReportCollection = [report!("error A"), report!("error B")].into_iter().collect();
-    /// let repot: Report<&str> = report_collection.context_with_handler::<handlers::Debug, _>("context");
+    /// let report_collection: ReportCollection = [report!("error A"), report!("error B")]
+    ///     .into_iter()
+    ///     .collect();
+    /// let repot: Report<&str> =
+    ///     report_collection.context_with_handler::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]

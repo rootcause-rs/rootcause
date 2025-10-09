@@ -1,3 +1,4 @@
+use indexmap::{IndexMap, IndexSet};
 use rootcause::{
     Report,
     handlers::{self, FormattingFunction},
@@ -7,7 +8,6 @@ use rootcause::{
     report_attachment::ReportAttachmentRef,
     report_attachments::ReportAttachments,
 };
-use indexmap::{IndexMap, IndexSet};
 
 fn from_err() -> Result<std::fs::File, std::io::Error> {
     std::fs::File::open("/notexist")

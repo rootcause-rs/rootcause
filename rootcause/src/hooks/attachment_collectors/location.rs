@@ -1,4 +1,5 @@
 use alloc::borrow::Cow;
+
 use rootcause_internals::handlers::{AttachmentFormattingStyle, AttachmentHandler};
 
 use crate::hooks::AttachmentCollectorHook;

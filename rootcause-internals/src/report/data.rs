@@ -4,9 +4,8 @@
 //! when created and that the API offers no way to change the [`ReportVtable`] or context type after
 //! creation.
 
-use core::ptr::NonNull;
-
 use alloc::vec::Vec;
+use core::ptr::NonNull;
 
 use crate::{
     attachment::RawAttachment,

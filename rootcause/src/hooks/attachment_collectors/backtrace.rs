@@ -5,11 +5,10 @@ use std::{
 };
 
 use backtrace::BytesOrWideString;
-
+use indexmap::{IndexMap, IndexSet};
 use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
 };
-use indexmap::{IndexMap, IndexSet};
 
 use crate::hooks::AttachmentCollectorHook;
 

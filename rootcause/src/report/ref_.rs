@@ -12,8 +12,7 @@ use rootcause_internals::{
 use crate::{
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::{self, Preformatted},
-    report::Report,
-    report::ReportIter,
+    report::{Report, ReportIter},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachmentsRef,
     report_collection::ReportCollectionRef,
@@ -219,8 +218,10 @@ where
     ///
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
-    /// root.children_mut().push(with_context1.into_dyn_any().into_cloneable());
-    /// root.children_mut().push(with_context2.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context1.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context2.into_dyn_any().into_cloneable());
     ///
     /// let root_ref: ReportRef<'_, &'static str, Uncloneable> = root.as_ref();
     ///
@@ -229,7 +230,7 @@ where
     ///     .map(|report| report.format_current_context().to_string())
     ///     .collect();
     ///
-    /// assert_eq!(all_reports[0], "context for root error");  // Current report is included
+    /// assert_eq!(all_reports[0], "context for root error"); // Current report is included
     /// assert_eq!(all_reports[1], "root error");
     /// assert_eq!(all_reports[2], "context for error 1");
     /// assert_eq!(all_reports.len(), 6);
@@ -264,8 +265,10 @@ where
     ///
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
-    /// root.children_mut().push(with_context1.into_dyn_any().into_cloneable());
-    /// root.children_mut().push(with_context2.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context1.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context2.into_dyn_any().into_cloneable());
     ///
     /// let root_ref: ReportRef<'_, &'static str, Uncloneable> = root.as_ref();
     ///

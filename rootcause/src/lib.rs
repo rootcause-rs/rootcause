@@ -210,6 +210,7 @@ pub mod __private {
         }
     }
 
+    #[doc(hidden)]
     pub mod kind {
         use crate::{
             handlers, markers, report::Report, report_attachments::ReportAttachments,

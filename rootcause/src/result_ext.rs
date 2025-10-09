@@ -103,7 +103,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// use rootcause::prelude::*;
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<String>> = result.context_lazy(|| format!("Failed at {}", "12:34:56"));
+    /// let report_result: Result<Vec<u8>, Report<String>> =
+    ///     result.context_lazy(|| format!("Failed at {}", "12:34:56"));
     /// ```
     #[track_caller]
     #[must_use]
@@ -340,8 +341,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// # fn some_function() -> Result<String, MyError> { Ok(String::new()) }
-    /// use rootcause::prelude::*;
     /// use std::{fmt, rc::Rc};
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// // This error is neither Send nor Sync
     /// #[derive(Debug)]
@@ -355,7 +357,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// impl std::error::Error for MyError {}
     ///
     /// let result: Result<String, MyError> = some_function();
-    /// let report_result: Result<String, Report<MyError, _, markers::Local>> = result.local_into_report();
+    /// let report_result: Result<String, Report<MyError, _, markers::Local>> =
+    ///     result.local_into_report();
     /// ```
     #[track_caller]
     #[must_use]
@@ -384,11 +387,13 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// ```
     /// # type NetworkError = std::io::Error;
     /// # fn fetch_data(path: &str) -> Result<Vec<u8>, NetworkError> { Ok(Vec::new()) }
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
     ///
+    /// use rootcause::prelude::*;
+    ///
     /// let result: Result<Vec<u8>, NetworkError> = fetch_data("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<Rc<&str>, _, markers::Local>> = result.local_context(Rc::from("This context is thread-local context"));
+    /// let report_result: Result<Vec<u8>, Report<Rc<&str>, _, markers::Local>> =
+    ///     result.local_context(Rc::from("This context is thread-local context"));
     /// ```
     #[track_caller]
     #[must_use]
@@ -417,8 +422,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// ```
     /// # #[derive(Debug)]
     /// # struct Expensive;
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct SomeObject(Rc<Expensive>);
@@ -436,7 +442,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// }
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<SomeObject, _, markers::Local>> = result.local_context_lazy(|| SomeObject::compute_or_get_cached());
+    /// let report_result: Result<Vec<u8>, Report<SomeObject, _, markers::Local>> =
+    ///     result.local_context_lazy(|| SomeObject::compute_or_get_cached());
     /// ```
     #[track_caller]
     #[must_use]
@@ -464,8 +471,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// enum ErrorContext {
@@ -503,8 +511,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// # fn expensive_computation() -> Rc<ErrorContext> { Rc::new(ErrorContext {}) }
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
@@ -545,8 +554,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
     /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
@@ -571,8 +581,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
     /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
@@ -602,8 +613,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct MyAttachment {
@@ -640,8 +652,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// # fn expensive_computation() -> MyAttachment { MyAttachment {} }
-    /// use rootcause::prelude::*;
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct MyAttachment {
@@ -655,8 +668,10 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// }
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
-    ///     result.local_attach_with_handler_lazy::<handlers::Debug, _, _>(|| Rc::new(MyAttachment::new()));
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> = result
+    ///     .local_attach_with_handler_lazy::<handlers::Debug, _, _>(
+    ///     || Rc::new(MyAttachment::new()),
+    /// );
     /// ```
     #[track_caller]
     #[must_use]

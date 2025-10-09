@@ -7,9 +7,9 @@ use core::{
     fmt::{self, Formatter, Write},
 };
 
-use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 use hashbrown::DefaultHashBuilder;
 use indexmap::IndexMap;
+use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 use triomphe::Arc;
 
 use crate::{

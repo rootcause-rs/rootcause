@@ -246,8 +246,10 @@ where
     ///
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
-    /// root.children_mut().push(with_context1.into_dyn_any().into_cloneable());
-    /// root.children_mut().push(with_context2.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context1.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context2.into_dyn_any().into_cloneable());
     ///
     /// let root_mut: ReportMut<'_, &'static str> = root.as_mut();
     ///
@@ -256,7 +258,7 @@ where
     ///     .map(|report| report.format_current_context().to_string())
     ///     .collect();
     ///
-    /// assert_eq!(all_reports[0], "context for root error");  // Current report is included
+    /// assert_eq!(all_reports[0], "context for root error"); // Current report is included
     /// assert_eq!(all_reports[1], "root error");
     /// assert_eq!(all_reports[2], "context for error 1");
     /// assert_eq!(all_reports.len(), 6);
@@ -292,8 +294,10 @@ where
     ///
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
-    /// root.children_mut().push(with_context1.into_dyn_any().into_cloneable());
-    /// root.children_mut().push(with_context2.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context1.into_dyn_any().into_cloneable());
+    /// root.children_mut()
+    ///     .push(with_context2.into_dyn_any().into_cloneable());
     ///
     /// let root_mut: ReportMut<'_, &'static str> = root.as_mut();
     ///
@@ -480,7 +484,8 @@ where
     /// # use rootcause::{Report, report, handlers::FormattingFunction};
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
-    /// let style = report_mut.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
+    /// let style =
+    ///     report_mut.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,

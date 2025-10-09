@@ -5,8 +5,8 @@ use core::{
     panic::Location,
 };
 
-use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 use hashbrown::HashMap;
+use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 use triomphe::Arc;
 use unsize::CoerceUnsize;
 
