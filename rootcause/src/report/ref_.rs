@@ -207,7 +207,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportRef, markers::Uncloneable, report};
+    /// # use rootcause::{prelude::*, ReportRef, markers::Uncloneable};
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -435,10 +435,11 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportRef, handlers::FormattingFunction};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
-    /// let style = report_ref.preferred_context_formatting_style(FormattingFunction::Display, false);
+    /// let style =
+    ///     report_ref.preferred_context_formatting_style(handlers::FormattingFunction::Display, false);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
@@ -465,10 +466,11 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportRef, handlers::FormattingFunction, markers::Uncloneable};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
-    /// let style = report_ref.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
+    /// let style = report_ref
+    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display, false);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,

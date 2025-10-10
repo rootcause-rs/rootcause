@@ -24,7 +24,7 @@ use crate::{
 ///
 /// # Example
 /// ```
-/// # use rootcause::{Report, report};
+/// # use rootcause::prelude::*;
 /// let report: Report = report!("file missing");
 /// println!("{report}");
 /// ```
@@ -61,7 +61,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, markers::{SendSync, Mutable, Local}};
+    /// # use rootcause::{prelude::*, markers::{SendSync, Mutable, Local}};
     /// # #[derive(Debug)]
     /// # struct MyError;
     /// # impl core::error::Error for MyError {}
@@ -87,7 +87,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, markers::{SendSync, Local}};
+    /// # use rootcause::{prelude::*, markers::{SendSync, Local}};
     /// # #[derive(Debug)]
     /// # struct MyError;
     /// # impl core::error::Error for MyError {}
@@ -112,7 +112,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_collection::ReportCollection, report_attachments::ReportAttachments, handlers, markers::{SendSync}};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments, markers::{SendSync}};
     /// let report: Report<String, _, SendSync> = Report::from_parts::<handlers::Display>(
     ///     "error".to_string(),
     ///     ReportCollection::new(),
@@ -142,7 +142,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_collection::ReportCollection, report_attachments::ReportAttachments, handlers, markers::{SendSync}};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments, markers::SendSync};
     /// let report: Report<String, _, SendSync> = Report::from_parts_unhooked::<handlers::Display>(
     ///     "error".to_string(),
     ///     ReportCollection::new(),
@@ -191,7 +191,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_collection::ReportCollection, report_attachments::ReportAttachments, report, handlers};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments};
     /// // Create a report with some children and attachments
     /// let mut report: Report<String> = Report::from_parts::<handlers::Display>(
     ///     "main error".to_string(),
@@ -242,7 +242,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// #[derive(Debug, PartialEq, Clone)]
     /// struct MyError {
     ///     message: String,
@@ -285,7 +285,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// let with_attachment = report.attach("additional info");
     /// ```
@@ -307,7 +307,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, handlers};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// let with_attachment = report.attach_with_handler::<handlers::Display, _>("info");
     /// ```
@@ -343,7 +343,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_collection::ReportCollectionMut, report};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollectionMut};
     /// let mut report: Report = report!("error message");
     /// let children_mut: ReportCollectionMut<'_> = report.children_mut();
     /// ```
@@ -420,7 +420,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportRef};
+    /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// # let my_error = MyError;
     /// let report: Report<MyError> = report!(my_error);
@@ -447,7 +447,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
     /// let contextual_report: Report<&str> = report.context("additional context");
     /// ```
@@ -469,8 +469,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, handlers};
-    /// #
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
     /// let contextual_report: Report<&str> =
     ///     report.context_with_handler::<handlers::Debug, _>("context");
@@ -493,7 +492,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_collection::ReportCollectionRef, report};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollectionRef};
     /// let report: Report = report!("error message");
     /// let children: ReportCollectionRef<'_> = report.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
@@ -507,7 +506,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_attachments::ReportAttachmentsRef, report};
+    /// # use rootcause::{prelude::*, report_attachments::ReportAttachmentsRef};
     /// let report: Report = report!("error message");
     /// let attachments: ReportAttachmentsRef<'_> = report.attachments();
     /// ```
@@ -531,7 +530,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, report};
+    /// # use rootcause::prelude::*;
     /// # use core::any::Any;
     /// # struct MyError;
     /// # let my_error = MyError;
@@ -564,7 +563,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, markers::{Mutable, Cloneable}, report};
+    /// # use rootcause::{prelude::*, markers::{Mutable, Cloneable}};
     /// # let my_error = "error message";
     /// let report: Report<_, Mutable> = report!(my_error);
     /// let cloneable_report: Report<_, Cloneable> = report.into_cloneable();
@@ -591,7 +590,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, markers::{Local, SendSync}};
+    /// # use rootcause::{prelude::*, markers::{Local, SendSync}};
     /// # let my_error = "error message";
     /// let report: Report<_, _, SendSync> = report!(my_error);
     /// let local_report: Report<_, _, Local> = report.into_local();
@@ -613,7 +612,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, markers::{Mutable, Cloneable}};
+    /// # use rootcause::{prelude::*, markers::{Mutable, Cloneable}};
     /// # let some_report = report!("error message").into_cloneable();
     /// let cloneable: Report<_, Cloneable> = some_report;
     /// match cloneable.try_into_mutable() {
@@ -662,7 +661,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -714,7 +713,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, markers::Cloneable};
+    /// # use rootcause::{prelude::*, markers::Cloneable};
     /// # use core::any::Any;
     /// // Create base reports
     /// let error1: Report = report!("error 1");
@@ -777,7 +776,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
@@ -799,7 +798,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, markers::SendSync};
+    /// # use rootcause::{prelude::*, markers::SendSync};
     /// # use core::any::TypeId;
     /// let report = Report::new_sendsync_with_handler::<handlers::Debug>("error message");
     /// let handler_type = report.current_context_handler_type_id();
@@ -815,7 +814,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
     /// let report: Report = report!("error message");
     /// let source: Option<&dyn core::error::Error> = report.current_context_error_source();
@@ -840,7 +839,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// let formatted = report.format_current_context();
     /// println!("{formatted}");
@@ -859,7 +858,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// let formatted = report.format_current_context_unhooked();
     /// println!("{formatted}");
@@ -887,9 +886,10 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, handlers::FormattingFunction};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let style = report.preferred_context_formatting_style(FormattingFunction::Display, false);
+    /// let style =
+    ///     report.preferred_context_formatting_style(handlers::FormattingFunction::Display, false);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
@@ -918,10 +918,10 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report, handlers::FormattingFunction};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let style =
-    ///     report.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
+    /// let style = report
+    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display, false);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,
@@ -938,7 +938,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report};
+    /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// assert_eq!(report.strong_count(), 1); // We just created the report so it has a single owner
     /// ```
@@ -958,7 +958,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, report};
+    /// # use rootcause::prelude::*;
     /// # use core::any::Any;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
@@ -992,7 +992,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, report};
+    /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
@@ -1019,7 +1019,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, report};
+    /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let dyn_report: Report = report.into_dyn_any();
@@ -1054,7 +1054,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers, report};
+    /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
@@ -1088,7 +1088,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::Report;
+    /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct MyError;
     /// # impl core::error::Error for MyError {}
@@ -1111,7 +1111,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers};
+    /// # use rootcause::prelude::*;
     /// let report = Report::new_sendsync_with_handler::<handlers::Display>("error");
     /// ```
     #[track_caller]
@@ -1137,7 +1137,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::Report;
+    /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct MyError;
     /// # impl core::error::Error for MyError {}
@@ -1160,7 +1160,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, handlers};
+    /// # use rootcause::prelude::*;
     /// let report = Report::new_local_with_handler::<handlers::Display>("error");
     /// ```
     #[track_caller]
