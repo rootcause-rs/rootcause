@@ -74,7 +74,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # struct MyError;
     /// # let my_error = MyError;
     /// # let mut report: Report<MyError> = report!(my_error);
@@ -92,7 +92,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # let mut report: Report<String> = report!("An error occurred".to_string());
     /// let report_mut: ReportMut<'_, String> = report.as_mut();
     /// let context: &mut String = report_mut.into_current_context_mut();
@@ -110,7 +110,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # let mut report: Report<String> = report!("An error occurred".to_string());
     /// let mut report_mut: ReportMut<'_, String> = report.as_mut();
     /// let context: &mut String = report_mut.current_context_mut();
@@ -127,7 +127,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollectionRef};
     /// let mut report: Report = report!("error message");
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// let children: ReportCollectionRef<'_> = report_mut.children();
@@ -142,7 +142,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollectionMut};
     /// # let mut report = report!("error message");
     /// let mut report_mut: ReportMut<'_> = report.as_mut();
     /// let children_mut: ReportCollectionMut<'_> = report_mut.children_mut();
@@ -156,7 +156,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachmentsRef};
     /// # let mut report = report!("error message");
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// let attachments: ReportAttachmentsRef<'_> = report_mut.attachments();
@@ -170,7 +170,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachmentsMut};
     /// # let mut report = report!("error message");
     /// let mut report_mut: ReportMut<'_> = report.as_mut();
     /// let attachments_mut: ReportAttachmentsMut<'_> = report_mut.attachments_mut();
@@ -195,7 +195,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # use core::any::Any;
     /// # struct MyError;
     /// # let mut report = report!(MyError);
@@ -210,7 +210,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut, ReportRef};
     /// # struct MyError;
     /// # let mut report = report!(MyError);
     /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
@@ -224,7 +224,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut, ReportRef};
     /// # struct MyError;
     /// # let mut report = report!(MyError);
     /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
@@ -238,7 +238,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # struct MyError;
     /// # let mut report = report!(MyError);
     /// let mut report_mut: ReportMut<'_, MyError> = report.as_mut();
@@ -270,7 +270,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -317,7 +317,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # use core::any::Any;
     /// // Create base reports
     /// let error1: Report = report!("error 1");
@@ -364,8 +364,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}, preformatted::Preformatted};
-    /// # use core::any::Any;
+    /// # use rootcause::{prelude::*, ReportMut, preformatted::Preformatted};
     /// # use core::cell::Cell;
     /// # #[derive(Default)]
     /// # struct NonSendSyncError(core::cell::Cell<()>);
@@ -385,7 +384,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::{prelude::*, ReportMut};
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// # let mut report = report!(MyError);
@@ -408,7 +407,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// # use core::any::TypeId;
     /// let mut report = Report::new_sendsync_with_handler::<handlers::Debug>("error message");
     /// let report_mut = report.as_mut();
@@ -425,7 +424,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// let source = report_mut.current_context_error_source();
@@ -439,7 +438,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// let formatted = report_mut.format_current_context();
@@ -458,7 +457,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// let formatted = report_mut.format_current_context_unhooked();
@@ -485,7 +484,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// let style = report_mut.preferred_context_formatting_style(handlers::FormattingFunction::Display, false);
@@ -516,7 +515,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// let style =
@@ -537,7 +536,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// assert_eq!(report_mut.strong_count(), 1);
@@ -557,7 +556,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let mut dyn_report: Report = report.into_dyn_any();
@@ -590,7 +589,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
@@ -617,7 +616,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let mut dyn_report: Report = report.into_dyn_any();
@@ -652,7 +651,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, ReportRef, report_collection::{ReportCollectionRef, ReportCollectionMut}, report_attachments::{ReportAttachmentsRef, ReportAttachmentsMut}};
+    /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
