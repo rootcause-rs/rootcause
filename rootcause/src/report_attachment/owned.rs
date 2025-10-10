@@ -21,6 +21,10 @@ use crate::{
 /// Attachments can hold any type of data, and can be formatted using custom handlers.
 /// The attachment can be marked as either `SendSync` or `Local`, indicating whether it is safe to
 /// send the attachment across threads or not.
+///
+/// # Type Parameters
+/// - `Attachment`: The type of the attachment. This can either be a concrete type, or `dyn Any`.
+/// - `ThreadSafety`: The thread safety marker for the attachment. This can either be `SendSync` or `Local`.
 #[repr(transparent)]
 pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
 where
@@ -136,42 +140,12 @@ where
         unsafe { ReportAttachment::from_raw(self.into_raw()) }
     }
 
+    /// Returns a reference to the inner attachment.
+    ///
+    /// This method is only available when the attachment type
     pub fn inner(&self) -> &A
     where
         A: Sized,
-    {
-        unsafe { self.downcast_inner_unchecked() }
-    }
-
-    pub fn downcast_attachment<B>(self) -> Result<ReportAttachment<B, T>, Self>
-    where
-        B: markers::ObjectMarker + ?Sized,
-    {
-        if TypeId::of::<B>() == TypeId::of::<dyn Any>() || TypeId::of::<B>() == self.inner_type_id()
-        {
-            Ok(unsafe { self.downcast_unchecked() })
-        } else {
-            Err(self)
-        }
-    }
-
-    pub unsafe fn downcast_unchecked<B>(self) -> ReportAttachment<B, T>
-    where
-        B: markers::ObjectMarker + ?Sized,
-    {
-        unsafe { ReportAttachment::from_raw(self.into_raw()) }
-    }
-
-    pub fn downcast_inner<B>(&self) -> Option<&B>
-    where
-        B: ObjectMarker,
-    {
-        self.as_raw_ref().attachment_downcast()
-    }
-
-    pub unsafe fn downcast_inner_unchecked<B>(&self) -> &B
-    where
-        B: ObjectMarker,
     {
         unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
@@ -267,6 +241,44 @@ where
         H: AttachmentHandler<A>,
     {
         Self::new_with_handler::<H>(attachment)
+    }
+}
+
+impl<T> ReportAttachment<dyn Any, T>
+where
+    T: markers::ThreadSafetyMarker,
+{
+    pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
+    where
+        A: markers::ObjectMarker + ?Sized,
+    {
+        if TypeId::of::<A>() == TypeId::of::<dyn Any>() || TypeId::of::<A>() == self.inner_type_id()
+        {
+            Ok(unsafe { self.downcast_unchecked() })
+        } else {
+            Err(self)
+        }
+    }
+
+    pub unsafe fn downcast_unchecked<A>(self) -> ReportAttachment<A, T>
+    where
+        A: markers::ObjectMarker + ?Sized,
+    {
+        unsafe { ReportAttachment::from_raw(self.into_raw()) }
+    }
+
+    pub fn downcast_inner<A>(&self) -> Option<&A>
+    where
+        A: ObjectMarker,
+    {
+        self.as_raw_ref().attachment_downcast()
+    }
+
+    pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
+    where
+        A: ObjectMarker,
+    {
+        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
 }
 

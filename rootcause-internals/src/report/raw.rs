@@ -261,6 +261,21 @@ pub struct RawReportMut<'a> {
 }
 
 impl<'a> RawReportMut<'a> {
+    /// Casts the [`RawReportMut`] to a mutable [`ReportData<C>`] reference.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
+    pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a mut ReportData<C::Target> {
+        // Debug assertion to catch type mismatches in case of bugs
+        debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
+
+        let mut this = self.ptr.cast::<ReportData<C::Target>>();
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe to turn
+        // the NonNull pointer into a reference with the same lifetime
+        unsafe { this.as_mut() }
+    }
+
     /// Reborrows the mutable reference to the [`ReportData`] with a shorter lifetime.
     pub fn reborrow<'b>(&'b mut self) -> RawReportMut<'b> {
         RawReportMut {

@@ -3,7 +3,7 @@
 //! Full disclosure: These tests are very verbose and extremely LLM-generated, but I have validated that they make sense and that they
 //! cover the use-cases I can think of.
 //!
-//! This test suite exercises all major functionality of the rootcause-internals crate with **36 comprehensive tests**:
+//! This test suite exercises all major functionality of the rootcause-internals crate with **37 comprehensive tests**:
 //!
 //! ## Attachment Tests (4 tests)
 //! - `test_attachment_creation_and_basic_operations`: Basic attachment creation, type checking, and downcasting
@@ -22,7 +22,7 @@
 //! - `test_mutable_operations`: Mutable operations on children and attachments
 //! - `test_context_downcast`: Context downcasting with type checking and hierarchical structures
 //!
-//! ## RawReportMut Tests (8 tests)
+//! ## RawReportMut Tests (9 tests)
 //! - `test_raw_report_mut_basic_operations`: Basic mutable reference operations, reborrow, and type safety
 //! - `test_raw_report_mut_children_manipulation`: Adding, removing, and manipulating child reports
 //! - `test_raw_report_mut_attachments_manipulation`: Adding, removing, and manipulating attachments with mixed handler types
@@ -31,6 +31,7 @@
 //! - `test_raw_report_mut_type_safety_and_downcasting`: Type safety verification and downcasting with mutable operations
 //! - `test_raw_report_mut_error_source_handling`: Error source handling with custom handlers through mutable operations
 //! - `test_raw_report_mut_modification_correctness`: Verification of final state after multiple modifications
+//! - `test_raw_report_mut_context_downcast_unchecked`: Unsafe mutable context downcasting with modification verification
 //!
 //! ## Custom Handler Tests (3 tests)
 //! - `test_custom_handler_with_source`: Custom handlers correctly handling sources
@@ -2641,4 +2642,77 @@ fn test_raw_report_mut_modification_correctness() {
     let attachment_downcast = attachment.attachment_downcast::<TestAttachment>().unwrap();
     assert_eq!(attachment_downcast.name, "attachment");
     assert_eq!(attachment_downcast.value, 123);
+}
+
+#[test]
+fn test_raw_report_mut_context_downcast_unchecked() {
+    // Test the unsafe context_downcast_unchecked method for RawReportMut
+    let mut test_error_report = RawReport::new::<_, DefaultContextHandler>(
+        TestError::new("mutable context test"),
+        Vec::new(),
+        Vec::new(),
+    );
+
+    let mut string_report = RawReport::new::<_, StringContextHandler>(
+        "mutable string context".to_owned(),
+        Vec::new(),
+        Vec::new(),
+    );
+
+    let mut number_report =
+        RawReport::new::<_, NumberContextHandler>(99i32, Vec::new(), Vec::new());
+
+    unsafe {
+        // Test with TestError context
+        let error_mut = test_error_report.as_mut();
+        let error_context = error_mut.context_downcast_unchecked::<TestError>();
+        assert_eq!(error_context.message, "mutable context test");
+        assert!(error_context.source.is_none());
+
+        // Modify the context through the mutable reference
+        error_context.message = "modified error message".to_owned();
+        error_context.source = Some(Box::new(TestError::new("nested error")));
+
+        // Test with String context
+        let string_mut = string_report.as_mut();
+        let string_context = string_mut.context_downcast_unchecked::<String>();
+        assert_eq!(string_context, "mutable string context");
+
+        // Modify the string context
+        *string_context = "modified string".to_owned();
+
+        // Test with i32 context
+        let number_mut = number_report.as_mut();
+        let number_context = number_mut.context_downcast_unchecked::<i32>();
+        assert_eq!(*number_context, 99);
+
+        // Modify the number context
+        *number_context = 42;
+    }
+
+    // Verify modifications were applied correctly
+    let error_ref = test_error_report.as_ref();
+    let modified_error = error_ref.context_downcast::<TestError>().unwrap();
+    assert_eq!(modified_error.message, "modified error message");
+    assert!(modified_error.source.is_some());
+    let nested_error = modified_error.source.as_ref().unwrap();
+    assert_eq!(format!("{}", nested_error), "nested error");
+
+    let string_ref = string_report.as_ref();
+    let modified_string = string_ref.context_downcast::<String>().unwrap();
+    assert_eq!(modified_string, "modified string");
+
+    let number_ref = number_report.as_ref();
+    let modified_number = number_ref.context_downcast::<i32>().unwrap();
+    assert_eq!(*modified_number, 42);
+
+    // Test that display still works correctly after modifications
+    let error_display = format!("{}", TestReportDisplayWrapper(error_ref));
+    assert_eq!(error_display, "modified error message");
+
+    let string_display = format!("{}", TestReportDisplayWrapper(string_ref));
+    assert_eq!(string_display, "modified string");
+
+    let number_display = format!("{}", TestReportDisplayWrapper(number_ref));
+    assert_eq!(number_display, "42");
 }

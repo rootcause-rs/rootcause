@@ -190,6 +190,17 @@ impl<'a> RawReportMut<'a> {
             &mut *attachments_ptr
         }
     }
+
+    /// Accesses the inner context of the [`ReportData`] instance as a mutable reference to the specified type.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
+    pub unsafe fn context_downcast_unchecked<C: 'static>(self) -> &'a mut C {
+        // SAFETY: The inner function requires that `C` matches the type stored, but that is guaranteed by our caller.
+        let this = unsafe { self.cast_inner::<C>() };
+        &mut this.context
+    }
 }
 
 #[cfg(test)]

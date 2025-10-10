@@ -322,6 +322,23 @@ where
         self
     }
 
+    /// Returns a mutable reference to the current context.
+    ///
+    /// # Example
+    /// ```
+    /// # use rootcause::{Report, report::ReportRef, handlers, report};
+    /// let mut report: Report<String> = report!(String::from("An error occurred"));
+    /// let context: &mut String = report.current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    #[must_use]
+    pub fn current_context_mut(&mut self) -> &mut C
+    where
+        C: Sized,
+    {
+        self.as_mut().into_current_context_mut()
+    }
+
     /// Returns a mutable reference to the child reports.
     ///
     /// # Example

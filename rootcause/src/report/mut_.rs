@@ -88,6 +88,41 @@ where
         self.as_ref().current_context()
     }
 
+    /// Turns the [`ReportMut`] into a mutable reference to the current context with the same lifetime.
+    ///
+    /// # Example
+    /// ```
+    /// # use rootcause::{Report, report::ReportMut, handlers, report};
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let report_mut: ReportMut<'_, String> = report.as_mut();
+    /// let context: &mut String = report_mut.into_current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    pub fn into_current_context_mut(self) -> &'a mut C
+    where
+        C: Sized,
+    {
+        let raw = self.into_raw();
+        unsafe { raw.context_downcast_unchecked() }
+    }
+
+    /// Returns a mutable reference to the current context.
+    ///
+    /// # Example
+    /// ```
+    /// # use rootcause::{Report, report::ReportMut, handlers, report};
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let mut report_mut: ReportMut<'_, String> = report.as_mut();
+    /// let context: &mut String = report_mut.current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    pub fn current_context_mut(&mut self) -> &mut C
+    where
+        C: Sized,
+    {
+        self.reborrow().into_current_context_mut()
+    }
+
     /// Returns an immutable reference to the child reports.
     ///
     /// # Example
