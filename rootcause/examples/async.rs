@@ -1,4 +1,4 @@
-use indexmap::{IndexMap, IndexSet};
+use indexmap::IndexMap;
 use rootcause::{
     Report,
     handlers::{self, FormattingFunction},
@@ -92,16 +92,6 @@ async fn wat() {
     // println!("{}", report!("hello"));
     println!("{}", baz().unwrap_err());
     // return;
-
-    #[derive(Debug, Default)]
-    struct Meh(std::sync::Arc<()>);
-
-    impl core::fmt::Display for Meh {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "meh!")
-        }
-    }
-    impl core::error::Error for Meh {}
 
     // print_types(report!("bla{}", x));
     // return;

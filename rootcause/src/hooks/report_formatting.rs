@@ -13,9 +13,9 @@ use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunctio
 use triomphe::Arc;
 
 use crate::{
+    ReportRef,
     hooks::{AttachmentParent, hook_lock::HookLock},
     markers::{Local, Uncloneable},
-    report::ReportRef,
     report_attachment::ReportAttachmentRef,
 };
 

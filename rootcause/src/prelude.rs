@@ -1,4 +1,4 @@
 pub use crate::{
-    bail, handlers, iterator_ext::IteratorExt, markers, report, report::Report,
+    IntoReport, Report, bail, handlers, iterator_ext::IteratorExt, markers, report,
     result_ext::ResultExt,
 };

@@ -14,15 +14,60 @@ use core::any::Any;
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct Mutable;
 
+/// Marker type indicating that a report or report reference can be cloned, but
+/// does not allow mutating as there may be other references to the same report.
+///
+/// # Examples
+/// ```
+/// use rootcause::{ReportRef, prelude::*};
+/// let report: Report<String, markers::Cloneable> =
+///     report!("An error occurred".to_string()).into_cloneable();
+/// let report2 = report.clone();
+/// let report_ref: ReportRef<String, markers::Cloneable> = report.as_ref();
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct Cloneable;
 
+/// Marker type indicating that a report reference cannot be cloned.
+///
+/// This is used when taking a reference to a [`Mutable`] report, but it is also possible
+/// to convert a `ReportRef<C, Cloneable>` into a `ReportRef<C, Uncloneable>`.
+///
+/// # Examples
+/// ```
+/// use rootcause::{ReportRef, prelude::*};
+/// let mut report: Report<String, markers::Mutable> = report!("An error occurred".to_string());
+/// let report_ref: ReportRef<String, markers::Uncloneable> = report.as_ref();
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct Uncloneable;
 
+/// Marker type indicating that a report can be sent across threads and shared
+/// between threads. This requires that the context and all attachments
+/// are `Send + Sync`.
+///
+/// # Examples
+/// ```
+/// use rootcause::prelude::*;
+/// let report: Report<String, markers::Mutable, markers::SendSync> =
+///     report!("An error occurred".to_string());
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct SendSync;
 
+/// Marker type indicating that a report is not `Send` or `Sync`, and that it cannot
+/// be sent or shared between threads.
+///
+/// # Examples
+/// ```
+/// use rootcause::prelude::*;
+/// struct NotSendSync {
+///     data: std::rc::Rc<String>,
+/// }
+/// let report: Report<NotSendSync, markers::Mutable, markers::Local> = report!(NotSendSync {
+///     data: std::rc::Rc::new("An error occurred".to_string())
+/// });
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Debug, Default, Hash)]
 pub struct Local;
 

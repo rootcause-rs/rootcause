@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::mem;
 
-use crate::{markers, report::Report, report_collection::ReportCollection};
+use crate::{Report, markers, report_collection::ReportCollection};
 
 /// Extension trait for iterators over `Result`s to collect errors into a `ReportCollection`.
 pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {

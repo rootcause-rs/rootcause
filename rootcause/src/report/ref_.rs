@@ -10,9 +10,9 @@ use rootcause_internals::{
 };
 
 use crate::{
+    Report, ReportIter,
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::{self, Preformatted},
-    report::{Report, ReportIter},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachmentsRef,
     report_collection::ReportCollectionRef,
@@ -70,7 +70,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
     /// let report_ref: ReportRef<'_, MyError> = report.as_ref();
@@ -87,7 +87,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report_collection::ReportCollectionRef, report};
+    /// # use rootcause::{prelude::*, ReportRef, report_collection::ReportCollectionRef};
     /// let report = report!("parent error").into_cloneable();
     /// let report_ref: ReportRef<'_, _, _> = report.as_ref();
     /// let children: ReportCollectionRef<'_> = report_ref.children();
@@ -102,7 +102,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report, report::ReportRef, report_attachments::ReportAttachmentsRef};
+    /// # use rootcause::{prelude::*, ReportRef, report_attachments::ReportAttachmentsRef};
     /// # let report = report!("error with attachment").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let attachments: ReportAttachmentsRef<'_> = report_ref.attachments();
@@ -127,7 +127,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::Any;
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
@@ -154,7 +154,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report, markers::{Uncloneable, Cloneable}};
+    /// # use rootcause::{prelude::*, ReportRef, markers::{Uncloneable, Cloneable}};
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
     /// let report_ref: ReportRef<'_, MyError, Cloneable> = report.as_ref();
@@ -180,7 +180,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report, markers::{SendSync, Local}};
+    /// # use rootcause::{prelude::*, ReportRef, markers::{SendSync, Local}};
     /// # let report = report!("my error").into_cloneable();
     /// let report_ref: ReportRef<'_, _, _, SendSync> = report.as_ref();
     /// let local_report_ref: ReportRef<'_, _, _, Local> = report_ref.into_local();
@@ -207,7 +207,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, markers::Uncloneable, report};
+    /// # use rootcause::{prelude::*, ReportRef, markers::Uncloneable, report};
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -254,7 +254,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, report, markers::Uncloneable};
+    /// # use rootcause::{prelude::*, ReportRef, markers::Uncloneable};
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -300,7 +300,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{preformatted::Preformatted, Report, report::ReportRef, report, markers::{Uncloneable, Mutable, SendSync, Local}};
+    /// # use rootcause::{prelude::*, preformatted::Preformatted, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # use core::cell::Cell;
     /// # #[derive(Default)]
     /// # struct NonSendSyncError(core::cell::Cell<()>);
@@ -336,7 +336,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
@@ -359,7 +359,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, markers::Uncloneable, handlers, markers::SendSync};
+    /// # use rootcause::{prelude::*, ReportRef, markers::{Uncloneable, SendSync}};
     /// # use core::any::TypeId;
     /// let report = Report::new_sendsync_with_handler::<handlers::Debug>("error message");
     /// let report_ref: ReportRef<'_, &'static str, Uncloneable> = report.as_ref();
@@ -376,7 +376,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let source: Option<&dyn core::error::Error> = report_ref.current_context_error_source();
@@ -389,7 +389,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let formatted = report_ref.format_current_context();
@@ -408,7 +408,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let formatted = report_ref.format_current_context_unhooked();
@@ -435,7 +435,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report, handlers::FormattingFunction};
+    /// # use rootcause::{prelude::*, ReportRef, handlers::FormattingFunction};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let style = report_ref.preferred_context_formatting_style(FormattingFunction::Display, false);
@@ -465,7 +465,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, report, handlers::FormattingFunction, markers::Uncloneable};
+    /// # use rootcause::{prelude::*, ReportRef, handlers::FormattingFunction, markers::Uncloneable};
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let style = report_ref.preferred_context_formatting_style_unhooked(FormattingFunction::Display, false);
@@ -485,7 +485,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// let mut report: Report = report!("error message");
     /// let report_ref: ReportRef<'_, _, _> = report.as_ref();
     /// assert_eq!(report_ref.strong_count(), 1); // The report has just been created, so it has a single owner
@@ -506,7 +506,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::Any;
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
@@ -540,7 +540,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// # let report = report!(MyError).into_dyn_any().into_cloneable();
@@ -566,7 +566,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::Any;
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
@@ -602,7 +602,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::{Any, TypeId};
     /// # struct MyError;
     /// # let report = report!(MyError).into_dyn_any().into_cloneable();

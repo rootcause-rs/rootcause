@@ -1,9 +1,10 @@
 #![no_std]
-#![deny(
+#![forbid(
     missing_docs,
     clippy::missing_docs_in_private_items,
     clippy::missing_safety_doc,
-    clippy::undocumented_unsafe_blocks
+    clippy::undocumented_unsafe_blocks,
+    clippy::multiple_unsafe_ops_per_block
 )]
 #![allow(rustdoc::private_intra_doc_links)]
 //! Internal crate for the `rootcause` crate.

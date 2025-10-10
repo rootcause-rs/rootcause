@@ -1,12 +1,7 @@
-use std::any::Any;
-
 use rootcause::{
-    Report,
-    handlers::{self, FormattingFunction},
+    handlers::FormattingFunction,
     hooks::{AttachmentHook, AttachmentParent, register_attachment_hook},
-    markers::{Local, Mutable},
-    prelude::ResultExt,
-    report,
+    prelude::*,
     report_attachment::ReportAttachmentRef,
     report_attachments::ReportAttachments,
 };
@@ -84,23 +79,6 @@ fn main() {
     register_attachment_hook(WatHandler);
 
     println!("{}", baz().unwrap_err());
-    return;
-
-    #[derive(Debug, Default)]
-    struct Meh(std::sync::Arc<()>);
-
-    impl core::fmt::Display for Meh {
-        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-            write!(f, "meh!")
-        }
-    }
-    impl core::error::Error for Meh {}
-
-    let y = 17;
-    let x = "wat".to_string();
-    let z = Meh::default();
-    // print_types(report!("bla{}", x));
-    // return;
 
     let report1: Report = report!(from_err().unwrap_err())
         .attach("This is\nblabla")

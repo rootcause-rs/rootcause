@@ -1,10 +1,9 @@
 use rootcause_internals::handlers;
 
 use crate::{
-    IntoReport,
+    IntoReport, Report,
     into_report::IntoReportCollection,
     markers::{Local, Mutable, ObjectMarker, SendSync},
-    report::Report,
 };
 
 mod sealed {

@@ -75,7 +75,7 @@ macro_rules! report {
         }
     };
     ($fmt:expr, $($arg:tt)*) => {
-        $crate::report::Report::<
+        $crate::Report::<
             _,
             $crate::markers::Mutable,
             $crate::markers::SendSync

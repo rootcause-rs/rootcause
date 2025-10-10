@@ -4,8 +4,8 @@ use core::{any::Any, marker::PhantomData};
 use rootcause_internals::RawReport;
 
 use crate::{
+    Report, ReportRef,
     markers::{self, Cloneable, SendSync},
-    report::{Report, ReportRef},
     report_collection::{ReportCollection, ReportCollectionIter, ReportCollectionRef},
 };
 

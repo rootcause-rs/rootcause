@@ -1,9 +1,24 @@
 use crate::{markers, prelude::Report, report_collection::ReportCollection};
 
+/// Trait for converting an error or a report into a [`Report`] with the specified
+/// thread safety marker.
 pub trait IntoReport<T: markers::ThreadSafetyMarker> {
+    /// The context type of the resulting report.
     type Context: markers::ObjectMarker + ?Sized;
+
+    /// The ownership marker of the resulting report.
     type Ownership: markers::ReportOwnershipMarker;
 
+    /// Converts `self` into a [`Report`] with the specified context, ownership,
+    /// and thread safety markers.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::prelude::*;
+    /// let my_error = std::io::Error::other("An error occurred");
+    /// let report: Report<std::io::Error> = my_error.into_report();
+    /// let report2: Report<std::io::Error> = report.into_report();
+    /// ```
     #[track_caller]
     #[must_use]
     fn into_report(self) -> Report<Self::Context, Self::Ownership, T>;
@@ -52,9 +67,21 @@ where
     }
 }
 
+/// Trait for converting an error or a report into a [`ReportCollection`] with the specified
+/// thread safety marker.
 pub trait IntoReportCollection<T: markers::ThreadSafetyMarker> {
+    /// The context type of the resulting report collection.
     type Context: markers::ObjectMarker + ?Sized;
 
+    /// Converts `self` into a [`ReportCollection`] with the specified context and
+    /// thread safety markers.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{IntoReportCollection, prelude::*, report_collection::ReportCollection};
+    /// let my_error = std::io::Error::other("An error occurred");
+    /// let report_collection: ReportCollection<std::io::Error> = my_error.into_report_collection();
+    /// ```
     #[track_caller]
     #[must_use]
     fn into_report_collection(self) -> ReportCollection<Self::Context, T>;

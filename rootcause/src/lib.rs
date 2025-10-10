@@ -69,9 +69,9 @@
 //!
 //! 1. The type of the context in the root node. The default is `dyn Any`, which means that
 //!    the root node can have any type of context.
-//! 2. The ownership and cloning behavior of the report. The default is `Mutable`, which means
+//! 2. The ownership and cloning behavior of the report. The default is [`Mutable`], which means
 //!    that the root node of the report is mutable, but cannot be cloned.
-//! 3. The thread-safety of the objects inside the report. The default is `SendSync`, which means
+//! 3. The thread-safety of the objects inside the report. The default is [`SendSync`], which means
 //!    that the report implements `Send+Sync`, but also requires all objects inside it to
 //!    be `Send+Sync`.
 //!
@@ -142,8 +142,15 @@
 //!     current one if printed, but all contexts and attachments will be replaced with a
 //!     [`Preformatted`] version.
 //!
+//! # Acknowledgements
+//!
+//! This library was inspired by and draws ideas from several existing error handling
+//! libraries in the Rust ecosystem, including [`anyhow`], [`thiserror`], and
+//! [`error-stack`].
+//!
 //! [`Preformatted`]: crate::preformatted::Preformatted
 //! [`Mutable`]: crate::markers::Mutable
+//! [`SendSync`]: crate::markers::SendSync
 
 extern crate alloc;
 
@@ -155,20 +162,20 @@ pub mod hooks;
 pub mod markers;
 pub mod preformatted;
 
-pub mod report;
+mod report;
 pub mod report_attachment;
 pub mod report_attachments;
 pub mod report_collection;
 
 mod into_report;
-mod iterator_ext;
+pub mod iterator_ext;
 pub mod prelude;
 mod result_ext;
 mod util;
 
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},
-    report::Report,
+    report::{iter::ReportIter, mut_::ReportMut, owned::Report, ref_::ReportRef},
 };
 
 // Not public API. Referenced by macro-generated code.
@@ -180,7 +187,7 @@ pub mod __private {
     #[doc(hidden)]
     pub use core::{any::Any, format_args, result::Result::Err};
 
-    use crate::{handlers, markers, report::Report};
+    use crate::{Report, handlers, markers};
 
     #[doc(hidden)]
     #[inline]
@@ -188,9 +195,9 @@ pub mod __private {
     #[must_use]
     pub fn must_use<C, O, T>(report: Report<C, O, T>) -> Report<C, O, T>
     where
-        C: crate::markers::ObjectMarker + ?Sized,
-        O: crate::markers::ReportOwnershipMarker,
-        T: crate::markers::ThreadSafetyMarker,
+        C: markers::ObjectMarker + ?Sized,
+        O: markers::ReportOwnershipMarker,
+        T: markers::ThreadSafetyMarker,
     {
         report
     }
@@ -213,7 +220,7 @@ pub mod __private {
     #[doc(hidden)]
     pub mod kind {
         use crate::{
-            handlers, markers, report::Report, report_attachments::ReportAttachments,
+            Report, handlers, markers, report_attachments::ReportAttachments,
             report_collection::ReportCollection,
         };
 

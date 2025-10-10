@@ -10,10 +10,10 @@ use rootcause_internals::{
 };
 
 use crate::{
+    ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::Preformatted,
-    report::{ReportIter, ReportRef, mut_::ReportMut},
     report_attachment::ReportAttachment,
     report_attachments::{ReportAttachments, ReportAttachmentsMut, ReportAttachmentsRef},
     report_collection::{ReportCollection, ReportCollectionMut, ReportCollectionRef},
@@ -326,7 +326,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, handlers, report};
+    /// use rootcause::prelude::*;
     /// let mut report: Report<String> = report!(String::from("An error occurred"));
     /// let context: &mut String = report.current_context_mut();
     /// context.push_str(" and that's bad");
@@ -356,7 +356,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report_attachments::ReportAttachmentsMut, report};
+    /// # use rootcause::{prelude::*, report_attachments::ReportAttachmentsMut};
     /// let mut report: Report = report!("error message");
     /// let attachments_mut: ReportAttachmentsMut<'_> = report.attachments_mut();
     /// ```
@@ -369,7 +369,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportMut, report};
+    /// use rootcause::{ReportMut, prelude::*};
     /// let mut report: Report = report!("error message");
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// ```
@@ -420,7 +420,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, handlers, report};
+    /// # use rootcause::{prelude::*, ReportRef};
     /// # struct MyError;
     /// # let my_error = MyError;
     /// let report: Report<MyError> = report!(my_error);
@@ -634,7 +634,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{Report, report::ReportRef, markers::{Cloneable, Mutable, Uncloneable}, report};
+    /// # use rootcause::{prelude::*, ReportRef, markers::{Cloneable, Mutable, Uncloneable}};
     /// let report: Report<_, Mutable> = report!("error message");
     /// let report_ref: ReportRef<'_, _, Uncloneable> = report.as_ref();
     ///
@@ -757,7 +757,7 @@ where
     ///
     /// # Example
     /// ```
-    /// # use rootcause::{preformatted::Preformatted, Report, report::ReportRef, report, markers::{Uncloneable, Mutable, SendSync, Local}};
+    /// # use rootcause::{prelude::*, preformatted::Preformatted, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # use core::any::Any;
     /// # use core::cell::Cell;
     /// # #[derive(Default)]

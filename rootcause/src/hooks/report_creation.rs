@@ -12,13 +12,12 @@ use unsize::CoerceUnsize;
 #[cfg(feature = "backtrace")]
 use crate::hooks::attachment_collectors::backtrace::{BacktraceCollector, BacktraceHandler};
 use crate::{
-    handlers,
+    ReportMut, handlers,
     hooks::{
         attachment_collectors::location::{LocationCollector, LocationHandler},
         hook_lock::{HookLock, HookLockReadGuard},
     },
     markers::{self, Local, SendSync},
-    report::ReportMut,
     report_attachment::ReportAttachment,
 };
 

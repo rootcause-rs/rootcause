@@ -3,7 +3,7 @@ use core::{any::Any, iter::FusedIterator, marker::PhantomData};
 
 use rootcause_internals::RawReportRef;
 
-use crate::{markers, report::ReportRef};
+use crate::{ReportRef, markers};
 
 /// An iterator over a report and all its descendant reports in depth-first order.
 ///

@@ -11,10 +11,10 @@ use triomphe::Arc;
 use unsize::CoerceUnsize;
 
 use crate::{
+    ReportRef,
     hooks::hook_lock::HookLock,
     markers::{self, Local, Uncloneable},
     preformatted::Preformatted,
-    report::ReportRef,
 };
 
 type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHook>>;

@@ -3,8 +3,10 @@ use core::any::TypeId;
 
 use rootcause_internals::handlers::{AttachmentHandler, ContextHandler};
 
-use crate::{markers, report::ReportRef, report_attachment::ReportAttachmentRef};
+use crate::{ReportRef, markers, report_attachment::ReportAttachmentRef};
 
+/// A context or attachment that has been preformatted into `String`s for both
+/// `Display` and `Debug`.
 pub struct Preformatted {
     original_type_id: TypeId,
     display: String,
