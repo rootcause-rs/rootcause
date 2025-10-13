@@ -22,7 +22,7 @@ use crate::{
 
 /// An error report that contains a context, child reports, and attachments.
 ///
-/// # Example
+/// # Examples
 /// ```
 /// # use rootcause::prelude::*;
 /// let report: Report = report!("file missing");
@@ -59,7 +59,7 @@ where
     ///
     /// [`report!()`]: crate::report!
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::{SendSync, Mutable, Local}};
     /// # #[derive(Debug)]
@@ -85,7 +85,7 @@ where
     /// If you're having trouble with type inference for the thread safety parameter,
     /// consider using [`Report::new_sendsync_with_handler`] or [`Report::new_local_with_handler`] instead.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::{SendSync, Local}};
     /// # #[derive(Debug)]
@@ -110,7 +110,7 @@ where
     /// This method processes hooks during report creation. If you want to skip hook
     /// processing, use [`Report::from_parts_unhooked`] instead.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments, markers::{SendSync}};
     /// let report: Report<String, _, SendSync> = Report::from_parts::<handlers::Display>(
@@ -140,7 +140,7 @@ where
     /// This method skips hook processing during report creation. If you want hooks to be
     /// processed, use [`Report::from_parts`] instead.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments, markers::SendSync};
     /// let report: Report<String, _, SendSync> = Report::from_parts_unhooked::<handlers::Display>(
@@ -189,7 +189,7 @@ where
     /// Note that to exactly reconstruct the original report, you will also need to use the
     /// same handler as was used for the original report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments};
     /// // Create a report with some children and attachments
@@ -240,7 +240,7 @@ where
     /// - Extracting context for logging or forwarding to other systems
     /// - Implementing error conversion traits
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// #[derive(Debug, PartialEq, Clone)]
@@ -283,7 +283,7 @@ where
     ///
     /// If you want more direct control over the attachments, you can use the [`Report::attachments_mut`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -305,7 +305,7 @@ where
     ///
     /// If you want more direct control over the attachments, you can use the [`Report::attachments_mut`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -324,7 +324,7 @@ where
 
     /// Returns a mutable reference to the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// use rootcause::prelude::*;
     /// let mut report: Report<String> = report!(String::from("An error occurred"));
@@ -341,7 +341,7 @@ where
 
     /// Returns a mutable reference to the child reports.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_collection::ReportCollectionMut};
     /// let mut report: Report = report!("error message");
@@ -354,7 +354,7 @@ where
 
     /// Returns a mutable reference to the attachments.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_attachments::ReportAttachmentsMut};
     /// let mut report: Report = report!("error message");
@@ -367,7 +367,7 @@ where
 
     /// Returns a mutable reference to the report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// use rootcause::{ReportMut, prelude::*};
     /// let mut report: Report = report!("error message");
@@ -418,7 +418,7 @@ where
 
     /// Returns a reference to the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # struct MyError;
@@ -445,7 +445,7 @@ where
     /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
     /// which is the underlying method used to implement this method.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
@@ -467,7 +467,7 @@ where
     /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
     /// which is the underlying method used to implement this method.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
@@ -490,7 +490,7 @@ where
 
     /// Returns a reference to the child reports.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_collection::ReportCollectionRef};
     /// let report: Report = report!("error message");
@@ -504,7 +504,7 @@ where
 
     /// Returns a reference to the attachments.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, report_attachments::ReportAttachmentsRef};
     /// let report: Report = report!("error message");
@@ -528,7 +528,7 @@ where
     ///
     /// To get back the report with a concrete `C` you can use the method [`Report::downcast_report`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::Any;
@@ -561,7 +561,7 @@ where
     /// - If there is a single unique owner of the report, you can use [`Report::try_into_mutable`].
     /// - Preformat the root node using [`Report::preformat`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::{Mutable, Cloneable}};
     /// # let my_error = "error message";
@@ -588,7 +588,7 @@ where
     /// After calling this method, you can add objects to the [`Report`] that neither [`Send`] nor
     /// [`Sync`], but the report itself will no longer be [`Send`]+[`Sync`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::{Local, SendSync}};
     /// # let my_error = "error message";
@@ -610,7 +610,7 @@ where
     /// checking for unique ownership and returns the same report (with different type
     /// parameters) no matter the outcome of the check.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::{Mutable, Cloneable}};
     /// # let some_report = report!("error message").into_cloneable();
@@ -631,7 +631,7 @@ where
 
     /// Returns an immutable reference to the report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::{Cloneable, Mutable, Uncloneable}};
     /// let report: Report<_, Mutable> = report!("error message");
@@ -659,7 +659,7 @@ where
     ///
     /// See also: [`Report::iter_sub_reports`] for iterating only over child reports with cloneable references.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// // Create base reports
@@ -711,7 +711,7 @@ where
     ///
     /// See also: [`Report::iter_reports`] for iterating over all reports including the current one.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::Cloneable};
     /// # use core::any::Any;
@@ -754,7 +754,7 @@ where
     /// This can be useful, as the new report is mutable because it was just created,
     /// and additionally the new report is [`Send`]+[`Sync`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, preformatted::Preformatted, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # use core::any::Any;
@@ -774,7 +774,7 @@ where
 
     /// Returns the [`TypeId`] of the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
@@ -796,7 +796,7 @@ where
     /// This can be useful for debugging or introspection to understand which
     /// handler was used to format the context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::SendSync};
     /// # use core::any::TypeId;
@@ -812,7 +812,7 @@ where
     ///
     /// [`Error`]: core::error::Error
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
@@ -837,7 +837,7 @@ where
 
     /// Formats the current context with hook processing.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -856,7 +856,7 @@ where
 
     /// Formats the current context without hook processing.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -884,7 +884,7 @@ where
     ///
     /// See also [`Report::preferred_context_formatting_style_unhooked`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -916,7 +916,7 @@ where
     /// [`Debug`]: core::fmt::Debug
     /// [`alternate`]: core::fmt::Formatter::alternate
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -936,7 +936,7 @@ where
 
     /// Returns the number of references to this report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
@@ -956,7 +956,7 @@ where
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise returns `None`.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::Any;
@@ -990,7 +990,7 @@ where
     ///
     /// [`current_context_type_id()`]: Report::current_context_type_id
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
@@ -1017,7 +1017,7 @@ where
     /// Returns `Ok(report)` if the current context is of type `C`,
     /// otherwise returns `Err(self)` with the original report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # struct MyError;
@@ -1052,7 +1052,7 @@ where
     ///
     /// [`current_context_type_id()`]: Report::current_context_type_id
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
@@ -1086,7 +1086,7 @@ where
     ///
     /// The context will use the [`handlers::Error`] handler to format the context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
@@ -1109,7 +1109,7 @@ where
     /// This is a convenience method that calls [`Report::new_with_handler`] with explicit [`SendSync`] thread safety.
     /// Use this method when you're having trouble with type inference for the thread safety parameter.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report = Report::new_sendsync_with_handler::<handlers::Display>("error");
@@ -1135,7 +1135,7 @@ where
     ///
     /// The context will use the [`handlers::Error`] handler to format the context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
@@ -1158,7 +1158,7 @@ where
     /// This is a convenience method that calls [`Report::new_with_handler`] with explicit [`Local`] thread safety.
     /// Use this method when you're having trouble with type inference for the thread safety parameter.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report = Report::new_local_with_handler::<handlers::Display>("error");

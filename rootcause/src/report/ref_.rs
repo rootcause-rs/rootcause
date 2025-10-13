@@ -68,7 +68,7 @@ where
 
     /// Returns a reference to the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # struct MyError;
@@ -85,7 +85,7 @@ where
 
     /// Returns a reference to the child reports.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, report_collection::ReportCollectionRef};
     /// let report = report!("parent error").into_cloneable();
@@ -100,7 +100,7 @@ where
 
     /// Returns a reference to the attachments.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, report_attachments::ReportAttachmentsRef};
     /// # let report = report!("error with attachment").into_cloneable();
@@ -125,7 +125,7 @@ where
     ///
     /// To get back the report with a concrete `C` you can use the method [`ReportRef::downcast_report`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::Any;
@@ -152,7 +152,7 @@ where
     /// After calling this method, you can add objects to the [`ReportRef`] that neither [`Send`] nor
     /// [`Sync`], but the report itself will no longer be [`Send`]+[`Sync`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::{Uncloneable, Cloneable}};
     /// # struct MyError;
@@ -178,7 +178,7 @@ where
     /// After calling this method, you can add objects to the [`ReportRef`] that neither [`Send`] nor
     /// [`Sync`], but the report itself will no longer be [`Send`]+[`Sync`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::{SendSync, Local}};
     /// # let report = report!("my error").into_cloneable();
@@ -205,7 +205,7 @@ where
     ///
     /// [`Uncloneable`]: crate::markers::Uncloneable
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::Uncloneable};
     /// // Create base reports
@@ -252,7 +252,7 @@ where
     ///
     /// See also: [`ReportRef::iter_reports`] for iterating over all reports including the current one.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::Uncloneable};
     /// // Create base reports
@@ -298,7 +298,7 @@ where
     /// This can be useful, as the new report is mutable because it was just created,
     /// and additionally the new report is [`Send`]+[`Sync`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, preformatted::Preformatted, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # use core::cell::Cell;
@@ -334,7 +334,7 @@ where
 
     /// Returns the [`TypeId`] of the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::{Any, TypeId};
@@ -357,7 +357,7 @@ where
     /// This can be useful for debugging or introspection to understand which
     /// handler was used to format the context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::{Uncloneable, SendSync}};
     /// # use core::any::TypeId;
@@ -374,7 +374,7 @@ where
     ///
     /// [`Error`]: core::error::Error
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
@@ -387,7 +387,7 @@ where
 
     /// Formats the current context with hook processing.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
@@ -406,7 +406,7 @@ where
 
     /// Formats the current context without hook processing.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
@@ -433,7 +433,7 @@ where
     /// [`Debug`]: core::fmt::Debug
     /// [`alternate`]: core::fmt::Formatter::alternate
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
@@ -464,7 +464,7 @@ where
     /// [`Debug`]: core::fmt::Debug
     /// [`alternate`]: core::fmt::Formatter::alternate
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # let report = report!("error message").into_cloneable();
@@ -485,7 +485,7 @@ where
 
     /// Returns the number of references to this report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// let mut report: Report = report!("error message");
@@ -506,7 +506,7 @@ where
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise returns `None`.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::Any;
@@ -540,7 +540,7 @@ where
     ///
     /// [`current_context_type_id()`]: ReportRef::current_context_type_id
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::{Any, TypeId};
@@ -566,7 +566,7 @@ where
     /// Returns `Some(report_ref)` if the current context is of type `C`,
     /// otherwise returns `None`.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::Any;
@@ -602,7 +602,7 @@ where
     ///
     /// [`current_context_type_id()`]: ReportRef::current_context_type_id
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportRef};
     /// # use core::any::{Any, TypeId};

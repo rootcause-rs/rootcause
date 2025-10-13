@@ -72,7 +72,7 @@ where
 
     /// Returns a reference to the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # struct MyError;
@@ -90,7 +90,7 @@ where
 
     /// Turns the [`ReportMut`] into a mutable reference to the current context with the same lifetime.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # let mut report: Report<String> = report!("An error occurred".to_string());
@@ -108,7 +108,7 @@ where
 
     /// Returns a mutable reference to the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # let mut report: Report<String> = report!("An error occurred".to_string());
@@ -125,7 +125,7 @@ where
 
     /// Returns an immutable reference to the child reports.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollectionRef};
     /// let mut report: Report = report!("error message");
@@ -140,7 +140,7 @@ where
 
     /// Returns a mutable reference to the child reports.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollectionMut};
     /// # let mut report = report!("error message");
@@ -154,7 +154,7 @@ where
 
     /// Returns an immutable reference to the attachments.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachmentsRef};
     /// # let mut report = report!("error message");
@@ -168,7 +168,7 @@ where
 
     /// Returns a mutable reference to the attachments.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachmentsMut};
     /// # let mut report = report!("error message");
@@ -193,7 +193,7 @@ where
     ///
     /// To get back the report with a concrete `C` you can use the method [`ReportMut::downcast_report`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # use core::any::Any;
@@ -208,7 +208,7 @@ where
 
     /// Returns an immutable reference to the report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, ReportRef};
     /// # struct MyError;
@@ -222,7 +222,7 @@ where
 
     /// Consumes the [`ReportMut`] and returns a [`ReportRef`] with same lifetime.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, ReportRef};
     /// # struct MyError;
@@ -236,7 +236,7 @@ where
 
     /// Reborrows the [`ReportMut`] to return a new [`ReportMut`] with a shorter lifetime
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # struct MyError;
@@ -268,7 +268,7 @@ where
     ///
     /// [`Uncloneable`]: crate::markers::Uncloneable
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// // Create base reports
@@ -315,7 +315,7 @@ where
     ///
     /// See also: [`ReportMut::iter_reports`] for iterating over all reports including the current one.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # use core::any::Any;
@@ -362,7 +362,7 @@ where
     /// This can be useful, as the new report is mutable because it was just created,
     /// and additionally the new report is [`Send`]+[`Sync`].
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut, preformatted::Preformatted};
     /// # use core::cell::Cell;
@@ -382,7 +382,7 @@ where
 
     /// Returns the [`TypeId`] of the current context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
     /// # use core::any::{Any, TypeId};
@@ -405,7 +405,7 @@ where
     /// This can be useful for debugging or introspection to understand which
     /// handler was used to format the context.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::TypeId;
@@ -422,7 +422,7 @@ where
     ///
     /// [`Error`]: core::error::Error
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
@@ -436,7 +436,7 @@ where
 
     /// Formats the current context with hook processing.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
@@ -455,7 +455,7 @@ where
 
     /// Formats the current context without hook processing.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
@@ -482,7 +482,7 @@ where
     /// [`Debug`]: core::fmt::Debug
     /// [`alternate`]: core::fmt::Formatter::alternate
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
@@ -513,7 +513,7 @@ where
     /// [`Debug`]: core::fmt::Debug
     /// [`alternate`]: core::fmt::Formatter::alternate
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
@@ -534,7 +534,7 @@ where
 
     /// Returns the number of references to this report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
@@ -554,7 +554,7 @@ where
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise returns `None`.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # struct MyError;
@@ -587,7 +587,7 @@ where
     ///
     /// [`current_context_type_id()`]: ReportMut::current_context_type_id
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};
@@ -614,7 +614,7 @@ where
     /// Returns `Ok(ReportMut<C>)` if the current context is of type `C`,
     /// otherwise returns `Err(self)` with the original report.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # struct MyError;
@@ -649,7 +649,7 @@ where
     ///
     /// [`current_context_type_id()`]: ReportMut::current_context_type_id
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::{Any, TypeId};

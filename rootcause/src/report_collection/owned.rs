@@ -101,7 +101,7 @@ where
     /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
     /// which is the underlying method used to implement this method.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{Report, report_collection::ReportCollection, report};
     /// let report_collection: ReportCollection = [report!("error A"), report!("error B")]
@@ -125,7 +125,7 @@ where
     /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
     /// which is the underlying method used to implement this method.
     ///
-    /// # Example
+    /// # Examples
     /// ```
     /// # use rootcause::{Report, report_collection::ReportCollection, report, handlers};
     /// let report_collection: ReportCollection = [report!("error A"), report!("error B")]

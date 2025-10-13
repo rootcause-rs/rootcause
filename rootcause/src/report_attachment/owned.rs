@@ -55,10 +55,12 @@ where
         }
     }
 
+    /// Consumes the [`ReportAttachment`] and returns the inner [`RawAttachment`].
     pub(crate) fn into_raw(self) -> RawAttachment {
         self.raw
     }
 
+    /// Creates a lifetime-bound [`RawAttachmentRef`] from the inner [`RawAttachment`].
     pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
         self.raw.as_ref()
     }
@@ -122,6 +124,9 @@ where
     /// that the inner attachment actually has the type `A`.
     ///
     /// To get back the attachment with a concrete `A` you can use the method [`ReportAttachment::downcast_attachment`].
+    ///
+    /// # Examples
+    /// ```
     pub fn into_dyn_any(self) -> ReportAttachment<dyn Any, T> {
         unsafe { ReportAttachment::from_raw(self.into_raw()) }
     }
