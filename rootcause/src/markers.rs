@@ -171,7 +171,7 @@ impl ReportRefOwnershipMarker for Uncloneable {}
 ///   between threads. This requires that the context and all attachments
 ///   are `Send + Sync`.
 /// - [`Local`] indicates that the report is not `Send` or `Sync`, and that it cannot
-///  be sent or shared between threads.
+///   be sent or shared between threads.
 pub trait ThreadSafetyMarker: sealed_send_sync_marker::Sealed {}
 impl ThreadSafetyMarker for SendSync {}
 impl ThreadSafetyMarker for Local {}

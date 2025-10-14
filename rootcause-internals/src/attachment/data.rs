@@ -37,16 +37,17 @@ impl<'a> RawAttachmentRef<'a> {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner attachment type, but we do know
         // that it points to an instance of `AttachmentData<A>` for some specific `A`.
-        // Since `AttachmentData<A>` is `#[repr(C)]`, that means we can access
-        // the fields before the actual attachment.
+        // Since `AttachmentData<A>` is `#[repr(C)]`, that means that it's
+        // safe to create pointers to the fields before the actual attachment.
         //
         // We need to take care to avoid creating an actual reference to
         // the `AttachmentData` itself though, as that would still be undefined behavior
         // since we don't have the right type.
-        unsafe {
-            let vtable_ptr = &raw const (*ptr).vtable;
-            *vtable_ptr
-        }
+        let vtable_ptr: *const &'static AttachmentVtable = unsafe { &raw const (*ptr).vtable };
+
+        // SAFETY: Deferencing the pointer and getting out the `&'static AttachmentVtable` is valid
+        // for the same reasons
+        unsafe { *vtable_ptr }
     }
 
     /// Accesses the inner attachment of the [`AttachmentData`] instance as a reference to the specified type.

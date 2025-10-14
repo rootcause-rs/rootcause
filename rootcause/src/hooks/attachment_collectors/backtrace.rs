@@ -145,13 +145,20 @@ fn capture_backtrace(max_frame_count: usize, do_capture_filtering: bool) -> Vec<
         CaptureState::Capturing
     };
     let mut frames: Vec<Frame> = Vec::new();
+
+    macro_rules! is_done {
+        () => {
+            frames.len() >= max_frame_count || state == CaptureState::Done
+        };
+    }
+
     backtrace::trace(|frame| {
-        if frames.len() >= max_frame_count || state == CaptureState::Done {
+        if is_done!() {
             return false;
         }
 
         backtrace::resolve_frame(frame, |symbol| {
-            if frames.len() >= max_frame_count || matches!(state, CaptureState::Done) {
+            if is_done!() {
                 return;
             }
 
@@ -225,11 +232,7 @@ fn capture_backtrace(max_frame_count: usize, do_capture_filtering: bool) -> Vec<
             }
         });
 
-        if frames.len() >= max_frame_count || matches!(state, CaptureState::Done) {
-            false
-        } else {
-            true
-        }
+        !(is_done!())
     });
 
     while let Some(last) = frames.last()

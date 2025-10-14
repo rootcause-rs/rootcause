@@ -225,13 +225,15 @@ impl Default for DefaultReportFormatter {
     }
 }
 
+type Appendices<'a> = IndexMap<
+    &'static str,
+    Vec<(ReportAttachmentRef<'a, dyn Any>, FormattingFunction)>,
+    DefaultHashBuilder,
+>;
+
 struct DefaultFormatterState<'a, 'b> {
     config: &'a DefaultReportFormatter,
-    appendices: IndexMap<
-        &'static str,
-        Vec<(ReportAttachmentRef<'a, dyn Any>, FormattingFunction)>,
-        DefaultHashBuilder,
-    >,
+    appendices: Appendices<'a>,
     line_prefix: String,
     formatter: &'a mut Formatter<'b>,
     report_formatting_function: FormattingFunction,

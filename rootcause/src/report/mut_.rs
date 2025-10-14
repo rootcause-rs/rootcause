@@ -103,7 +103,7 @@ where
         C: Sized,
     {
         let raw = self.into_raw();
-        unsafe { raw.context_downcast_unchecked() }
+        unsafe { raw.into_context_downcast_unchecked() }
     }
 
     /// Returns a mutable reference to the current context.
@@ -148,7 +148,7 @@ where
     /// let children_mut: ReportCollectionMut<'_> = report_mut.children_mut();
     /// ```
     pub fn children_mut(&mut self) -> ReportCollectionMut<'_, dyn Any, T> {
-        let raw = self.raw.reborrow().children_mut();
+        let raw = self.raw.reborrow().into_children_mut();
         unsafe { ReportCollectionMut::from_raw(raw) }
     }
 
@@ -176,7 +176,7 @@ where
     /// let attachments_mut: ReportAttachmentsMut<'_> = report_mut.attachments_mut();
     /// ```
     pub fn attachments_mut(&mut self) -> ReportAttachmentsMut<'_, T> {
-        let raw = self.raw.reborrow().attachments_mut();
+        let raw = self.raw.reborrow().into_attachments_mut();
         unsafe { ReportAttachmentsMut::from_raw(raw) }
     }
 

@@ -640,7 +640,7 @@ fn test_mutable_operations() {
 
     // Test mutable access to children and attachments
     unsafe {
-        let children = report.as_mut().children_mut();
+        let children = report.as_mut().into_children_mut();
         assert_eq!(children.len(), 0);
 
         // Add a child
@@ -650,7 +650,7 @@ fn test_mutable_operations() {
             Vec::new(),
         ));
 
-        let attachments = report.as_mut().attachments_mut();
+        let attachments = report.as_mut().into_attachments_mut();
         assert_eq!(attachments.len(), 0);
 
         // Add an attachment
@@ -2085,7 +2085,7 @@ fn test_raw_report_mut_children_manipulation() {
     // Test adding children through mutable reference
     unsafe {
         let report_mut = report.as_mut();
-        let children_mut = report_mut.children_mut();
+        let children_mut = report_mut.into_children_mut();
         assert_eq!(children_mut.len(), 0);
 
         // Add multiple children
@@ -2124,7 +2124,7 @@ fn test_raw_report_mut_children_manipulation() {
     // Test removing children
     unsafe {
         let report_mut = report.as_mut();
-        let children_mut = report_mut.children_mut();
+        let children_mut = report_mut.into_children_mut();
         let removed_child = children_mut.pop();
         assert!(removed_child.is_some());
         assert_eq!(children_mut.len(), 2);
@@ -2145,7 +2145,7 @@ fn test_raw_report_mut_attachments_manipulation() {
 
     // Test adding attachments through mutable reference
     unsafe {
-        let attachments_mut = report.as_mut().attachments_mut();
+        let attachments_mut = report.as_mut().into_attachments_mut();
         assert_eq!(attachments_mut.len(), 0);
 
         // Add multiple attachments
@@ -2196,7 +2196,7 @@ fn test_raw_report_mut_attachments_manipulation() {
     // Test removing attachments
     unsafe {
         let report_mut = report.as_mut();
-        let attachments_mut = report_mut.attachments_mut();
+        let attachments_mut = report_mut.into_attachments_mut();
         let removed_attachment = attachments_mut.pop();
         assert!(removed_attachment.is_some());
         assert_eq!(attachments_mut.len(), 2);
@@ -2215,14 +2215,14 @@ fn test_raw_report_mut_complex_hierarchy_manipulation() {
 
     unsafe {
         // Add initial children and attachments
-        let children_mut = root.as_mut().children_mut();
+        let children_mut = root.as_mut().into_children_mut();
         children_mut.push(RawReport::new::<_, DefaultContextHandler>(
             TestError::new("initial child"),
             Vec::new(),
             Vec::new(),
         ));
 
-        let attachments_mut = root.as_mut().attachments_mut();
+        let attachments_mut = root.as_mut().into_attachments_mut();
         attachments_mut.push(RawAttachment::new::<_, DefaultAttachmentHandler>(
             TestAttachment::new("initial_attachment", 50),
         ));
@@ -2234,7 +2234,7 @@ fn test_raw_report_mut_complex_hierarchy_manipulation() {
 
     // Add complex nested structure
     unsafe {
-        let children_mut = root.as_mut().children_mut();
+        let children_mut = root.as_mut().into_children_mut();
 
         // Create a child with its own children and attachments
         let grandchild1 = RawReport::new::<_, DefaultContextHandler>(
@@ -2264,7 +2264,7 @@ fn test_raw_report_mut_complex_hierarchy_manipulation() {
         children_mut.push(child_with_grandchildren);
 
         // Add more attachments to root
-        let attachments_mut = root.as_mut().attachments_mut();
+        let attachments_mut = root.as_mut().into_attachments_mut();
         attachments_mut.push(RawAttachment::new::<_, CustomAttachmentHandler>(
             TestAttachment::new("root_custom", 999),
         ));
@@ -2353,7 +2353,7 @@ fn test_raw_report_mut_reborrow_with_modifications() {
         let mut report_mut = report.as_mut();
 
         // Add some initial content
-        let children_mut = report_mut.reborrow().children_mut();
+        let children_mut = report_mut.reborrow().into_children_mut();
         children_mut.push(RawReport::new::<_, DefaultContextHandler>(
             TestError::new("child 1"),
             Vec::new(),
@@ -2362,13 +2362,13 @@ fn test_raw_report_mut_reborrow_with_modifications() {
 
         // Reborrow and add more content
         let reborrowed = report_mut.reborrow();
-        let attachments_mut = reborrowed.attachments_mut();
+        let attachments_mut = reborrowed.into_attachments_mut();
         attachments_mut.push(RawAttachment::new::<_, DefaultAttachmentHandler>(
             TestAttachment::new("reborrow_attachment", 42),
         ));
 
         // Another reborrow and add more children
-        let children_mut2 = report_mut.reborrow().children_mut();
+        let children_mut2 = report_mut.reborrow().into_children_mut();
         children_mut2.push(RawReport::new::<_, CustomContextHandler>(
             TestError::new("child 2"),
             Vec::new(),
@@ -2408,14 +2408,14 @@ fn test_raw_report_mut_type_safety_and_downcasting() {
 
     unsafe {
         // Add different types of children and attachments
-        let int_children_mut = int_report.as_mut().children_mut();
+        let int_children_mut = int_report.as_mut().into_children_mut();
         int_children_mut.push(RawReport::new::<_, NumberContextHandler>(
             100i32,
             Vec::new(),
             Vec::new(),
         ));
 
-        let string_children_mut = string_report.as_mut().children_mut();
+        let string_children_mut = string_report.as_mut().into_children_mut();
         string_children_mut.push(RawReport::new::<_, StringContextHandler>(
             "child string".to_owned(),
             Vec::new(),
@@ -2423,7 +2423,7 @@ fn test_raw_report_mut_type_safety_and_downcasting() {
         ));
 
         // Add mixed attachment types
-        let int_attachments_mut = int_report.as_mut().attachments_mut();
+        let int_attachments_mut = int_report.as_mut().into_attachments_mut();
         int_attachments_mut.push(RawAttachment::new::<_, DefaultAttachmentHandler>(
             TestAttachment::new("int_attachment", 777),
         ));
@@ -2431,7 +2431,7 @@ fn test_raw_report_mut_type_safety_and_downcasting() {
             "string attachment in int report".to_owned(),
         ));
 
-        let string_attachments_mut = string_report.as_mut().attachments_mut();
+        let string_attachments_mut = string_report.as_mut().into_attachments_mut();
         string_attachments_mut.push(RawAttachment::new::<_, DefaultAttachmentHandler>(999i32));
     }
 
@@ -2525,7 +2525,7 @@ fn test_raw_report_mut_error_source_handling() {
 
     unsafe {
         // Add children with different source behaviors
-        let children_mut = report.as_mut().children_mut();
+        let children_mut = report.as_mut().into_children_mut();
 
         // Child with source
         let child_source = TestError::new("child source");
@@ -2612,7 +2612,7 @@ fn test_raw_report_mut_modification_correctness() {
         let mut report_mut = report.as_mut();
 
         // Add children
-        let children_mut = report_mut.reborrow().children_mut();
+        let children_mut = report_mut.reborrow().into_children_mut();
         children_mut.push(RawReport::new::<_, DefaultContextHandler>(
             TestError::new("child"),
             Vec::new(),
@@ -2620,7 +2620,7 @@ fn test_raw_report_mut_modification_correctness() {
         ));
 
         // Add attachments
-        let attachments_mut = report_mut.reborrow().attachments_mut();
+        let attachments_mut = report_mut.reborrow().into_attachments_mut();
         attachments_mut.push(RawAttachment::new::<_, DefaultAttachmentHandler>(
             TestAttachment::new("attachment", 123),
         ));
@@ -2665,7 +2665,7 @@ fn test_raw_report_mut_context_downcast_unchecked() {
     unsafe {
         // Test with TestError context
         let error_mut = test_error_report.as_mut();
-        let error_context = error_mut.context_downcast_unchecked::<TestError>();
+        let error_context = error_mut.into_context_downcast_unchecked::<TestError>();
         assert_eq!(error_context.message, "mutable context test");
         assert!(error_context.source.is_none());
 
@@ -2675,7 +2675,7 @@ fn test_raw_report_mut_context_downcast_unchecked() {
 
         // Test with String context
         let string_mut = string_report.as_mut();
-        let string_context = string_mut.context_downcast_unchecked::<String>();
+        let string_context = string_mut.into_context_downcast_unchecked::<String>();
         assert_eq!(string_context, "mutable string context");
 
         // Modify the string context
@@ -2683,7 +2683,7 @@ fn test_raw_report_mut_context_downcast_unchecked() {
 
         // Test with i32 context
         let number_mut = number_report.as_mut();
-        let number_context = number_mut.context_downcast_unchecked::<i32>();
+        let number_context = number_mut.into_context_downcast_unchecked::<i32>();
         assert_eq!(*number_context, 99);
 
         // Modify the number context

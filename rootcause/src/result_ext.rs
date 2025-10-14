@@ -43,7 +43,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// let report_result: Result<i32, Report<SomeError>> = result.into_report();
     /// ```
     #[track_caller]
-    #[must_use]
     fn into_report(self) -> Result<V, Report<E::Context, E::Ownership, SendSync>>
     where
         E: IntoReport<SendSync>;
@@ -75,7 +74,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// let report_result: Result<Vec<u8>, Report<&str>> = result.context("Failed to fetch user data");
     /// ```
     #[track_caller]
-    #[must_use]
     fn context<C>(self, context: C) -> Result<V, Report<C, Mutable, SendSync>>
     where
         E: IntoReportCollection<SendSync>,
@@ -106,7 +104,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.context_lazy(|| format!("Failed at {}", "12:34:56"));
     /// ```
     #[track_caller]
-    #[must_use]
     fn context_lazy<C, F>(self, context: F) -> Result<V, Report<C, Mutable, SendSync>>
     where
         E: IntoReportCollection<SendSync>,
@@ -144,7 +141,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.context_with_handler::<handlers::Debug, _>(ErrorContext::IoError);
     /// ```
     #[track_caller]
-    #[must_use]
     fn context_with_handler<H, C>(self, context: C) -> Result<V, Report<C, Mutable, SendSync>>
     where
         E: IntoReportCollection<SendSync>,
@@ -187,7 +183,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.context_with_handler_lazy::<handlers::Debug, _, _>(|| ErrorContext::new());
     /// ```
     #[track_caller]
-    #[must_use]
     fn context_with_handler_lazy<H, C, F>(
         self,
         context: F,
@@ -217,7 +212,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.attach("input: invalid_data");
     /// ```
     #[track_caller]
-    #[must_use]
     fn attach<A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, SendSync>>
     where
         E: IntoReport<SendSync, Ownership = Mutable>,
@@ -242,7 +236,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.attach_lazy(|| format!("debug info: {}", "complex computation"));
     /// ```
     #[track_caller]
-    #[must_use]
     fn attach_lazy<A, F>(self, attachment: F) -> Result<V, Report<E::Context, Mutable, SendSync>>
     where
         E: IntoReport<SendSync, Ownership = Mutable>,
@@ -277,7 +270,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.attach_with_handler::<handlers::Debug, _>(MyAttachment::new());
     /// ```
     #[track_caller]
-    #[must_use]
     fn attach_with_handler<H, A>(
         self,
         attachment: A,
@@ -317,7 +309,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.attach_with_handler_lazy::<handlers::Debug, _, _>(|| MyAttachment::new());
     /// ```
     #[track_caller]
-    #[must_use]
     fn attach_with_handler_lazy<H, A, F>(
         self,
         attachment: F,
@@ -360,7 +351,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_into_report();
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_into_report(self) -> Result<V, Report<E::Context, E::Ownership, Local>>
     where
         E: IntoReport<Local>;
@@ -395,7 +385,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_context(Rc::from("This context is thread-local context"));
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_context<C>(self, context: C) -> Result<V, Report<C, Mutable, Local>>
     where
         E: IntoReportCollection<Local>,
@@ -445,7 +434,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_context_lazy(|| SomeObject::compute_or_get_cached());
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_context_lazy<C, F>(self, context: F) -> Result<V, Report<C, Mutable, Local>>
     where
         E: IntoReportCollection<Local>,
@@ -485,7 +473,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_context_with_handler::<handlers::Debug, _>(Rc::new(ErrorContext::IoError));
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_context_with_handler<H, C>(self, context: C) -> Result<V, Report<C, Mutable, Local>>
     where
         E: IntoReportCollection<Local>,
@@ -530,7 +517,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_context_with_handler_lazy::<handlers::Debug, _, _>(|| ErrorContext::new());
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_context_with_handler_lazy<H, C, F>(
         self,
         context: F,
@@ -562,7 +548,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_attach(Rc::new("input: invalid_data"));
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_attach<A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, Local>>
     where
         E: IntoReport<Local, Ownership = Mutable>,
@@ -589,7 +574,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_attach_lazy(|| Rc::new(format!("debug info: {}", "complex computation")));
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_attach_lazy<A, F>(
         self,
         attachment: F,
@@ -629,7 +613,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     result.local_attach_with_handler::<handlers::Debug, _>(Rc::new(MyAttachment::new()));
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_attach_with_handler<H, A>(
         self,
         attachment: A,
@@ -673,7 +656,6 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// );
     /// ```
     #[track_caller]
-    #[must_use]
     fn local_attach_with_handler_lazy<H, A, F>(
         self,
         attachment: F,

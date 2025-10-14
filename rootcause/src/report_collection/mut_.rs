@@ -18,6 +18,13 @@ pub struct ReportCollectionMut<'a, Context: ?Sized + 'static = dyn Any, ThreadSa
 
 impl<'a, C: ?Sized, T> ReportCollectionMut<'a, C, T> {
     /// Creates a new ReportCollectionRef from a slice of raw reports
+    ///
+    /// # Safety
+    ///
+    /// - The thread safety marker must match the contents of the reports. More specifically if the marker is `SendSync`, then
+    ///   all the data (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the `RawReport`s are actually of
+    ///   type `C` when `C` if is is a type different from `dyn Any`.
     pub(crate) unsafe fn from_raw(raw: &'a mut Vec<RawReport>) -> Self {
         Self {
             raw,
@@ -73,10 +80,6 @@ where
         self.as_ref().iter()
     }
 
-    pub fn into_iter(self) -> ReportCollectionIter<'a, C, T> {
-        self.into_ref().iter()
-    }
-
     pub fn as_ref(&self) -> ReportCollectionRef<'_, C, T> {
         unsafe { ReportCollectionRef::from_raw(self.raw.as_slice()) }
     }
@@ -95,7 +98,7 @@ where
     type IntoIter = ReportCollectionIter<'a, C, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
+        self.into_ref().iter()
     }
 }
 

@@ -27,6 +27,12 @@ where
     T: markers::ThreadSafetyMarker,
 {
     /// Creates a new ReportCollection from a vector of raw reports
+    ///
+    /// # Safety
+    /// - The thread safety marker must match the contents of the reports. More specifically if the marker is `SendSync`, then
+    ///   all the data (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the `RawReport`s are actually of
+    ///   type `C` when `C` if is is a type different from `dyn Any`.
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
             raw,
@@ -72,10 +78,6 @@ where
 
     pub fn iter(&self) -> ReportCollectionIter<'_, C, T> {
         self.as_ref().into_iter()
-    }
-
-    pub fn into_iter(self) -> ReportCollectionIntoIter<C, T> {
-        unsafe { ReportCollectionIntoIter::from_raw(self.raw) }
     }
 
     pub fn as_ref(&self) -> ReportCollectionRef<'_, C, T> {
@@ -306,7 +308,7 @@ mod unsafe_impls {
     }
 }
 
-impl<'a, C, T> From<Vec<Report<C, Cloneable, T>>> for ReportCollection<C, T>
+impl<C, T> From<Vec<Report<C, Cloneable, T>>> for ReportCollection<C, T>
 where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
@@ -317,7 +319,7 @@ where
     }
 }
 
-impl<'a, const N: usize, C, T> From<[Report<C, Cloneable, T>; N]> for ReportCollection<C, T>
+impl<const N: usize, C, T> From<[Report<C, Cloneable, T>; N]> for ReportCollection<C, T>
 where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
@@ -340,7 +342,7 @@ where
     type IntoIter = ReportCollectionIntoIter<C, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
+        unsafe { ReportCollectionIntoIter::from_raw(self.raw) }
     }
 }
 

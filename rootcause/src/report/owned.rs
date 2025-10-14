@@ -348,7 +348,7 @@ where
     /// let children_mut: ReportCollectionMut<'_> = report.children_mut();
     /// ```
     pub fn children_mut(&mut self) -> ReportCollectionMut<'_, dyn Any, T> {
-        let raw = unsafe { self.raw.as_mut().children_mut() };
+        let raw = unsafe { self.raw.as_mut().into_children_mut() };
         unsafe { ReportCollectionMut::from_raw(raw) }
     }
 
@@ -361,7 +361,7 @@ where
     /// let attachments_mut: ReportAttachmentsMut<'_> = report.attachments_mut();
     /// ```
     pub fn attachments_mut(&mut self) -> ReportAttachmentsMut<'_, T> {
-        let raw = unsafe { self.raw.as_mut().attachments_mut() };
+        let raw = unsafe { self.raw.as_mut().into_attachments_mut() };
         unsafe { ReportAttachmentsMut::from_raw(raw) }
     }
 
@@ -620,7 +620,6 @@ where
     ///     Err(cloneable) => println!("Still cloneable"),
     /// }
     /// ```
-    #[must_use]
     pub fn try_into_mutable(self) -> Result<Report<C, Mutable, T>, Report<C, O, T>> {
         if self.as_raw_ref().strong_count() == 1 {
             unsafe { Ok(Report::from_raw(self.into_raw())) }
@@ -1026,8 +1025,7 @@ where
     /// let downcasted: Result<Report<MyError>, _> = dyn_report.downcast_report();
     /// assert!(downcasted.is_ok());
     /// ```
-    #[must_use]
-    pub fn downcast_report<C>(self) -> Result<Report<C, O, T>, Report<dyn Any, O, T>>
+    pub fn downcast_report<C>(self) -> Result<Report<C, O, T>, Self>
     where
         C: markers::ObjectMarker,
     {

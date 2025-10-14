@@ -147,11 +147,10 @@ where
 
 #[track_caller]
 fn default_hooks() -> HookSet {
-    let mut hooks = Vec::new();
-
-    hooks.push(attachment_hook_to_untyped::<_, LocationHandler, _>(
+    #[allow(unused_mut)]
+    let mut hooks = vec![attachment_hook_to_untyped::<_, LocationHandler, _>(
         LocationCollector,
-    ));
+    )];
 
     #[cfg(feature = "backtrace")]
     hooks.push(attachment_hook_to_untyped::<_, BacktraceHandler, _>(

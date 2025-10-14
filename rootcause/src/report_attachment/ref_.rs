@@ -119,7 +119,7 @@ where
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
 
-    pub fn downcast_inner<B: 'static>(self) -> Option<&'a B>
+    pub fn downcast_inner<B>(self) -> Option<&'a B>
     where
         B: markers::ObjectMarker,
     {

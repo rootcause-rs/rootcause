@@ -74,10 +74,6 @@ where
         self.as_ref().into_iter()
     }
 
-    pub fn into_iter(self) -> ReportAttachmentsIntoIter<T> {
-        unsafe { ReportAttachmentsIntoIter::from_raw(self.raw.into_iter()) }
-    }
-
     pub fn as_ref(&self) -> ReportAttachmentsRef<'_, T> {
         unsafe { ReportAttachmentsRef::from_raw(self.raw.as_slice()) }
     }
@@ -121,7 +117,7 @@ impl From<ReportAttachments<SendSync>> for ReportAttachments<Local> {
     }
 }
 
-impl<'a, A, T> From<Vec<ReportAttachment<A, T>>> for ReportAttachments<T>
+impl<A, T> From<Vec<ReportAttachment<A, T>>> for ReportAttachments<T>
 where
     A: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
@@ -132,7 +128,7 @@ where
     }
 }
 
-impl<'a, const N: usize, A, T> From<[ReportAttachment<A, T>; N]> for ReportAttachments<T>
+impl<const N: usize, A, T> From<[ReportAttachment<A, T>; N]> for ReportAttachments<T>
 where
     A: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
@@ -154,7 +150,7 @@ where
     type IntoIter = ReportAttachmentsIntoIter<T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        self.into_iter()
+        unsafe { ReportAttachmentsIntoIter::from_raw(self.raw.into_iter()) }
     }
 }
 
