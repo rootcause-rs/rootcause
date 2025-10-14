@@ -10,7 +10,7 @@ repository = "https://github.com/rootcause-rs/rootcause"
 backtrace = { version = "0.3.75", optional = true, features = ["cpp_demangle"] }
 rootcause-internals = { path = "../rootcause-internals", version = "0.2.0" }
 hashbrown = "0.15.5"
-indexmap = { version = "2.10.0", default-features = false }
+indexmap = { version = "2.11.4", default-features = false }
 regex = { version = "1.11.3", optional = true }
 spin = "0.10.0"
 triomphe = { version = "0.1.14", default-features = false, features = [
