@@ -72,9 +72,9 @@ impl AttachmentVtable {
     ///
     /// The attachment type `A` used when creating this [`AttachmentVtable`] must match the type
     /// stored in the [`RawAttachmentRef`].
-    pub(super) unsafe fn display<'a>(
+    pub(super) unsafe fn display(
         &self,
-        ptr: RawAttachmentRef<'a>,
+        ptr: RawAttachmentRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         // SAFETY: We know that the `self.display` field points to the function `display::<A, H>` below.
@@ -92,9 +92,9 @@ impl AttachmentVtable {
     ///
     /// The attachment type `A` used when creating this [`AttachmentVtable`] must match the type
     /// stored in the [`RawAttachmentRef`].
-    pub(super) unsafe fn debug<'a>(
+    pub(super) unsafe fn debug(
         &self,
-        ptr: RawAttachmentRef<'a>,
+        ptr: RawAttachmentRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         // SAFETY: We know that the `self.debug` field points to the function `debug::<A, H>` below.
@@ -112,9 +112,9 @@ impl AttachmentVtable {
     ///
     /// The attachment type `A` used when creating this [`AttachmentVtable`] must match the type
     /// stored in the [`RawAttachmentRef`].
-    pub(super) unsafe fn preferred_formatting_style<'a>(
+    pub(super) unsafe fn preferred_formatting_style(
         &self,
-        ptr: RawAttachmentRef<'a>,
+        ptr: RawAttachmentRef<'_>,
         report_formatting_function: FormattingFunction,
         report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {

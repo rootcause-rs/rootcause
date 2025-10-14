@@ -49,7 +49,7 @@ impl RawAttachment {
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
-    pub fn as_ref<'a>(&'a self) -> RawAttachmentRef<'a> {
+    pub fn as_ref(&self) -> RawAttachmentRef<'_> {
         RawAttachmentRef {
             ptr: self.ptr,
             _marker: core::marker::PhantomData,

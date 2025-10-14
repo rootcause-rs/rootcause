@@ -63,7 +63,7 @@ impl RawReport {
     }
 
     /// Returns a reference to the [`ReportData`] instance.
-    pub fn as_ref<'a>(&'a self) -> RawReportRef<'a> {
+    pub fn as_ref(&self) -> RawReportRef<'_> {
         RawReportRef {
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
@@ -76,7 +76,7 @@ impl RawReport {
     ///
     /// The caller must ensure that this is the only existing reference pointing to
     /// the inner [`ReportData`].
-    pub unsafe fn as_mut<'a>(&'a mut self) -> RawReportMut<'a> {
+    pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
         RawReportMut {
             ptr: self.ptr,
             _marker: core::marker::PhantomData,

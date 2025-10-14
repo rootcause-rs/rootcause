@@ -131,9 +131,9 @@ impl ReportVtable {
     ///
     /// The context type `C` used when creating this [`ReportVtable`] must match the type
     /// stored in the [`ReportData`].
-    pub(super) unsafe fn display<'a>(
+    pub(super) unsafe fn display(
         &self,
-        ptr: RawReportRef<'a>,
+        ptr: RawReportRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         // SAFETY: We know that the `self.display` field points to the function `display::<C, H>` below.
@@ -151,9 +151,9 @@ impl ReportVtable {
     ///
     /// The context type `C` used when creating this [`ReportVtable`] must match the type
     /// stored in the [`ReportData`].
-    pub(super) unsafe fn debug<'a>(
+    pub(super) unsafe fn debug(
         &self,
-        ptr: RawReportRef<'a>,
+        ptr: RawReportRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         // SAFETY: We know that the `self.debug` field points to the function `debug::<C, H>` below.

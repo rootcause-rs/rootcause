@@ -249,11 +249,11 @@ impl ContextHandler<String> for StringContextHandler {
     }
 
     fn display(value: &String, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}", value)
+        write!(formatter, "{value}")
     }
 
     fn debug(value: &String, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "String({:?})", value)
+        write!(formatter, "String({value:?})")
     }
 }
 
@@ -265,11 +265,11 @@ impl ContextHandler<i32> for NumberContextHandler {
     }
 
     fn display(value: &i32, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "{}", value)
+        write!(formatter, "{value}")
     }
 
     fn debug(value: &i32, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(formatter, "Number({})", value)
+        write!(formatter, "Number({value})")
     }
 }
 
@@ -679,7 +679,7 @@ fn test_mutable_operations() {
 // Helper wrappers for testing Display and Debug
 struct TestDisplayWrapper<'a>(RawAttachmentRef<'a>);
 
-impl<'a> fmt::Display for TestDisplayWrapper<'a> {
+impl fmt::Display for TestDisplayWrapper<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.attachment_display(f)
     }
@@ -687,7 +687,7 @@ impl<'a> fmt::Display for TestDisplayWrapper<'a> {
 
 struct TestDebugWrapper<'a>(RawAttachmentRef<'a>);
 
-impl<'a> fmt::Debug for TestDebugWrapper<'a> {
+impl fmt::Debug for TestDebugWrapper<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.attachment_debug(f)
     }
@@ -695,7 +695,7 @@ impl<'a> fmt::Debug for TestDebugWrapper<'a> {
 
 struct TestReportDisplayWrapper<'a>(RawReportRef<'a>);
 
-impl<'a> fmt::Display for TestReportDisplayWrapper<'a> {
+impl fmt::Display for TestReportDisplayWrapper<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.context_display(f)
     }
@@ -703,7 +703,7 @@ impl<'a> fmt::Display for TestReportDisplayWrapper<'a> {
 
 struct TestReportDebugWrapper<'a>(RawReportRef<'a>);
 
-impl<'a> fmt::Debug for TestReportDebugWrapper<'a> {
+impl fmt::Debug for TestReportDebugWrapper<'_> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.context_debug(f)
     }
@@ -893,7 +893,7 @@ fn test_deep_hierarchy() {
 
     for i in 1..5 {
         current = RawReport::new::<_, DefaultContextHandler>(
-            TestError::new(&format!("level {}", i)),
+            TestError::new(&format!("level {i}")),
             vec![current],
             Vec::new(),
         );
@@ -903,7 +903,7 @@ fn test_deep_hierarchy() {
     let mut current_ref = current.as_ref();
     for i in (0..5).rev() {
         let display_result = format!("{}", TestReportDisplayWrapper(current_ref));
-        assert_eq!(display_result, format!("level {}", i));
+        assert_eq!(display_result, format!("level {i}"));
 
         if i > 0 {
             assert_eq!(current_ref.children().len(), 1);
@@ -1077,14 +1077,14 @@ fn test_large_hierarchy() {
     let mut attachments = Vec::new();
     for i in 0..10 {
         attachments.push(RawAttachment::new::<_, DefaultAttachmentHandler>(
-            TestAttachment::new(&format!("attachment_{}", i), i),
+            TestAttachment::new(&format!("attachment_{i}"), i),
         ));
     }
 
     let mut children = Vec::new();
     for i in 0..5 {
         children.push(RawReport::new::<_, DefaultContextHandler>(
-            TestError::new(&format!("child_{}", i)),
+            TestError::new(&format!("child_{i}")),
             Vec::new(),
             Vec::new(),
         ));
@@ -1103,7 +1103,7 @@ fn test_large_hierarchy() {
         let downcast = attachment_ref
             .attachment_downcast::<TestAttachment>()
             .unwrap();
-        assert_eq!(downcast.name, format!("attachment_{}", i));
+        assert_eq!(downcast.name, format!("attachment_{i}"));
         assert_eq!(downcast.value, i as i32);
     }
 
@@ -1111,7 +1111,7 @@ fn test_large_hierarchy() {
     for (i, child) in root_ref.children().iter().enumerate() {
         let child_ref = child.as_ref();
         let display = format!("{}", TestReportDisplayWrapper(child_ref));
-        assert_eq!(display, format!("child_{}", i));
+        assert_eq!(display, format!("child_{i}"));
     }
 }
 
@@ -1294,7 +1294,7 @@ fn test_clone_and_drop_behavior() {
 
     impl DropCounter {
         fn new(name: &str, counter: Rc<RefCell<Vec<String>>>) -> Self {
-            counter.borrow_mut().push(format!("Created: {}", name));
+            counter.borrow_mut().push(format!("Created: {name}"));
             Self {
                 name: name.to_string(),
                 counter,
@@ -1604,7 +1604,7 @@ fn test_hierarchical_drop_order_independence() {
                 name: name.to_string(),
                 log: log.clone(),
             };
-            log.borrow_mut().push(format!("Created: {}", name));
+            log.borrow_mut().push(format!("Created: {name}"));
             tracker
         }
     }
@@ -2696,7 +2696,7 @@ fn test_raw_report_mut_context_downcast_unchecked() {
     assert_eq!(modified_error.message, "modified error message");
     assert!(modified_error.source.is_some());
     let nested_error = modified_error.source.as_ref().unwrap();
-    assert_eq!(format!("{}", nested_error), "nested error");
+    assert_eq!(format!("{nested_error}"), "nested error");
 
     let string_ref = string_report.as_ref();
     let modified_string = string_ref.context_downcast::<String>().unwrap();
