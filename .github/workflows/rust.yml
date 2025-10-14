@@ -1,0 +1,36 @@
+name: Rust checks
+
+env:
+  CARGO_TERM_COLOR: always
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  schedule:
+    - cron: "32 4 * * 5"
+  workflow_dispatch:
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest]
+        rust: ["1.75", stable, beta]
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v5.0.0
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: ${{ matrix.rust }}
+          components: rustfmt, clippy
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run clippy
+        run: cargo clippy --all-targets -- -D warnings && cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run tests
+        run: cargo test && cargo test --all-features
