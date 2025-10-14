@@ -2170,8 +2170,8 @@ fn test_raw_report_mut_attachments_manipulation() {
     assert_eq!(attachments.len(), 3);
 
     // Check first two attachments (default handler)
-    for i in 0..2 {
-        let attachment_ref = attachments[i].as_ref();
+    for (i, attachment) in attachments[..2].iter().enumerate() {
+        let attachment_ref = attachment.as_ref();
         let downcast = attachment_ref
             .attachment_downcast::<TestAttachment>()
             .unwrap();
