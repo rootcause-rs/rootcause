@@ -7,7 +7,7 @@ description = "A flexible, ergonomic, and inspectable error reporting library fo
 repository = "https://github.com/rootcause-rs/rootcause"
 
 [dependencies]
-triomphe = "0.1.14"
+triomphe = "0.1.15"
 
 [package.metadata.docs.rs]
 rustdoc-args = ["--document-private-items"]

@@ -7,21 +7,21 @@ description = "A flexible, ergonomic, and inspectable error reporting library fo
 repository = "https://github.com/rootcause-rs/rootcause"
 
 [dependencies]
-backtrace = { version = "0.3.75", optional = true, features = ["cpp_demangle"] }
+backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
 rootcause-internals = { path = "../rootcause-internals", version = "0.2.0" }
-hashbrown = "0.15.5"
-indexmap = { version = "2.10.0", default-features = false }
-regex = { version = "1.11.3", optional = true }
+hashbrown = "0.16.0"
+indexmap = { version = "2.11.4", default-features = false }
+regex = { version = "1.12.2", optional = true }
 spin = "0.10.0"
-triomphe = { version = "0.1.14", default-features = false, features = [
+triomphe = { version = "0.1.15", default-features = false, features = [
   "unsize",
 ] }
 unsize = "1.1.0"
 
 [dev-dependencies]
 static_assertions = "1.1.0"
-thiserror = "2.0.16"
-tokio = { version = "1.47.1", features = ["full"] }
+thiserror = "2.0.17"
+tokio = { version = "1.48.0", features = ["full"] }
 
 [features]
 default = ["std"]
