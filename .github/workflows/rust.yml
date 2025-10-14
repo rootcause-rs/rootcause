@@ -34,3 +34,25 @@ jobs:
 
       - name: Run tests
         run: cargo test && cargo test --all-features
+
+  miri:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v5.0.0
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+          components: miri
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Run tests with miri
+        run: |
+          export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
+
+          cargo miri test --all-targets
+          cargo miri test --doc
+
+          cargo miri test --all-features --all-targets
+          cargo miri test --all-features --doc
