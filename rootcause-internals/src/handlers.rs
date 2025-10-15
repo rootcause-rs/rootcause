@@ -25,21 +25,14 @@ pub trait ContextHandler<C>: 'static {
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     fn preferred_formatting_style(
         value: &C,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
-        let _ = (
-            value,
-            report_formatting_function,
-            report_formatting_alternate,
-        );
+        let _ = (value, report_formatting_function);
         ContextFormattingStyle::default()
     }
 }
@@ -65,23 +58,16 @@ pub trait AttachmentHandler<A>: 'static {
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     ///
     /// [`RawAttachmentRef::preferred_formatting_style`]: crate::attachment::RawAttachmentRef::preferred_formatting_style
     fn preferred_formatting_style(
         value: &A,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
-        let _ = (
-            value,
-            report_formatting_function,
-            report_formatting_alternate,
-        );
+        let _ = (value, report_formatting_function);
         AttachmentFormattingStyle::default()
     }
 }

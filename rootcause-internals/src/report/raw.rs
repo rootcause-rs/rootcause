@@ -196,27 +196,18 @@ impl<'a> RawReportRef<'a> {
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     pub fn preferred_context_formatting_style(
         self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
         // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
         // which ensures this fact.
-        unsafe {
-            vtable.preferred_context_formatting_style(
-                self,
-                report_formatting_function,
-                report_formatting_alternate,
-            )
-        }
+        unsafe { vtable.preferred_context_formatting_style(self, report_formatting_function) }
     }
 
     /// Clones the inner [`triomphe::Arc`] and returns a new [`RawReport`] pointing to the same data.

@@ -18,7 +18,7 @@ pub(super) struct AttachmentVtable {
     display: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     debug: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     preferred_formatting_style:
-        unsafe fn(RawAttachmentRef<'_>, FormattingFunction, bool) -> AttachmentFormattingStyle,
+        unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
 }
 
 impl AttachmentVtable {
@@ -116,18 +116,11 @@ impl AttachmentVtable {
         &self,
         ptr: RawAttachmentRef<'_>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
         // SAFETY: We know that the `self.preferred_formatting_style` field points to the function `preferred_formatting_style::<A, H>` below.
         // That function requires that the attachment type `A` matches the actual attachment type stored in the `AttachmentData`,
         // which is guaranteed by our caller.
-        unsafe {
-            (self.preferred_formatting_style)(
-                ptr,
-                report_formatting_function,
-                report_formatting_alternate,
-            )
-        }
+        unsafe { (self.preferred_formatting_style)(ptr, report_formatting_function) }
     }
 }
 
@@ -186,15 +179,10 @@ unsafe fn debug<A: 'static, H: AttachmentHandler<A>>(
 unsafe fn preferred_formatting_style<A: 'static, H: AttachmentHandler<A>>(
     ptr: RawAttachmentRef<'_>,
     report_formatting_function: FormattingFunction,
-    report_formatting_alternate: bool,
 ) -> AttachmentFormattingStyle {
     // SAFETY: Our caller guarantees that the type `A` matches the actual attachment type stored in the `AttachmentData`.
     let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
-    H::preferred_formatting_style(
-        context,
-        report_formatting_function,
-        report_formatting_alternate,
-    )
+    H::preferred_formatting_style(context, report_formatting_function)
 }
 
 #[cfg(test)]

@@ -9,12 +9,14 @@ use core::{
 
 use hashbrown::DefaultHashBuilder;
 use indexmap::IndexMap;
-use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
+use rootcause_internals::handlers::{
+    AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
+};
 use triomphe::Arc;
 
 use crate::{
     ReportRef,
-    hooks::{AttachmentParent, hook_lock::HookLock},
+    hooks::hook_lock::HookLock,
     markers::{Local, Uncloneable},
     report_attachment::ReportAttachmentRef,
 };
@@ -438,10 +440,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             formatting,
             report.format_current_context(),
             report
-                .preferred_context_formatting_style(
-                    self.report_formatting_function,
-                    self.formatter.alternate(),
-                )
+                .preferred_context_formatting_style(self.report_formatting_function)
                 .function,
             |this, tmp_value_buffer| {
                 this.format_node_data(tmp_value_buffer, tmp_attachments_buffer, report)
@@ -461,21 +460,27 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
 
         let mut opaque_attachment_count = 0;
         tmp_attachments_buffer.clear();
-        tmp_attachments_buffer.extend(report.attachments().iter().enumerate().map(
-            |(attachment_index, attachment)| {
-                (
-                    attachment.preferred_formatting_style(
-                        AttachmentParent {
-                            report,
-                            attachment_index,
-                        },
-                        self.report_formatting_function,
-                        self.formatter.alternate(),
-                    ),
-                    attachment,
-                )
-            },
-        ));
+        tmp_attachments_buffer.extend(
+            report
+                .attachments()
+                .iter()
+                .map(|attachment| {
+                    (
+                        attachment.preferred_formatting_style(self.report_formatting_function),
+                        attachment,
+                    )
+                })
+                .filter(
+                    |(formatting_style, _attachment)| match formatting_style.placement {
+                        AttachmentFormattingPlacement::Opaque => {
+                            opaque_attachment_count += 1;
+                            false
+                        }
+                        AttachmentFormattingPlacement::Hidden => false,
+                        _ => true,
+                    },
+                ),
+        );
         tmp_attachments_buffer
             .sort_by_key(|(style1, _attachment)| core::cmp::Reverse(style1.priority));
         for (attachment_index, &(attachment_formatting_style, attachment)) in
@@ -487,7 +492,6 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 attachment_formatting_style,
                 attachment,
                 is_last_attachment && !has_children,
-                &mut opaque_attachment_count,
             )?;
         }
 
@@ -543,10 +547,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         attachment_formatting_style: AttachmentFormattingStyle,
         attachment: ReportAttachmentRef<'a, dyn Any>,
         is_last: bool,
-        opaque_attachment_count: &mut usize,
     ) -> fmt::Result {
         match attachment_formatting_style.placement {
-            rootcause_internals::handlers::AttachmentFormattingPlacement::Inline => {
+            AttachmentFormattingPlacement::Inline => {
                 let formatting = if is_last {
                     &self.config.attachment_last_formatting
                 } else {
@@ -559,9 +562,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     attachment_formatting_style.function,
                 )?;
             }
-            rootcause_internals::handlers::AttachmentFormattingPlacement::InlineWithHeader {
-                header,
-            } => {
+            AttachmentFormattingPlacement::InlineWithHeader { header } => {
                 let formatting = if is_last {
                     &self.config.headered_attachment_last_formatting
                 } else {
@@ -596,9 +597,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     },
                 )?;
             }
-            rootcause_internals::handlers::AttachmentFormattingPlacement::Appendix {
-                appendix_name,
-            } => {
+            AttachmentFormattingPlacement::Appendix { appendix_name } => {
                 let appendices = self.appendices.entry(appendix_name).or_default();
                 appendices.push((attachment, attachment_formatting_style.function));
                 let formatting = if is_last {
@@ -609,10 +608,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 let line = format_args!("{appendix_name} #{}", appendices.len());
                 self.format_line(formatting, line)?;
             }
-            rootcause_internals::handlers::AttachmentFormattingPlacement::Opaque => {
-                *opaque_attachment_count += 1;
-            }
-            rootcause_internals::handlers::AttachmentFormattingPlacement::Hidden => {}
+            AttachmentFormattingPlacement::Opaque | AttachmentFormattingPlacement::Hidden => {}
         }
         Ok(())
     }

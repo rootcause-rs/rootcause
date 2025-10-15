@@ -159,27 +159,18 @@ impl<'a> RawAttachmentRef<'a> {
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     pub fn preferred_formatting_style(
         self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A` of the `AttachmentVtable`.
         // However, the only way to construct an `AttachmentData` is through the `AttachmentData::new` method,
         // which ensures this fact.
-        unsafe {
-            vtable.preferred_formatting_style(
-                self,
-                report_formatting_function,
-                report_formatting_alternate,
-            )
-        }
+        unsafe { vtable.preferred_formatting_style(self, report_formatting_function) }
     }
 }
 

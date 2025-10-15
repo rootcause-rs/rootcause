@@ -13,7 +13,7 @@ use crate::{
     ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
-    preformatted::Preformatted,
+    preformatted::PreformattedContext,
     report_attachment::ReportAttachment,
     report_attachments::{ReportAttachments, ReportAttachmentsMut, ReportAttachmentsRef},
     report_collection::{ReportCollection, ReportCollectionMut, ReportCollectionRef},
@@ -755,19 +755,18 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, preformatted::Preformatted, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
+    /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # use core::any::Any;
-    /// # use core::cell::Cell;
     /// # #[derive(Default)]
     /// # struct NonSendSyncError(core::cell::Cell<()>);
     /// # let non_send_sync_error = NonSendSyncError::default();
     /// let mut report: Report<NonSendSyncError, Mutable, Local> = report!(non_send_sync_error);
-    /// let preformatted: Report<Preformatted, Mutable, SendSync> = report.preformat();
+    /// let preformatted: Report<PreformattedContext, Mutable, SendSync> = report.preformat();
     /// assert_eq!(format!("{report}"), format!("{preformatted}"));
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn preformat(&self) -> Report<Preformatted, Mutable, SendSync> {
+    pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
         self.as_ref().preformat()
     }
 
@@ -875,11 +874,9 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     ///
     /// See also [`Report::preferred_context_formatting_style_unhooked`].
     ///
@@ -888,20 +885,15 @@ where
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// let style =
-    ///     report.preferred_context_formatting_style(handlers::FormattingFunction::Display, false);
+    ///     report.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
         let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        crate::hooks::get_preferred_context_formatting_style(
-            report,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
     }
 
     /// Gets the preferred formatting style for the context without hook processing.
@@ -909,28 +901,23 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     ///
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
     /// let style = report
-    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display, false);
+    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
-        self.as_raw_ref().preferred_context_formatting_style(
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        self.as_raw_ref()
+            .preferred_context_formatting_style(report_formatting_function)
     }
 
     /// Returns the number of references to this report.

@@ -14,7 +14,7 @@ use crate::{
     ReportRef,
     hooks::hook_lock::HookLock,
     markers::{self, Local, Uncloneable},
-    preformatted::Preformatted,
+    preformatted::PreformattedContext,
 };
 
 type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHook>>;
@@ -78,29 +78,26 @@ pub(crate) trait UntypedContextHook: 'static + Send + Sync + core::fmt::Display 
 
     fn display_preformatted(
         &self,
-        report: ReportRef<'_, Preformatted, Uncloneable, Local>,
+        report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
     fn debug_preformatted(
         &self,
-        report: ReportRef<'_, Preformatted, Uncloneable, Local>,
+        report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     fn preferred_context_formatting_style(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle;
 }
 
@@ -118,7 +115,7 @@ where
 
     fn display_preformatted(
         &self,
-        report: ReportRef<'_, Preformatted, Uncloneable, Local>,
+        report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
@@ -134,7 +131,7 @@ where
 
     fn debug_preformatted(
         &self,
-        report: ReportRef<'_, Preformatted, Uncloneable, Local>,
+        report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
@@ -143,21 +140,15 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     fn preferred_context_formatting_style(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
-        report.preferred_context_formatting_style_unhooked(
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        report.preferred_context_formatting_style_unhooked(report_formatting_function)
     }
 }
 
@@ -186,7 +177,7 @@ where
 
     fn display_preformatted(
         &self,
-        report: ReportRef<'_, Preformatted, Uncloneable, Local>,
+        report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         self.hook.display_preformatted(report, formatter)
@@ -194,7 +185,7 @@ where
 
     fn debug_preformatted(
         &self,
-        report: ReportRef<'_, Preformatted, Uncloneable, Local>,
+        report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         self.hook.debug_preformatted(report, formatter)
@@ -204,13 +195,9 @@ where
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
-        self.hook.preferred_context_formatting_style(
-            report,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        self.hook
+            .preferred_context_formatting_style(report, report_formatting_function)
     }
 }
 
@@ -240,7 +227,7 @@ pub(crate) fn display_context(
     report: ReportRef<'_, dyn Any, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(report) = report.downcast_report::<Preformatted>()
+    if let Some(report) = report.downcast_report::<PreformattedContext>()
         && let Some(hook) = get_hook(report.current_context().original_type_id())
     {
         hook.display_preformatted(report, formatter)
@@ -255,7 +242,7 @@ pub(crate) fn debug_context(
     report: ReportRef<'_, dyn Any, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(report) = report.downcast_report::<Preformatted>()
+    if let Some(report) = report.downcast_report::<PreformattedContext>()
         && let Some(hook) = get_hook(report.current_context().original_type_id())
     {
         hook.debug_preformatted(report, formatter)
@@ -269,35 +256,21 @@ pub(crate) fn debug_context(
 /// # Arguments
 ///
 /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-/// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
 ///
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug
-/// [`alternate`]: core::fmt::Formatter::alternate
 pub(crate) fn get_preferred_context_formatting_style(
     report: ReportRef<'_, dyn Any, Uncloneable, Local>,
     report_formatting_function: FormattingFunction,
-    report_formatting_alternate: bool,
 ) -> ContextFormattingStyle {
-    if let Some(current_context) = report.downcast_current_context::<Preformatted>()
+    if let Some(current_context) = report.downcast_current_context::<PreformattedContext>()
         && let Some(hook) = get_hook(current_context.original_type_id())
     {
-        hook.preferred_context_formatting_style(
-            report,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        hook.preferred_context_formatting_style(report, report_formatting_function)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        hook.preferred_context_formatting_style(
-            report,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        hook.preferred_context_formatting_style(report, report_formatting_function)
     } else {
-        report.preferred_context_formatting_style_unhooked(
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        report.preferred_context_formatting_style_unhooked(report_formatting_function)
     }
 }
 

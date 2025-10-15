@@ -24,7 +24,6 @@ impl AttachmentHandler<Location> for LocationHandler {
     fn preferred_formatting_style(
         _value: &Location,
         _report_formatting_function: rootcause_internals::handlers::FormattingFunction,
-        _report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
             priority: 20,

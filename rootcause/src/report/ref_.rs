@@ -12,7 +12,7 @@ use rootcause_internals::{
 use crate::{
     Report, ReportIter,
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
-    preformatted::{self, Preformatted},
+    preformatted::{self, PreformattedAttachment, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachmentsRef,
     report_collection::ReportCollectionRef,
@@ -300,20 +300,19 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, preformatted::Preformatted, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
-    /// # use core::cell::Cell;
+    /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # #[derive(Default)]
     /// # struct NonSendSyncError(core::cell::Cell<()>);
     /// # let non_send_sync_error = NonSendSyncError::default();
-    /// # let mut report = report!(non_send_sync_error);
+    /// # let report = report!(non_send_sync_error);
     /// let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
-    /// let preformatted: Report<Preformatted, Mutable, SendSync> = report_ref.preformat();
+    /// let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
     /// assert_eq!(format!("{report}"), format!("{preformatted}"));
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn preformat(self) -> Report<Preformatted, Mutable, SendSync> {
-        let preformatted_context = Preformatted::new_from_context(self);
+    pub fn preformat(self) -> Report<PreformattedContext, Mutable, SendSync> {
+        let preformatted_context = PreformattedContext::new_from_context(self);
         Report::from_parts_unhooked::<preformatted::PreformattedHandler>(
             preformatted_context,
             self.children()
@@ -324,7 +323,7 @@ where
                 .iter()
                 .map(|attachment| {
                     ReportAttachment::new_with_handler::<preformatted::PreformattedHandler>(
-                        Preformatted::new_from_attachment(attachment),
+                        PreformattedAttachment::new_from_attachment(attachment),
                     )
                     .into_dyn_any()
                 })
@@ -427,11 +426,9 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     ///
     /// # Examples
     /// ```
@@ -439,17 +436,15 @@ where
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let style =
-    ///     report_ref.preferred_context_formatting_style(handlers::FormattingFunction::Display, false);
+    ///     report_ref.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
         crate::hooks::get_preferred_context_formatting_style(
             self.into_dyn_any().into_uncloneable().into_local(),
             report_formatting_function,
-            report_formatting_alternate,
         )
     }
 
@@ -458,11 +453,9 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this context will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     ///
     /// # Examples
     /// ```
@@ -470,17 +463,14 @@ where
     /// # let report = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let style = report_ref
-    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display, false);
+    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
-        self.as_raw_ref().preferred_context_formatting_style(
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        self.as_raw_ref()
+            .preferred_context_formatting_style(report_formatting_function)
     }
 
     /// Returns the number of references to this report.
@@ -813,5 +803,22 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<NonSend, Mutable, SendSync>: From<ReportRef<'static, NonSend, Uncloneable, SendSync>>);
         static_assertions::assert_not_impl_any!(Report<dyn Any, Mutable, Local>: From<ReportRef<'static, dyn Any, Uncloneable, Local>>);
         static_assertions::assert_not_impl_any!(Report<dyn Any, Mutable, SendSync>: From<ReportRef<'static, dyn Any, Uncloneable, SendSync>>);
+    }
+
+    #[test]
+    fn test_preformat() {
+        use crate::{
+            ReportRef,
+            markers::{Local, Mutable, SendSync, Uncloneable},
+            preformatted::PreformattedContext,
+            prelude::*,
+        };
+        #[derive(Default)]
+        struct NonSendSyncError(core::cell::Cell<()>);
+        let non_send_sync_error = NonSendSyncError::default();
+        let report = report!(non_send_sync_error);
+        let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
+        let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
+        assert_eq!(format!("{report}"), format!("{preformatted}"));
     }
 }

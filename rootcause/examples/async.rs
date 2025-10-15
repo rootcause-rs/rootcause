@@ -2,7 +2,7 @@ use indexmap::IndexMap;
 use rootcause::{
     Report,
     handlers::{self, FormattingFunction},
-    hooks::{AttachmentHook, AttachmentParent, register_attachment_hook},
+    hooks::{AttachmentHook, register_attachment_hook},
     prelude::ResultExt,
     report,
     report_attachment::ReportAttachmentRef,
@@ -32,9 +32,7 @@ impl AttachmentHook<Wat> for WatHandler {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
-        _attachment_parent: AttachmentParent<'_>,
         _report_formatting_function: FormattingFunction,
-        _report_formatting_alternate: bool,
     ) -> handlers::AttachmentFormattingStyle {
         handlers::AttachmentFormattingStyle {
             // placement: handlers::AttachmentFormattingPlacement::Appendix {

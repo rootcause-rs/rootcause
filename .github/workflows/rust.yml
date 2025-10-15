@@ -33,7 +33,7 @@ jobs:
         run: cargo clippy --all-targets -- -D warnings && cargo clippy --all-targets --all-features -- -D warnings
 
       - name: Run tests
-        run: cargo test && cargo test --all-features
+        run: cargo test --all-targets && cargo test --all-targets --all-features
 
   miri:
     runs-on: ubuntu-latest
@@ -44,7 +44,7 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: nightly
-          components: miri
+          components: miri rust-src
       - uses: Swatinem/rust-cache@v2
 
       - name: Run tests with miri

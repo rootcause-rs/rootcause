@@ -86,7 +86,6 @@ impl AttachmentHandler<Backtrace> for BacktraceHandler {
     fn preferred_formatting_style(
         backtrace: &Backtrace,
         _report_formatting_function: rootcause_internals::handlers::FormattingFunction,
-        _report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
             placement: if backtrace.frames.is_empty() {

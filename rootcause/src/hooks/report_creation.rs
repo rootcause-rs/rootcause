@@ -216,7 +216,6 @@ fn get_hooks() -> HookLockReadGuard<HookSet> {
 }
 
 #[track_caller]
-#[inline(never)]
 fn run_creation_hooks_local(mut report: ReportMut<'_, dyn Any, Local>) {
     if let Some(hooks) = get_hooks().get() {
         for hook in hooks {
@@ -226,7 +225,6 @@ fn run_creation_hooks_local(mut report: ReportMut<'_, dyn Any, Local>) {
 }
 
 #[track_caller]
-#[inline(never)]
 fn run_creation_hooks_sendsync(mut report: ReportMut<'_, dyn Any, SendSync>) {
     if let Some(hooks) = get_hooks().get() {
         for hook in hooks {
@@ -236,7 +234,7 @@ fn run_creation_hooks_sendsync(mut report: ReportMut<'_, dyn Any, SendSync>) {
 }
 
 #[track_caller]
-#[inline(always)]
+#[inline(never)]
 pub(crate) fn __run_creation_hooks<T>(report: ReportMut<'_, dyn Any, T>)
 where
     T: markers::ThreadSafetyMarker,

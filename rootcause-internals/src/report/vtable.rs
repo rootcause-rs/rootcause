@@ -23,7 +23,7 @@ pub(super) struct ReportVtable {
     display: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     debug: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     preferred_context_formatting_style:
-        unsafe fn(RawReportRef<'_>, FormattingFunction, bool) -> ContextFormattingStyle,
+        unsafe fn(RawReportRef<'_>, FormattingFunction) -> ContextFormattingStyle,
 }
 
 impl ReportVtable {
@@ -175,18 +175,11 @@ impl ReportVtable {
         &self,
         ptr: RawReportRef<'_>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> ContextFormattingStyle {
         // SAFETY: We know that the `self.preferred_context_formatting_style` field points to the function `preferred_context_formatting_style::<C, H>` below.
         // That function requires that the context type `C` matches the actual context type stored in the `ReportData`,
         // which is guaranteed by our caller.
-        unsafe {
-            (self.preferred_context_formatting_style)(
-                ptr,
-                report_formatting_function,
-                report_formatting_alternate,
-            )
-        }
+        unsafe { (self.preferred_context_formatting_style)(ptr, report_formatting_function) }
     }
 }
 
@@ -288,15 +281,10 @@ unsafe fn debug<C: 'static, H: ContextHandler<C>>(
 unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'_>,
     report_formatting_function: FormattingFunction,
-    report_formatting_alternate: bool,
 ) -> ContextFormattingStyle {
     // SAFETY: Our caller guarantees that the type `C` matches the actual attachment type stored in the `AttachmentData`.
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
-    H::preferred_formatting_style(
-        context,
-        report_formatting_function,
-        report_formatting_alternate,
-    )
+    H::preferred_formatting_style(context, report_formatting_function)
 }
 
 /// Gets the strong count of the underlying [`triomphe::Arc`]

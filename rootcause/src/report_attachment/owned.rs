@@ -10,7 +10,6 @@ use rootcause_internals::{
 
 use crate::{
     handlers::{self, AttachmentHandler},
-    hooks::AttachmentParent,
     markers::{self, Local, ObjectMarker, SendSync},
     report_attachment::ReportAttachmentRef,
     util::format_helper,
@@ -183,40 +182,31 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     pub fn preferred_formatting_style(
         &self,
-        attachment_parent: AttachmentParent<'_>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
         crate::hooks::get_preferred_formatting_style(
             self.as_ref().into_dyn_any(),
-            attachment_parent,
             report_formatting_function,
-            report_formatting_alternate,
         )
     }
 
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     pub fn preferred_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
-            .preferred_formatting_style(report_formatting_function, report_formatting_alternate)
+            .preferred_formatting_style(report_formatting_function)
     }
 
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {

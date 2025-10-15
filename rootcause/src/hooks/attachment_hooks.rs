@@ -14,7 +14,7 @@ use crate::{
     ReportRef,
     hooks::hook_lock::HookLock,
     markers::{self, Local, Uncloneable},
-    preformatted::Preformatted,
+    preformatted::PreformattedAttachment,
     report_attachment::ReportAttachmentRef,
 };
 
@@ -87,14 +87,14 @@ pub(crate) trait UntypedAttachmentHook: 'static + Send + Sync + core::fmt::Displ
 
     fn display_preformatted(
         &self,
-        attachment: ReportAttachmentRef<'_, Preformatted>,
+        attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
     fn debug_preformatted(
         &self,
-        attachment: ReportAttachmentRef<'_, Preformatted>,
+        attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
@@ -102,17 +102,13 @@ pub(crate) trait UntypedAttachmentHook: 'static + Send + Sync + core::fmt::Displ
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
-        attachment_parent: AttachmentParent<'_>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle;
 }
 
@@ -132,7 +128,7 @@ where
 
     fn display_preformatted(
         &self,
-        attachment: ReportAttachmentRef<'_, Preformatted>,
+        attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
@@ -152,7 +148,7 @@ where
 
     fn debug_preformatted(
         &self,
-        attachment: ReportAttachmentRef<'_, Preformatted>,
+        attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
@@ -163,23 +159,15 @@ where
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    /// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
-    /// [`alternate`]: core::fmt::Formatter::alternate
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
-        attachment_parent: AttachmentParent<'_>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
-        let _ = attachment_parent;
-        attachment.preferred_formatting_style_unhooked(
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        attachment.preferred_formatting_style_unhooked(report_formatting_function)
     }
 }
 
@@ -210,7 +198,7 @@ where
 
     fn display_preformatted(
         &self,
-        attachment: ReportAttachmentRef<'_, Preformatted>,
+        attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
@@ -220,7 +208,7 @@ where
 
     fn debug_preformatted(
         &self,
-        attachment: ReportAttachmentRef<'_, Preformatted>,
+        attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
@@ -231,16 +219,10 @@ where
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
-        attachment_parent: AttachmentParent<'_>,
         report_formatting_function: FormattingFunction,
-        report_formatting_alternate: bool,
     ) -> AttachmentFormattingStyle {
-        self.hook.preferred_formatting_style(
-            attachment,
-            attachment_parent,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        self.hook
+            .preferred_formatting_style(attachment, report_formatting_function)
     }
 }
 
@@ -271,7 +253,7 @@ pub(crate) fn display_attachment(
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(attachment) = attachment.downcast_attachment::<Preformatted>()
+    if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
         && let Some(hook) = get_hook(attachment.inner().original_type_id())
     {
         hook.display_preformatted(attachment, attachment_parent, formatter)
@@ -287,7 +269,7 @@ pub(crate) fn debug_attachment(
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(attachment) = attachment.downcast_attachment::<Preformatted>()
+    if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
         && let Some(hook) = get_hook(attachment.inner().original_type_id())
     {
         hook.debug_preformatted(attachment, attachment_parent, formatter)
@@ -301,38 +283,21 @@ pub(crate) fn debug_attachment(
 /// # Arguments
 ///
 /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-/// - `report_formatting_alternate`: Whether the report in which this attachment will be embedded is being formatted using the [`alternate`] mode
 ///
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug
-/// [`alternate`]: core::fmt::Formatter::alternate
 pub(crate) fn get_preferred_formatting_style(
     attachment: ReportAttachmentRef<'_, dyn Any>,
-    attachment_parent: AttachmentParent<'_>,
     report_formatting_function: FormattingFunction,
-    report_formatting_alternate: bool,
 ) -> AttachmentFormattingStyle {
-    if let Some(inner) = attachment.downcast_inner::<Preformatted>()
+    if let Some(inner) = attachment.downcast_inner::<PreformattedAttachment>()
         && let Some(hook) = get_hook(inner.original_type_id())
     {
-        hook.preferred_formatting_style(
-            attachment,
-            attachment_parent,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        hook.preferred_formatting_style(attachment, report_formatting_function)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
-        hook.preferred_formatting_style(
-            attachment,
-            attachment_parent,
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        hook.preferred_formatting_style(attachment, report_formatting_function)
     } else {
-        attachment.preferred_formatting_style_unhooked(
-            report_formatting_function,
-            report_formatting_alternate,
-        )
+        attachment.preferred_formatting_style_unhooked(report_formatting_function)
     }
 }
 
