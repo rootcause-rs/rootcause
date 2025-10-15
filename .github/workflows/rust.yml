@@ -51,8 +51,17 @@ jobs:
         run: |
           export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
 
+          # Always run regular tests
           cargo miri test --all-targets
+          cargo miri test --all-features --all-targets
+
+          # Always run basic doctests
           cargo miri test --doc
 
-          cargo miri test --all-features --all-targets
-          cargo miri test --all-features --doc
+          # Only run rootcause doctests with all features on scheduled runs or manual dispatch (slow due to backtraces)
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Running rootcause doctests with all features (scheduled/manual run)"
+            cargo miri test --doc --all-features
+          else
+            echo "Skipping rootcause doctests with all features (too slow for push/PR events)"
+          fi
