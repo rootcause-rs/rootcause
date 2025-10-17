@@ -15,13 +15,13 @@
 //!
 //! ## Usage
 //!
-//! The [`BacktraceCollector`] can be registered as a report creation hook to automatically
+//! The [`BacktraceCollector`] can be registered as an attachment collector hook to automatically
 //! capture backtraces for all reports:
 //!
 //! ```rust
-//! use rootcause::hooks::{register_report_creation_hook, attachment_collectors::backtrace::BacktraceCollector};
+//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::backtrace::BacktraceCollector};
 //!
-//! register_report_creation_hook(BacktraceCollector);
+//! register_attachment_collector_hook(BacktraceCollector::default());
 //! ```
 //!
 //! Once registered, all reports will automatically include a backtrace showing the
