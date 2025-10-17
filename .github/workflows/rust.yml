@@ -1,4 +1,4 @@
-name: CI
+name: Tests
 
 env:
   CARGO_TERM_COLOR: always

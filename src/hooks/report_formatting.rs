@@ -400,7 +400,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         let mut tmp_attachments_buffer = TmpAttachmentsBuffer::default();
         let mut is_first = true;
         self.line_prefix = self.config.report_line_prefix_always.to_string();
-        for &report in reports {
+        for &report in reports.iter() {
             if is_first {
                 is_first = false;
             } else {

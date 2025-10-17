@@ -82,9 +82,6 @@
 //! If you want an experience similar to [`error-stack`], you should use `Report<SomeContextType>`,
 //! which is the same as `Report<SomeContextType, Mutable, SendSync>`.
 //!
-//! [`anyhow`]: https://docs.rs/anyhow
-//! [`error-stack`]: https://docs.rs/error-stack
-//!
 //! #### Tables of Report Variants
 //! ##### Context Variants
 //! | Variant                       | Context of root node | Context of internal nodes |
@@ -152,6 +149,9 @@
 //! [`Preformatted`]: crate::preformatted::Preformatted
 //! [`Mutable`]: crate::markers::Mutable
 //! [`SendSync`]: crate::markers::SendSync
+//! [`anyhow`]: https://docs.rs/anyhow
+//! [`thiserror`]: https://docs.rs/thiserror
+//! [`error-stack`]: https://docs.rs/error-stack
 
 extern crate alloc;
 
@@ -194,19 +194,7 @@ pub mod __private {
     #[inline]
     #[cold]
     #[must_use]
-    pub fn must_use<C, O, T>(report: Report<C, O, T>) -> Report<C, O, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
-        report
-    }
-
-    #[doc(hidden)]
-    #[inline]
-    #[cold]
-    #[must_use]
+    #[track_caller]
     pub fn format_report(
         args: fmt::Arguments<'_>,
     ) -> Report<dyn Any, markers::Mutable, markers::SendSync> {
@@ -284,6 +272,7 @@ pub mod __private {
 
         #[doc(hidden)]
         #[must_use]
+        #[track_caller]
         pub fn new_with_handler_and_thread_marker<H, T, C>(
             _handler: H,
             _thread_safety: T,
@@ -299,6 +288,7 @@ pub mod __private {
 
         #[doc(hidden)]
         #[must_use]
+        #[track_caller]
         pub fn new_with_handler<H, T, C>(_handler: H, context: C) -> Report<C, markers::Mutable, T>
         where
             H: handlers::ContextHandler<C>,
