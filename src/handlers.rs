@@ -99,7 +99,7 @@ where
     }
 
     fn display(_context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "An object of type {}", core::any::type_name::<C>())
+        write!(f, "Context of type `{}`", core::any::type_name::<C>())
     }
 
     fn debug(context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -112,7 +112,7 @@ where
     A: core::fmt::Debug,
 {
     fn display(_context: &A, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "An object of type {}", core::any::type_name::<A>())
+        write!(f, "Attachment of type `{}`", core::any::type_name::<A>())
     }
 
     fn debug(context: &A, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {

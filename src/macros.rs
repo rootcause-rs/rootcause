@@ -93,6 +93,9 @@ macro_rules! report {
 ///
 /// This is equivalent to writing `return Err(report!(...).into());`
 ///
+/// [`bail!`]: https://docs.rs/anyhow/latest/anyhow/macro.bail.html
+/// [`anyhow`]: https://docs.rs/anyhow/latest/anyhow/
+///
 /// # Examples
 ///
 /// ```

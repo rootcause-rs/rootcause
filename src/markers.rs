@@ -152,7 +152,7 @@ impl ReportOwnershipMarker for Cloneable {
 }
 
 /// Marker trait for types that can be used as the reference ownership marker
-/// for a [`ReportRef`](crate::report::ReportRef).
+/// for a [`ReportRef`](crate::ReportRef).
 ///
 /// This trait is implemented for [`Cloneable`] and [`Uncloneable`].
 ///

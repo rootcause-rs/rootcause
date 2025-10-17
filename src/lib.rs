@@ -1,12 +1,17 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::missing_safety_doc)]
-// #![warn(
-// missing_docs,
-// missing_doc_code_examples,
-// clippy::missing_safety_doc,
-// clippy::undocumented_unsafe_blocks,
-// clippy::missing_docs_in_private_items
-// )]
+#![forbid(
+//     missing_docs,
+    clippy::alloc_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::std_instead_of_core,
+//     clippy::missing_safety_doc,
+//     clippy::missing_docs_in_private_items,
+//     clippy::undocumented_unsafe_blocks,
+//     clippy::multiple_unsafe_ops_per_block,
+    rustdoc::invalid_rust_codeblocks,
+    rustdoc::broken_intra_doc_links
+)]
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
 //!
 //! ## Overview
@@ -82,9 +87,6 @@
 //! If you want an experience similar to [`error-stack`], you should use `Report<SomeContextType>`,
 //! which is the same as `Report<SomeContextType, Mutable, SendSync>`.
 //!
-//! [`anyhow`]: https://docs.rs/anyhow
-//! [`error-stack`]: https://docs.rs/error-stack
-//!
 //! #### Tables of Report Variants
 //! ##### Context Variants
 //! | Variant                       | Context of root node | Context of internal nodes |
@@ -137,11 +139,11 @@
 //!   - You can allocate a new root node and set the current node as a child of the
 //!     new node. The new root node will be [`Mutable`]. One method for allocating a
 //!     new root node is to call [`Report::context`].
-//! - From `Report<*, *, *>` to `Report<Preformatted, Mutable, SendSync>`:
+//! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable, SendSync>`:
 //!   - You can preformat the entire the report using [`Report::preformat`]. This creates
 //!     an entirely new report that has the same structure and will look the same as the
 //!     current one if printed, but all contexts and attachments will be replaced with a
-//!     [`Preformatted`] version.
+//!     [`PreformattedContext`] version.
 //!
 //! # Acknowledgements
 //!
@@ -149,9 +151,12 @@
 //! libraries in the Rust ecosystem, including [`anyhow`], [`thiserror`], and
 //! [`error-stack`].
 //!
-//! [`Preformatted`]: crate::preformatted::Preformatted
+//! [`PreformattedContext`]: crate::preformatted::PreformattedContext
 //! [`Mutable`]: crate::markers::Mutable
 //! [`SendSync`]: crate::markers::SendSync
+//! [`anyhow`]: https://docs.rs/anyhow
+//! [`thiserror`]: https://docs.rs/thiserror
+//! [`error-stack`]: https://docs.rs/error-stack
 
 extern crate alloc;
 
@@ -194,19 +199,7 @@ pub mod __private {
     #[inline]
     #[cold]
     #[must_use]
-    pub fn must_use<C, O, T>(report: Report<C, O, T>) -> Report<C, O, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
-        report
-    }
-
-    #[doc(hidden)]
-    #[inline]
-    #[cold]
-    #[must_use]
+    #[track_caller]
     pub fn format_report(
         args: fmt::Arguments<'_>,
     ) -> Report<dyn Any, markers::Mutable, markers::SendSync> {
@@ -284,6 +277,7 @@ pub mod __private {
 
         #[doc(hidden)]
         #[must_use]
+        #[track_caller]
         pub fn new_with_handler_and_thread_marker<H, T, C>(
             _handler: H,
             _thread_safety: T,
@@ -299,6 +293,7 @@ pub mod __private {
 
         #[doc(hidden)]
         #[must_use]
+        #[track_caller]
         pub fn new_with_handler<H, T, C>(_handler: H, context: C) -> Report<C, markers::Mutable, T>
         where
             H: handlers::ContextHandler<C>,

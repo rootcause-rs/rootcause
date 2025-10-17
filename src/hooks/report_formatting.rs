@@ -6,6 +6,7 @@ use core::{
     any::Any,
     fmt::{self, Formatter, Write},
 };
+use unsize::CoerceUnsize;
 
 use hashbrown::DefaultHashBuilder;
 use indexmap::IndexMap;
@@ -400,7 +401,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         let mut tmp_attachments_buffer = TmpAttachmentsBuffer::default();
         let mut is_first = true;
         self.line_prefix = self.config.report_line_prefix_always.to_string();
-        for &report in reports {
+        for &report in reports.iter() {
             if is_first {
                 is_first = false;
             } else {
@@ -661,4 +662,9 @@ pub(crate) fn format_report(
         .as_deref()
         .unwrap_or(const { &DefaultReportFormatter::DEFAULT });
     hook.format_report(report, formatter, report_formatting_function)
+}
+
+pub fn register_report_formatter_hook(hook: impl ReportFormatterHook) {
+    *HOOK.write().get() =
+        Some(Arc::new(hook).unsize(unsize::Coercion!(to dyn ReportFormatterHook)));
 }

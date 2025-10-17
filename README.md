@@ -11,6 +11,21 @@ A flexible, ergonomic, and inspectable error reporting library for Rust.
 
 This crate provides a structured way to represent and work with errors and their context. The main goal is to enable you to build rich, structured error reports that automatically capture not just what went wrong, but also the context and supporting data at each step.
 
+It allows printing pretty, tree-structured reports like this one:
+
+```
+ ● Unable to fetch document http://example.com
+ ├ examples/readme-example.rs:45:21
+ │
+ ├─ ● HTTP error: 400 Bad Request: Could not parse JSON payload
+ │  ├ examples/readme-example.rs:32:9
+ │  ╰ Attempt #1
+ │
+ ╰─ ● HTTP error: 500 Internal server error
+    ├ examples/readme-example.rs:32:9
+    ╰ Attempt #2
+```
+
 ## Project Goals
 
 - **Ergonomic**: The `?` operator should work with most error types, even ones not designed for this library
@@ -79,6 +94,10 @@ fn main() {
 ```rust
 use rootcause::prelude::*;
 
+// You might also want to implement `std::fmt::Display`,
+// as otherwise this example will print out:
+//   ● Context of type `example::MyError`
+//   ╰ src/main.rs:19:9
 #[derive(Debug)]
 struct MyError {
     code: u32,
@@ -92,6 +111,12 @@ fn typed_error() -> Result<(), Report<MyError>> {
     };
 
     Err(report!(error))
+}
+
+fn main() {
+    if let Err(report) = typed_error() {
+        println!("{report}");
+    }
 }
 ```
 
@@ -187,15 +212,17 @@ Our current Minimum Supported Rust Version is 1.89.0. When adding features, we w
 
 This library was inspired by and draws ideas from several existing error handling libraries in the Rust ecosystem, including [`anyhow`](https://docs.rs/anyhow), [`thiserror`](https://docs.rs/thiserror), and [`error-stack`](https://docs.rs/error-stack).
 
-## License
+#### License
 
-Licensed under either of
+<sup>
+Licensed under either of <a href="LICENSE-APACHE">Apache License, Version
+2.0</a> or <a href="LICENSE-MIT">MIT license</a> at your option.
+</sup>
 
-- Apache License, Version 2.0 ([LICENSE-APACHE](LICENSE-APACHE) or http://www.apache.org/licenses/LICENSE-2.0)
-- MIT license ([LICENSE-MIT](LICENSE-MIT) or http://opensource.org/licenses/MIT)
+<br>
 
-at your option.
-
-### Contribution
-
-Unless you explicitly state otherwise, any contribution intentionally submitted for inclusion in the work by you, as defined in the Apache-2.0 license, shall be dual licensed as above, without any additional terms or conditions.
+<sub>
+Unless you explicitly state otherwise, any contribution intentionally submitted
+for inclusion in this crate by you, as defined in the Apache-2.0 license, shall
+be dual licensed as above, without any additional terms or conditions.
+</sub>

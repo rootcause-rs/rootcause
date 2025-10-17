@@ -1,3 +1,13 @@
+//! Vtable for type-erased report operations.
+//!
+//! This module contains the [`ReportVtable`] which enables calling handler methods on
+//! reports when their concrete context type `C` and handler type `H` have been erased.
+//! The vtable stores function pointers that dispatch to the correct typed implementations.
+//!
+//! This module encapsulates the fields of the [`ReportVtable`] so that they cannot be accessed
+//! directly without going through the proper methods which specifies which safety invariants are
+//! required to call them safely.
+
 use core::{any::TypeId, ptr::NonNull};
 
 use crate::{
@@ -14,14 +24,23 @@ use crate::{
 /// Contains function pointers for performing operations on reports without
 /// knowing their concrete type at compile time.
 pub(super) struct ReportVtable {
+    /// Gets the [`TypeId`] of the context type that was used to create this [`ReportVtable`].
     type_id: fn() -> TypeId,
+    /// Gets the [`TypeId`] of the handler that was used to create this [`ReportVtable`].
     handler_type_id: fn() -> TypeId,
+    /// Method to drop the [`triomphe::Arc<ReportData<C>>`] instance pointed to by this pointer.
     drop: unsafe fn(NonNull<ReportData<Erased>>),
+    /// Clones the `triomphe::Arc<ReportData<C>>` pointed to by this pointer.
     clone_arc: unsafe fn(NonNull<ReportData<Erased>>) -> RawReport,
+    /// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to by this pointer.
     strong_count: unsafe fn(NonNull<ReportData<Erased>>) -> usize,
+    /// Returns a reference to the source of the error using the `source` method on the handler.
     source: unsafe fn(RawReportRef<'_>) -> Option<&(dyn core::error::Error + 'static)>,
+    /// Formats the report using the `display` method on the handler.
     display: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
+    /// Formats the report using the `debug method on the handler.
     debug: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
+    /// Get the formatting style preferred by the context when formatted as part of a report.
     preferred_context_formatting_style:
         unsafe fn(RawReportRef<'_>, FormattingFunction) -> ContextFormattingStyle,
 }
@@ -52,7 +71,7 @@ impl ReportVtable {
         (self.handler_type_id)()
     }
 
-    /// Drops the [`triomphe::Arc<ReportData<C>>`] instance pointed to by this pointer.
+    /// Drops the `triomphe::Arc<ReportData<C>>` instance pointed to by this pointer.
     ///
     /// # Safety
     ///
@@ -96,7 +115,7 @@ impl ReportVtable {
     ///   into a pointer using [`triomphe::Arc::into_raw`].
     /// - The context type `C` stored in the [`ReportData`] must match the `C` used when creating this [`ReportVtable`].
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
-        // SAFETY: We know that `self.clone_arc` points to the function `clone_arc::<C>` below.
+        // SAFETY: We know that `self.strong_count` points to the function `strong_count::<C>` below.
         // That function has three requirements, all of which are guaranteed by our caller:
         // - The pointer must come from `triomphe::Arc::into_raw`
         // - The context type `C` must match the stored type
@@ -208,14 +227,13 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
     core::mem::drop(arc);
 }
 
-/// Clones the [`triomphe::Arc<ReportData<C>>`] instance pointed to by this pointer.
+/// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to by this pointer.
 ///
 /// # Safety
 ///
 /// - The caller must ensure that the pointer comes from an [`triomphe::Arc<ReportData<C>>`], which was turned
 ///   into a pointer using [`triomphe::Arc::into_raw`].
-/// - The context type `C` must also match the actual context stored in the [`ReportData`].
-/// - There must be no external assumptions that there is a unique ownership of the [`triomphe::Arc`].
+/// - The context type `C` stored in the [`ReportData`] must match the `C` used when creating this [`ReportVtable`].
 unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 
@@ -287,13 +305,13 @@ unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
     H::preferred_formatting_style(context, report_formatting_function)
 }
 
-/// Gets the strong count of the underlying [`triomphe::Arc`]
+/// Gets the preferred formatting style using the [`H::preferred_formatting_style`] function.
+///
+/// [`H::preferred_formatting_style`]: ContextHandler::preferred_formatting_style
 ///
 /// # Safety
 ///
-/// - The caller must ensure that the pointer comes from an [`triomphe::Arc<ReportData<C>>`], which was turned
-///   into a pointer using [`triomphe::Arc::into_raw`].
-/// - The context type `C` must also match the actual context stored in the [`ReportData`].
+/// The caller must ensure that the type `A` matches the actual attachment type stored in the [`AttachmentData`].
 unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 

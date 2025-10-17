@@ -1,3 +1,32 @@
+//! Stack backtrace attachment collector.
+//!
+//! This module provides functionality to automatically capture and attach stack backtraces
+//! to reports when they are created. This is useful for debugging to see the call stack
+//! that led to an error.
+//!
+//! ## Feature Requirement
+//!
+//! This module is only available when the `backtrace` feature is enabled in `Cargo.toml`:
+//!
+//! ```toml
+//! [dependencies]
+//! rootcause = { version = "0.3", features = ["backtrace"] }
+//! ```
+//!
+//! ## Usage
+//!
+//! The [`BacktraceCollector`] can be registered as an attachment collector hook to automatically
+//! capture backtraces for all reports:
+//!
+//! ```rust
+//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::backtrace::BacktraceCollector};
+//!
+//! register_attachment_collector_hook(BacktraceCollector::default());
+//! ```
+//!
+//! Once registered, all reports will automatically include a backtrace showing the
+//! call stack from where the report was created.
+
 use core::fmt;
 use std::{
     path::{Path, PathBuf},
@@ -12,20 +41,39 @@ use rootcause_internals::handlers::{
 
 use crate::hooks::AttachmentCollectorHook;
 
+/// Stack backtrace information.
+///
+/// Contains a collection of stack frames representing the call stack
+/// at the point where a report was created.
 pub struct Backtrace {
+    /// The stack frames in the backtrace, ordered from most recent to oldest.
     pub frames: Vec<Frame>,
 }
 
+/// A single stack frame in a backtrace.
+///
+/// Represents one function call in the call stack, including symbol information
+/// and source location if available.
 pub struct Frame {
+    /// The demangled symbol name for this frame.
     pub sym_demangled: String,
+    /// File path information for this frame, if available.
     pub frame_path: Option<FramePath>,
+    /// Line number in the source file, if available.
     pub lineno: Option<u32>,
+    /// Whether this frame was detected as part of tokio or std library code.
     pub detected_as_tokio_or_std: bool,
 }
 
+/// File path information for a stack frame.
+///
+/// Contains the raw path and processed components for better display formatting.
 pub struct FramePath {
+    /// The raw file path from the debug information.
     pub raw_path: PathBuf,
+    /// Common path prefix information for shortening display.
     pub prefix: Option<FramePrefix>,
+    /// The remaining path suffix after removing the prefix.
     pub suffix: String,
 }
 

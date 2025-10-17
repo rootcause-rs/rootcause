@@ -89,6 +89,18 @@ where
     }
 }
 
+impl<'a, C, T> Extend<Report<C, Cloneable, T>> for ReportCollectionMut<'a, C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn extend<I: IntoIterator<Item = Report<C, Cloneable, T>>>(&mut self, iter: I) {
+        for report in iter {
+            self.push(report);
+        }
+    }
+}
+
 impl<'a, C, T> IntoIterator for ReportCollectionMut<'a, C, T>
 where
     C: markers::ObjectMarker + ?Sized,

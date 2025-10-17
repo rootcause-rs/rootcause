@@ -15,7 +15,7 @@ use crate::{
     util::format_helper,
 };
 
-/// An attachment to be attached to a [`Report`](crate::report::Report).
+/// An attachment to be attached to a [`Report`](crate::Report).
 ///
 /// Attachments can hold any type of data, and can be formatted using custom handlers.
 /// The attachment can be marked as either `SendSync` or `Local`, indicating whether it is safe to
@@ -123,9 +123,6 @@ where
     /// that the inner attachment actually has the type `A`.
     ///
     /// To get back the attachment with a concrete `A` you can use the method [`ReportAttachment::downcast_attachment`].
-    ///
-    /// # Examples
-    /// ```
     pub fn into_dyn_any(self) -> ReportAttachment<dyn Any, T> {
         unsafe { ReportAttachment::from_raw(self.into_raw()) }
     }

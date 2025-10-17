@@ -819,6 +819,6 @@ mod tests {
         let report = report!(non_send_sync_error);
         let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
         let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
-        assert_eq!(format!("{report}"), format!("{preformatted}"));
+        assert_eq!(alloc::format!("{report}"), alloc::format!("{preformatted}"));
     }
 }

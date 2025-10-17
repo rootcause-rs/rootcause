@@ -148,7 +148,7 @@ where
 #[track_caller]
 fn default_hooks() -> HookSet {
     #[allow(unused_mut)]
-    let mut hooks = vec![attachment_hook_to_untyped::<_, LocationHandler, _>(
+    let mut hooks = alloc::vec![attachment_hook_to_untyped::<_, LocationHandler, _>(
         LocationCollector,
     )];
 
