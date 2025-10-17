@@ -193,9 +193,6 @@ pub mod __private {
     #[doc(hidden)]
     pub use core::{any::Any, format_args, result::Result::Err};
 
-    #[cfg(doc)]
-    pub use anyhow;
-
     use crate::{Report, handlers, markers};
 
     #[doc(hidden)]

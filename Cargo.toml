@@ -13,7 +13,6 @@ members = ["rootcause-internals"]
 default = []
 std = ["indexmap/std", "triomphe/std"]
 backtrace = ["dep:backtrace", "dep:regex", "std"]
-docs = ["dep:anyhow"]
 
 [dependencies]
 backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
