@@ -35,6 +35,9 @@ jobs:
       - name: Run tests
         run: cargo test --all-targets && cargo test --all-targets --all-features
 
+      - name: Run docs
+        run: cargo doc --no-deps -p rootcause-internals -p rootcause --all-features
+
   miri:
     runs-on: ubuntu-latest
 

@@ -26,9 +26,9 @@ use crate::{
 /// Note that unlike owned reports, mutable references cannot be consumed for
 /// chaining operations like [`Report::context`] or [`Report::attach`].
 ///
-/// [`Report`]: crate::report::Report
-/// [`Report::context`]: crate::report::Report::context
-/// [`Report::attach`]: crate::report::Report::attach
+/// [`Report`]: crate::Report
+/// [`Report::context`]: crate::Report::context
+/// [`Report::attach`]: crate::Report::attach
 #[repr(transparent)]
 pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
 where

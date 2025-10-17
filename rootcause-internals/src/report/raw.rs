@@ -4,7 +4,7 @@
 //! `ptr` field is altered after creation (besides invalidating it after it should no longer be used).
 
 use alloc::vec::Vec;
-use core::{any::TypeId, marker::PhantomData, ptr::NonNull};
+use core::{any::TypeId, ptr::NonNull};
 
 use crate::{
     attachment::RawAttachment,
@@ -25,8 +25,8 @@ use crate::{
 /// us to type-erase the `C`.
 #[repr(transparent)]
 pub struct RawReport {
+    /// Pointer to the inner report data
     ptr: NonNull<ReportData<Erased>>,
-    _marker: core::marker::PhantomData<ReportData<Erased>>,
 }
 
 impl RawReport {
@@ -38,10 +38,7 @@ impl RawReport {
         // SAFETY: Triomphe guarantees that `Arc::into_raw` returns a non-null pointer
         let ptr: NonNull<ReportData<Erased>> = unsafe { NonNull::new_unchecked(ptr) };
 
-        Self {
-            ptr,
-            _marker: PhantomData,
-        }
+        Self { ptr }
     }
 
     /// Consumes the RawReport without decrementing the reference count and returns
@@ -114,7 +111,10 @@ impl core::ops::Drop for RawReport {
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct RawReportRef<'a> {
+    /// Pointer to the inner report data
     ptr: NonNull<ReportData<Erased>>,
+    /// Marker to tell the compiler that we should
+    /// behave the same as a `&'a ReportData<Erased>`
     _marker: core::marker::PhantomData<&'a ReportData<Erased>>,
 }
 
@@ -247,7 +247,10 @@ impl<'a> RawReportRef<'a> {
 /// [`&'a mut ReportData<C>`]: ReportData
 #[repr(transparent)]
 pub struct RawReportMut<'a> {
+    /// Pointer to the inner report data
     ptr: NonNull<ReportData<Erased>>,
+    /// Marker to tell the compiler that we should
+    /// behave the same as a `&'a mut ReportData<Erased>`
     _marker: core::marker::PhantomData<&'a mut ReportData<Erased>>,
 }
 

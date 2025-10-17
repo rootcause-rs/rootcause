@@ -28,7 +28,7 @@ struct WatHandler;
 impl AttachmentHook<Wat> for WatHandler {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
+        _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,
         _report_formatting_function: FormattingFunction,
     ) -> handlers::AttachmentFormattingStyle {
         handlers::AttachmentFormattingStyle {

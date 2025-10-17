@@ -1,3 +1,13 @@
+//! Vtable for type-erased attachment operations.
+//!
+//! This module contains the [`AttachmentVtable`] which enables calling handler methods on
+//! attachments when their concrete attachment type `A` and handler type `H` have been erased.
+//! The vtable stores function pointers that dispatch to the correct typed implementations.
+//!
+//! This module encapsulates the fields of the [`AttachmentVtable`] so that they cannot be accessed
+//! directly without going through the proper methods which specifies which safety invariants are
+//! required to call them safely.
+
 use alloc::boxed::Box;
 use core::{any::TypeId, ptr::NonNull};
 

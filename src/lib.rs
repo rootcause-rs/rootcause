@@ -9,6 +9,8 @@
 //     clippy::missing_docs_in_private_items,
 //     clippy::undocumented_unsafe_blocks,
 //     clippy::multiple_unsafe_ops_per_block,
+    rustdoc::invalid_rust_codeblocks,
+    rustdoc::broken_intra_doc_links
 )]
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
 //!
@@ -137,11 +139,11 @@
 //!   - You can allocate a new root node and set the current node as a child of the
 //!     new node. The new root node will be [`Mutable`]. One method for allocating a
 //!     new root node is to call [`Report::context`].
-//! - From `Report<*, *, *>` to `Report<Preformatted, Mutable, SendSync>`:
+//! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable, SendSync>`:
 //!   - You can preformat the entire the report using [`Report::preformat`]. This creates
 //!     an entirely new report that has the same structure and will look the same as the
 //!     current one if printed, but all contexts and attachments will be replaced with a
-//!     [`Preformatted`] version.
+//!     [`PreformattedContext`] version.
 //!
 //! # Acknowledgements
 //!
@@ -149,7 +151,7 @@
 //! libraries in the Rust ecosystem, including [`anyhow`], [`thiserror`], and
 //! [`error-stack`].
 //!
-//! [`Preformatted`]: crate::preformatted::Preformatted
+//! [`PreformattedContext`]: crate::preformatted::PreformattedContext
 //! [`Mutable`]: crate::markers::Mutable
 //! [`SendSync`]: crate::markers::SendSync
 //! [`anyhow`]: https://docs.rs/anyhow
@@ -190,6 +192,9 @@ pub mod __private {
     pub use alloc::format;
     #[doc(hidden)]
     pub use core::{any::Any, format_args, result::Result::Err};
+
+    #[cfg(doc)]
+    pub use anyhow;
 
     use crate::{Report, handlers, markers};
 

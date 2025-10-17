@@ -86,8 +86,8 @@ impl core::ops::Drop for RawAttachment {
 pub struct RawAttachmentRef<'a> {
     /// Pointer to the inner attachment data
     ptr: NonNull<AttachmentData<Erased>>,
-    /// Marker to tell the compiler that we have
-    /// the same variance as a `&'a AttachmentData<Erased>`
+    /// Marker to tell the compiler that we should
+    /// behave the same as a `&'a AttachmentData<Erased>`
     _marker: core::marker::PhantomData<&'a AttachmentData<Erased>>,
 }
 
