@@ -645,4 +645,10 @@ mod tests {
         // Both pointers should point to the same location
         assert_eq!(immut_ptr, mut_ptr as *const _ as usize);
     }
+    #[test]
+    fn test_send_sync() {
+        static_assertions::assert_not_impl_any!(RawReport: Send, Sync);
+        static_assertions::assert_not_impl_any!(RawReportRef<'_>: Send, Sync);
+        static_assertions::assert_not_impl_any!(RawReportMut<'_>: Send, Sync);
+    }
 }

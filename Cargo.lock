@@ -333,6 +333,7 @@ dependencies = [
 name = "rootcause-internals"
 version = "0.3.1"
 dependencies = [
+ "static_assertions",
  "triomphe",
 ]
 

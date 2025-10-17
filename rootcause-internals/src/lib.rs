@@ -1,8 +1,11 @@
 #![no_std]
 #![forbid(
     missing_docs,
-    clippy::missing_docs_in_private_items,
+    clippy::alloc_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::std_instead_of_core,
     clippy::missing_safety_doc,
+    clippy::missing_docs_in_private_items,
     clippy::undocumented_unsafe_blocks,
     clippy::multiple_unsafe_ops_per_block
 )]

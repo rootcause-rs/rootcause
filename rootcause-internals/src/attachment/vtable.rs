@@ -12,11 +12,17 @@ use crate::{
 /// Contains function pointers for performing operations on attachments without
 /// knowing their concrete type at compile time.
 pub(super) struct AttachmentVtable {
+    /// Gets the [`TypeId`] of the attachment type that was used to create this [`AttachmentVtable`].
     type_id: fn() -> TypeId,
+    /// Gets the [`TypeId`] of the handler that was used to create this [`AttachmentVtable`].
     handler_type_id: fn() -> TypeId,
+    /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this pointer.
     drop: unsafe fn(NonNull<AttachmentData<Erased>>),
+    /// Formats the report using the `display` method on the handler.
     display: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
+    /// Formats the report using the `debug` method on the handler.
     debug: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
+    /// Get the formatting style preferred by the context when formatted as part of a report.
     preferred_formatting_style:
         unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
 }
@@ -44,7 +50,7 @@ impl AttachmentVtable {
         (self.handler_type_id)()
     }
 
-    /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this pointer.
+    /// Drops the `Box<AttachmentData<A>>` instance pointed to by this pointer.
     ///
     /// # Safety
     ///

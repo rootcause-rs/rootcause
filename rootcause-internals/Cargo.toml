@@ -9,5 +9,8 @@ repository = "https://github.com/rootcause-rs/rootcause"
 [dependencies]
 triomphe = "0.1.15"
 
+[dev-dependencies]
+static_assertions = "1.1.0"
+
 [package.metadata.docs.rs]
 rustdoc-args = ["--document-private-items"]

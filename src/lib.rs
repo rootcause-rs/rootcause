@@ -1,12 +1,15 @@
 #![cfg_attr(not(feature = "std"), no_std)]
 #![allow(clippy::missing_safety_doc)]
-// #![warn(
-// missing_docs,
-// missing_doc_code_examples,
-// clippy::missing_safety_doc,
-// clippy::undocumented_unsafe_blocks,
-// clippy::missing_docs_in_private_items
-// )]
+#![forbid(
+//     missing_docs,
+    clippy::alloc_instead_of_core,
+    clippy::std_instead_of_alloc,
+    clippy::std_instead_of_core,
+//     clippy::missing_safety_doc,
+//     clippy::missing_docs_in_private_items,
+//     clippy::undocumented_unsafe_blocks,
+//     clippy::multiple_unsafe_ops_per_block,
+)]
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
 //!
 //! ## Overview

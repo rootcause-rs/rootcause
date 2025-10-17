@@ -4,7 +4,7 @@
 //! `ptr` field is altered after creation (besides invalidating it after it should no longer be used).
 
 use alloc::boxed::Box;
-use core::{any::TypeId, marker::PhantomData, ptr::NonNull};
+use core::{any::TypeId, ptr::NonNull};
 
 use crate::{
     attachment::data::AttachmentData,
@@ -24,8 +24,8 @@ use crate::{
 /// us to type-erase the `A`.
 #[repr(transparent)]
 pub struct RawAttachment {
+    /// Pointer to the inner attachment data
     ptr: NonNull<AttachmentData<Erased>>,
-    _marker: core::marker::PhantomData<AttachmentData<Erased>>,
 }
 
 impl RawAttachment {
@@ -42,10 +42,7 @@ impl RawAttachment {
         // SAFETY: `Box::into_raw` returns a non-null pointer
         let ptr: NonNull<AttachmentData<Erased>> = unsafe { NonNull::new_unchecked(ptr) };
 
-        Self {
-            ptr,
-            _marker: PhantomData,
-        }
+        Self { ptr }
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
@@ -87,7 +84,10 @@ impl core::ops::Drop for RawAttachment {
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct RawAttachmentRef<'a> {
+    /// Pointer to the inner attachment data
     ptr: NonNull<AttachmentData<Erased>>,
+    /// Marker to tell the compiler that we have
+    /// the same variance as a `&'a AttachmentData<Erased>`
     _marker: core::marker::PhantomData<&'a AttachmentData<Erased>>,
 }
 
@@ -340,5 +340,11 @@ mod tests {
         fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             (self.formatter_fn)(f)
         }
+    }
+
+    #[test]
+    fn test_send_sync() {
+        static_assertions::assert_not_impl_any!(RawAttachment: Send, Sync);
+        static_assertions::assert_not_impl_any!(RawAttachmentRef<'_>: Send, Sync);
     }
 }

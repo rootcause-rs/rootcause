@@ -94,6 +94,10 @@ fn main() {
 ```rust
 use rootcause::prelude::*;
 
+// You might also want to implement `std::fmt::Display`,
+// as otherwise this example will print out:
+//   ● Context of type `example::MyError`
+//   ╰ src/main.rs:19:9
 #[derive(Debug)]
 struct MyError {
     code: u32,
@@ -107,6 +111,12 @@ fn typed_error() -> Result<(), Report<MyError>> {
     };
 
     Err(report!(error))
+}
+
+fn main() {
+    if let Err(report) = typed_error() {
+        println!("{report}");
+    }
 }
 ```
 
