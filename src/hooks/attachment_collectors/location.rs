@@ -9,9 +9,9 @@
 //! attach location information to all reports:
 //!
 //! ```rust
-//! use rootcause::hooks::{register_report_creation_hook, attachment_collectors::location::LocationCollector};
+//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
 //!
-//! register_report_creation_hook(LocationCollector);
+//! register_attachment_collector_hook(LocationCollector);
 //! ```
 //!
 //! Once registered, all reports will automatically include the source location where
@@ -74,10 +74,10 @@ impl AttachmentHandler<Location> for LocationHandler {
 /// ## Example
 ///
 /// ```rust
-/// use rootcause::hooks::{register_report_creation_hook, attachment_collectors::location::LocationCollector};
+/// use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
 ///
 /// // Register to automatically collect location for all reports
-/// register_report_creation_hook(LocationCollector);
+/// register_attachment_collector_hook(LocationCollector);
 /// ```
 pub struct LocationCollector;
 

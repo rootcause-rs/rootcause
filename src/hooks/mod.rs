@@ -77,7 +77,7 @@
 //!         report: rootcause::ReportRef<'_, MyError, rootcause::markers::Uncloneable, rootcause::markers::Local>,
 //!         formatter: &mut std::fmt::Formatter<'_>,
 //!     ) -> std::fmt::Result {
-//!         let context = report.context();
+//!         let context = report.current_context();
 //!         write!(formatter, "Error {}: {}", context.code, context.message)
 //!     }
 //! }
@@ -99,11 +99,13 @@
 //! impl ReportCreationHook for DebugInfoCollector {
 //!     fn on_sendsync_creation(&self, mut report: rootcause::ReportMut<'_, dyn std::any::Any, rootcause::markers::SendSync>) {
 //!         // Automatically attach debug information
-//!         report.attach("Debug info collected");
+//!         let attachment = rootcause::report_attachment::ReportAttachment::new("Debug info collected");
+//!         report.attachments_mut().push(attachment.into_dyn_any());
 //!     }
 //!
 //!     fn on_local_creation(&self, mut report: rootcause::ReportMut<'_, dyn std::any::Any, rootcause::markers::Local>) {
-//!         report.attach("Local debug info");
+//!         let attachment = rootcause::report_attachment::ReportAttachment::new("Local debug info");
+//!         report.attachments_mut().push(attachment.into_dyn_any());
 //!     }
 //! }
 //!
@@ -130,7 +132,7 @@
 //!     ) -> std::fmt::Result {
 //!         for (i, report) in reports.iter().enumerate() {
 //!             if i > 0 { write!(formatter, " -> ")?; }
-//!             write!(formatter, "{}", report.context_formatted_unhooked())?;
+//!             write!(formatter, "{}", report.format_current_context_unhooked())?;
 //!         }
 //!         Ok(())
 //!     }
@@ -154,19 +156,6 @@
 //! All hooks are registered globally and apply to all reports created after registration.
 //! Hook registration is thread-safe and can be done at any time, though it's typically
 //! done during application initialization.
-//!
-//! ## Thread Safety
-//!
-//! All hooks must implement `Send + Sync` since they are stored globally and may be
-//! accessed from multiple threads. The hook system uses thread-safe storage and locking
-//! to ensure safe concurrent access.
-//!
-//! ## Performance Considerations
-//!
-//! - Hooks are called for every relevant operation, so they should be efficient
-//! - Consider the performance impact of attachment collection hooks, especially backtrace collection
-//! - Formatting hooks are only called when reports are actually displayed
-//! - Hook lookup is optimized with type-based dispatch using `TypeId`
 
 pub mod attachment_collectors;
 mod attachment_hooks;
