@@ -43,7 +43,7 @@ fn fetch_document_with_retry(s: &str, retry_count: usize) -> Result<Vec<u8>, Rep
         }
     }
     let mut error = report!("Unable to fetch document {s}");
-    error.children_mut().extend(errors.into_iter());
+    error.children_mut().extend(errors);
     Err(error)
 }
 
