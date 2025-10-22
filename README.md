@@ -71,7 +71,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.4.2"
+rootcause = "0.4.3"
 ```
 
 ### Basic Usage
