@@ -1,11 +1,13 @@
 # rootcause
 
+A flexible, ergonomic, and inspectable error reporting library for Rust.
+
 [![Build Status](https://github.com/rootcause-rs/rootcause/actions/workflows/rust.yml/badge.svg?branch=main)](https://github.com/rootcause-rs/rootcause/actions/workflows/rust.yml)
 [![Crates.io](https://img.shields.io/crates/v/rootcause.svg)](https://crates.io/crates/rootcause)
 [![Documentation](https://docs.rs/rootcause/badge.svg)](https://docs.rs/rootcause)
 [![License: MIT/Apache-2.0](https://img.shields.io/badge/license-MIT%2FApache--2.0-blue.svg)](https://github.com/rootcause-rs/rootcause#license)
 
-A flexible, ergonomic, and inspectable error reporting library for Rust.
+<img src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png" width="192">
 
 ## Overview
 
@@ -68,7 +70,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.3.0"
+rootcause = "0.4.1"
 ```
 
 ### Basic Usage

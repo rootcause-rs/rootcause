@@ -33,12 +33,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "683d7910e743518b0e34f1186f92494becacb047c7b6bf616c96772180fef923"
 
 [[package]]
-name = "anyhow"
-version = "1.0.100"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a23eb6b1614318a8071c9b2521f36b424b2c83db5eb3a0fead4a6c0809af6e61"
-
-[[package]]
 name = "autocfg"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -319,9 +313,8 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "rootcause"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
- "anyhow",
  "backtrace",
  "hashbrown",
  "indexmap",
@@ -338,7 +331,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-internals"
-version = "0.4.0"
+version = "0.4.1"
 dependencies = [
  "static_assertions",
  "triomphe",
