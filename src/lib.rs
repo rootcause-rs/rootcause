@@ -14,6 +14,8 @@
 )]
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
 //!
+//! <img src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png" width="192">
+//!
 //! ## Overview
 //!
 //! This crate provides a structured way to represent and work with errors and their context.
