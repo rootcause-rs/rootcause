@@ -30,6 +30,9 @@ jobs:
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
 
+      - name: Run fmt
+        run: cargo fmt --check
+
       - name: Run clippy
         run: cargo clippy --all-targets -- -D warnings && cargo clippy --all-targets --all-features -- -D warnings
 
@@ -41,6 +44,11 @@ jobs:
 
       - name: Run docs
         run: cargo doc --no-deps -p rootcause-internals -p rootcause --all-features
+
+      - name: Run cargo-deny
+        uses: EmbarkStudios/cargo-deny-action@v2
+        with:
+          rust-version: ${{ matrix.rust }}
 
   miri:
     runs-on: ubuntu-latest

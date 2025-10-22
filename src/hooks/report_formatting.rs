@@ -8,7 +8,6 @@ use core::{
 };
 use unsize::CoerceUnsize;
 
-use hashbrown::DefaultHashBuilder;
 use indexmap::IndexMap;
 use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
@@ -231,7 +230,7 @@ impl Default for DefaultReportFormatter {
 type Appendices<'a> = IndexMap<
     &'static str,
     Vec<(ReportAttachmentRef<'a, dyn Any>, FormattingFunction)>,
-    DefaultHashBuilder,
+    rustc_hash::FxBuildHasher,
 >;
 
 struct DefaultFormatterState<'a, 'b> {

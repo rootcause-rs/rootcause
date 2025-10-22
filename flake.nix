@@ -32,7 +32,7 @@
               targets = [ "x86_64-unknown-linux-gnu" "x86_64-unknown-linux-musl" ];
             })
 
-            cargo-tarpaulin
+            cargo-deny
           ];
 
           RUST_SRC_PATH = "${pkgs.rust.packages.stable.rustPlatform.rustLibSrc}";
