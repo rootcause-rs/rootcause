@@ -18,7 +18,7 @@ use crate::{
     report_attachment::ReportAttachmentRef,
 };
 
-type HookMap = HashMap<TypeId, Arc<dyn UntypedAttachmentHook>>;
+type HookMap = HashMap<TypeId, Arc<dyn UntypedAttachmentHook>, rustc_hash::FxBuildHasher>;
 
 static HOOKS: HookLock<HookMap> = HookLock::new();
 

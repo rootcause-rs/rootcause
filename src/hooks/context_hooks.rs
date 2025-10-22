@@ -17,7 +17,7 @@ use crate::{
     preformatted::PreformattedContext,
 };
 
-type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHook>>;
+type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHook>, rustc_hash::FxBuildHasher>;
 
 static HOOKS: HookLock<HookMap> = HookLock::new();
 

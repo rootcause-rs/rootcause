@@ -15,16 +15,21 @@ std = ["indexmap/std", "triomphe/std"]
 backtrace = ["dep:backtrace", "dep:regex", "std"]
 
 [dependencies]
-backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
-hashbrown = "0.16.0"
+hashbrown = { version = "0.16.0", default-features = false }
 indexmap = { version = "2.12.0", default-features = false }
-regex = { version = "1.12.2", optional = true }
-rootcause-internals = { path = "rootcause-internals", version = "=0.4.2" }
-spin = "0.10.0"
+rustc-hash = { version = "2.1.1", default-features = false }
+spin = { version = "0.10.0", default-features = false, features = ["rwlock"] }
 triomphe = { version = "0.1.15", default-features = false, features = [
   "unsize",
 ] }
 unsize = "1.1.0"
+
+# Optional dependencies
+backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
+regex = { version = "1.12.2", optional = true }
+
+# Internal dependencies
+rootcause-internals = { path = "rootcause-internals", version = "=0.4.2" }
 
 [dev-dependencies]
 indexmap = "2.12.0"
