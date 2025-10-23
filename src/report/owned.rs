@@ -392,7 +392,7 @@ where
     ///
     /// To call this method you must ensure the following:
     ///
-    /// - The context embedded in the [`RawReport`] must match the `C` of the output type, or the `C` of the output type must be `dyn Any`
+    /// - The context embedded in the [`RawReport`] must either be the type `C`, or `C` must be the type `dyn Any`
     /// - The ownership marker must match the actual ownership status of the report. More specifically, if the ownership mode is
     ///   [`Mutable`], then no other references my exist to the report itself, but references to sub-reports are allowed.
     /// - The thread safety marker must match the contents of the report. More specifically if the marker is [`SendSync`], then

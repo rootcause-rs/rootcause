@@ -44,7 +44,8 @@ where
     ///
     /// # Safety
     ///
-    /// The thread safety marker must match the contents of the attachment. More specifically if the marker is `SendSync`, then
+    /// - The attachment embedded in the [`RawAttachment`] must either be the type `A`, or `A` must be the type `dyn Any`.
+    /// - The thread safety marker must match the contents of the attachment. More specifically if the marker is [`SendSync`], then
     /// the inner attachment must be `Send+Sync`
     pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
         ReportAttachment {
@@ -143,7 +144,7 @@ where
 
     /// Returns a reference to the inner attachment.
     ///
-    /// This method is only available when the attachment type
+    /// This method is only available when the attachment type is a specific type, and not `dyn Any`.
     pub fn inner(&self) -> &A
     where
         A: Sized,
@@ -151,22 +152,17 @@ where
         unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
 
+    /// Returns the [`TypeId`] of the inner attachment.
     pub fn inner_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
 
+    /// Returns the [`TypeId`] of the handler used when creating this attachment.
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
-    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |attachment, formatter| attachment.attachment_display(formatter),
-            |attachment, formatter| attachment.attachment_debug(formatter),
-        )
-    }
-
+    /// Formats the attachment with hook processing.
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
         let attachment: ReportAttachmentRef<'_, dyn Any> = self.as_ref().into_dyn_any();
         format_helper(
@@ -176,6 +172,17 @@ where
         )
     }
 
+    /// Formats the attachment without hook processing.
+    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
+        format_helper(
+            self.as_raw_ref(),
+            |attachment, formatter| attachment.attachment_display(formatter),
+            |attachment, formatter| attachment.attachment_debug(formatter),
+        )
+    }
+
+    /// Gets the preferred formatting style for the attachment with hook processing.
+    ///
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
@@ -192,6 +199,8 @@ where
         )
     }
 
+    /// Gets the preferred formatting style for the attachment with hook processing.
+    ///
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
@@ -206,6 +215,7 @@ where
             .preferred_formatting_style(report_formatting_function)
     }
 
+    /// Returns an reference to the attachment.
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
@@ -215,21 +225,55 @@ impl<A> ReportAttachment<A, SendSync>
 where
     A: markers::ObjectMarker,
 {
-    /// Allocates a new [`ReportAttachment`] with the given attachment as the data.
+    /// Creates a new [`ReportAttachment`] with [`SendSync`] thread safety.
     ///
-    /// The new attachment will use the [`handlers::Display`] handler to format the attachment.
+    /// This is a convenience method that calls [`ReportAttachment::new`] with explicit [`SendSync`] thread safety.
+    /// Use this method when you're having trouble with type inference for the thread safety parameter.
     ///
-    /// See [`ReportAttachment::new_custom`] if you want to control the handler used.
+    /// The context will use the [`handlers::Display`] handler to format the attachment.
     pub fn new_sendsync(attachment: A) -> Self
     where
         A: core::fmt::Display + core::fmt::Debug + Send + Sync,
     {
-        Self::new_custom::<handlers::Display>(attachment)
+        Self::new(attachment)
     }
 
+    /// Creates a new [`ReportAttachment`] with [`SendSync`] thread safety and the given handler.
+    ///
+    /// This is a convenience method that calls [`ReportAttachment::new_custom`] with explicit [`SendSync`] thread safety.
+    /// Use this method when you're having trouble with type inference for the thread safety parameter.
     pub fn new_sendsync_custom<H>(attachment: A) -> Self
     where
         A: Send + Sync + 'static,
+        H: AttachmentHandler<A>,
+    {
+        Self::new_custom::<H>(attachment)
+    }
+}
+
+impl<A> ReportAttachment<A, Local>
+where
+    A: markers::ObjectMarker,
+{
+    /// Creates a new [`ReportAttachment`] with [`Local`] thread safety.
+    ///
+    /// This is a convenience method that calls [`ReportAttachment::new`] with explicit [`Local`] thread safety.
+    /// Use this method when you're having trouble with type inference for the thread safety parameter.
+    ///
+    /// The context will use the [`handlers::Display`] handler to format the attachment.
+    pub fn new_local(attachment: A) -> Self
+    where
+        A: core::fmt::Display + core::fmt::Debug,
+    {
+        Self::new_custom::<handlers::Display>(attachment)
+    }
+
+    /// Creates a new [`ReportAttachment`] with [`Local`] thread safety and the given handler.
+    ///
+    /// This is a convenience method that calls [`ReportAttachment::new_custom`] with explicit [`Local`] thread safety.
+    /// Use this method when you're having trouble with type inference for the thread safety parameter.
+    pub fn new_local_custom<H>(attachment: A) -> Self
+    where
         H: AttachmentHandler<A>,
     {
         Self::new_custom::<H>(attachment)
@@ -240,6 +284,35 @@ impl<T> ReportAttachment<dyn Any, T>
 where
     T: markers::ThreadSafetyMarker,
 {
+    /// Attempts to downcast the inner attachment to a specific type.
+    ///
+    /// Returns `Some(&A)` if the current context is of type `A`, otherwise returns `None`.
+    pub fn downcast_inner<A>(&self) -> Option<&A>
+    where
+        A: ObjectMarker,
+    {
+        self.as_raw_ref().attachment_downcast()
+    }
+
+    /// Downcasts the current context to a specific type without checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the inner attachment is actually of type `A`.
+    /// This can be verified by calling [`inner_type_id()`] first.
+    ///
+    /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
+    where
+        A: ObjectMarker,
+    {
+        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+    }
+
+    /// Attempts to downcast the [`ReportAttachment`] to a specific attachment type.
+    ///
+    /// Returns `Ok(attachment)` if the inner attachment is of type `A`,
+    /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
     where
         A: markers::ObjectMarker + ?Sized,
@@ -252,44 +325,19 @@ where
         }
     }
 
+    /// Downcasts the [`ReportAttachment`] to a specific attachment type without checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the inner attachment is actually of type `A`.
+    /// This can be verified by calling [`inner_type_id()`] first.
+    ///
+    /// [`inner_type_id()`]: ReportAttachment::inner_type_id
     pub unsafe fn downcast_unchecked<A>(self) -> ReportAttachment<A, T>
     where
         A: markers::ObjectMarker + ?Sized,
     {
         unsafe { ReportAttachment::from_raw(self.into_raw()) }
-    }
-
-    pub fn downcast_inner<A>(&self) -> Option<&A>
-    where
-        A: ObjectMarker,
-    {
-        self.as_raw_ref().attachment_downcast()
-    }
-
-    pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
-    where
-        A: ObjectMarker,
-    {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
-    }
-}
-
-impl<A> ReportAttachment<A, Local>
-where
-    A: markers::ObjectMarker,
-{
-    pub fn new_local(attachment: A) -> Self
-    where
-        A: core::fmt::Display + core::fmt::Debug,
-    {
-        Self::new_custom::<handlers::Display>(attachment)
-    }
-
-    pub fn new_local_custom<H>(attachment: A) -> Self
-    where
-        H: AttachmentHandler<A>,
-    {
-        Self::new_custom::<H>(attachment)
     }
 }
 

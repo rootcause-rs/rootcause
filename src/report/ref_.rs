@@ -50,8 +50,8 @@ where
     ///
     /// To call this method you must ensure the following:
     ///
-    /// - The context embedded in the RawReport must match the `C` of the output type, or the `C` of the output type must be `dyn Any`
-    /// - The thread safety marker must match the contents of the report. More specifically if the marker is `SendSync`, then
+    /// - The context embedded in the [`RawReportRef`] must either be of type `C`, or the `C` must be `dyn Any`
+    /// - The thread safety marker must match the contents of the report. More specifically if the marker is [`SendSync`], then
     ///   all contexts and attachments must be `Send+Sync`
     pub(crate) unsafe fn from_raw(raw: RawReportRef<'a>) -> Self {
         Self {
