@@ -6,13 +6,13 @@ use core::{
     any::Any,
     fmt::{self, Formatter, Write},
 };
-use unsize::CoerceUnsize;
 
 use indexmap::IndexMap;
 use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
 };
 use triomphe::Arc;
+use unsize::CoerceUnsize;
 
 use crate::{
     ReportRef,
