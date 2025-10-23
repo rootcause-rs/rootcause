@@ -143,7 +143,7 @@ where
 
     /// Returns a reference to the inner attachment.
     ///
-    /// This method is only available when the attachment type
+    /// This method is only available when the attachment type is a specific type, and not `dyn Any`.
     pub fn inner(&self) -> &A
     where
         A: Sized,
@@ -151,22 +151,17 @@ where
         unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
 
+    /// Returns the [`TypeId`] of the inner attachment.
     pub fn inner_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
 
+    /// Returns the [`TypeId`] of the handler used when creating this attachment.
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
-    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |attachment, formatter| attachment.attachment_display(formatter),
-            |attachment, formatter| attachment.attachment_debug(formatter),
-        )
-    }
-
+    /// Formats the attachment with hook processing.
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
         let attachment: ReportAttachmentRef<'_, dyn Any> = self.as_ref().into_dyn_any();
         format_helper(
@@ -176,6 +171,17 @@ where
         )
     }
 
+    /// Formats the attachment without hook processing.
+    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
+        format_helper(
+            self.as_raw_ref(),
+            |attachment, formatter| attachment.attachment_display(formatter),
+            |attachment, formatter| attachment.attachment_debug(formatter),
+        )
+    }
+
+    /// Gets the preferred formatting style for the attachment with hook processing.
+    ///
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
@@ -192,6 +198,8 @@ where
         )
     }
 
+    /// Gets the preferred formatting style for the attachment with hook processing.
+    ///
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
@@ -206,6 +214,7 @@ where
             .preferred_formatting_style(report_formatting_function)
     }
 
+    /// Returns an reference to the attachment.
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
