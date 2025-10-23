@@ -6,13 +6,13 @@ use core::{
     any::Any,
     fmt::{self, Formatter, Write},
 };
-use unsize::CoerceUnsize;
 
 use indexmap::IndexMap;
 use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
 };
 use triomphe::Arc;
+use unsize::CoerceUnsize;
 
 use crate::{
     ReportRef,
@@ -44,6 +44,7 @@ pub trait ReportFormatterHook: 'static + Send + Sync {
 }
 
 pub struct DefaultReportFormatter {
+    pub report_header: &'static str,
     pub report_line_prefix_always: &'static str,
     pub appendix_line_prefix_always: &'static str,
     pub context_standalone_formatting: NodeConfig,
@@ -75,6 +76,7 @@ impl DefaultReportFormatter {
     pub const DEFAULT: Self = Self::UNICODE_ANSI;
 
     pub const UNICODE_ANSI: Self = Self {
+        report_header: "\n",
         report_line_prefix_always: " ",
         appendix_line_prefix_always: "",
         context_standalone_formatting: NodeConfig::new(
@@ -148,6 +150,7 @@ impl DefaultReportFormatter {
     };
 
     pub const ASCII_NO_ANSI: Self = Self {
+        report_header: "\n",
         report_line_prefix_always: "",
         appendix_line_prefix_always: "",
         context_standalone_formatting: NodeConfig::new(
@@ -248,6 +251,7 @@ impl ReportFormatterHook for DefaultReportFormatter {
         formatter: &mut fmt::Formatter<'_>,
         report_formatting_function: FormattingFunction,
     ) -> fmt::Result {
+        formatter.write_str(self.report_header)?;
         DefaultFormatterState::new(self, formatter, report_formatting_function)
             .format_reports(reports)
     }

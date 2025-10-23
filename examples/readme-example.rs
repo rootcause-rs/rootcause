@@ -48,7 +48,5 @@ fn fetch_document_with_retry(s: &str, retry_count: usize) -> Result<Vec<u8>, Rep
 }
 
 fn main() {
-    if let Err(e) = fetch_document_with_retry("http://example.com", 2) {
-        println!("{e}");
-    }
+    fetch_document_with_retry("http://example.com", 2).unwrap();
 }

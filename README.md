@@ -17,6 +17,8 @@ This crate provides a structured way to represent and work with errors and their
 It allows printing pretty, tree-structured reports like this one:
 
 ```
+thread 'main' panicked at examples/readme-example.rs:51:56:
+called `Result::unwrap()` on an `Err` value:
  ● Unable to fetch document http://example.com
  ├ examples/readme-example.rs:45:21
  │
@@ -27,6 +29,8 @@ It allows printing pretty, tree-structured reports like this one:
  ╰─ ● HTTP error: 500 Internal server error
     ├ examples/readme-example.rs:32:9
     ╰ Attempt #2
+
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 ```
 
 ## Project Goals
