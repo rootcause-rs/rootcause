@@ -251,7 +251,7 @@ impl ReportFormatterHook for DefaultReportFormatter {
         formatter: &mut fmt::Formatter<'_>,
         report_formatting_function: FormattingFunction,
     ) -> fmt::Result {
-        formatter.write_str(&self.report_header)?;
+        formatter.write_str(self.report_header)?;
         DefaultFormatterState::new(self, formatter, report_formatting_function)
             .format_reports(reports)
     }
