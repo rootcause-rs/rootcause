@@ -665,8 +665,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let report = self.as_ref().into_dyn_any().into_local();
-        crate::hooks::format_report(report, f, FormattingFunction::Display)
+        core::fmt::Display::fmt(&self.as_ref(), f)
     }
 }
 
@@ -676,8 +675,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let report = self.as_ref().into_dyn_any().into_local();
-        crate::hooks::format_report(report, f, FormattingFunction::Debug)
+        core::fmt::Debug::fmt(&self.as_ref(), f)
     }
 }
 
@@ -690,14 +688,14 @@ mod from_impls {
                 $($param:ident),*
             >:
             $context1:ty => $context2:ty,
-            $thread_safety1:ty => $thread_safety2:ty
+            $thread_safety:ty
         ),* $(,)?) => {
             $(
-                impl<'a, $($param),*> From<ReportMut<'a, $context1, $thread_safety1>> for ReportMut<'a, $context2, $thread_safety2>
+                impl<'a, $($param),*> From<ReportMut<'a, $context1, $thread_safety>> for ReportMut<'a, $context2, $thread_safety>
                     where $(
                         $param: markers::ObjectMarker,
                     )* {
-                    fn from(report: ReportMut<'a, $context1, $thread_safety1>) -> Self {
+                    fn from(report: ReportMut<'a, $context1, $thread_safety>) -> Self {
                         // SAFETY:
                         // - The context is valid, because it either doesn't change or goes from a known `C` to `dyn Any`.
                         // - The thread marker is valid, because it either does not change or it goes from `SendSync` to `Local`.
@@ -708,12 +706,13 @@ mod from_impls {
         };
     }
 
+    // NOTE: A mutable report reference is not variant over thread safety.
+    //
+    // * If you allow a SendSync => Local conversion, then you permit adding local attachments to the root.
+    // * If you allow a Local => SendSync conversion, then you permit cloning a subreport that contains local data and sending it to another thread
     unsafe_reportref_to_reportref!(
-        <C>: C => C, SendSync => Local,
-        <C>: C => dyn Any, SendSync => SendSync,
-        <C>: C => dyn Any, SendSync => Local,
-        <C>: C => dyn Any, Local => Local,
-        <>:  dyn Any => dyn Any, SendSync => Local,
+        <C>: C => dyn Any, SendSync,
+        <C>: C => dyn Any, Local,
     );
 }
 

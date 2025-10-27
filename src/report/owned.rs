@@ -1242,8 +1242,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let report = unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        crate::hooks::format_report(report, f, FormattingFunction::Display)
+        core::fmt::Display::fmt(&self.as_ref(), f)
     }
 }
 
@@ -1254,8 +1253,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let report = unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        crate::hooks::format_report(report, f, FormattingFunction::Debug)
+        core::fmt::Debug::fmt(&self.as_ref(), f)
     }
 }
 
