@@ -1,0 +1,14 @@
+- Update version numbers in:
+  - `Cargo.toml`
+  - `rootcause-internals/Cargo.toml`
+  - `README.md`
+- Grep for the old version number
+- Update CHANGELOG.md, including the links at the bottom
+- Run `cargo update`
+- Commit changes to a branch and make a PR
+- Run `cargo publish --workspace --dry-run` on PR branch
+- Wait for CI and merge PR to main branch
+- Run `cargo login` if your token has expired
+- Run `cargo publish --workspace` on main branch
+- Push tag and make a github release
+- Make an announcement on discord
