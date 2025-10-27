@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- Fix the links in the CHANGELOG [#34](https://github.com/rootcause-rs/rootcause/pull/34)
+
 ## [0.5.0] - 2025-10-27
 
 ### Changed
@@ -67,11 +71,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.5.0...HEAD
-[0.5.0]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.4.3...v0.5.0
-[0.4.3]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.4.2...v0.4.3
-[0.4.2]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.4.1...v0.4.2
-[0.4.1]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.4.0...v0.4.1
-[0.4.0]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/olivierlacan/keep-a-changelog/compare/v0.2.0...v0.3.0
+[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/rootcause-rs/rootcause/compare/v0.4.3...v0.5.0
+[0.4.3]: https://github.com/rootcause-rs/rootcause/compare/v0.4.2...v0.4.3
+[0.4.2]: https://github.com/rootcause-rs/rootcause/compare/v0.4.1...v0.4.2
+[0.4.1]: https://github.com/rootcause-rs/rootcause/compare/v0.4.0...v0.4.1
+[0.4.0]: https://github.com/rootcause-rs/rootcause/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/rootcause-rs/rootcause/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/rootcause-rs/rootcause/releases/tag/v0.2.0
