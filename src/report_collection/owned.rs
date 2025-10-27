@@ -98,7 +98,7 @@ where
     ///
     /// This is a convenience method used for chaining method calls; it consumes the [`ReportCollection`] and returns a new [`Report`].
     ///
-    /// If you want a different context handler, you can use [`Report::context_with_handler`].
+    /// If you want a different context handler, you can use [`Report::context_custom`].
     ///
     /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
     /// which is the underlying method used to implement this method.
@@ -117,7 +117,7 @@ where
     where
         D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
     {
-        self.context_with_handler::<handlers::Display, _>(context)
+        self.context_custom::<handlers::Display, _>(context)
     }
 
     /// Creates a new [`Report`] with the given context and sets the current report collection as the children of the new report.
@@ -134,11 +134,11 @@ where
     ///     .into_iter()
     ///     .collect();
     /// let repot: Report<&str> =
-    ///     report_collection.context_with_handler::<handlers::Debug, _>("context");
+    ///     report_collection.context_custom::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn context_with_handler<H, D>(self, context: D) -> Report<D, Mutable, T>
+    pub fn context_custom<H, D>(self, context: D) -> Report<D, Mutable, T>
     where
         D: markers::ObjectMarkerFor<T>,
         H: ContextHandler<D>,

@@ -322,7 +322,7 @@ where
             self.attachments()
                 .iter()
                 .map(|attachment| {
-                    ReportAttachment::new_with_handler::<preformatted::PreformattedHandler>(
+                    ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
                         PreformattedAttachment::new_from_attachment(attachment),
                     )
                     .into_dyn_any()
@@ -360,7 +360,7 @@ where
     /// ```
     /// # use rootcause::{prelude::*, ReportRef, markers::{Uncloneable, SendSync}};
     /// # use core::any::TypeId;
-    /// let report = Report::new_sendsync_with_handler::<handlers::Debug>("error message");
+    /// let report = Report::new_sendsync_custom::<handlers::Debug>("error message");
     /// let report_ref: ReportRef<'_, &'static str, Uncloneable> = report.as_ref();
     /// let handler_type = report_ref.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());

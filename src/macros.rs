@@ -71,7 +71,7 @@ macro_rules! report {
             let context = $context;
             let handler = (&&&&Wrap(&context)).handler();
             let thread_safety = (&context).thread_safety();
-            new_with_handler_and_thread_marker(handler, thread_safety, context)
+            macro_helper_new(handler, thread_safety, context)
         }
     };
     ($fmt:expr, $($arg:tt)*) => {
@@ -79,7 +79,7 @@ macro_rules! report {
             _,
             $crate::markers::Mutable,
             $crate::markers::SendSync
-        >::new_with_handler::<$crate::handlers::Display>(
+        >::new_custom::<$crate::handlers::Display>(
             $crate::__private::format!($fmt, $($arg)*)
         ).into_dyn_any()
     };

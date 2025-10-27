@@ -206,10 +206,9 @@ pub mod __private {
         args: fmt::Arguments<'_>,
     ) -> Report<dyn Any, markers::Mutable, markers::SendSync> {
         if let Some(message) = args.as_str() {
-            Report::new_sendsync_with_handler::<handlers::Display>(message).into_dyn_any()
+            Report::new_sendsync_custom::<handlers::Display>(message).into_dyn_any()
         } else {
-            // anyhow!("interpolate {var}"), can downcast to String
-            Report::new_sendsync_with_handler::<handlers::Display>(fmt::format(args)).into_dyn_any()
+            Report::new_sendsync_custom::<handlers::Display>(fmt::format(args)).into_dyn_any()
         }
     }
 
@@ -280,23 +279,11 @@ pub mod __private {
         #[doc(hidden)]
         #[must_use]
         #[track_caller]
-        pub fn new_with_handler_and_thread_marker<H, T, C>(
+        pub fn macro_helper_new<H, T, C>(
             _handler: H,
             _thread_safety: T,
             context: C,
         ) -> Report<C, markers::Mutable, T>
-        where
-            H: handlers::ContextHandler<C>,
-            T: markers::ThreadSafetyMarker,
-            C: markers::ObjectMarkerFor<T>,
-        {
-            Report::from_parts::<H>(context, ReportCollection::new(), ReportAttachments::new())
-        }
-
-        #[doc(hidden)]
-        #[must_use]
-        #[track_caller]
-        pub fn new_with_handler<H, T, C>(_handler: H, context: C) -> Report<C, markers::Mutable, T>
         where
             H: handlers::ContextHandler<C>,
             T: markers::ThreadSafetyMarker,

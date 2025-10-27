@@ -55,7 +55,7 @@ where
     ///
     /// - The [`report!()`] macro will also create a new report, but can auto-detect the thread safety marker and handler.
     /// - The [`Report::new_sendsync`] and [`Report::new_local`] are more restrictive variants of this function that might help avoid type inference issues.
-    /// - The [`Report::new_with_handler`] methods also allows you to manually specify the handler.
+    /// - The [`Report::new_custom`] methods also allows you to manually specify the handler.
     ///
     /// [`report!()`]: crate::report!
     ///
@@ -75,7 +75,7 @@ where
     where
         C: core::error::Error + markers::ObjectMarkerFor<T> + Sized,
     {
-        Self::new_with_handler::<handlers::Error>(context)
+        Self::new_custom::<handlers::Error>(context)
     }
 
     /// Creates a new [`Report`] with the given context and handler.
@@ -83,7 +83,7 @@ where
     /// This method is generic over the thread safety marker `T`.
     ///
     /// If you're having trouble with type inference for the thread safety parameter,
-    /// consider using [`Report::new_sendsync_with_handler`] or [`Report::new_local_with_handler`] instead.
+    /// consider using [`Report::new_sendsync_custom`] or [`Report::new_local_custom`] instead.
     ///
     /// # Examples
     /// ```
@@ -92,12 +92,12 @@ where
     /// # struct MyError;
     /// # impl core::error::Error for MyError {}
     /// # impl core::fmt::Display for MyError { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { unimplemented!() }}
-    /// let report_sendsync: Report<MyError> = Report::new_with_handler::<handlers::Debug>(MyError);
-    /// let report_local: Report<MyError> = Report::new_with_handler::<handlers::Display>(MyError);
+    /// let report_sendsync: Report<MyError> = Report::new_custom::<handlers::Debug>(MyError);
+    /// let report_local: Report<MyError> = Report::new_custom::<handlers::Display>(MyError);
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn new_with_handler<H>(context: C) -> Self
+    pub fn new_custom<H>(context: C) -> Self
     where
         C: markers::ObjectMarkerFor<T> + Sized,
         H: ContextHandler<C>,
@@ -309,16 +309,16 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let with_attachment = report.attach_with_handler::<handlers::Display, _>("info");
+    /// let with_attachment = report.attach_custom::<handlers::Display, _>("info");
     /// ```
     #[must_use]
-    pub fn attach_with_handler<H, A>(mut self, attachment: A) -> Self
+    pub fn attach_custom<H, A>(mut self, attachment: A) -> Self
     where
         A: markers::ObjectMarkerFor<T>,
         H: handlers::AttachmentHandler<A>,
     {
         self.attachments_mut()
-            .push(ReportAttachment::new_with_handler::<H>(attachment).into_dyn_any());
+            .push(ReportAttachment::new_custom::<H>(attachment).into_dyn_any());
         self
     }
 
@@ -440,7 +440,7 @@ where
     ///
     /// This is a convenience method used for chaining method calls; it consumes the [`Report`] and returns it.
     ///
-    /// If you want a different context handler, you can use [`Report::context_with_handler`].
+    /// If you want a different context handler, you can use [`Report::context_custom`].
     ///
     /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
     /// which is the underlying method used to implement this method.
@@ -457,7 +457,7 @@ where
     where
         D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
     {
-        self.context_with_handler::<handlers::Display, _>(context)
+        self.context_custom::<handlers::Display, _>(context)
     }
 
     /// Creates a new [`Report`] with the given context and sets the current report as a child of the new report.
@@ -472,11 +472,11 @@ where
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
     /// let contextual_report: Report<&str> =
-    ///     report.context_with_handler::<handlers::Debug, _>("context");
+    ///     report.context_custom::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn context_with_handler<H, D>(self, context: D) -> Report<D, Mutable, T>
+    pub fn context_custom<H, D>(self, context: D) -> Report<D, Mutable, T>
     where
         D: markers::ObjectMarkerFor<T>,
         H: ContextHandler<D>,
@@ -798,7 +798,7 @@ where
     /// ```
     /// # use rootcause::{prelude::*, markers::SendSync};
     /// # use core::any::TypeId;
-    /// let report = Report::new_sendsync_with_handler::<handlers::Debug>("error message");
+    /// let report = Report::new_sendsync_custom::<handlers::Debug>("error message");
     /// let handler_type = report.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
@@ -1091,21 +1091,21 @@ where
 
     /// Creates a new [`Report`] with [`SendSync`] thread safety and the given handler.
     ///
-    /// This is a convenience method that calls [`Report::new_with_handler`] with explicit [`SendSync`] thread safety.
+    /// This is a convenience method that calls [`Report::new_custom`] with explicit [`SendSync`] thread safety.
     /// Use this method when you're having trouble with type inference for the thread safety parameter.
     ///
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// let report = Report::new_sendsync_with_handler::<handlers::Display>("error");
+    /// let report = Report::new_sendsync_custom::<handlers::Display>("error");
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn new_sendsync_with_handler<H>(context: C) -> Self
+    pub fn new_sendsync_custom<H>(context: C) -> Self
     where
         H: ContextHandler<C>,
     {
-        Self::new_with_handler::<H>(context)
+        Self::new_custom::<H>(context)
     }
 }
 
@@ -1140,21 +1140,21 @@ where
 
     /// Creates a new [`Report`] with [`Local`] thread safety and the given handler.
     ///
-    /// This is a convenience method that calls [`Report::new_with_handler`] with explicit [`Local`] thread safety.
+    /// This is a convenience method that calls [`Report::new_custom`] with explicit [`Local`] thread safety.
     /// Use this method when you're having trouble with type inference for the thread safety parameter.
     ///
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// let report = Report::new_local_with_handler::<handlers::Display>("error");
+    /// let report = Report::new_local_custom::<handlers::Display>("error");
     /// ```
     #[track_caller]
     #[must_use]
-    pub fn new_local_with_handler<H>(context: C) -> Self
+    pub fn new_local_custom<H>(context: C) -> Self
     where
         H: ContextHandler<C>,
     {
-        Self::new_with_handler::<H>(context)
+        Self::new_custom::<H>(context)
     }
 }
 

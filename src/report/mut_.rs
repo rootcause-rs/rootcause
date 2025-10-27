@@ -408,7 +408,7 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// # use core::any::TypeId;
-    /// let mut report = Report::new_sendsync_with_handler::<handlers::Debug>("error message");
+    /// let mut report = Report::new_sendsync_custom::<handlers::Debug>("error message");
     /// let report_mut = report.as_mut();
     /// let handler_type = report_mut.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
