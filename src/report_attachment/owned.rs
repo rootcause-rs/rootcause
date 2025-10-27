@@ -46,7 +46,7 @@ where
     ///
     /// - The attachment embedded in the [`RawAttachment`] must either be the type `A`, or `A` must be the type `dyn Any`.
     /// - The thread safety marker must match the contents of the attachment. More specifically if the marker is [`SendSync`], then
-    /// the inner attachment must be `Send+Sync`
+    ///   the inner attachment must be `Send+Sync`
     pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
         ReportAttachment {
             raw,

@@ -60,7 +60,7 @@ where
     ///
     /// - The attachment embedded in the RawAttachmentRef must match the `C` of the output type, or the `C` of the output type must be `dyn Any`
     /// - The thread safety marker must match the contents of the attachment. More specifically if the marker is [`SendSync`], then
-    /// the inner attachment must be `Send+Sync`
+    ///   the inner attachment must be `Send+Sync`
     ///
     /// [`SendSync`]: crate::markers::SendSync
     pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
