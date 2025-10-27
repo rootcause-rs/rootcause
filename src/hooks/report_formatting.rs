@@ -667,6 +667,18 @@ pub(crate) fn format_report(
     hook.format_report(report, formatter, report_formatting_function)
 }
 
+pub(crate) fn format_reports(
+    reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+    formatter: &mut fmt::Formatter<'_>,
+    report_formatting_function: FormattingFunction,
+) -> fmt::Result {
+    let hook = HOOK.read().get().cloned();
+    let hook = hook
+        .as_deref()
+        .unwrap_or(const { &DefaultReportFormatter::DEFAULT });
+    hook.format_reports(reports, formatter, report_formatting_function)
+}
+
 pub fn register_report_formatter_hook(hook: impl ReportFormatterHook) {
     *HOOK.write().get() =
         Some(Arc::new(hook).unsize(unsize::Coercion!(to dyn ReportFormatterHook)));

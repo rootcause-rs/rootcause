@@ -114,6 +114,26 @@ where
     }
 }
 
+impl<C, T> core::fmt::Display for ReportCollectionMut<'_, C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.as_ref(), f)
+    }
+}
+
+impl<C, T> core::fmt::Debug for ReportCollectionMut<'_, C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(&self.as_ref(), f)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

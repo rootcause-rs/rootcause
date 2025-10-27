@@ -1,6 +1,6 @@
 use core::{any::Any, marker::PhantomData};
 
-use rootcause_internals::RawReport;
+use rootcause_internals::{RawReport, handlers::FormattingFunction};
 
 use crate::{
     ReportRef,
@@ -100,6 +100,65 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
+    }
+}
+
+impl<'a, C, T> core::fmt::Display for ReportCollectionRef<'a, C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let reports: &'a [RawReport] = self.raw;
+        let reports: &'a [ReportRef<'a, dyn Any, markers::Uncloneable, markers::Local>] =
+            unsafe { core::mem::transmute(reports) };
+        crate::hooks::format_reports(reports, f, FormattingFunction::Display)
+    }
+}
+
+impl<'a, C, T> core::fmt::Debug for ReportCollectionRef<'a, C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let reports: &'a [RawReport] = self.raw;
+        let reports: &'a [ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>] =
+            unsafe { core::mem::transmute(reports) };
+        crate::hooks::format_reports(reports, f, FormattingFunction::Display)
+    }
+}
+
+mod from_impls {
+    use super::*;
+
+    macro_rules! unsafe_report_collection_to_report_collection {
+        ($(
+            <
+                $($param:ident),*
+            >:
+            $context1:ty => $context2:ty,
+            $thread_safety1:ty => $thread_safety2:ty
+        ),* $(,)?) => {
+            $(
+                impl<'a, $($param),*> From<ReportCollectionRef<'a, $context1, $thread_safety1>> for ReportCollectionRef<'a, $context2, $thread_safety2>
+                    where
+                        $($param: markers::ObjectMarker)*
+                    {
+                    fn from(value: ReportCollectionRef<'a, $context1, $thread_safety1>) -> Self {
+                        unsafe { ReportCollectionRef::from_raw(value.raw) }
+                    }
+                }
+            )*
+        };
+    }
+
+    unsafe_report_collection_to_report_collection! {
+        <C>: C => C, SendSync => Local,
+        <C>: C => dyn Any, SendSync => SendSync,
+        <C>: C => dyn Any, SendSync => Local,
+        <C>: C => dyn Any, Local => Local,
+        <>: dyn Any => dyn Any, SendSync => Local,
     }
 }
 

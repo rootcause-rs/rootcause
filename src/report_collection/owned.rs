@@ -275,7 +275,27 @@ where
     }
 }
 
-mod unsafe_impls {
+impl<C, T> core::fmt::Display for ReportCollection<C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.as_ref(), f)
+    }
+}
+
+impl<C, T> core::fmt::Debug for ReportCollection<C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(&self.as_ref(), f)
+    }
+}
+
+mod from_impls {
     use super::*;
 
     macro_rules! unsafe_report_collection_to_report_collection {
@@ -287,7 +307,7 @@ mod unsafe_impls {
             $thread_safety1:ty => $thread_safety2:ty
         ),* $(,)?) => {
             $(
-                impl<'a, $($param),*> From<ReportCollection<$context1, $thread_safety1>> for ReportCollection<$context2, $thread_safety2>
+                impl<$($param),*> From<ReportCollection<$context1, $thread_safety1>> for ReportCollection<$context2, $thread_safety2>
                     where
                         $($param: markers::ObjectMarker)*
                     {
