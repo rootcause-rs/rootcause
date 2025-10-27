@@ -67,7 +67,7 @@ where
     /// Allocates a new [`ReportAttachment`] with the given attachment as the data.
     ///
     /// The new attachment will use the [`handlers::Display`] handler to format the attachment.
-    /// See [`ReportAttachment::new_with_handler`] if you want to control the handler used.
+    /// See [`ReportAttachment::new_custom`] if you want to control the handler used.
     ///
     /// # Examples
     /// ```
@@ -81,7 +81,7 @@ where
     where
         A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug + Sized,
     {
-        Self::new_with_handler::<handlers::Display>(attachment)
+        Self::new_custom::<handlers::Display>(attachment)
     }
 
     /// Allocates a new [`ReportAttachment`] with the given attachment as the data and the given handler to format it.
@@ -94,13 +94,13 @@ where
     /// struct MyAttachmentType {
     ///     data: String,
     /// }
-    /// let attachment = ReportAttachment::new_with_handler::<handlers::Debug>(MyAttachmentType {
+    /// let attachment = ReportAttachment::new_custom::<handlers::Debug>(MyAttachmentType {
     ///     data: "Important data".to_string(),
     /// });
     /// let mut report = report!("An error occurred");
     /// report.attachments_mut().push(attachment.into_dyn_any());
     /// ```
-    pub fn new_with_handler<H>(attachment: A) -> Self
+    pub fn new_custom<H>(attachment: A) -> Self
     where
         A: markers::ObjectMarkerFor<T> + Sized,
         H: AttachmentHandler<A>,
@@ -219,20 +219,20 @@ where
     ///
     /// The new attachment will use the [`handlers::Display`] handler to format the attachment.
     ///
-    /// See [`ReportAttachment::new_with_handler`] if you want to control the handler used.
+    /// See [`ReportAttachment::new_custom`] if you want to control the handler used.
     pub fn new_sendsync(attachment: A) -> Self
     where
         A: core::fmt::Display + core::fmt::Debug + Send + Sync,
     {
-        Self::new_with_handler::<handlers::Display>(attachment)
+        Self::new_custom::<handlers::Display>(attachment)
     }
 
-    pub fn new_sendsync_with_handler<H>(attachment: A) -> Self
+    pub fn new_sendsync_custom<H>(attachment: A) -> Self
     where
         A: Send + Sync + 'static,
         H: AttachmentHandler<A>,
     {
-        Self::new_with_handler::<H>(attachment)
+        Self::new_custom::<H>(attachment)
     }
 }
 
@@ -282,14 +282,14 @@ where
     where
         A: core::fmt::Display + core::fmt::Debug,
     {
-        Self::new_with_handler::<handlers::Display>(attachment)
+        Self::new_custom::<handlers::Display>(attachment)
     }
 
-    pub fn new_full_local<H>(attachment: A) -> Self
+    pub fn new_local_custom<H>(attachment: A) -> Self
     where
         H: AttachmentHandler<A>,
     {
-        Self::new_with_handler::<H>(attachment)
+        Self::new_custom::<H>(attachment)
     }
 }
 
@@ -299,7 +299,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn from(attachment: A) -> Self {
-        ReportAttachment::new_with_handler::<handlers::Display>(attachment)
+        ReportAttachment::new_custom::<handlers::Display>(attachment)
     }
 }
 
@@ -309,7 +309,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn from(attachment: A) -> Self {
-        ReportAttachment::new_with_handler::<handlers::Display>(attachment).into_dyn_any()
+        ReportAttachment::new_custom::<handlers::Display>(attachment).into_dyn_any()
     }
 }
 

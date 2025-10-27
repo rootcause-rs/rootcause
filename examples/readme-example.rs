@@ -35,7 +35,7 @@ fn fetch_document(_s: &str) -> Result<Vec<u8>, Report<HttpError>> {
 fn fetch_document_with_retry(s: &str, retry_count: usize) -> Result<Vec<u8>, Report> {
     let mut errors = ReportCollection::new();
     for i in 1..=retry_count {
-        match fetch_document(s).attach_lazy(|| format!("Attempt #{i}")) {
+        match fetch_document(s).attach_with(|| format!("Attempt #{i}")) {
             Ok(v) => return Ok(v),
             Err(e) => {
                 errors.push(e.into());

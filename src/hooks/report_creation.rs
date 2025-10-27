@@ -109,7 +109,7 @@ where
             let attachment = self.collector.collect();
             report
                 .attachments_mut()
-                .push(ReportAttachment::new_full_local::<H>(attachment).into_dyn_any());
+                .push(ReportAttachment::new_local_custom::<H>(attachment).into_dyn_any());
         }
 
         #[track_caller]
@@ -117,7 +117,7 @@ where
             let attachment = self.collector.collect();
             report
                 .attachments_mut()
-                .push(ReportAttachment::new_sendsync_with_handler::<H>(attachment).into_dyn_any());
+                .push(ReportAttachment::new_sendsync_custom::<H>(attachment).into_dyn_any());
         }
     }
     impl<A, H, C> core::fmt::Display for Hook<A, H, C> {
