@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Fix the links in the CHANGELOG [#34](https://github.com/rootcause-rs/rootcause/pull/34)
 
+### Added
+
+- More docs [#35](https://github.com/rootcause-rs/rootcause/pull/35)
+
 ## [0.5.0] - 2025-10-27
 
 ### Changed
