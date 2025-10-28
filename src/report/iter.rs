@@ -5,11 +5,13 @@ use rootcause_internals::RawReportRef;
 
 use crate::{ReportRef, markers};
 
-/// An iterator over a report and all its descendant reports in depth-first order.
+/// An iterator over a report and all its descendant reports in depth-first
+/// order.
 ///
-/// This iterator yields `ReportRef` items, which are references to the reports in the hierarchy.
-/// The iterator traverses the report tree in a depth-first manner, starting from the root report
-/// and visiting each child report before moving to the next sibling.
+/// This iterator yields `ReportRef` items, which are references to the reports
+/// in the hierarchy. The iterator traverses the report tree in a depth-first
+/// manner, starting from the root report and visiting each child report before
+/// moving to the next sibling.
 pub struct ReportIter<'a, Ownership, ThreadSafety>
 where
     Ownership: markers::ReportRefOwnershipMarker,

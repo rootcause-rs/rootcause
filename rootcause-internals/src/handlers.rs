@@ -1,8 +1,10 @@
-//! Handlers used to implement or override the behavior of [`core::error::Error`], [`core::fmt::Display`] and
-//! [`core::fmt::Debug`] when creating an attachment or report.
+//! Handlers used to implement or override the behavior of
+//! [`core::error::Error`], [`core::fmt::Display`] and [`core::fmt::Debug`] when
+//! creating an attachment or report.
 
-/// Handler used to implement or override the behavior of [`core::error::Error`], [`core::fmt::Display`] and
-/// [`core::fmt::Debug`] when creating a report.
+/// Handler used to implement or override the behavior of
+/// [`core::error::Error`], [`core::fmt::Display`] and [`core::fmt::Debug`] when
+/// creating a report.
 pub trait ContextHandler<C>: 'static {
     /// The function used when calling [`RawReportRef::context_source`]
     ///
@@ -19,12 +21,14 @@ pub trait ContextHandler<C>: 'static {
     /// [`RawReportRef::context_debug`]: crate::report::RawReportRef::context_debug
     fn debug(value: &C, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// The formatting style preferred by the context when formatted as part of a
-    /// report.
+    /// The formatting style preferred by the context when formatted as part of
+    /// a report.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -37,8 +41,8 @@ pub trait ContextHandler<C>: 'static {
     }
 }
 
-/// Handler used to implement or override the behavior of [`core::fmt::Display`] and
-/// [`core::fmt::Debug`] when creating an attachment.
+/// Handler used to implement or override the behavior of [`core::fmt::Display`]
+/// and [`core::fmt::Debug`] when creating an attachment.
 pub trait AttachmentHandler<A>: 'static {
     /// The function used when calling [`RawAttachmentRef::attachment_display`]
     ///
@@ -50,14 +54,17 @@ pub trait AttachmentHandler<A>: 'static {
     /// [`RawAttachmentRef::attachment_debug`]: crate::attachment::RawAttachmentRef::attachment_debug
     fn debug(value: &A, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// The function used when calling [`RawAttachmentRef::preferred_formatting_style`]
+    /// The function used when calling
+    /// [`RawAttachmentRef::preferred_formatting_style`]
     ///
-    /// The formatting style preferred by the attachment when formatted as part of a
-    /// report.
+    /// The formatting style preferred by the attachment when formatted as part
+    /// of a report.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -102,13 +109,16 @@ pub struct AttachmentFormattingStyle {
 /// Enum for deciding which function to prefer when a context/attachment
 /// is formatted as part of a report.
 ///
-/// Whether this is respected or not is up to the code that does the formatting for reports.
+/// Whether this is respected or not is up to the code that does the formatting
+/// for reports.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum FormattingFunction {
-    /// The context prefers to be rendered inline using the [`ContextHandler::display`]/[`AttachmentHandler::display`] methods.
+    /// The context prefers to be rendered inline using the
+    /// [`ContextHandler::display`]/[`AttachmentHandler::display`] methods.
     #[default]
     Display,
-    /// The context prefers to be rendered inline using the [`ContextHandler::debug`]/[`AttachmentHandler::debug`] methods
+    /// The context prefers to be rendered inline using the
+    /// [`ContextHandler::debug`]/[`AttachmentHandler::debug`] methods
     Debug,
 }
 
@@ -134,7 +144,8 @@ pub enum AttachmentFormattingPlacement {
         /// is the name preferred for this attachment
         appendix_name: &'static str,
     },
-    /// The attachment prefers not to be rendered, but would like to show up in an "$N additional opaque attachments" message
+    /// The attachment prefers not to be rendered, but would like to show up in
+    /// an "$N additional opaque attachments" message
     Opaque,
     /// The attachment prefers not to be rendered at all
     Hidden,

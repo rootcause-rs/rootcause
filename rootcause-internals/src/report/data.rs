@@ -1,8 +1,9 @@
-//! This module encapsulates the fields of the [`ReportData`]. Since this is the only place
-//! they are visible, this means that the type of the [`ReportVtable`] is guaranteed to always be in sync
-//! with the type of the actual context. This follows from the fact that they are in sync
-//! when created and that the API offers no way to change the [`ReportVtable`] or context type after
-//! creation.
+//! This module encapsulates the fields of the [`ReportData`]. Since this is the
+//! only place they are visible, this means that the type of the
+//! [`ReportVtable`] is guaranteed to always be in sync with the type of the
+//! actual context. This follows from the fact that they are in sync
+//! when created and that the API offers no way to change the [`ReportVtable`]
+//! or context type after creation.
 
 use alloc::vec::Vec;
 use core::ptr::NonNull;
@@ -19,8 +20,9 @@ use crate::{
 
 /// Type-erased report data structure with vtable-based dispatch.
 ///
-/// This struct uses `#[repr(C)]` to enable safe field access in type-erased contexts,
-/// allowing access to the vtable and other fields even when the concrete context type `C` is unknown.
+/// This struct uses `#[repr(C)]` to enable safe field access in type-erased
+/// contexts, allowing access to the vtable and other fields even when the
+/// concrete context type `C` is unknown.
 #[repr(C)]
 pub(super) struct ReportData<C: 'static> {
     /// Reference to the vtable of this report
@@ -34,9 +36,11 @@ pub(super) struct ReportData<C: 'static> {
 }
 
 impl<C: 'static> ReportData<C> {
-    /// Creates a new [`ReportData`] with the specified handler, context, children and attachments.
+    /// Creates a new [`ReportData`] with the specified handler, context,
+    /// children and attachments.
     ///
-    /// This method creates the vtable for type-erased dispatch and pairs it with the report data.
+    /// This method creates the vtable for type-erased dispatch and pairs it
+    /// with the report data.
     pub(super) fn new<H: ContextHandler<C>>(
         context: C,
         children: Vec<RawReport>,
@@ -54,16 +58,18 @@ impl<C: 'static> ReportData<C> {
 impl RawReport {
     /// # Safety
     ///
-    /// - The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
-    /// - The caller must ensure that this is the only existing reference pointing to
-    ///   the inner [`ReportData`].
+    /// - The caller must ensure that the type `C` matches the actual context
+    ///   type stored in the [`ReportData`].
+    /// - The caller must ensure that this is the only existing reference
+    ///   pointing to the inner [`ReportData`].
     pub unsafe fn into_parts<C: 'static>(self) -> (C, Vec<RawReport>, Vec<RawAttachment>) {
         let ptr: NonNull<ReportData<Erased>> = self.into_non_null();
         let ptr: NonNull<ReportData<C>> = ptr.cast::<ReportData<C>>();
         let ptr: *const ReportData<C> = ptr.as_ptr();
 
         // SAFETY: The requirements to this
-        // - The given pointer must be a valid pointer to `T` that came from [`Arc::into_raw`].
+        // - The given pointer must be a valid pointer to `T` that came from
+        //   [`Arc::into_raw`].
         // - After `from_raw`, the pointer must not be accessed.
         //
         // Both of these are guaranteed by our caller
@@ -78,9 +84,10 @@ impl RawReport {
                 if cfg!(debug_assertions) {
                     unreachable!("Caller did not fulfill the guarantee that pointer is unique")
                 } else {
-                    // SAFETY: This unsafe block *will* cause Undefined Behavior. However our caller guarantees
-                    // that the pointer must be unique. This match statement can only be reached when
-                    // our caller has broken that requirement, so it is valid to cause Undefined Behavior in this case.
+                    // SAFETY: This unsafe block *will* cause Undefined Behavior. However our caller
+                    // guarantees that the pointer must be unique. This match
+                    // statement can only be reached when our caller has broken
+                    // that requirement, so it is valid to cause Undefined Behavior in this case.
                     unsafe { core::hint::unreachable_unchecked() }
                 }
             }
@@ -89,7 +96,8 @@ impl RawReport {
 }
 
 impl<'a> RawReportRef<'a> {
-    /// Returns a reference to the [`ReportVtable`] of the [`ReportData`] instance.
+    /// Returns a reference to the [`ReportVtable`] of the [`ReportData`]
+    /// instance.
     pub(super) fn vtable(self) -> &'static ReportVtable {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner context type, but we do know
@@ -102,8 +110,8 @@ impl<'a> RawReportRef<'a> {
         // since we don't have the right type.
         let vtable_ptr: *const &'static ReportVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: Deferencing the pointer and getting out the `&'static ReportVtable` is valid
-        // for the same reasons
+        // SAFETY: Deferencing the pointer and getting out the `&'static ReportVtable`
+        // is valid for the same reasons
         unsafe { *vtable_ptr }
     }
 
@@ -120,9 +128,9 @@ impl<'a> RawReportRef<'a> {
         // since we don't have the right type.
         let children_ptr: *const Vec<RawReport> = unsafe { &raw const (*ptr).children };
 
-        // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid because the
-        // existence of the `RawReportMut<'a>` already implied that we had readable access
-        // to the report for the 'a lifetime.
+        // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
+        // because the existence of the `RawReportMut<'a>` already implied that
+        // we had readable access to the report for the 'a lifetime.
         unsafe { &*children_ptr }
     }
 
@@ -139,19 +147,22 @@ impl<'a> RawReportRef<'a> {
         // since we don't have the right type.
         let attachments_ptr: *const Vec<RawAttachment> = unsafe { &raw const (*ptr).attachments };
 
-        // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid because the
-        // existence of the `RawReportMut<'a>` already implied that we had readable access
-        // to the report for the 'a lifetime.
+        // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
+        // because the existence of the `RawReportMut<'a>` already implied that
+        // we had readable access to the report for the 'a lifetime.
         unsafe { &*attachments_ptr }
     }
 
-    /// Accesses the inner context of the [`ReportData`] instance as a reference to the specified type.
+    /// Accesses the inner context of the [`ReportData`] instance as a reference
+    /// to the specified type.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
+    /// The caller must ensure that the type `C` matches the actual context type
+    /// stored in the [`ReportData`].
     pub unsafe fn context_downcast_unchecked<C: 'static>(self) -> &'a C {
-        // SAFETY: The inner function requires that `C` matches the type stored, but that is guaranteed by our caller.
+        // SAFETY: The inner function requires that `C` matches the type stored, but
+        // that is guaranteed by our caller.
         let this = unsafe { self.cast_inner::<C>() };
         &this.context
     }
@@ -172,9 +183,9 @@ impl<'a> RawReportMut<'a> {
         // since we don't have the right type.
         let children_ptr: *mut Vec<RawReport> = unsafe { &raw mut (*ptr).children };
 
-        // SAFETY: We turn the `*mut` pointer into a `&'a mut` reference. This is valid because the
-        // existence of the `RawReportMut<'a>` already implied that nobody else has mutable access
-        // to the report for the 'a lifetime.
+        // SAFETY: We turn the `*mut` pointer into a `&'a mut` reference. This is valid
+        // because the existence of the `RawReportMut<'a>` already implied that
+        // nobody else has mutable access to the report for the 'a lifetime.
         unsafe { &mut *children_ptr }
     }
 
@@ -192,19 +203,22 @@ impl<'a> RawReportMut<'a> {
         // since we don't have the right type.
         let attachments_ptr: *mut Vec<RawAttachment> = unsafe { &raw mut (*ptr).attachments };
 
-        // SAFETY: We turn the `*mut` pointer into a `&'a mut` reference. This is valid because the
-        // existence of the `RawReportMut<'a>` already implied that nobody else has mutable access
-        // to the report for the 'a lifetime.
+        // SAFETY: We turn the `*mut` pointer into a `&'a mut` reference. This is valid
+        // because the existence of the `RawReportMut<'a>` already implied that
+        // nobody else has mutable access to the report for the 'a lifetime.
         unsafe { &mut *attachments_ptr }
     }
 
-    /// Accesses the inner context of the [`ReportData`] instance as a mutable reference to the specified type.
+    /// Accesses the inner context of the [`ReportData`] instance as a mutable
+    /// reference to the specified type.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
+    /// The caller must ensure that the type `C` matches the actual context type
+    /// stored in the [`ReportData`].
     pub unsafe fn into_context_downcast_unchecked<C: 'static>(self) -> &'a mut C {
-        // SAFETY: The inner function requires that `C` matches the type stored, but that is guaranteed by our caller.
+        // SAFETY: The inner function requires that `C` matches the type stored, but
+        // that is guaranteed by our caller.
         let this = unsafe { self.cast_inner::<C>() };
         &mut this.context
     }

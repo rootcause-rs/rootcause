@@ -51,9 +51,11 @@ where
     ///
     /// To call this method you must ensure the following:
     ///
-    /// - The context embedded in the RawReport must match the `C` of the output type, or the `C` of the output type must be `dyn Any`
-    /// - The thread safety marker must match the contents of the report. More specifically if the marker is `SendSync`, then
-    ///   all contexts and attachments must be `Send+Sync`
+    /// - The context embedded in the RawReport must match the `C` of the output
+    ///   type, or the `C` of the output type must be `dyn Any`
+    /// - The thread safety marker must match the contents of the report. More
+    ///   specifically if the marker is `SendSync`, then all contexts and
+    ///   attachments must be `Send+Sync`
     pub(crate) unsafe fn from_raw(raw: RawReportMut<'a>) -> Self {
         Self {
             raw,
@@ -88,7 +90,8 @@ where
         self.as_ref().current_context()
     }
 
-    /// Turns the [`ReportMut`] into a mutable reference to the current context with the same lifetime.
+    /// Turns the [`ReportMut`] into a mutable reference to the current context
+    /// with the same lifetime.
     ///
     /// # Examples
     /// ```
@@ -182,16 +185,19 @@ where
 
     /// Changes the context type of the [`ReportMut`] to [`dyn Any`].
     ///
-    /// Calling this method is equivalent to calling `report.into()`, however this method
-    /// has been restricted to only change the context mode to `dyn Any`.
+    /// Calling this method is equivalent to calling `report.into()`, however
+    /// this method has been restricted to only change the context mode to
+    /// `dyn Any`.
     ///
-    /// This method can be useful to help with type inference or to improve code readability,
-    /// as it more clearly communicates intent.
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
     ///
-    /// This method does not actually modify the report in any way. It only has the effect of "forgetting" that
-    /// that the context actually has the type `C`.
+    /// This method does not actually modify the report in any way. It only has
+    /// the effect of "forgetting" that that the context actually has the
+    /// type `C`.
     ///
-    /// To get back the report with a concrete `C` you can use the method [`ReportMut::downcast_report`].
+    /// To get back the report with a concrete `C` you can use the method
+    /// [`ReportMut::downcast_report`].
     ///
     /// # Examples
     /// ```
@@ -220,7 +226,8 @@ where
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
 
-    /// Consumes the [`ReportMut`] and returns a [`ReportRef`] with same lifetime.
+    /// Consumes the [`ReportMut`] and returns a [`ReportRef`] with same
+    /// lifetime.
     ///
     /// # Examples
     /// ```
@@ -234,7 +241,8 @@ where
         unsafe { ReportRef::from_raw(self.raw.into_ref()) }
     }
 
-    /// Reborrows the [`ReportMut`] to return a new [`ReportMut`] with a shorter lifetime
+    /// Reborrows the [`ReportMut`] to return a new [`ReportMut`] with a shorter
+    /// lifetime
     ///
     /// # Examples
     /// ```
@@ -254,17 +262,20 @@ where
         unsafe { ReportMut::from_raw(self.raw.reborrow()) }
     }
 
-    /// Returns an iterator over the complete report hierarchy including this report.
+    /// Returns an iterator over the complete report hierarchy including this
+    /// report.
     ///
-    /// The iterator visits reports in a depth-first order: it first visits the current report,
-    /// then recursively visits each child report and all of their descendants before moving
-    /// to the next sibling. Unlike [`ReportMut::iter_sub_reports`], this method includes the report on
+    /// The iterator visits reports in a depth-first order: it first visits the
+    /// current report, then recursively visits each child report and all of
+    /// their descendants before moving to the next sibling. Unlike
+    /// [`ReportMut::iter_sub_reports`], this method includes the report on
     /// which it was called as the first item in the iteration.
     ///
-    /// Since this is a mutable reference, the returned iterator references are [`Uncloneable`]
-    /// to ensure proper borrowing semantics.
+    /// Since this is a mutable reference, the returned iterator references are
+    /// [`Uncloneable`] to ensure proper borrowing semantics.
     ///
-    /// See also: [`ReportMut::iter_sub_reports`] for iterating only over child reports with cloneable references.
+    /// See also: [`ReportMut::iter_sub_reports`] for iterating only over child
+    /// reports with cloneable references.
     ///
     /// [`Uncloneable`]: crate::markers::Uncloneable
     ///
@@ -303,17 +314,21 @@ where
         unsafe { ReportIter::from_raw(stack) }
     }
 
-    /// Returns an iterator over child reports in the report hierarchy (excluding this report).
+    /// Returns an iterator over child reports in the report hierarchy
+    /// (excluding this report).
     ///
-    /// The iterator visits reports in a depth-first order: it first visits the current report's
-    /// children, then recursively visits each child report and all of their descendants before
-    /// moving to the next sibling. Unlike [`ReportMut::iter_reports`], this method does NOT include the
+    /// The iterator visits reports in a depth-first order: it first visits the
+    /// current report's children, then recursively visits each child report
+    /// and all of their descendants before moving to the next sibling.
+    /// Unlike [`ReportMut::iter_reports`], this method does NOT include the
     /// report on which it was called - only its descendants.
     ///
-    /// This method always returns cloneable report references, making it suitable for scenarios
-    /// where you need to store or pass around the report references.
+    /// This method always returns cloneable report references, making it
+    /// suitable for scenarios where you need to store or pass around the
+    /// report references.
     ///
-    /// See also: [`ReportMut::iter_reports`] for iterating over all reports including the current one.
+    /// See also: [`ReportMut::iter_reports`] for iterating over all reports
+    /// including the current one.
     ///
     /// # Examples
     /// ```
@@ -356,11 +371,11 @@ where
         unsafe { ReportIter::from_raw(stack) }
     }
 
-    /// Creates a new report, which has the same structure as the current report,
-    /// but has all the contexts and attachments preformatted.
+    /// Creates a new report, which has the same structure as the current
+    /// report, but has all the contexts and attachments preformatted.
     ///
-    /// This can be useful, as the new report is mutable because it was just created,
-    /// and additionally the new report is [`Send`]+[`Sync`].
+    /// This can be useful, as the new report is mutable because it was just
+    /// created, and additionally the new report is [`Send`]+[`Sync`].
     ///
     /// # Examples
     /// ```
@@ -370,7 +385,8 @@ where
     /// # let non_send_sync_error = NonSendSyncError::default();
     /// # let mut report = report!(non_send_sync_error);
     /// let report_mut: ReportMut<'_, NonSendSyncError, markers::Local> = report.as_mut();
-    /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> = report.preformat();
+    /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> =
+    ///     report.preformat();
     /// assert_eq!(format!("{report}"), format!("{preformatted}"));
     /// ```
     #[track_caller]
@@ -470,35 +486,14 @@ where
         )
     }
 
-    /// Gets the preferred formatting style for the context with hook processing.
+    /// Gets the preferred formatting style for the context with hook
+    /// processing.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// let mut report: Report = report!("error message");
-    /// let report_mut = report.as_mut();
-    /// let style = report_mut.preferred_context_formatting_style(handlers::FormattingFunction::Display);
-    /// ```
-    pub fn preferred_context_formatting_style(
-        &self,
-        report_formatting_function: FormattingFunction,
-    ) -> ContextFormattingStyle {
-        let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
-        crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
-    }
-
-    /// Gets the preferred formatting style for the context without hook processing.
-    ///
-    /// # Arguments
-    ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -509,7 +504,35 @@ where
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
     /// let style =
-    ///     report_mut.preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
+    ///     report_mut.preferred_context_formatting_style(handlers::FormattingFunction::Display);
+    /// ```
+    pub fn preferred_context_formatting_style(
+        &self,
+        report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
+        crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
+    }
+
+    /// Gets the preferred formatting style for the context without hook
+    /// processing.
+    ///
+    /// # Arguments
+    ///
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
+    ///
+    /// [`Display`]: core::fmt::Display
+    /// [`Debug`]: core::fmt::Debug
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let mut report: Report = report!("error message");
+    /// let report_mut = report.as_mut();
+    /// let style = report_mut
+    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,
@@ -539,7 +562,8 @@ where
 {
     /// Attempts to downcast the current context to a specific type.
     ///
-    /// Returns `Some(&C)` if the current context is of type `C`, otherwise returns `None`.
+    /// Returns `Some(&C)` if the current context is of type `C`, otherwise
+    /// returns `None`.
     ///
     /// # Examples
     /// ```
@@ -708,8 +732,10 @@ mod from_impls {
 
     // NOTE: A mutable report reference is not variant over thread safety.
     //
-    // * If you allow a SendSync => Local conversion, then you permit adding local attachments to the root.
-    // * If you allow a Local => SendSync conversion, then you permit cloning a subreport that contains local data and sending it to another thread
+    // * If you allow a SendSync => Local conversion, then you permit adding local
+    //   attachments to the root.
+    // * If you allow a Local => SendSync conversion, then you permit cloning a
+    //   subreport that contains local data and sending it to another thread
     unsafe_reportref_to_reportref!(
         <C>: C => dyn Any, SendSync,
         <C>: C => dyn Any, Local,

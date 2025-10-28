@@ -1,7 +1,9 @@
-//! This module encapsulates the fields of the [`RawReport`], [`RawReportRef`], and [`RawReportMut`].
-//! Since this is the only place they are visible, this means that the `ptr` field of all three types is always
-//! guaranteed to come from a [`triomphe::Arc<ReportData<C>>`]. This follows from the fact that there are no places where the
-//! `ptr` field is altered after creation (besides invalidating it after it should no longer be used).
+//! This module encapsulates the fields of the [`RawReport`], [`RawReportRef`],
+//! and [`RawReportMut`]. Since this is the only place they are visible, this
+//! means that the `ptr` field of all three types is always guaranteed to come
+//! from a [`triomphe::Arc<ReportData<C>>`]. This follows from the fact that
+//! there are no places where the `ptr` field is altered after creation (besides
+//! invalidating it after it should no longer be used).
 
 use alloc::vec::Vec;
 use core::{any::TypeId, ptr::NonNull};
@@ -13,16 +15,18 @@ use crate::{
     util::{CastTo, Erased},
 };
 
-/// A pointer to a [`ReportData`] that is guaranteed to point to an initialized instance
-/// of a [`ReportData<C>`] for some specific `C`, though we do not know which actual `C` it is.
+/// A pointer to a [`ReportData`] that is guaranteed to point to an initialized
+/// instance of a [`ReportData<C>`] for some specific `C`, though we do not know
+/// which actual `C` it is.
 ///
-/// However, the pointer is allowed to transition into a non-initialized state inside the
-/// [`RawReport::drop`] method.
+/// However, the pointer is allowed to transition into a non-initialized state
+/// inside the [`RawReport::drop`] method.
 ///
-/// The pointer is guaranteed to have been created using [`triomphe::Arc::into_raw`].
+/// The pointer is guaranteed to have been created using
+/// [`triomphe::Arc::into_raw`].
 ///
-/// We cannot use a [`triomphe::OffsetArc<ReportData<C>>`] directly, because that does not allow
-/// us to type-erase the `C`.
+/// We cannot use a [`triomphe::OffsetArc<ReportData<C>>`] directly, because
+/// that does not allow us to type-erase the `C`.
 #[repr(transparent)]
 pub struct RawReport {
     /// Pointer to the inner report data
@@ -41,15 +45,16 @@ impl RawReport {
         Self { ptr }
     }
 
-    /// Consumes the RawReport without decrementing the reference count and returns
-    /// the inner pointer.
+    /// Consumes the RawReport without decrementing the reference count and
+    /// returns the inner pointer.
     pub(super) fn into_non_null(self) -> NonNull<ReportData<Erased>> {
         let ptr = self.ptr;
         core::mem::forget(self);
         ptr
     }
 
-    /// Creates a new [`RawReport`] with the specified handler, context, children, and attachments.
+    /// Creates a new [`RawReport`] with the specified handler, context,
+    /// children, and attachments.
     pub fn new<C, H>(context: C, children: Vec<RawReport>, attachments: Vec<RawAttachment>) -> Self
     where
         C: 'static,
@@ -71,8 +76,8 @@ impl RawReport {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that this is the only existing reference pointing to
-    /// the inner [`ReportData`].
+    /// The caller must ensure that this is the only existing reference pointing
+    /// to the inner [`ReportData`].
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
         RawReportMut {
             ptr: self.ptr,
@@ -86,13 +91,16 @@ impl core::ops::Drop for RawReport {
         let vtable = self.as_ref().vtable();
 
         // SAFETY: The vtable drop method has three safety requirements:
-        // - The pointer must come from `triomphe::Arc<ReportData<C>>` via `triomphe::Arc::into_raw`
+        // - The pointer must come from `triomphe::Arc<ReportData<C>>` via
+        //   `triomphe::Arc::into_raw`
         // - The `C` type in `ReportData<C>` must match the vtable's `C` type
         // - The pointer must not be used after this call
         //
         // These are satisfied because:
-        // - The only way to construct or alter a `RawReport` is through the `RawReport::new` method
-        // - The only way to construct or alter a `ReportData` is through the `ReportData::new` method
+        // - The only way to construct or alter a `RawReport` is through the
+        //   `RawReport::new` method
+        // - The only way to construct or alter a `ReportData` is through the
+        //   `ReportData::new` method
         // - This is guaranteed by the fact that we are in the `drop()` function
         unsafe {
             vtable.drop(self.ptr);
@@ -101,8 +109,8 @@ impl core::ops::Drop for RawReport {
 }
 
 /// A lifetime-bound pointer to a [`ReportData`] that is guaranteed to point
-/// to an initialized instance of a [`ReportData<C>`] for some specific `C`, though
-/// we do not know which actual `C` it is.
+/// to an initialized instance of a [`ReportData<C>`] for some specific `C`,
+/// though we do not know which actual `C` it is.
 ///
 /// We cannot use a [`&'a ReportData<C>`] directly, because that would require
 /// us to know the actual type of the context, which we do not.
@@ -123,14 +131,15 @@ impl<'a> RawReportRef<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
+    /// The caller must ensure that the type `C` matches the actual context type
+    /// stored in the [`ReportData`].
     pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a ReportData<C::Target> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<C>());
 
         let this = self.ptr.cast::<ReportData<C::Target>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe to turn
-        // the NonNull pointer into a reference with the same lifetime
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe
+        // to turn the NonNull pointer into a reference with the same lifetime
         unsafe { this.as_ref() }
     }
 
@@ -149,24 +158,26 @@ impl<'a> RawReportRef<'a> {
         self.vtable().handler_type_id()
     }
 
-    /// Checks if the type of the context matches the specified type and returns a reference to it if it does.
+    /// Checks if the type of the context matches the specified type and returns
+    /// a reference to it if it does.
     pub fn context_downcast<C: 'static>(self) -> Option<&'a C> {
         if self.context_type_id() == core::any::TypeId::of::<C>() {
-            // SAFETY: We must ensure that the `C` in the ReportData matches the `C` we are using as an argument.
-            // However, we have just checked that the types match, so that is fine.
+            // SAFETY: We must ensure that the `C` in the ReportData matches the `C` we are
+            // using as an argument. However, we have just checked that the
+            // types match, so that is fine.
             unsafe { Some(self.context_downcast_unchecked::<C>()) }
         } else {
             None
         }
     }
 
-    /// Returns the source of the context using the [`ContextHandler::source`] method
-    /// specified when the [`ReportData`] was created.
+    /// Returns the source of the context using the [`ContextHandler::source`]
+    /// method specified when the [`ReportData`] was created.
     pub fn context_source(self) -> Option<&'a (dyn core::error::Error + 'static)> {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
-        // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
-        // which ensures this fact.
+        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
+        // the `ReportVtable`. However, the only way to construct a `ReportData`
+        // is through the `ReportData::new` method, which ensures this fact.
         unsafe { vtable.source(self) }
     }
 
@@ -174,9 +185,9 @@ impl<'a> RawReportRef<'a> {
     /// specified by the handler used to create the [`ReportData`].
     pub fn context_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
-        // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
-        // which ensures this fact.
+        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
+        // the `ReportVtable`. However, the only way to construct a `ReportData`
+        // is through the `ReportData::new` method, which ensures this fact.
         unsafe { vtable.display(self, formatter) }
     }
 
@@ -184,18 +195,20 @@ impl<'a> RawReportRef<'a> {
     /// specified by the handler used to create the [`ReportData`].
     pub fn context_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
-        // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
-        // which ensures this fact.
+        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
+        // the `ReportVtable`. However, the only way to construct a `ReportData`
+        // is through the `ReportData::new` method, which ensures this fact.
         unsafe { vtable.debug(self, formatter) }
     }
 
-    /// The formatting style preferred by the context when formatted as part of a
-    /// report.
+    /// The formatting style preferred by the context when formatted as part of
+    /// a report.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -204,22 +217,24 @@ impl<'a> RawReportRef<'a> {
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
-        // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
-        // which ensures this fact.
+        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
+        // the `ReportVtable`. However, the only way to construct a `ReportData`
+        // is through the `ReportData::new` method, which ensures this fact.
         unsafe { vtable.preferred_context_formatting_style(self, report_formatting_function) }
     }
 
-    /// Clones the inner [`triomphe::Arc`] and returns a new [`RawReport`] pointing to the same data.
+    /// Clones the inner [`triomphe::Arc`] and returns a new [`RawReport`]
+    /// pointing to the same data.
     ///
     /// # Safety
     ///
-    /// There must be no external assumptions that there is unique ownership of the [`triomphe::Arc`].
+    /// There must be no external assumptions that there is unique ownership of
+    /// the [`triomphe::Arc`].
     pub unsafe fn clone_arc(self) -> RawReport {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
-        // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
-        // which ensures this fact.
+        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
+        // the `ReportVtable`. However, the only way to construct a `ReportData`
+        // is through the `ReportData::new` method, which ensures this fact.
         //
         // We must also ensure that there are no external assumptions that
         // there is unique ownership of the `Arc`. However, this is guaranteed by
@@ -230,19 +245,19 @@ impl<'a> RawReportRef<'a> {
     /// Gets the strong_count of the inner [`triomphe::Arc`].
     pub fn strong_count(self) -> usize {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of the `ReportVtable`.
-        // However, the only way to construct a `ReportData` is through the `ReportData::new` method,
-        // which ensures this fact.
+        // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
+        // the `ReportVtable`. However, the only way to construct a `ReportData`
+        // is through the `ReportData::new` method, which ensures this fact.
         unsafe { vtable.strong_count(self.ptr) }
     }
 }
 
-/// A mutable lifetime-bound pointer to a [`ReportData`] that is guaranteed to point
-/// to an initialized instance of a [`ReportData<C>`] for some specific `C`, though
-/// we do not know which actual `C` it is.
+/// A mutable lifetime-bound pointer to a [`ReportData`] that is guaranteed to
+/// point to an initialized instance of a [`ReportData<C>`] for some specific
+/// `C`, though we do not know which actual `C` it is.
 ///
-/// We cannot use a [`&'a mut ReportData<C>`] directly, because that would require
-/// us to know the actual type of the context, which we do not.
+/// We cannot use a [`&'a mut ReportData<C>`] directly, because that would
+/// require us to know the actual type of the context, which we do not.
 ///
 /// [`&'a mut ReportData<C>`]: ReportData
 #[repr(transparent)]
@@ -259,18 +274,20 @@ impl<'a> RawReportMut<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `C` matches the actual context type stored in the [`ReportData`].
+    /// The caller must ensure that the type `C` matches the actual context type
+    /// stored in the [`ReportData`].
     pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a mut ReportData<C::Target> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
 
         let mut this = self.ptr.cast::<ReportData<C::Target>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe to turn
-        // the NonNull pointer into a reference with the same lifetime
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe
+        // to turn the NonNull pointer into a reference with the same lifetime
         unsafe { this.as_mut() }
     }
 
-    /// Reborrows the mutable reference to the [`ReportData`] with a shorter lifetime.
+    /// Reborrows the mutable reference to the [`ReportData`] with a shorter
+    /// lifetime.
     pub fn reborrow<'b>(&'b mut self) -> RawReportMut<'b> {
         RawReportMut {
             ptr: self.ptr,
@@ -286,7 +303,8 @@ impl<'a> RawReportMut<'a> {
         }
     }
 
-    /// Consumes the mutable reference and returns an immutable one with the same lifetime.
+    /// Consumes the mutable reference and returns an immutable one with the
+    /// same lifetime.
     pub fn into_ref(self) -> RawReportRef<'a> {
         RawReportRef {
             ptr: self.ptr,
@@ -294,9 +312,11 @@ impl<'a> RawReportMut<'a> {
         }
     }
 
-    /// Consumes this [`RawReportMut`] and returns a raw mutable pointer to the underlying [`ReportData`].
+    /// Consumes this [`RawReportMut`] and returns a raw mutable pointer to the
+    /// underlying [`ReportData`].
     ///
-    /// This method is primarily used for internal operations that require direct pointer access.
+    /// This method is primarily used for internal operations that require
+    /// direct pointer access.
     pub(super) fn into_mut_ptr(self) -> *mut ReportData<Erased> {
         self.ptr.as_ptr()
     }
@@ -315,9 +335,11 @@ mod tests {
         fn source(_value: &i32) -> Option<&(dyn Error + 'static)> {
             None
         }
+
         fn display(value: &i32, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             fmt::Display::fmt(value, formatter)
         }
+
         fn debug(value: &i32, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             fmt::Debug::fmt(value, formatter)
         }
@@ -328,9 +350,11 @@ mod tests {
         fn source(_value: &String) -> Option<&(dyn Error + 'static)> {
             None
         }
+
         fn display(value: &String, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             fmt::Display::fmt(value, formatter)
         }
+
         fn debug(value: &String, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
             fmt::Debug::fmt(value, formatter)
         }
@@ -499,6 +523,7 @@ mod tests {
             fn display(value: &i32, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 fmt::Display::fmt(value, formatter)
             }
+
             fn debug(value: &i32, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 fmt::Debug::fmt(value, formatter)
             }

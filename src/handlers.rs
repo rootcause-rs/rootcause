@@ -1,17 +1,20 @@
-//! Handlers used to implement or override the behavior of [`core::error::Error`], [`core::fmt::Debug`] or
-//! [`core::fmt::Display`] when creating an attachment or report.
+//! Handlers used to implement or override the behavior of
+//! [`core::error::Error`], [`core::fmt::Debug`] or [`core::fmt::Display`] when
+//! creating an attachment or report.
 
 pub use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
     ContextFormattingStyle, ContextHandler, FormattingFunction,
 };
 
-/// A handler that implements [`ContextHandler<C>`] for any `C` that implements [`core::error::Error`], by delegating
-/// to [`Error::source`], [`Display::fmt`] and [`Debug::fmt`].
+/// A handler that implements [`ContextHandler<C>`] for any `C` that implements
+/// [`core::error::Error`], by delegating to [`Error::source`], [`Display::fmt`]
+/// and [`Debug::fmt`].
 ///
 /// [`Error::source`]: core::error::Error::source
 /// [`Display::fmt`]: core::fmt::Display::fmt
 /// [`Debug::fmt`]: core::fmt::Debug::fmt
+#[derive(Copy, Clone)]
 pub struct Error;
 
 impl<C> ContextHandler<C> for Error
@@ -33,16 +36,20 @@ where
 
 /// A handler that implements [`ContextHandler`] and [`AttachmentHandler`].
 ///
-/// [`ContextHandler<C>`] is implemented for any `C` that implements [`core::fmt::Display`] and [`core::fmt::Debug`], and similarly
-/// [`AttachmentHandler<A>`] is implemented for any `A` that implements those same traits.
+/// [`ContextHandler<C>`] is implemented for any `C` that implements
+/// [`core::fmt::Display`] and [`core::fmt::Debug`], and similarly
+/// [`AttachmentHandler<A>`] is implemented for any `A` that implements those
+/// same traits.
 ///
-/// The methods [`ContextHandler::display`], [`ContextHandler::debug`], [`AttachmentHandler::display`]
-/// and [`AttachmentHandler::debug`] are implemented by delegating to [`Display::fmt`] and [`Debug::fmt`].
+/// The methods [`ContextHandler::display`], [`ContextHandler::debug`],
+/// [`AttachmentHandler::display`] and [`AttachmentHandler::debug`] are
+/// implemented by delegating to [`Display::fmt`] and [`Debug::fmt`].
 ///
 /// The [`ContextHandler::source`] method always returns `None`.
 ///
 /// [`Display::fmt`]: core::fmt::Display::fmt
 /// [`Debug::fmt`]: core::fmt::Debug::fmt
+#[derive(Copy, Clone)]
 pub struct Display;
 
 impl<C> ContextHandler<C> for Display
@@ -77,17 +84,20 @@ where
 
 /// A handler that implements [`ContextHandler`] and [`AttachmentHandler`].
 ///
-/// [`ContextHandler<C>`] is implemented for any `C` that implements [`core::fmt::Debug`], and similarly
-/// [`AttachmentHandler<A>`] is implemented for any `A` that implements that same trait.
+/// [`ContextHandler<C>`] is implemented for any `C` that implements
+/// [`core::fmt::Debug`], and similarly [`AttachmentHandler<A>`] is implemented
+/// for any `A` that implements that same trait.
 ///
-/// The methods [`ContextHandler::debug`] and [`AttachmentHandler::debug`] are implemented
-/// by delegating to [`Debug::fmt`].
+/// The methods [`ContextHandler::debug`] and [`AttachmentHandler::debug`] are
+/// implemented by delegating to [`Debug::fmt`].
 ///
 /// The [`ContextHandler::source`] method always returns `None`.
 ///
-/// The [`ContextHandler::display`] and [`AttachmentHandler::display`] methods always output the string "An object of type {...}".
+/// The [`ContextHandler::display`] and [`AttachmentHandler::display`] methods
+/// always output the string "An object of type {...}".
 ///
 /// [`Debug::fmt`]: core::fmt::Debug::fmt
+#[derive(Copy, Clone)]
 pub struct Debug;
 
 impl<C> ContextHandler<C> for Debug
@@ -127,8 +137,10 @@ where
 ///
 /// The [`ContextHandler::source`] method always returns `None`.
 ///
-/// The [`ContextHandler::display`], [`ContextHandler::debug`], [`AttachmentHandler::display`]
-/// and [`AttachmentHandler::debug`] methods always output the string "An object of type {...}".
+/// The [`ContextHandler::display`], [`ContextHandler::debug`],
+/// [`AttachmentHandler::display`] and [`AttachmentHandler::debug`] methods
+/// always output the string "An object of type {...}".
+#[derive(Copy, Clone)]
 pub struct Any;
 
 impl<A> AttachmentHandler<A> for Any {

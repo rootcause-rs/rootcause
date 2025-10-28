@@ -48,14 +48,18 @@ where
 {
     /// Creates a new [`Report`] with the given context.
     ///
-    /// This method is generic over the thread safety marker `T`. The context will use the
-    /// [`handlers::Error`] handler for formatting.
+    /// This method is generic over the thread safety marker `T`. The context
+    /// will use the [`handlers::Error`] handler for formatting.
     ///
     /// See also:
     ///
-    /// - The [`report!()`] macro will also create a new report, but can auto-detect the thread safety marker and handler.
-    /// - The [`Report::new_sendsync`] and [`Report::new_local`] are more restrictive variants of this function that might help avoid type inference issues.
-    /// - The [`Report::new_custom`] methods also allows you to manually specify the handler.
+    /// - The [`report!()`] macro will also create a new report, but can
+    ///   auto-detect the thread safety marker and handler.
+    /// - The [`Report::new_sendsync`] and [`Report::new_local`] are more
+    ///   restrictive variants of this function that might help avoid type
+    ///   inference issues.
+    /// - The [`Report::new_custom`] methods also allows you to manually specify
+    ///   the handler.
     ///
     /// [`report!()`]: crate::report!
     ///
@@ -82,8 +86,9 @@ where
     ///
     /// This method is generic over the thread safety marker `T`.
     ///
-    /// If you're having trouble with type inference for the thread safety parameter,
-    /// consider using [`Report::new_sendsync_custom`] or [`Report::new_local_custom`] instead.
+    /// If you're having trouble with type inference for the thread safety
+    /// parameter, consider using [`Report::new_sendsync_custom`] or
+    /// [`Report::new_local_custom`] instead.
     ///
     /// # Examples
     /// ```
@@ -105,10 +110,11 @@ where
         Self::from_parts::<H>(context, ReportCollection::new(), ReportAttachments::new())
     }
 
-    /// Creates a new [`Report`] with the given context, children, and attachments.
+    /// Creates a new [`Report`] with the given context, children, and
+    /// attachments.
     ///
-    /// This method processes hooks during report creation. If you want to skip hook
-    /// processing, use [`Report::from_parts_unhooked`] instead.
+    /// This method processes hooks during report creation. If you want to skip
+    /// hook processing, use [`Report::from_parts_unhooked`] instead.
     ///
     /// # Examples
     /// ```
@@ -135,10 +141,11 @@ where
         report
     }
 
-    /// Creates a new [`Report`] with the given context, children, and attachments without hook processing.
+    /// Creates a new [`Report`] with the given context, children, and
+    /// attachments without hook processing.
     ///
-    /// This method skips hook processing during report creation. If you want hooks to be
-    /// processed, use [`Report::from_parts`] instead.
+    /// This method skips hook processing during report creation. If you want
+    /// hooks to be processed, use [`Report::from_parts`] instead.
     ///
     /// # Examples
     /// ```
@@ -161,10 +168,12 @@ where
         H: ContextHandler<C>,
     {
         // SAFETY:
-        // - The context matches the `C` in the output, because we just created the raw report
+        // - The context matches the `C` in the output, because we just created the raw
+        //   report
         // - The entire report has only a single reference, because we just created it
-        // - The entire report only contains `Send+Sync` data, as the bounds on this method
-        //   requires `C: Send+Sync` and our attachments have been marked as `SendSync` as well
+        // - The entire report only contains `Send+Sync` data, as the bounds on this
+        //   method requires `C: Send+Sync` and our attachments have been marked as
+        //   `SendSync` as well
         unsafe {
             Report::from_raw(RawReport::new::<C, H>(
                 context,
@@ -176,9 +185,9 @@ where
 
     /// Decomposes the [`Report`] into its constituent parts.
     ///
-    /// Returns a tuple containing the children collection, attachments collection, and context
-    /// in that order. This is the inverse operation of [`Report::from_parts`] and
-    /// [`Report::from_parts_unhooked`].
+    /// Returns a tuple containing the children collection, attachments
+    /// collection, and context in that order. This is the inverse operation
+    /// of [`Report::from_parts`] and [`Report::from_parts_unhooked`].
     ///
     /// This method can be useful when you need to:
     /// - Extract and modify individual components of a report
@@ -186,8 +195,8 @@ where
     /// - Transfer components between different reports
     /// - Perform custom processing on specific parts
     ///
-    /// Note that to exactly reconstruct the original report, you will also need to use the
-    /// same handler as was used for the original report.
+    /// Note that to exactly reconstruct the original report, you will also need
+    /// to use the same handler as was used for the original report.
     ///
     /// # Examples
     /// ```
@@ -230,9 +239,9 @@ where
 
     /// Extracts and returns the context value from the [`Report`].
     ///
-    /// This is a convenience method that consumes the [`Report`] and returns only the context,
-    /// discarding the children and attachments. It's equivalent to calling
-    /// `report.into_parts().0`.
+    /// This is a convenience method that consumes the [`Report`] and returns
+    /// only the context, discarding the children and attachments. It's
+    /// equivalent to calling `report.into_parts().0`.
     ///
     /// This method can be useful when:
     /// - You only need the underlying error or context value
@@ -279,9 +288,11 @@ where
 
     /// Adds a new attachment to the [`Report`].
     ///
-    /// This is a convenience method used for chaining method calls; it consumes the [`Report`] and returns it.
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
     ///
-    /// If you want more direct control over the attachments, you can use the [`Report::attachments_mut`].
+    /// If you want more direct control over the attachments, you can use the
+    /// [`Report::attachments_mut`].
     ///
     /// # Examples
     /// ```
@@ -301,9 +312,11 @@ where
 
     /// Adds a new attachment to the [`Report`].
     ///
-    /// This is a convenience method used for chaining method calls; it consumes the [`Report`] and returns it.
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
     ///
-    /// If you want more direct control over the attachments, you can use the [`Report::attachments_mut`].
+    /// If you want more direct control over the attachments, you can use the
+    /// [`Report::attachments_mut`].
     ///
     /// # Examples
     /// ```
@@ -374,8 +387,8 @@ where
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// ```
     pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY: We are guaranteed that the report is mutable, because we are in a `Mutable` report
-        // and we have a mutable reference to it.
+        // SAFETY: We are guaranteed that the report is mutable, because we are in a
+        // `Mutable` report and we have a mutable reference to it.
         unsafe { ReportMut::from_raw(self.raw.as_mut()) }
     }
 }
@@ -392,11 +405,15 @@ where
     ///
     /// To call this method you must ensure the following:
     ///
-    /// - The context embedded in the [`RawReport`] must match the `C` of the output type, or the `C` of the output type must be `dyn Any`
-    /// - The ownership marker must match the actual ownership status of the report. More specifically, if the ownership mode is
-    ///   [`Mutable`], then no other references my exist to the report itself, but references to sub-reports are allowed.
-    /// - The thread safety marker must match the contents of the report. More specifically if the marker is [`SendSync`], then
-    ///   all contexts and attachments must be [`Send`]+[`Sync`]
+    /// - The context embedded in the [`RawReport`] must either be the type `C`,
+    ///   or `C` must be the type `dyn Any`
+    /// - The ownership marker must match the actual ownership status of the
+    ///   report. More specifically, if the ownership mode is [`Mutable`], then
+    ///   no other references my exist to the report itself, but references to
+    ///   sub-reports are allowed.
+    /// - The thread safety marker must match the contents of the report. More
+    ///   specifically if the marker is [`SendSync`], then all contexts and
+    ///   attachments must be [`Send`]+[`Sync`]
     pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
         Self {
             raw,
@@ -434,16 +451,21 @@ where
         self.as_ref().current_context()
     }
 
-    /// Creates a new [`Report`] with the given context and sets the current report as a child of the new report.
+    /// Creates a new [`Report`] with the given context and sets the current
+    /// report as a child of the new report.
     ///
-    /// The new context will use the [`handlers::Display`] handler to format the context.
+    /// The new context will use the [`handlers::Display`] handler to format the
+    /// context.
     ///
-    /// This is a convenience method used for chaining method calls; it consumes the [`Report`] and returns it.
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
     ///
-    /// If you want a different context handler, you can use [`Report::context_custom`].
+    /// If you want a different context handler, you can use
+    /// [`Report::context_custom`].
     ///
-    /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
-    /// which is the underlying method used to implement this method.
+    /// If you want to more directly control the allocation of the new report,
+    /// you can use [`Report::from_parts`], which is the underlying method
+    /// used to implement this method.
     ///
     /// # Examples
     /// ```
@@ -460,19 +482,21 @@ where
         self.context_custom::<handlers::Display, _>(context)
     }
 
-    /// Creates a new [`Report`] with the given context and sets the current report as a child of the new report.
+    /// Creates a new [`Report`] with the given context and sets the current
+    /// report as a child of the new report.
     ///
-    /// This is a convenience method used for chaining method calls; it consumes the [`Report`] and returns it.
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
     ///
-    /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
-    /// which is the underlying method used to implement this method.
+    /// If you want to more directly control the allocation of the new report,
+    /// you can use [`Report::from_parts`], which is the underlying method
+    /// used to implement this method.
     ///
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
-    /// let contextual_report: Report<&str> =
-    ///     report.context_custom::<handlers::Debug, _>("context");
+    /// let contextual_report: Report<&str> = report.context_custom::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]
@@ -517,16 +541,19 @@ where
 
     /// Changes the context type of the [`Report`] to [`dyn Any`].
     ///
-    /// Calling this method is equivalent to calling `report.into()`, however this method
-    /// has been restricted to only change the context mode to `dyn Any`.
+    /// Calling this method is equivalent to calling `report.into()`, however
+    /// this method has been restricted to only change the context mode to
+    /// `dyn Any`.
     ///
-    /// This method can be useful to help with type inference or to improve code readability,
-    /// as it more clearly communicates intent.
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
     ///
-    /// This method does not actually modify the report in any way. It only has the effect of "forgetting"
-    /// that the context actually has the type `C`.
+    /// This method does not actually modify the report in any way. It only has
+    /// the effect of "forgetting" that the context actually has the type
+    /// `C`.
     ///
-    /// To get back the report with a concrete `C` you can use the method [`Report::downcast_report`].
+    /// To get back the report with a concrete `C` you can use the method
+    /// [`Report::downcast_report`].
     ///
     /// # Examples
     /// ```
@@ -544,21 +571,25 @@ where
 
     /// Changes the ownership of the [`Report`] to [`Cloneable`].
     ///
-    /// Calling this method is equivalent to calling `report.into()`, however this method
-    /// has been restricted to only change the ownership mode to [`Cloneable`].
+    /// Calling this method is equivalent to calling `report.into()`, however
+    /// this method has been restricted to only change the ownership mode to
+    /// [`Cloneable`].
     ///
-    /// This method can be useful to help with type inference or to improve code readability,
-    /// as it more clearly communicates intent.
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
     ///
-    /// This method does not actually modify the report in any way. It only has the effect of "forgetting" that
-    /// all objects in the [`Report`] might be actually [`Send`] and [`Sync`].
+    /// This method does not actually modify the report in any way. It only has
+    /// the effect of "forgetting" that the [`Report`] only has a single
+    /// owner.
     ///
-    /// After calling this method, you can clone the [`Report`], but you can no longer add
-    /// attachments to the [`Report`] or otherwise modify the root node.
+    /// After calling this method, you can clone the [`Report`], but you can no
+    /// longer add attachments to the [`Report`] or otherwise modify the
+    /// root node.
     ///
     /// To get back a [`Mutable`] you need to either:
     /// - Allocate a new root node using e.g. [`Report::context`].
-    /// - If there is a single unique owner of the report, you can use [`Report::try_into_mutable`].
+    /// - If there is a single unique owner of the report, you can use
+    ///   [`Report::try_into_mutable`].
     /// - Preformat the root node using [`Report::preformat`].
     ///
     /// # Examples
@@ -576,17 +607,20 @@ where
 
     /// Changes the thread safety mode of the [`Report`] to [`Local`].
     ///
-    /// Calling this method is equivalent to calling `report.into()`, however this method
-    /// has been restricted to only change the thread safety mode to [`Local`].
+    /// Calling this method is equivalent to calling `report.into()`, however
+    /// this method has been restricted to only change the thread safety
+    /// mode to [`Local`].
     ///
-    /// This method can be useful to help with type inference or to improve code readability,
-    /// as it more clearly communicates intent.
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
     ///
-    /// This method does not actually modify the report in any way. It only has the effect of "forgetting" that
-    /// all objects in the [`Report`] might actually be [`Send`] and [`Sync`].
+    /// This method does not actually modify the report in any way. It only has
+    /// the effect of "forgetting" that all objects in the [`Report`] might
+    /// actually be [`Send`] and [`Sync`].
     ///
-    /// After calling this method, you can add objects to the [`Report`] that neither [`Send`] nor
-    /// [`Sync`], but the report itself will no longer be [`Send`]+[`Sync`].
+    /// After calling this method, you can add objects to the [`Report`] that
+    /// neither [`Send`] nor [`Sync`], but the report itself will no longer
+    /// be [`Send`]+[`Sync`].
     ///
     /// # Examples
     /// ```
@@ -600,15 +634,17 @@ where
         unsafe { Report::from_raw(self.into_raw()) }
     }
 
-    /// Checks if there is only a single unique owner of the root node of the [`Report`].
+    /// Checks if there is only a single unique owner of the root node of the
+    /// [`Report`].
     ///
-    /// If there is only a single unique owner of the [`Report`], this method marks the
-    /// current report as [`Mutable`] report and returns, otherwise it gives back the
-    /// current report.
+    /// If there is only a single unique owner of the [`Report`], this method
+    /// marks the current report as [`Mutable`] report and returns,
+    /// otherwise it gives back the current report.
     ///
-    /// This method does not actually modify the report in any way. It only has the effect of
-    /// checking for unique ownership and returns the same report (with different type
-    /// parameters) no matter the outcome of the check.
+    /// This method does not actually modify the report in any way. It only has
+    /// the effect of checking for unique ownership and returns the same
+    /// report (with different type parameters) no matter the outcome of the
+    /// check.
     ///
     /// # Examples
     /// ```
@@ -643,20 +679,24 @@ where
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
 
-    /// Returns an iterator over the complete report hierarchy including this report.
+    /// Returns an iterator over the complete report hierarchy including this
+    /// report.
     ///
-    /// The iterator visits reports in a depth-first order: it first visits the current report,
-    /// then recursively visits each child report and all of their descendants before moving
-    /// to the next sibling. Unlike [`Report::iter_sub_reports`], this method includes the report on
+    /// The iterator visits reports in a depth-first order: it first visits the
+    /// current report, then recursively visits each child report and all of
+    /// their descendants before moving to the next sibling. Unlike
+    /// [`Report::iter_sub_reports`], this method includes the report on
     /// which it was called as the first item in the iteration.
     ///
-    /// The ownership marker of the returned iterator references matches the ownership of this
-    /// report. For mutable reports, the references may not be cloneable, which can limit
-    /// how you can use them. If you need cloneable references, consider using
-    /// [`Report::iter_sub_reports`] instead, which only iterates over children but guarantees
+    /// The ownership marker of the returned iterator references matches the
+    /// ownership of this report. For mutable reports, the references may
+    /// not be cloneable, which can limit how you can use them. If you need
+    /// cloneable references, consider using [`Report::iter_sub_reports`]
+    /// instead, which only iterates over children but guarantees
     /// cloneable references.
     ///
-    /// See also: [`Report::iter_sub_reports`] for iterating only over child reports with cloneable references.
+    /// See also: [`Report::iter_sub_reports`] for iterating only over child
+    /// reports with cloneable references.
     ///
     /// # Examples
     /// ```
@@ -696,19 +736,23 @@ where
         unsafe { ReportIter::from_raw(stack) }
     }
 
-    /// Returns an iterator over child reports in the report hierarchy (excluding this report).
+    /// Returns an iterator over child reports in the report hierarchy
+    /// (excluding this report).
     ///
-    /// The iterator visits reports in a depth-first order: it first visits the current report's
-    /// children, then recursively visits each child report and all of their descendants before
-    /// moving to the next sibling. Unlike [`Report::iter_reports`], this method does NOT include the
+    /// The iterator visits reports in a depth-first order: it first visits the
+    /// current report's children, then recursively visits each child report
+    /// and all of their descendants before moving to the next sibling.
+    /// Unlike [`Report::iter_reports`], this method does NOT include the
     /// report on which it was called - only its descendants.
     ///
-    /// This method always returns cloneable report references, making it suitable for scenarios
-    /// where you need to store or pass around the report references. This is different from
-    /// [`Report::iter_reports`], which returns references that match the ownership marker of the
+    /// This method always returns cloneable report references, making it
+    /// suitable for scenarios where you need to store or pass around the
+    /// report references. This is different from [`Report::iter_reports`],
+    /// which returns references that match the ownership marker of the
     /// current report and may not be cloneable for mutable reports.
     ///
-    /// See also: [`Report::iter_reports`] for iterating over all reports including the current one.
+    /// See also: [`Report::iter_reports`] for iterating over all reports
+    /// including the current one.
     ///
     /// # Examples
     /// ```
@@ -747,11 +791,11 @@ where
         unsafe { ReportIter::from_raw(stack) }
     }
 
-    /// Creates a new report, which has the same structure as the current report,
-    /// but has all the contexts and attachments preformatted.
+    /// Creates a new report, which has the same structure as the current
+    /// report, but has all the contexts and attachments preformatted.
     ///
-    /// This can be useful, as the new report is mutable because it was just created,
-    /// and additionally the new report is [`Send`]+[`Sync`].
+    /// This can be useful, as the new report is mutable because it was just
+    /// created, and additionally the new report is [`Send`]+[`Sync`].
     ///
     /// # Examples
     /// ```
@@ -869,11 +913,14 @@ where
         )
     }
 
-    /// Gets the preferred formatting style for the context with hook processing.
+    /// Gets the preferred formatting style for the context with hook
+    /// processing.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -884,8 +931,7 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let style =
-    ///     report.preferred_context_formatting_style(handlers::FormattingFunction::Display);
+    /// let style = report.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
@@ -896,11 +942,14 @@ where
         crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
     }
 
-    /// Gets the preferred formatting style for the context without hook processing.
+    /// Gets the preferred formatting style for the context without hook
+    /// processing.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -909,8 +958,8 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let style = report
-    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
+    /// let style =
+    ///     report.preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,
@@ -940,7 +989,8 @@ where
 {
     /// Attempts to downcast the current context to a specific type.
     ///
-    /// Returns `Some(&C)` if the current context is of type `C`, otherwise returns `None`.
+    /// Returns `Some(&C)` if the current context is of type `C`, otherwise
+    /// returns `None`.
     ///
     /// # Examples
     /// ```
@@ -1066,10 +1116,12 @@ where
 {
     /// Creates a new [`Report`] with [`SendSync`] thread safety.
     ///
-    /// This is a convenience method that calls [`Report::new`] with explicit [`SendSync`] thread safety.
-    /// Use this method when you're having trouble with type inference for the thread safety parameter.
+    /// This is a convenience method that calls [`Report::new`] with explicit
+    /// [`SendSync`] thread safety. Use this method when you're having
+    /// trouble with type inference for the thread safety parameter.
     ///
-    /// The context will use the [`handlers::Error`] handler to format the context.
+    /// The context will use the [`handlers::Error`] handler to format the
+    /// context.
     ///
     /// # Examples
     /// ```
@@ -1089,10 +1141,12 @@ where
         Self::new(context)
     }
 
-    /// Creates a new [`Report`] with [`SendSync`] thread safety and the given handler.
+    /// Creates a new [`Report`] with [`SendSync`] thread safety and the given
+    /// handler.
     ///
-    /// This is a convenience method that calls [`Report::new_custom`] with explicit [`SendSync`] thread safety.
-    /// Use this method when you're having trouble with type inference for the thread safety parameter.
+    /// This is a convenience method that calls [`Report::new_custom`] with
+    /// explicit [`SendSync`] thread safety. Use this method when you're
+    /// having trouble with type inference for the thread safety parameter.
     ///
     /// # Examples
     /// ```
@@ -1115,10 +1169,12 @@ where
 {
     /// Creates a new [`Report`] with [`Local`] thread safety.
     ///
-    /// This is a convenience method that calls [`Report::new`] with explicit [`Local`] thread safety.
-    /// Use this method when you're having trouble with type inference for the thread safety parameter.
+    /// This is a convenience method that calls [`Report::new`] with explicit
+    /// [`Local`] thread safety. Use this method when you're having trouble
+    /// with type inference for the thread safety parameter.
     ///
-    /// The context will use the [`handlers::Error`] handler to format the context.
+    /// The context will use the [`handlers::Error`] handler to format the
+    /// context.
     ///
     /// # Examples
     /// ```
@@ -1138,10 +1194,12 @@ where
         Self::new(context)
     }
 
-    /// Creates a new [`Report`] with [`Local`] thread safety and the given handler.
+    /// Creates a new [`Report`] with [`Local`] thread safety and the given
+    /// handler.
     ///
-    /// This is a convenience method that calls [`Report::new_custom`] with explicit [`Local`] thread safety.
-    /// Use this method when you're having trouble with type inference for the thread safety parameter.
+    /// This is a convenience method that calls [`Report::new_custom`] with
+    /// explicit [`Local`] thread safety. Use this method when you're having
+    /// trouble with type inference for the thread safety parameter.
     ///
     /// # Examples
     /// ```
@@ -1228,8 +1286,8 @@ where
 
         // SAFETY:
         // - The context is valid, because does not change
-        // - The ownership of the cloned report is also set to Cloneable, which
-        //   is still valid
+        // - The ownership of the cloned report is also set to Cloneable, which is still
+        //   valid
         // - The thread marker is valid, because it does not change
         unsafe { Report::from_raw(raw) }
     }

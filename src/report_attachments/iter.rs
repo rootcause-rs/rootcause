@@ -16,8 +16,9 @@ impl<'a> ReportAttachmentsIter<'a> {
     ///
     /// # Safety
     ///
-    /// The thread safety marker must match the contents of the attachments. More specifically if the marker is `SendSync`, then
-    /// all of the inner attachments must be `Send+Sync`
+    /// The thread safety marker must match the contents of the attachments.
+    /// More specifically if the marker is `SendSync`, then all of the inner
+    /// attachments must be `Send+Sync`
     pub(crate) unsafe fn from_raw(iter: core::slice::Iter<'a, RawAttachment>) -> Self {
         Self { iter }
     }
@@ -67,8 +68,9 @@ where
     ///
     /// # Safety
     ///
-    /// The thread safety marker must match the contents of the attachments. More specifically if the marker is `SendSync`, then
-    /// all of the inner attachments must be `Send+Sync`
+    /// The thread safety marker must match the contents of the attachments.
+    /// More specifically if the marker is `SendSync`, then all of the inner
+    /// attachments must be `Send+Sync`
     pub(crate) unsafe fn from_raw(iter: alloc::vec::IntoIter<RawAttachment>) -> Self {
         Self {
             iter,

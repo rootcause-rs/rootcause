@@ -1,51 +1,78 @@
-//! Comprehensive integration tests for the rootcause-internals crate functionality.
+//! Comprehensive integration tests for the rootcause-internals crate
+//! functionality.
 //!
-//! Full disclosure: These tests are very verbose and extremely LLM-generated, but I have validated that they make sense and that they
-//! cover the use-cases I can think of.
+//! Full disclosure: These tests are very verbose and extremely LLM-generated,
+//! but I have validated that they make sense and that they cover the use-cases
+//! I can think of.
 //!
-//! This test suite exercises all major functionality of the rootcause-internals crate with **37 comprehensive tests**:
+//! This test suite exercises all major functionality of the rootcause-internals
+//! crate with **37 comprehensive tests**:
 //!
 //! ## Attachment Tests (4 tests)
-//! - `test_attachment_creation_and_basic_operations`: Basic attachment creation, type checking, and downcasting
-//! - `test_attachment_display_and_debug`: Display and debug formatting with default handlers
-//! - `test_attachment_custom_handler`: Custom handler display and debug formatting
-//! - `test_multiple_attachments`: Multiple attachments with proper type checking
+//! - `test_attachment_creation_and_basic_operations`: Basic attachment
+//!   creation, type checking, and downcasting
+//! - `test_attachment_display_and_debug`: Display and debug formatting with
+//!   default handlers
+//! - `test_attachment_custom_handler`: Custom handler display and debug
+//!   formatting
+//! - `test_multiple_attachments`: Multiple attachments with proper type
+//!   checking
 //!
 //! ## Report Tests (9 tests)
-//! - `test_report_creation_and_basic_operations`: Basic report creation with contexts
+//! - `test_report_creation_and_basic_operations`: Basic report creation with
+//!   contexts
 //! - `test_report_with_source`: Error source handling and chaining
-//! - `test_report_display_and_debug`: Display and debug formatting with default handlers
+//! - `test_report_display_and_debug`: Display and debug formatting with default
+//!   handlers
 //! - `test_report_custom_handler`: Custom handler display and debug formatting
 //! - `test_report_with_children`: Hierarchical structures with nested children
 //! - `test_report_with_attachments`: Reports containing multiple attachments
 //! - `test_report_clone_arc`: Arc cloning and reference management
 //! - `test_mutable_operations`: Mutable operations on children and attachments
-//! - `test_context_downcast`: Context downcasting with type checking and hierarchical structures
+//! - `test_context_downcast`: Context downcasting with type checking and
+//!   hierarchical structures
 //!
 //! ## RawReportMut Tests (9 tests)
-//! - `test_raw_report_mut_basic_operations`: Basic mutable reference operations, reborrow, and type safety
-//! - `test_raw_report_mut_children_manipulation`: Adding, removing, and manipulating child reports
-//! - `test_raw_report_mut_attachments_manipulation`: Adding, removing, and manipulating attachments with mixed handler types
-//! - `test_raw_report_mut_complex_hierarchy_manipulation`: Complex nested structures with mixed children and attachments
-//! - `test_raw_report_mut_reborrow_with_modifications`: Reborrow functionality with multiple modifications
-//! - `test_raw_report_mut_type_safety_and_downcasting`: Type safety verification and downcasting with mutable operations
-//! - `test_raw_report_mut_error_source_handling`: Error source handling with custom handlers through mutable operations
-//! - `test_raw_report_mut_modification_correctness`: Verification of final state after multiple modifications
-//! - `test_raw_report_mut_context_downcast_unchecked`: Unsafe mutable context downcasting with modification verification
+//! - `test_raw_report_mut_basic_operations`: Basic mutable reference
+//!   operations, reborrow, and type safety
+//! - `test_raw_report_mut_children_manipulation`: Adding, removing, and
+//!   manipulating child reports
+//! - `test_raw_report_mut_attachments_manipulation`: Adding, removing, and
+//!   manipulating attachments with mixed handler types
+//! - `test_raw_report_mut_complex_hierarchy_manipulation`: Complex nested
+//!   structures with mixed children and attachments
+//! - `test_raw_report_mut_reborrow_with_modifications`: Reborrow functionality
+//!   with multiple modifications
+//! - `test_raw_report_mut_type_safety_and_downcasting`: Type safety
+//!   verification and downcasting with mutable operations
+//! - `test_raw_report_mut_error_source_handling`: Error source handling with
+//!   custom handlers through mutable operations
+//! - `test_raw_report_mut_modification_correctness`: Verification of final
+//!   state after multiple modifications
+//! - `test_raw_report_mut_context_downcast_unchecked`: Unsafe mutable context
+//!   downcasting with modification verification
 //!
 //! ## Custom Handler Tests (3 tests)
-//! - `test_custom_handler_with_source`: Custom handlers correctly handling sources
-//! - `test_custom_handler_overrides_source`: Proof that custom handlers override default Error::source() behavior
-//! - `test_custom_handler_provides_source`: Custom handlers providing sources for both Error and non-Error types
+//! - `test_custom_handler_with_source`: Custom handlers correctly handling
+//!   sources
+//! - `test_custom_handler_overrides_source`: Proof that custom handlers
+//!   override default Error::source() behavior
+//! - `test_custom_handler_provides_source`: Custom handlers providing sources
+//!   for both Error and non-Error types
 //!
 //! ## Complex Integration Tests (7 tests)
-//! - `test_complex_report_hierarchy`: Complex nested structures combining reports and attachments
-//! - `test_different_attachment_types`: Mixed attachment types with proper type checking
-//! - `test_different_context_types`: Multiple context types with appropriate handlers
-//! - `test_context_types_with_custom_handlers`: Custom handlers for non-Error context types
+//! - `test_complex_report_hierarchy`: Complex nested structures combining
+//!   reports and attachments
+//! - `test_different_attachment_types`: Mixed attachment types with proper type
+//!   checking
+//! - `test_different_context_types`: Multiple context types with appropriate
+//!   handlers
+//! - `test_context_types_with_custom_handlers`: Custom handlers for non-Error
+//!   context types
 //! - `test_deep_hierarchy`: Deep recursive structures (5 levels)
 //! - `test_mixed_handler_types`: Different handler types operating together
-//! - `test_large_hierarchy`: Large-scale structures (10 attachments, 5 children)
+//! - `test_large_hierarchy`: Large-scale structures (10 attachments, 5
+//!   children)
 //!
 //! ## Edge Case and Consistency Tests (3 tests)
 //! - `test_empty_report`: Edge case handling for empty reports
@@ -53,14 +80,17 @@
 //! - `test_report_vtable_consistency`: Vtable consistency for report operations
 //!
 //! ## Memory Management Tests (2 tests)
-//! - `test_clone_and_drop_behavior`: Comprehensive memory management verification with drop tracking
+//! - `test_clone_and_drop_behavior`: Comprehensive memory management
+//!   verification with drop tracking
 //!   - Single report clone/drop behavior
 //!   - Attachment clone/drop behavior
 //!   - Complex hierarchy cloning with proper reference counting
 //!   - Multiple clones with exact-once drop semantics
-//! - `test_hierarchical_drop_order_independence`: Hierarchical drop order independence verification
+//! - `test_hierarchical_drop_order_independence`: Hierarchical drop order
+//!   independence verification
 //!   - 3-level hierarchy drop verification (grandchild -> child -> parent)
-//!   - Reference counting with clones - proves original can be dropped while clone exists
+//!   - Reference counting with clones - proves original can be dropped while
+//!     clone exists
 //!   - Multiple clone scenarios - verifies last clone triggers final drop
 //!   - Direct child/grandchild cloning with non-standard drop orders
 //!   - Parent-first drop with child/grandchild clones still alive
@@ -69,18 +99,28 @@
 //!
 //! ## Safety Coverage
 //! The tests verify that all unsafe operations work correctly:
-//! - **Type-erased vtable dispatch** maintains complete type safety across all operations
-//! - **Memory management** with Box and Arc wrappers prevents leaks and double-free errors
-//! - **Raw pointer manipulation** in `#[repr(C)]` structs maintains memory layout guarantees
-//! - **Lifetime management** in reference types ensures no use-after-free conditions
-//! - **Custom handler dispatch** proves vtable system allows complete control override
-//! - **Reference counting** ensures values are dropped exactly once regardless of clone count
+//! - **Type-erased vtable dispatch** maintains complete type safety across all
+//!   operations
+//! - **Memory management** with Box and Arc wrappers prevents leaks and
+//!   double-free errors
+//! - **Raw pointer manipulation** in `#[repr(C)]` structs maintains memory
+//!   layout guarantees
+//! - **Lifetime management** in reference types ensures no use-after-free
+//!   conditions
+//! - **Custom handler dispatch** proves vtable system allows complete control
+//!   override
+//! - **Reference counting** ensures values are dropped exactly once regardless
+//!   of clone count
 //!
 //! ## Coverage Achievement
-//! - **100% meaningful coverage** of rootcause-internals crate (204/550 total lines covered)
-//! - **All vtable dispatch scenarios** thoroughly tested with both default and custom handlers
-//! - **Complete memory safety verification** through comprehensive clone and drop behavior testing
-//! - **Type safety validation** across all type-erased operations and downcasting scenarios
+//! - **100% meaningful coverage** of rootcause-internals crate (204/550 total
+//!   lines covered)
+//! - **All vtable dispatch scenarios** thoroughly tested with both default and
+//!   custom handlers
+//! - **Complete memory safety verification** through comprehensive clone and
+//!   drop behavior testing
+//! - **Type safety validation** across all type-erased operations and
+//!   downcasting scenarios
 
 use std::{any::TypeId, error::Error, fmt};
 
@@ -438,7 +478,8 @@ fn test_custom_handler_with_source() {
 
 #[test]
 fn test_custom_handler_overrides_source() {
-    // Create a custom handler that deliberately returns None even when the Error has a source
+    // Create a custom handler that deliberately returns None even when the Error
+    // has a source
     struct IgnoreSourceHandler;
 
     impl ContextHandler<TestError> for IgnoreSourceHandler {
@@ -1133,12 +1174,14 @@ fn test_custom_handler_provides_source() {
 
     static REFERENCE_ERROR: SimpleError = SimpleError("reference error from custom handler");
 
-    // Test for Error types: custom handler that provides a different source than Error::source()
+    // Test for Error types: custom handler that provides a different source than
+    // Error::source()
     struct AlternateSourceHandler;
 
     impl ContextHandler<TestError> for AlternateSourceHandler {
         fn source(_value: &TestError) -> Option<&(dyn Error + 'static)> {
-            // Always return a specific static error, regardless of the actual Error::source()
+            // Always return a specific static error, regardless of the actual
+            // Error::source()
             Some(&REFERENCE_ERROR)
         }
 
@@ -1155,7 +1198,8 @@ fn test_custom_handler_provides_source() {
         }
     }
 
-    // Test for non-Error types: custom handler that provides a source for types that don't implement Error
+    // Test for non-Error types: custom handler that provides a source for types
+    // that don't implement Error
     #[derive(Debug)]
     struct NonErrorContext {
         message: String,
@@ -1209,7 +1253,8 @@ fn test_custom_handler_provides_source() {
     let alternate_ref = alternate_report.as_ref();
     let alternate_source = alternate_ref.context_source();
 
-    // The custom handler should return the reference error, NOT the actual Error::source()
+    // The custom handler should return the reference error, NOT the actual
+    // Error::source()
     assert!(alternate_source.is_some());
     assert_eq!(
         alternate_source.unwrap().to_string(),
@@ -1235,7 +1280,8 @@ fn test_custom_handler_provides_source() {
         "reference error from custom handler"
     );
 
-    // Test 3: Compare with default handler for same non-Error type (should have no source)
+    // Test 3: Compare with default handler for same non-Error type (should have no
+    // source)
     struct DefaultNonErrorHandler;
 
     impl ContextHandler<NonErrorContext> for DefaultNonErrorHandler {
@@ -1846,12 +1892,14 @@ fn test_hierarchical_drop_order_independence() {
         assert_eq!(child_clone.as_ref().strong_count(), 2);
         assert_eq!(grandchild_clone.as_ref().strong_count(), 2);
 
-        // Drop parent first - but child_clone and grandchild_clone should keep them alive
+        // Drop parent first - but child_clone and grandchild_clone should keep them
+        // alive
         drop(parent);
 
         // After parent is dropped:
         // - child_clone should have strong count of 1 (parent's reference is gone)
-        // - grandchild_clone should have strong count of 2 (child_clone still holds a reference to grandchild, plus grandchild_clone)
+        // - grandchild_clone should have strong count of 2 (child_clone still holds a
+        //   reference to grandchild, plus grandchild_clone)
         assert_eq!(child_clone.as_ref().strong_count(), 1);
         assert_eq!(grandchild_clone.as_ref().strong_count(), 2);
 
@@ -1865,7 +1913,8 @@ fn test_hierarchical_drop_order_independence() {
         // Drop child clone - child should be dropped now
         drop(child_clone);
 
-        // Grandchild should now have strong count of 1 (child_clone's reference is gone)
+        // Grandchild should now have strong count of 1 (child_clone's reference is
+        // gone)
         assert_eq!(grandchild_clone.as_ref().strong_count(), 1);
 
         // Child should be dropped, grandchild still alive via clone
@@ -1928,7 +1977,8 @@ fn test_hierarchical_drop_order_independence() {
         assert_eq!(grandchild_ref.as_ref().strong_count(), 2);
         assert_eq!(grandchild_clone.as_ref().strong_count(), 2);
 
-        // Drop original parent (parent_clone and grandchild_clone should keep things alive)
+        // Drop original parent (parent_clone and grandchild_clone should keep things
+        // alive)
         drop(parent);
 
         // Parent clone should now have strong count of 1
@@ -1958,7 +2008,8 @@ fn test_hierarchical_drop_order_independence() {
         assert_eq!(final_log.len(), 6); // 3 Created + 3 Dropped
     }
 
-    // Test Case 6: Keep grandchild alive while parent and child are dropped together
+    // Test Case 6: Keep grandchild alive while parent and child are dropped
+    // together
     {
         let log = Rc::new(RefCell::new(Vec::<String>::new()));
 
@@ -2549,9 +2600,11 @@ fn test_raw_report_mut_error_source_handling() {
             fn source(_value: &TestError) -> Option<&(dyn Error + 'static)> {
                 None // Always ignore source
             }
+
             fn display(value: &TestError, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(formatter, "[NO_SOURCE] {}", value.message)
             }
+
             fn debug(value: &TestError, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(formatter, "NoSource({:?})", value.message)
             }

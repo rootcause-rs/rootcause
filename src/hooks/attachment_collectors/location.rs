@@ -1,21 +1,24 @@
 //! Source code location attachment collector.
 //!
-//! This module provides functionality to automatically capture and attach source code
-//! location information (file, line, column) to reports when they are created.
+//! This module provides functionality to automatically capture and attach
+//! source code location information (file, line, column) to reports when they
+//! are created.
 //!
 //! ## Usage
 //!
-//! The [`LocationCollector`] can be registered as a report creation hook to automatically
-//! attach location information to all reports:
+//! The [`LocationCollector`] can be registered as a report creation hook to
+//! automatically attach location information to all reports:
 //!
 //! ```rust
-//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
+//! use rootcause::hooks::{
+//!     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+//! };
 //!
 //! register_attachment_collector_hook(LocationCollector);
 //! ```
 //!
-//! Once registered, all reports will automatically include the source location where
-//! they were created, formatted as `filename:line:column`.
+//! Once registered, all reports will automatically include the source location
+//! where they were created, formatted as `filename:line:column`.
 
 use alloc::borrow::Cow;
 
@@ -26,7 +29,8 @@ use crate::hooks::AttachmentCollectorHook;
 /// Source code location information.
 ///
 /// Represents the file, line, and column where a report was created.
-/// This information is automatically captured using [`core::panic::Location::caller()`].
+/// This information is automatically captured using
+/// [`core::panic::Location::caller()`].
 #[derive(Debug)]
 pub struct Location {
     /// The source file path where the report was created.
@@ -44,6 +48,7 @@ pub struct Location {
 ///
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug
+#[derive(Copy, Clone)]
 pub struct LocationHandler;
 impl AttachmentHandler<Location> for LocationHandler {
     fn display(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -74,11 +79,14 @@ impl AttachmentHandler<Location> for LocationHandler {
 /// ## Example
 ///
 /// ```rust
-/// use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
+/// use rootcause::hooks::{
+///     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+/// };
 ///
 /// // Register to automatically collect location for all reports
 /// register_attachment_collector_hook(LocationCollector);
 /// ```
+#[derive(Copy, Clone)]
 pub struct LocationCollector;
 
 impl AttachmentCollectorHook<Location> for LocationCollector {

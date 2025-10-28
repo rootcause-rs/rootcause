@@ -1,12 +1,13 @@
 //! Vtable for type-erased attachment operations.
 //!
-//! This module contains the [`AttachmentVtable`] which enables calling handler methods on
-//! attachments when their concrete attachment type `A` and handler type `H` have been erased.
-//! The vtable stores function pointers that dispatch to the correct typed implementations.
+//! This module contains the [`AttachmentVtable`] which enables calling handler
+//! methods on attachments when their concrete attachment type `A` and handler
+//! type `H` have been erased. The vtable stores function pointers that dispatch
+//! to the correct typed implementations.
 //!
-//! This module encapsulates the fields of the [`AttachmentVtable`] so that they cannot be accessed
-//! directly without going through the proper methods which specifies which safety invariants are
-//! required to call them safely.
+//! This module encapsulates the fields of the [`AttachmentVtable`] so that they
+//! cannot be accessed directly without going through the proper methods which
+//! specifies which safety invariants are required to call them safely.
 
 use alloc::boxed::Box;
 use core::{any::TypeId, ptr::NonNull};
@@ -22,23 +23,28 @@ use crate::{
 /// Contains function pointers for performing operations on attachments without
 /// knowing their concrete type at compile time.
 pub(super) struct AttachmentVtable {
-    /// Gets the [`TypeId`] of the attachment type that was used to create this [`AttachmentVtable`].
+    /// Gets the [`TypeId`] of the attachment type that was used to create this
+    /// [`AttachmentVtable`].
     type_id: fn() -> TypeId,
-    /// Gets the [`TypeId`] of the handler that was used to create this [`AttachmentVtable`].
+    /// Gets the [`TypeId`] of the handler that was used to create this
+    /// [`AttachmentVtable`].
     handler_type_id: fn() -> TypeId,
-    /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this pointer.
+    /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this
+    /// pointer.
     drop: unsafe fn(NonNull<AttachmentData<Erased>>),
     /// Formats the report using the `display` method on the handler.
     display: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     /// Formats the report using the `debug` method on the handler.
     debug: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Get the formatting style preferred by the context when formatted as part of a report.
+    /// Get the formatting style preferred by the context when formatted as part
+    /// of a report.
     preferred_formatting_style:
         unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
 }
 
 impl AttachmentVtable {
-    /// Creates a new [`AttachmentVtable`] for the attachment type `A` and the handler type `H`.
+    /// Creates a new [`AttachmentVtable`] for the attachment type `A` and the
+    /// handler type `H`.
     pub(super) const fn new<A: 'static, H: AttachmentHandler<A>>() -> &'static Self {
         &Self {
             type_id: TypeId::of::<A>,
@@ -50,12 +56,14 @@ impl AttachmentVtable {
         }
     }
 
-    /// Gets the [`TypeId`] of the attachment type that was used to create this [`AttachmentVtable`].
+    /// Gets the [`TypeId`] of the attachment type that was used to create this
+    /// [`AttachmentVtable`].
     pub(super) fn type_id(&self) -> TypeId {
         (self.type_id)()
     }
 
-    /// Gets the [`TypeId`] of the handler that was used to create this [`AttachmentVtable`].
+    /// Gets the [`TypeId`] of the handler that was used to create this
+    /// [`AttachmentVtable`].
     pub(super) fn handler_type_id(&self) -> TypeId {
         (self.handler_type_id)()
     }
@@ -64,13 +72,16 @@ impl AttachmentVtable {
     ///
     /// # Safety
     ///
-    /// - The caller must ensure that the pointer comes from a [`Box<AttachmentData<A>>`], which was turned
-    ///   into a pointer using [`Box::into_raw`].
-    /// - The attachment type `A` stored in the [`AttachmentData`] must match the `A` used when creating this [`AttachmentVtable`].
+    /// - The caller must ensure that the pointer comes from a
+    ///   [`Box<AttachmentData<A>>`], which was turned into a pointer using
+    ///   [`Box::into_raw`].
+    /// - The attachment type `A` stored in the [`AttachmentData`] must match
+    ///   the `A` used when creating this [`AttachmentVtable`].
     /// - After calling this method, the pointer must no longer be used.
     pub(super) unsafe fn drop(&self, ptr: NonNull<AttachmentData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<A>` below.
-        // That function has three requirements, all of which are guaranteed by our caller:
+        // That function has three requirements, all of which are guaranteed by our
+        // caller:
         // - The pointer must come from `Box::into_raw`
         // - The attachment type `A` must match the stored type
         // - The pointer must not be used after calling
@@ -86,15 +97,16 @@ impl AttachmentVtable {
     ///
     /// # Safety
     ///
-    /// The attachment type `A` used when creating this [`AttachmentVtable`] must match the type
-    /// stored in the [`RawAttachmentRef`].
+    /// The attachment type `A` used when creating this [`AttachmentVtable`]
+    /// must match the type stored in the [`RawAttachmentRef`].
     pub(super) unsafe fn display(
         &self,
         ptr: RawAttachmentRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
-        // SAFETY: We know that the `self.display` field points to the function `display::<A, H>` below.
-        // That function requires that the attachment type `A` matches the actual attachment type stored in the `AttachmentData`,
+        // SAFETY: We know that the `self.display` field points to the function
+        // `display::<A, H>` below. That function requires that the attachment
+        // type `A` matches the actual attachment type stored in the `AttachmentData`,
         // which is guaranteed by our caller.
         unsafe { (self.display)(ptr, formatter) }
     }
@@ -106,36 +118,40 @@ impl AttachmentVtable {
     ///
     /// # Safety
     ///
-    /// The attachment type `A` used when creating this [`AttachmentVtable`] must match the type
-    /// stored in the [`RawAttachmentRef`].
+    /// The attachment type `A` used when creating this [`AttachmentVtable`]
+    /// must match the type stored in the [`RawAttachmentRef`].
     pub(super) unsafe fn debug(
         &self,
         ptr: RawAttachmentRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
-        // SAFETY: We know that the `self.debug` field points to the function `debug::<A, H>` below.
-        // That function requires that the attachment type `A` matches the actual attachment type stored in the `AttachmentData`,
+        // SAFETY: We know that the `self.debug` field points to the function
+        // `debug::<A, H>` below. That function requires that the attachment
+        // type `A` matches the actual attachment type stored in the `AttachmentData`,
         // which is guaranteed by our caller.
         unsafe { (self.debug)(ptr, formatter) }
     }
 
-    /// Gets the preferred formatting style using the [`H::preferred_formatting_style`] function
-    /// used when creating this [`AttachmentVtable`].
+    /// Gets the preferred formatting style using the
+    /// [`H::preferred_formatting_style`] function used when creating this
+    /// [`AttachmentVtable`].
     ///
     /// [`H::preferred_formatting_style`]: AttachmentHandler::preferred_formatting_style
     ///
     /// # Safety
     ///
-    /// The attachment type `A` used when creating this [`AttachmentVtable`] must match the type
-    /// stored in the [`RawAttachmentRef`].
+    /// The attachment type `A` used when creating this [`AttachmentVtable`]
+    /// must match the type stored in the [`RawAttachmentRef`].
     pub(super) unsafe fn preferred_formatting_style(
         &self,
         ptr: RawAttachmentRef<'_>,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        // SAFETY: We know that the `self.preferred_formatting_style` field points to the function `preferred_formatting_style::<A, H>` below.
-        // That function requires that the attachment type `A` matches the actual attachment type stored in the `AttachmentData`,
-        // which is guaranteed by our caller.
+        // SAFETY: We know that the `self.preferred_formatting_style` field points to
+        // the function `preferred_formatting_style::<A, H>` below.
+        // That function requires that the attachment type `A` matches the actual
+        // attachment type stored in the `AttachmentData`, which is guaranteed
+        // by our caller.
         unsafe { (self.preferred_formatting_style)(ptr, report_formatting_function) }
     }
 }
@@ -144,15 +160,17 @@ impl AttachmentVtable {
 ///
 /// # Safety
 ///
-/// - The caller must ensure that the pointer comes from a [`Box<AttachmentData<A>>`], which was turned
-///   into a pointer using [`Box::into_raw`].
-/// - The attachment type `A` must match the actual attachment type stored in the [`AttachmentData`].
+/// - The caller must ensure that the pointer comes from a
+///   [`Box<AttachmentData<A>>`], which was turned into a pointer using
+///   [`Box::into_raw`].
+/// - The attachment type `A` must match the actual attachment type stored in
+///   the [`AttachmentData`].
 /// - After calling this method, the pointer must no longer be used.
 unsafe fn drop<A: 'static>(ptr: NonNull<AttachmentData<Erased>>) {
     let ptr: NonNull<AttachmentData<A>> = ptr.cast();
     let ptr = ptr.as_ptr();
-    // SAFETY: Our pointer has the correct type as guaranteed by the caller, and it came
-    // from a call to [`Box::into_raw`] as also guaranteed by our caller.
+    // SAFETY: Our pointer has the correct type as guaranteed by the caller, and it
+    // came from a call to [`Box::into_raw`] as also guaranteed by our caller.
     let boxed = unsafe { Box::from_raw(ptr) };
     core::mem::drop(boxed);
 }
@@ -161,12 +179,14 @@ unsafe fn drop<A: 'static>(ptr: NonNull<AttachmentData<Erased>>) {
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `A` matches the actual attachment type stored in the [`AttachmentData`].
+/// The caller must ensure that the type `A` matches the actual attachment type
+/// stored in the [`AttachmentData`].
 unsafe fn display<A: 'static, H: AttachmentHandler<A>>(
     ptr: RawAttachmentRef<'_>,
     formatter: &mut core::fmt::Formatter<'_>,
 ) -> core::fmt::Result {
-    // SAFETY: Our caller guarantees that the type `A` matches the actual attachment type stored in the `AttachmentData`.
+    // SAFETY: Our caller guarantees that the type `A` matches the actual attachment
+    // type stored in the `AttachmentData`.
     let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
     H::display(context, formatter)
 }
@@ -175,28 +195,33 @@ unsafe fn display<A: 'static, H: AttachmentHandler<A>>(
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `A` matches the actual attachment type stored in the [`AttachmentData`].
+/// The caller must ensure that the type `A` matches the actual attachment type
+/// stored in the [`AttachmentData`].
 unsafe fn debug<A: 'static, H: AttachmentHandler<A>>(
     ptr: RawAttachmentRef<'_>,
     formatter: &mut core::fmt::Formatter<'_>,
 ) -> core::fmt::Result {
-    // SAFETY: Our caller guarantees that the type `A` matches the actual attachment type stored in the `AttachmentData`.
+    // SAFETY: Our caller guarantees that the type `A` matches the actual attachment
+    // type stored in the `AttachmentData`.
     let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
     H::debug(context, formatter)
 }
 
-/// Gets the preferred formatting style using the [`H::preferred_formatting_style`] function.
+/// Gets the preferred formatting style using the
+/// [`H::preferred_formatting_style`] function.
 ///
 /// [`H::preferred_formatting_style`]: AttachmentHandler::preferred_formatting_style
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `A` matches the actual attachment type stored in the [`AttachmentData`].
+/// The caller must ensure that the type `A` matches the actual attachment type
+/// stored in the [`AttachmentData`].
 unsafe fn preferred_formatting_style<A: 'static, H: AttachmentHandler<A>>(
     ptr: RawAttachmentRef<'_>,
     report_formatting_function: FormattingFunction,
 ) -> AttachmentFormattingStyle {
-    // SAFETY: Our caller guarantees that the type `A` matches the actual attachment type stored in the `AttachmentData`.
+    // SAFETY: Our caller guarantees that the type `A` matches the actual attachment
+    // type stored in the `AttachmentData`.
     let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
     H::preferred_formatting_style(context, report_formatting_function)
 }

@@ -21,10 +21,12 @@ impl<'a, C: ?Sized, T> ReportCollectionMut<'a, C, T> {
     ///
     /// # Safety
     ///
-    /// - The thread safety marker must match the contents of the reports. More specifically if the marker is `SendSync`, then
-    ///   all the data (recursively) contained by the reports must be `Send+Sync`.
-    /// - The caller must ensure that the contexts of the `RawReport`s are actually of
-    ///   type `C` when `C` if is is a type different from `dyn Any`.
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is `SendSync`, then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the `RawReport`s are
+    ///   actually of type `C` when `C` if is is a type different from `dyn
+    ///   Any`.
     pub(crate) unsafe fn from_raw(raw: &'a mut Vec<RawReport>) -> Self {
         Self {
             raw,
@@ -106,8 +108,8 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    type Item = ReportRef<'a, C, Cloneable, T>;
     type IntoIter = ReportCollectionIter<'a, C, T>;
+    type Item = ReportRef<'a, C, Cloneable, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.into_ref().iter()

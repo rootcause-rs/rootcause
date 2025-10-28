@@ -9,16 +9,20 @@
     clippy::undocumented_unsafe_blocks,
     clippy::multiple_unsafe_ops_per_block,
     rustdoc::invalid_rust_codeblocks,
-    rustdoc::broken_intra_doc_links
+    rustdoc::broken_intra_doc_links,
+    missing_copy_implementations,
+    unused_doc_comments
 )]
 #![allow(rustdoc::private_intra_doc_links)]
 //! Internal crate for the `rootcause` crate.
 //!
-//! This crate contains the core data structures used by the [`rootcause`] crate, and encapsulates most of the
-//! unsafe operations needed to make it work.
+//! This crate contains the core data structures used by the [`rootcause`]
+//! crate, and encapsulates most of the unsafe operations needed to make it
+//! work.
 //!
-//! This crate is considered an implementation detail of the [`rootcause`] crate, and as such no semantic versioning
-//! guarantees are made for this crate.
+//! This crate is considered an implementation detail of the [`rootcause`]
+//! crate, and as such no semantic versioning guarantees are made for this
+//! crate.
 //!
 //! [`rootcause`]: https://docs.rs/rootcause/latest/rootcause/
 

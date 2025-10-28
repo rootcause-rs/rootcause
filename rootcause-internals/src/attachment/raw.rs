@@ -1,7 +1,9 @@
-//! This module encapsulates the fields of the [`RawAttachment`] and [`RawAttachmentRef`].
-//! Since this is the only place they are visible, this means that the `ptr` field of both types is always
-//! guaranteed to come from [`Box<AttachmentData<A>>`]. This follows from the fact that there are no places where the
-//! `ptr` field is altered after creation (besides invalidating it after it should no longer be used).
+//! This module encapsulates the fields of the [`RawAttachment`] and
+//! [`RawAttachmentRef`]. Since this is the only place they are visible, this
+//! means that the `ptr` field of both types is always guaranteed to come from
+//! [`Box<AttachmentData<A>>`]. This follows from the fact that there are no
+//! places where the `ptr` field is altered after creation (besides invalidating
+//! it after it should no longer be used).
 
 use alloc::boxed::Box;
 use core::{any::TypeId, ptr::NonNull};
@@ -12,16 +14,17 @@ use crate::{
     util::{CastTo, Erased},
 };
 
-/// A pointer to an [`AttachmentData`] that is guaranteed to point to an initialized instance
-/// of an [`AttachmentData<A>`] for some specific `A`, though we do not know which actual `A` it is.
+/// A pointer to an [`AttachmentData`] that is guaranteed to point to an
+/// initialized instance of an [`AttachmentData<A>`] for some specific `A`,
+/// though we do not know which actual `A` it is.
 ///
-/// However, the pointer is allowed to transition into a non-initialized state inside the
-/// [`RawAttachment::drop`] method.
+/// However, the pointer is allowed to transition into a non-initialized state
+/// inside the [`RawAttachment::drop`] method.
 ///
 /// The pointer is guaranteed to have been created using [`Box::into_raw`].
 ///
-/// We cannot use a [`Box<AttachmentData<A>>`] directly, because that does not allow
-/// us to type-erase the `A`.
+/// We cannot use a [`Box<AttachmentData<A>>`] directly, because that does not
+/// allow us to type-erase the `A`.
 #[repr(transparent)]
 pub struct RawAttachment {
     /// Pointer to the inner attachment data
@@ -29,7 +32,8 @@ pub struct RawAttachment {
 }
 
 impl RawAttachment {
-    /// Creates a new [`RawAttachment`] with the specified handler and attachment.
+    /// Creates a new [`RawAttachment`] with the specified handler and
+    /// attachment.
     pub fn new<A, H>(attachment: A) -> Self
     where
         A: 'static,
@@ -64,8 +68,10 @@ impl core::ops::Drop for RawAttachment {
         // - The pointer must not be used after this call
         //
         // These are satisfied because:
-        // - The only way to construct or alter a `RawAttachment` is through the `RawAttachment::new` method
-        // - The only way to construct or alter an `AttachmentData` is through the `AttachmentData::new` method
+        // - The only way to construct or alter a `RawAttachment` is through the
+        //   `RawAttachment::new` method
+        // - The only way to construct or alter an `AttachmentData` is through the
+        //   `AttachmentData::new` method
         // - This is guaranteed by the fact that we are in the `drop()` function
         unsafe {
             vtable.drop(self.ptr);
@@ -73,12 +79,12 @@ impl core::ops::Drop for RawAttachment {
     }
 }
 
-/// A lifetime-bound pointer to an [`AttachmentData`] that is guaranteed to point
-/// to an initialized instance of an [`AttachmentData<A>`] for some specific `A`, though
-/// we do not know which actual `A` it is.
+/// A lifetime-bound pointer to an [`AttachmentData`] that is guaranteed to
+/// point to an initialized instance of an [`AttachmentData<A>`] for some
+/// specific `A`, though we do not know which actual `A` it is.
 ///
-/// We cannot use a [`&'a AttachmentData<A>`] directly, because that would require
-/// us to know the actual type of the attachment, which we do not.
+/// We cannot use a [`&'a AttachmentData<A>`] directly, because that would
+/// require us to know the actual type of the attachment, which we do not.
 ///
 /// [`&'a AttachmentData<A>`]: AttachmentData
 #[derive(Clone, Copy)]
@@ -96,14 +102,16 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `A` matches the actual attachment type stored in the [`AttachmentData`].
+    /// The caller must ensure that the type `A` matches the actual attachment
+    /// type stored in the [`AttachmentData`].
     pub(super) unsafe fn cast_inner<A: CastTo>(self) -> &'a AttachmentData<A::Target> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<A>());
 
         let this = self.ptr.cast::<AttachmentData<A::Target>>();
-        // SAFETY: Our caller guarantees that we point to an AttachmentData<A>, so it is safe to turn
-        // the NonNull pointer into a reference with the same lifetime
+        // SAFETY: Our caller guarantees that we point to an AttachmentData<A>, so it is
+        // safe to turn the NonNull pointer into a reference with the same
+        // lifetime
         unsafe { this.as_ref() }
     }
 
@@ -122,23 +130,27 @@ impl<'a> RawAttachmentRef<'a> {
         self.vtable().handler_type_id()
     }
 
-    /// Checks if the type of the attachment matches the specified type and returns a reference to it if it does.
+    /// Checks if the type of the attachment matches the specified type and
+    /// returns a reference to it if it does.
     pub fn attachment_downcast<A: 'static>(self) -> Option<&'a A> {
         if self.attachment_type_id() == core::any::TypeId::of::<A>() {
-            // SAFETY: We must ensure that the `A` in the AttachmentData matches the `A` we are using as an argument.
-            // However, we have just checked that the types match, so that is fine.
+            // SAFETY: We must ensure that the `A` in the AttachmentData matches the `A` we
+            // are using as an argument. However, we have just checked that the
+            // types match, so that is fine.
             unsafe { Some(self.attachment_downcast_unchecked::<A>()) }
         } else {
             None
         }
     }
 
-    /// Formats the attachment by using the [`AttachmentHandler::display`] method
-    /// specified by the handler used to create the [`AttachmentData`].
+    /// Formats the attachment by using the [`AttachmentHandler::display`]
+    /// method specified by the handler used to create the
+    /// [`AttachmentData`].
     pub fn attachment_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A` of the `AttachmentVtable`.
-        // However, the only way to construct an `AttachmentData` is through the `AttachmentData::new` method,
+        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
+        // of the `AttachmentVtable`. However, the only way to construct an
+        // `AttachmentData` is through the `AttachmentData::new` method,
         // which ensures this fact.
         unsafe { vtable.display(self, formatter) }
     }
@@ -147,18 +159,21 @@ impl<'a> RawAttachmentRef<'a> {
     /// specified by the handler used to create the [`AttachmentData`].
     pub fn attachment_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A` of the `AttachmentVtable`.
-        // However, the only way to construct an `AttachmentData` is through the `AttachmentData::new` method,
+        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
+        // of the `AttachmentVtable`. However, the only way to construct an
+        // `AttachmentData` is through the `AttachmentData::new` method,
         // which ensures this fact.
         unsafe { vtable.debug(self, formatter) }
     }
 
-    /// The formatting style preferred by the attachment when formatted as part of a
-    /// report.
+    /// The formatting style preferred by the attachment when formatted as part
+    /// of a report.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -167,8 +182,9 @@ impl<'a> RawAttachmentRef<'a> {
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A` of the `AttachmentVtable`.
-        // However, the only way to construct an `AttachmentData` is through the `AttachmentData::new` method,
+        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
+        // of the `AttachmentVtable`. However, the only way to construct an
+        // `AttachmentData` is through the `AttachmentData::new` method,
         // which ensures this fact.
         unsafe { vtable.preferred_formatting_style(self, report_formatting_function) }
     }
@@ -197,6 +213,7 @@ mod tests {
         fn display(value: &String, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             core::fmt::Display::fmt(value, formatter)
         }
+
         fn debug(value: &String, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
             core::fmt::Debug::fmt(value, formatter)
         }

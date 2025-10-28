@@ -90,7 +90,9 @@ pub(crate) trait UntypedContextHook: 'static + Send + Sync + core::fmt::Display 
 
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -139,7 +141,9 @@ where
 
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -255,7 +259,9 @@ pub(crate) fn debug_context(
 
 /// # Arguments
 ///
-/// - `report_formatting_function`: Whether the report in which this context will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+/// - `report_formatting_function`: Whether the report in which this context
+///   will be embedded is being formatted using [`Display`] formatting or
+///   [`Debug`]
 ///
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug

@@ -101,7 +101,9 @@ pub(crate) trait UntypedAttachmentHook: 'static + Send + Sync + core::fmt::Displ
 
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -158,7 +160,9 @@ where
 
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -282,7 +286,9 @@ pub(crate) fn debug_attachment(
 
 /// # Arguments
 ///
-/// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+/// - `report_formatting_function`: Whether the report in which this attachment
+///   will be embedded is being formatted using [`Display`] formatting or
+///   [`Debug`]
 ///
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug

@@ -184,6 +184,7 @@ where
     F: 'static + Send + Sync + Fn() -> A,
 {
     type Handler = handlers::Display;
+
     #[track_caller]
     fn collect(&self) -> A {
         (self)()
