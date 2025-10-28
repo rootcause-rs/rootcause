@@ -9,12 +9,15 @@
 //! creation:
 //!
 //! - **[`location`]**: Captures the source code location
-//!   ([`core::panic::Location`]) where each report was created. This helps
+//!   ([`Location`]) where each report was created. This helps
 //!   identify exactly where in your code an error originated.
 //!
 //! - **[`backtrace`]** (requires `backtrace` feature): Captures a full stack
-//!   backtrace when each report is created, showing the call chain that led to
+//!   [`Backtrace`] when each report is created, showing the call chain that led to
 //!   the error.
+//!
+//! [`Location`]: crate::hooks::builtin_hooks::location::Location
+//! [`Backtrace`]: crate::hooks::builtin_hooks::backtrace::Backtrace
 //!
 //! ## Report Formatter
 //!

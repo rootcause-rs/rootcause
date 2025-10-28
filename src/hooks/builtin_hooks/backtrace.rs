@@ -3,33 +3,6 @@
 //! This module provides functionality to automatically capture and attach stack
 //! backtraces to reports when they are created. This is useful for debugging to
 //! see the call stack that led to an error.
-//!
-//! ## Feature Requirement
-//!
-//! This module is only available when the `backtrace` feature is enabled in
-//! `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! rootcause = { version = "0.3", features = ["backtrace"] }
-//! ```
-//!
-//! ## Usage
-//!
-//! The [`BacktraceCollector`] can be registered as an attachment collector hook
-//! to automatically capture backtraces for all reports:
-//!
-//! ```rust
-//! use rootcause::hooks::{
-//!     builtin_hooks::backtrace::BacktraceCollector,
-//!     report_creation::register_attachment_collector_hook,
-//! };
-//!
-//! register_attachment_collector_hook(BacktraceCollector::default());
-//! ```
-//!
-//! Once registered, all reports will automatically include a backtrace showing
-//! the call stack from where the report was created.
 
 use core::fmt;
 use std::{

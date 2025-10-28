@@ -1,9 +1,5 @@
 //! Hooks system for customizing report creation and formatting behavior.
 //!
-//! This module provides a flexible hook system that allows you to customize how
-//! reports are created and formatted. The hooks system is organized into
-//! several specialized modules:
-//!
 //! # Modules
 //!
 //! - **[`report_creation`]**: Hooks that run when reports are created, allowing

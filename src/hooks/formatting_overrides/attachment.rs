@@ -161,14 +161,6 @@ where
         fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
     }
 
-    /// # Arguments
-    ///
-    /// - `report_formatting_function`: Whether the report in which this
-    ///   attachment will be embedded is being formatted using [`Display`]
-    ///   formatting or [`Debug`]
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -287,14 +279,6 @@ pub(crate) fn debug_attachment(
     }
 }
 
-/// # Arguments
-///
-/// - `report_formatting_function`: Whether the report in which this attachment
-///   will be embedded is being formatted using [`Display`] formatting or
-///   [`Debug`]
-///
-/// [`Display`]: core::fmt::Display
-/// [`Debug`]: core::fmt::Debug
 pub(crate) fn get_preferred_formatting_style(
     attachment: ReportAttachmentRef<'_, dyn Any>,
     report_formatting_function: FormattingFunction,

@@ -50,7 +50,7 @@
 //! }
 //!
 //! // Register the hook globally
-//! register_attachment_hook::<CustomData, _>(CustomDataHook);
+//! register_attachment_hook(CustomDataHook);
 //! ```
 //!
 //! ## Context Formatting Overrides
@@ -88,7 +88,7 @@
 //!     }
 //! }
 //!
-//! register_context_hook::<MyError, _>(MyErrorHook);
+//! register_context_hook(MyErrorHook);
 //! ```
 
 mod attachment;

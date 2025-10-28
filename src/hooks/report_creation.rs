@@ -331,11 +331,6 @@ fn default_hooks() -> HookSet {
 /// be designed to be fast. Heavy operations in hooks can significantly impact
 /// the performance of error reporting throughout the application.
 ///
-/// # Parameters
-///
-/// - `hook` - An instance of a type that implements [`ReportCreationHook`]. The
-///   hook will be stored internally and called for all future report creations.
-///
 /// # Examples
 ///
 /// ```rust
@@ -392,20 +387,16 @@ where
 /// Attachment collector hooks provide a specialized way to automatically
 /// collect and attach specific types of data to all reports. Unlike
 /// [`ReportCreationHook`], which provides full access to the report, attachment
-/// collectors focus on gathering a specific piece of data that will be
-/// formatted and attached using a designated handler.
-///
-/// # Associated Types
-///
-/// - [`Handler`](Self::Handler) - Specifies how the collected data should be
-///   formatted when attached to the report. This must implement
-///   [`AttachmentHandler<A>`].
+/// collectors are focused solely on gathering data to be attached.
 ///
 /// # Automatic Implementation
 ///
 /// This trait is automatically implemented for any closure that returns a value
 /// implementing [`Display`] and [`Debug`], using [`handlers::Display`] as the
 /// handler:
+///
+/// [`Display`]: core::fmt::Display
+/// [`Debug`]: core::fmt::Debug
 ///
 /// ```rust
 /// use rootcause::hooks::report_creation::register_attachment_collector_hook;
@@ -463,12 +454,6 @@ pub trait AttachmentCollectorHook<A>: 'static + Send + Sync {
     /// This method is called once for each report creation and should return
     /// the data that will be attached to the report. The data will be formatted
     /// using the associated [`Handler`](Self::Handler) type.
-    ///
-    /// # Performance Considerations
-    ///
-    /// This method is called for every report creation, so it should be
-    /// designed to be fast. Heavy operations here can significantly impact
-    /// error reporting performance.
     #[track_caller]
     fn collect(&self) -> A;
 }
