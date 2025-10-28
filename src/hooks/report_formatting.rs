@@ -6,13 +6,15 @@
 //! # Report Formatter Hooks
 //!
 //! Report formatting hooks allow you to control the entire presentation of a
-//! report. This includes how multiple reports in a collection are displayed, how
-//! individual reports are formatted, and how attachments are integrated into
-//! the output.
+//! report. This includes how multiple reports in a collection are displayed,
+//! how individual reports are formatted, and how attachments are integrated
+//! into the output.
 //!
 //! ```rust
 //! use rootcause::{
+//!     ReportRef,
 //!     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
+//!     markers::{Local, Uncloneable},
 //!     prelude::*,
 //! };
 //!
@@ -21,20 +23,12 @@
 //! impl ReportFormatterHook for CompactFormatter {
 //!     fn format_reports(
 //!         &self,
-//!         reports: &[rootcause::ReportRef<
-//!             '_,
-//!             dyn std::any::Any,
-//!             rootcause::markers::Uncloneable,
-//!             rootcause::markers::Local,
-//!         >],
+//!         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
 //!         formatter: &mut std::fmt::Formatter<'_>,
 //!         _function: rootcause::handlers::FormattingFunction,
 //!     ) -> std::fmt::Result {
-//!         for (i, report) in reports.iter().enumerate() {
-//!             if i > 0 {
-//!                 write!(formatter, " -> ")?;
-//!             }
-//!             write!(formatter, "{}", report.format_current_context_unhooked())?;
+//!         for report in reports {
+//!             writeln!(formatter, "{}", report.format_current_context_unhooked())?;
 //!         }
 //!         Ok(())
 //!     }
@@ -69,8 +63,8 @@ static HOOK: HookLock<Hook> = HookLock::new();
 ///
 /// This trait allows you to completely control the presentation of reports,
 /// including their structure, layout, colors, and how multiple reports in a
-/// collection are displayed together. Only one report formatter hook can be active
-/// at a time.
+/// collection are displayed together. Only one report formatter hook can be
+/// active at a time.
 ///
 /// # Examples
 ///
@@ -236,7 +230,9 @@ pub(crate) fn format_reports(
 ///
 /// ```rust
 /// use rootcause::{
+///     ReportRef,
 ///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
+///     markers::{Local, Uncloneable},
 ///     prelude::*,
 /// };
 ///
@@ -244,12 +240,7 @@ pub(crate) fn format_reports(
 /// impl ReportFormatterHook for FirstFormatter {
 ///     fn format_reports(
 ///         &self,
-///         reports: &[rootcause::ReportRef<
-///             '_,
-///             dyn std::any::Any,
-///             rootcause::markers::Uncloneable,
-///             rootcause::markers::Local,
-///         >],
+///         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
 ///         formatter: &mut std::fmt::Formatter<'_>,
 ///         _function: rootcause::handlers::FormattingFunction,
 ///     ) -> std::fmt::Result {
@@ -261,12 +252,7 @@ pub(crate) fn format_reports(
 /// impl ReportFormatterHook for SecondFormatter {
 ///     fn format_reports(
 ///         &self,
-///         reports: &[rootcause::ReportRef<
-///             '_,
-///             dyn std::any::Any,
-///             rootcause::markers::Uncloneable,
-///             rootcause::markers::Local,
-///         >],
+///         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
 ///         formatter: &mut std::fmt::Formatter<'_>,
 ///         _function: rootcause::handlers::FormattingFunction,
 ///     ) -> std::fmt::Result {

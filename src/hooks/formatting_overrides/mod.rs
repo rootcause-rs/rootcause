@@ -54,7 +54,7 @@
 //!
 //! // Example: An attachment hook that silences certain attachments
 //! struct SilenceAttachmentHook;
-//! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook{
+//! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook {
 //!     fn preferred_formatting_style(
 //!         &self,
 //!         _attachment: rootcause::report_attachment::ReportAttachmentRef<'_, dyn std::any::Any>,
