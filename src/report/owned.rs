@@ -550,7 +550,7 @@ where
     /// as it more clearly communicates intent.
     ///
     /// This method does not actually modify the report in any way. It only has the effect of "forgetting" that
-    /// all objects in the [`Report`] might be actually [`Send`] and [`Sync`].
+    /// the [`Report`] only has a single owner.
     ///
     /// After calling this method, you can clone the [`Report`], but you can no longer add
     /// attachments to the [`Report`] or otherwise modify the root node.

@@ -152,6 +152,7 @@ impl AttachmentHandler<Backtrace> for BacktraceHandler {
     }
 }
 
+#[derive(Copy, Clone)]
 pub struct BacktraceCollector {
     pub max_frame_count: usize,
     pub do_capture_filtering: bool,

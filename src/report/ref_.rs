@@ -147,7 +147,7 @@ where
     /// as it more clearly communicates intent.
     ///
     /// This method does not actually modify the report in any way. It only has the effect of "forgetting" that
-    /// all objects in the [`ReportRef`] might be actually [`Send`] and [`Sync`].
+    /// the [`ReportRef`] is cloneable.
     ///
     /// After calling this method, you can add objects to the [`ReportRef`] that neither [`Send`] nor
     /// [`Sync`], but the report itself will no longer be [`Send`]+[`Sync`].
@@ -173,7 +173,7 @@ where
     /// as it more clearly communicates intent.
     ///
     /// This method does not actually modify the report in any way. It only has the effect of "forgetting" that
-    /// all objects in the [`ReportRef`] might be actually [`Send`] and [`Sync`].
+    /// all objects in the [`ReportRef`] are actually [`Send`] and [`Sync`].
     ///
     /// After calling this method, you can add objects to the [`ReportRef`] that neither [`Send`] nor
     /// [`Sync`], but the report itself will no longer be [`Send`]+[`Sync`].
