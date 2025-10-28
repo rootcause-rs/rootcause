@@ -84,6 +84,7 @@ pub struct FramePrefix {
     pub value: String,
 }
 
+#[derive(Copy, Clone)]
 pub struct BacktraceHandler;
 
 impl AttachmentHandler<Backtrace> for BacktraceHandler {
