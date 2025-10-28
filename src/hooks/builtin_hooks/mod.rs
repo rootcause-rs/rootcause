@@ -8,13 +8,13 @@
 //! These hooks automatically collect and attach debugging information on report
 //! creation:
 //!
-//! - **[`location`]**: Captures the source code location
-//!   ([`Location`]) where each report was created. This helps
-//!   identify exactly where in your code an error originated.
+//! - **[`location`]**: Captures the source code location ([`Location`]) where
+//!   each report was created. This helps identify exactly where in your code an
+//!   error originated.
 //!
 //! - **[`backtrace`]** (requires `backtrace` feature): Captures a full stack
-//!   [`Backtrace`] when each report is created, showing the call chain that led to
-//!   the error.
+//!   [`Backtrace`] when each report is created, showing the call chain that led
+//!   to the error.
 //!
 //! [`Location`]: crate::hooks::builtin_hooks::location::Location
 //! [`Backtrace`]: crate::hooks::builtin_hooks::backtrace::Backtrace

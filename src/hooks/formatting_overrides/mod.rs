@@ -55,8 +55,8 @@
 //!
 //! ## Context Formatting Overrides
 //!
-//! Context formatting overrides allow you to customize how specific context types
-//! (the main error types) are displayed when they appear in reports.
+//! Context formatting overrides allow you to customize how specific context
+//! types (the main error types) are displayed when they appear in reports.
 //!
 //! ```rust
 //! use rootcause::{
