@@ -21,7 +21,8 @@
 //!
 //! ```rust
 //! use rootcause::hooks::{
-//!     attachment_collectors::backtrace::BacktraceCollector, register_attachment_collector_hook,
+//!     builtin_hooks::backtrace::BacktraceCollector,
+//!     report_creation::register_attachment_collector_hook,
 //! };
 //!
 //! register_attachment_collector_hook(BacktraceCollector::default());
@@ -42,7 +43,7 @@ use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
 };
 
-use crate::hooks::AttachmentCollectorHook;
+use crate::hooks::report_creation::AttachmentCollectorHook;
 
 /// Stack backtrace information.
 ///

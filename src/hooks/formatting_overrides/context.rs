@@ -17,11 +17,12 @@ use crate::{
     preformatted::PreformattedContext,
 };
 
-type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHandlerOverride>, rustc_hash::FxBuildHasher>;
+type HookMap =
+    HashMap<TypeId, Arc<dyn UntypedContextFormattingOverride>, rustc_hash::FxBuildHasher>;
 
 static HOOKS: HookLock<HookMap> = HookLock::new();
 
-fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextHandlerOverride>> {
+fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextFormattingOverride>> {
     HOOKS.read().get()?.get(&type_id).cloned()
 }
 
@@ -63,7 +64,7 @@ where
 {
 }
 
-pub(crate) trait UntypedContextHandlerOverride:
+pub(crate) trait UntypedContextFormattingOverride:
     'static + Send + Sync + core::fmt::Display
 {
     unsafe fn display(
@@ -105,7 +106,7 @@ pub(crate) trait UntypedContextHandlerOverride:
     ) -> ContextFormattingStyle;
 }
 
-pub trait ContextHandlerOverride<C>: 'static + Send + Sync
+pub trait ContextFormattingOverride<C>: 'static + Send + Sync
 where
     C: markers::ObjectMarker + ?Sized,
 {
@@ -158,10 +159,10 @@ where
     }
 }
 
-impl<C, H> UntypedContextHandlerOverride for Hook<C, H>
+impl<C, H> UntypedContextFormattingOverride for Hook<C, H>
 where
     C: markers::ObjectMarker + ?Sized,
-    H: ContextHandlerOverride<C>,
+    H: ContextFormattingOverride<C>,
 {
     unsafe fn display(
         &self,
@@ -211,7 +212,7 @@ where
 pub fn register_context_hook<C, H>(hook: H)
 where
     C: markers::ObjectMarker + ?Sized,
-    H: ContextHandlerOverride<C> + Send + Sync + 'static,
+    H: ContextFormattingOverride<C> + Send + Sync + 'static,
 {
     let added_location = Location::caller();
     let hook: Hook<C, H> = Hook {
@@ -220,7 +221,7 @@ where
         _hooked_type: PhantomData,
     };
     let hook: Arc<Hook<C, H>> = Arc::new(hook);
-    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedContextHandlerOverride));
+    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedContextFormattingOverride));
 
     HOOKS
         .write()

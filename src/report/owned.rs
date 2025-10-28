@@ -891,8 +891,12 @@ where
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
         format_helper(
             report,
-            |report, formatter| crate::hooks::handler_overrides::display_context(report, formatter),
-            |report, formatter| crate::hooks::handler_overrides::debug_context(report, formatter),
+            |report, formatter| {
+                crate::hooks::formatting_overrides::display_context(report, formatter)
+            },
+            |report, formatter| {
+                crate::hooks::formatting_overrides::debug_context(report, formatter)
+            },
         )
     }
 
@@ -939,7 +943,7 @@ where
     ) -> ContextFormattingStyle {
         let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        crate::hooks::handler_overrides::get_preferred_context_formatting_style(
+        crate::hooks::formatting_overrides::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
         )

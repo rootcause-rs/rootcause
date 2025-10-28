@@ -27,8 +27,8 @@
 //! registering it via [`register_report_formatter_hook`].
 //!
 //! [`DefaultReportFormatter`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter
-//! [`ReportFormatterHook`]: crate::hooks::ReportFormatterHook
-//! [`register_report_formatter_hook`]: crate::hooks::register_report_formatter_hook
+//! [`ReportFormatterHook`]: crate::hooks::report_formatting::ReportFormatterHook
+//! [`register_report_formatter_hook`]: crate::hooks::report_formatting::register_report_formatter_hook
 
 #[cfg(feature = "backtrace")]
 pub mod backtrace;

@@ -1,6 +1,6 @@
 use rootcause::{
     handlers::FormattingFunction,
-    hooks::handler_overrides::{AttachmentHandlerOverride, register_attachment_hook},
+    hooks::formatting_overrides::{AttachmentFormattingOverride, register_attachment_hook},
     prelude::*,
     report_attachment::ReportAttachmentRef,
     report_attachments::ReportAttachments,
@@ -25,7 +25,7 @@ impl core::fmt::Display for Wat {
 
 struct WatHandler;
 
-impl AttachmentHandlerOverride<Wat> for WatHandler {
+impl AttachmentFormattingOverride<Wat> for WatHandler {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,

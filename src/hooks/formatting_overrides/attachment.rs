@@ -19,11 +19,11 @@ use crate::{
 };
 
 type HookMap =
-    HashMap<TypeId, Arc<dyn UntypedAttachmentHandlerOverride>, rustc_hash::FxBuildHasher>;
+    HashMap<TypeId, Arc<dyn UntypedAttachmentFormattingOverride>, rustc_hash::FxBuildHasher>;
 
 static HOOKS: HookLock<HookMap> = HookLock::new();
 
-fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentHandlerOverride>> {
+fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverride>> {
     HOOKS.read().get()?.get(&type_id).cloned()
 }
 
@@ -71,7 +71,7 @@ pub struct AttachmentParent<'a> {
     pub attachment_index: usize,
 }
 
-pub(crate) trait UntypedAttachmentHandlerOverride:
+pub(crate) trait UntypedAttachmentFormattingOverride:
     'static + Send + Sync + core::fmt::Display
 {
     unsafe fn display(
@@ -117,7 +117,7 @@ pub(crate) trait UntypedAttachmentHandlerOverride:
     ) -> AttachmentFormattingStyle;
 }
 
-pub trait AttachmentHandlerOverride<A>: 'static + Send + Sync
+pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync
 where
     A: markers::ObjectMarker + ?Sized,
 {
@@ -178,10 +178,10 @@ where
     }
 }
 
-impl<A, H> UntypedAttachmentHandlerOverride for Hook<A, H>
+impl<A, H> UntypedAttachmentFormattingOverride for Hook<A, H>
 where
     A: markers::ObjectMarker + ?Sized,
-    H: AttachmentHandlerOverride<A>,
+    H: AttachmentFormattingOverride<A>,
 {
     unsafe fn display(
         &self,
@@ -237,7 +237,7 @@ where
 pub fn register_attachment_hook<A, H>(hook: H)
 where
     A: 'static,
-    H: AttachmentHandlerOverride<A> + Send + Sync + 'static,
+    H: AttachmentFormattingOverride<A> + Send + Sync + 'static,
 {
     let added_location = Location::caller();
     let hook: Hook<A, H> = Hook {
@@ -246,7 +246,7 @@ where
         _hooked_type: PhantomData,
     };
     let hook: Arc<Hook<A, H>> = Arc::new(hook);
-    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentHandlerOverride));
+    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentFormattingOverride));
 
     HOOKS
         .write()
