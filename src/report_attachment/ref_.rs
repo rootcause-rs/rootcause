@@ -61,9 +61,11 @@ where
     ///
     /// To call this method you must ensure the following:
     ///
-    /// - The attachment embedded in the RawAttachmentRef must match the `C` of the output type, or the `C` of the output type must be `dyn Any`
-    /// - The thread safety marker must match the contents of the attachment. More specifically if the marker is [`SendSync`], then
-    ///   the inner attachment must be `Send+Sync`
+    /// - The attachment embedded in the RawAttachmentRef must match the `C` of
+    ///   the output type, or the `C` of the output type must be `dyn Any`
+    /// - The thread safety marker must match the contents of the attachment.
+    ///   More specifically if the marker is [`SendSync`], then the inner
+    ///   attachment must be `Send+Sync`
     ///
     /// [`SendSync`]: crate::markers::SendSync
     pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
@@ -98,11 +100,13 @@ where
         self.as_raw_ref().attachment_type_id()
     }
 
-    /// Returns the [`TypeId`] of the handler used when creating this attachment.
+    /// Returns the [`TypeId`] of the handler used when creating this
+    /// attachment.
     ///
-    /// Each attachment is associated with a specific handler (like [`handlers::Display`] or
-    /// [`handlers::Debug`]) that determines how it should be formatted when included in a report.
-    /// This method allows you to inspect which handler is being used.
+    /// Each attachment is associated with a specific handler (like
+    /// [`handlers::Display`] or [`handlers::Debug`]) that determines how it
+    /// should be formatted when included in a report. This method allows
+    /// you to inspect which handler is being used.
     ///
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
@@ -112,12 +116,14 @@ where
 
     /// Formats the inner attachment data without applying any formatting hooks.
     ///
-    /// This method provides direct access to the attachment's formatting capabilities
-    /// as defined by its handler, bypassing any global formatting hooks that might
-    /// modify the output. The returned object implements both [`Display`] and [`Debug`]
-    /// traits for flexible formatting options.
+    /// This method provides direct access to the attachment's formatting
+    /// capabilities as defined by its handler, bypassing any global
+    /// formatting hooks that might modify the output. The returned object
+    /// implements both [`Display`] and [`Debug`] traits for flexible
+    /// formatting options.
     ///
-    /// For formatted output that includes formatting hooks, use [`format_inner`] instead.
+    /// For formatted output that includes formatting hooks, use
+    /// [`format_inner`] instead.
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -132,12 +138,14 @@ where
 
     /// Formats the inner attachment data with formatting hooks applied.
     ///
-    /// This method formats the attachment using both its handler and any global formatting
-    /// hooks that have been registered. The hooks allow for custom formatting behaviors
-    /// such as filtering, transforming, or decorating the output. The returned object
-    /// implements both [`Display`] and [`Debug`] traits.
+    /// This method formats the attachment using both its handler and any global
+    /// formatting hooks that have been registered. The hooks allow for
+    /// custom formatting behaviors such as filtering, transforming, or
+    /// decorating the output. The returned object implements both
+    /// [`Display`] and [`Debug`] traits.
     ///
-    /// For direct formatting without hooks, use [`format_inner_unhooked`] instead.
+    /// For direct formatting without hooks, use [`format_inner_unhooked`]
+    /// instead.
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -152,30 +160,36 @@ where
         )
     }
 
-    /// Changes the inner attachment type of the [`ReportAttachmentRef`] to [`dyn Any`].
+    /// Changes the inner attachment type of the [`ReportAttachmentRef`] to
+    /// [`dyn Any`].
     ///
-    /// Calling this method is equivalent to calling `attachment.into()`, however this method
-    /// has been restricted to only change the attachment type to `dyn Any`.
+    /// Calling this method is equivalent to calling `attachment.into()`,
+    /// however this method has been restricted to only change the
+    /// attachment type to `dyn Any`.
     ///
-    /// This method can be useful to help with type inference or to improve code readability,
-    /// as it more clearly communicates intent.
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
     ///
-    /// This method does not actually modify the attachment in any way. It only has the effect of "forgetting" that
-    /// that the inner attachment actually has the type `A`.
+    /// This method does not actually modify the attachment in any way. It only
+    /// has the effect of "forgetting" that that the inner attachment
+    /// actually has the type `A`.
     ///
-    /// To get back the attachment with a concrete `A` you can use the method [`ReportAttachmentRef::downcast_attachment`].
+    /// To get back the attachment with a concrete `A` you can use the method
+    /// [`ReportAttachmentRef::downcast_attachment`].
     pub fn into_dyn_any(self) -> ReportAttachmentRef<'a, dyn Any> {
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
 
     /// Returns a reference to the inner attachment data.
     ///
-    /// This method provides direct access to the attachment's data when the concrete type `A`
-    /// is known at compile time. The attachment type must be [`Sized`] to use this method.
+    /// This method provides direct access to the attachment's data when the
+    /// concrete type `A` is known at compile time. The attachment type must
+    /// be [`Sized`] to use this method.
     ///
     /// # Panics
-    /// This method will panic if the actual type of the attachment doesn't match the type `A`.
-    /// For a safe alternative that returns [`Option`], use [`downcast_inner`] instead.
+    /// This method will panic if the actual type of the attachment doesn't
+    /// match the type `A`. For a safe alternative that returns [`Option`],
+    /// use [`downcast_inner`] instead.
     ///
     /// # Examples
     /// ```
@@ -201,13 +215,16 @@ where
 
     /// Attempts to downcast the attachment reference to a different type `B`.
     ///
-    /// This method performs a safe type cast, returning [`Some`] if the attachment
-    /// actually contains data of type `B`, or [`None`] if the types don't match.
+    /// This method performs a safe type cast, returning [`Some`] if the
+    /// attachment actually contains data of type `B`, or [`None`] if the
+    /// types don't match.
     ///
-    /// This method is most useful when going from a `dyn Any` to a concrete `B`.
+    /// This method is most useful when going from a `dyn Any` to a concrete
+    /// `B`.
     ///
-    /// It is possible to use this when you have a concrete type `A`, however this
-    /// is unlikely to be useful outside of very generic or macro-heavy code.
+    /// It is possible to use this when you have a concrete type `A`, however
+    /// this is unlikely to be useful outside of very generic or macro-heavy
+    /// code.
     ///
     /// # Examples
     /// ```
@@ -243,14 +260,14 @@ where
 
     /// Performs an unchecked downcast of the attachment reference to type `B`.
     ///
-    /// This method bypasses type checking and performs the cast without verifying
-    /// that the attachment actually contains data of type `B`. It is the caller's
-    /// responsibility to ensure the cast is valid.
+    /// This method bypasses type checking and performs the cast without
+    /// verifying that the attachment actually contains data of type `B`. It
+    /// is the caller's responsibility to ensure the cast is valid.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the inner attachment is actually of type `A`.
-    /// This can be verified by calling [`inner_type_id()`] first.
+    /// The caller must ensure that the inner attachment is actually of type
+    /// `A`. This can be verified by calling [`inner_type_id()`] first.
     ///
     /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
     ///
@@ -277,12 +294,14 @@ where
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
 
-    /// Attempts to downcast the inner attachment data to a reference of type `B`.
+    /// Attempts to downcast the inner attachment data to a reference of type
+    /// `B`.
     ///
-    /// This method performs a safe type cast, returning [`Some`] with a reference to the
-    /// data if the attachment actually contains data of type `B`, or [`None`] if the
-    /// types don't match. Unlike [`downcast_attachment`], this method returns a direct
-    /// reference to the data rather than a [`ReportAttachmentRef`].
+    /// This method performs a safe type cast, returning [`Some`] with a
+    /// reference to the data if the attachment actually contains data of
+    /// type `B`, or [`None`] if the types don't match. Unlike
+    /// [`downcast_attachment`], this method returns a direct reference to
+    /// the data rather than a [`ReportAttachmentRef`].
     ///
     /// # Examples
     /// ```
@@ -313,18 +332,21 @@ where
         self.as_raw_ref().attachment_downcast()
     }
 
-    /// Performs an unchecked downcast of the inner attachment data to a reference of type `B`.
+    /// Performs an unchecked downcast of the inner attachment data to a
+    /// reference of type `B`.
     ///
-    /// This method bypasses type checking and performs the cast without verifying
-    /// that the attachment actually contains data of type `B`. It returns a direct
-    /// reference to the data. It is the caller's responsibility to ensure the cast is valid.
+    /// This method bypasses type checking and performs the cast without
+    /// verifying that the attachment actually contains data of type `B`. It
+    /// returns a direct reference to the data. It is the caller's
+    /// responsibility to ensure the cast is valid.
     ///
     /// # Safety
-    /// The caller must guarantee that the attachment actually contains data of type `B`.
-    /// Violating this requirement leads to undefined behavior.
+    /// The caller must guarantee that the attachment actually contains data of
+    /// type `B`. Violating this requirement leads to undefined behavior.
     ///
     /// # Type Parameters
-    /// - `B`: The target type to downcast to. Must implement [`markers::ObjectMarker`] and be [`Sized`].
+    /// - `B`: The target type to downcast to. Must implement
+    ///   [`markers::ObjectMarker`] and be [`Sized`].
     ///
     /// # Examples
     /// ```
@@ -349,15 +371,19 @@ where
         unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
 
-    /// Returns the preferred formatting style for this attachment with formatting hooks applied.
+    /// Returns the preferred formatting style for this attachment with
+    /// formatting hooks applied.
     ///
-    /// This method determines how the attachment should be formatted when included in a report,
-    /// taking into account both the attachment's handler preferences and any global formatting
-    /// hooks that might modify the behavior.
+    /// This method determines how the attachment should be formatted when
+    /// included in a report, taking into account both the attachment's
+    /// handler preferences and any global formatting hooks that might
+    /// modify the behavior.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
@@ -371,15 +397,19 @@ where
         )
     }
 
-    /// Returns the preferred formatting style for this attachment without formatting hooks.
+    /// Returns the preferred formatting style for this attachment without
+    /// formatting hooks.
     ///
-    /// This method determines how the attachment should be formatted based solely on its
-    /// handler's preferences, bypassing any global formatting hooks that might modify the behavior.
-    /// For formatting that includes hooks, use [`preferred_formatting_style`] instead.
+    /// This method determines how the attachment should be formatted based
+    /// solely on its handler's preferences, bypassing any global formatting
+    /// hooks that might modify the behavior. For formatting that includes
+    /// hooks, use [`preferred_formatting_style`] instead.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this attachment will be embedded is being formatted using [`Display`] formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this
+    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug

@@ -3,13 +3,16 @@ use core::{iter::FusedIterator, mem};
 
 use crate::{IntoReport, markers, report_collection::ReportCollection};
 
-/// Extension trait for iterators over `Result`s to collect errors into a `ReportCollection`.
+/// Extension trait for iterators over `Result`s to collect errors into a
+/// `ReportCollection`.
 pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
-    /// Collect all `Ok` values into a `Container`. If any `Err` values are encountered, stop iteration
-    /// and return a `ReportCollection` containing all encountered errors.
+    /// Collect all `Ok` values into a `Container`. If any `Err` values are
+    /// encountered, stop iteration and return a `ReportCollection`
+    /// containing all encountered errors.
     ///
-    /// This is similar to using [`Iterator::collect`] to collect a `Result<Container, E>`, but instead
-    /// of returning early in case of an error, this will iterate through all the values and collect
+    /// This is similar to using [`Iterator::collect`] to collect a
+    /// `Result<Container, E>`, but instead of returning early in case of an
+    /// error, this will iterate through all the values and collect
     /// all errors into a single [`ReportCollection`].
     ///
     /// # Examples
@@ -50,10 +53,12 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
         ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>;
 
-    /// Specialized version of [`IteratorExt::collect_reports`] that only works for [`Vec`].
+    /// Specialized version of [`IteratorExt::collect_reports`] that only works
+    /// for [`Vec`].
     ///
-    /// This might help with type inference in some cases. It might also generate slightly simplier
-    /// code, which might be useful if you call this function from performance-critical code.
+    /// This might help with type inference in some cases. It might also
+    /// generate slightly simplier code, which might be useful if you call
+    /// this function from performance-critical code.
     ///
     /// # Examples
     /// ```

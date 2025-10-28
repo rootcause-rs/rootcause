@@ -12,14 +12,17 @@ use crate::{
 
 /// A collection of reports.
 ///
-/// You can think of a [`ReportCollection<C, T>`] as a wrapper around a `Vec<Report<C, markers::Cloneable, T>>`,
-/// however, it has a slightly different API:
-/// - It provides methods such as [`context`](Self::context) and [`context_custom`](Self::context_custom)
-///   to create new reports with the collection as children.
-/// - It has convenience methods to convert between different context and thread safety markers such as
-///   [`into_dyn_any`](Self::into_dyn_any) and [`into_local`](Self::into_local).
-/// - It also possible to convert between different context and thread safety markers using
-///   the [`From`] and [`Into`] traits.
+/// You can think of a [`ReportCollection<C, T>`] as a wrapper around a
+/// `Vec<Report<C, markers::Cloneable, T>>`, however, it has a slightly
+/// different API:
+/// - It provides methods such as [`context`](Self::context) and
+///   [`context_custom`](Self::context_custom) to create new reports with the
+///   collection as children.
+/// - It has convenience methods to convert between different context and thread
+///   safety markers such as [`into_dyn_any`](Self::into_dyn_any) and
+///   [`into_local`](Self::into_local).
+/// - It also possible to convert between different context and thread safety
+///   markers using the [`From`] and [`Into`] traits.
 #[repr(transparent)]
 pub struct ReportCollection<Context = dyn Any, ThreadSafety = SendSync>
 where
@@ -39,10 +42,12 @@ where
     /// Creates a new ReportCollection from a vector of raw reports
     ///
     /// # Safety
-    /// - The thread safety marker must match the contents of the reports. More specifically if the marker is `SendSync`, then
-    ///   all the data (recursively) contained by the reports must be `Send+Sync`.
-    /// - The caller must ensure that the contexts of the `RawReport`s are actually of
-    ///   type `C` when `C` if is is a type different from `dyn Any`.
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is `SendSync`, then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the `RawReport`s are
+    ///   actually of type `C` when `C` if is is a type different from `dyn
+    ///   Any`.
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
             raw,
@@ -57,8 +62,9 @@ where
 
     /// Creates a new, empty `ReportCollection`.
     ///
-    /// The collection will be initially empty and will have no capacity allocated.
-    /// This method is equivalent to calling [`Default::default()`].
+    /// The collection will be initially empty and will have no capacity
+    /// allocated. This method is equivalent to calling
+    /// [`Default::default()`].
     ///
     /// # Examples
     ///
@@ -76,13 +82,13 @@ where
     /// Appends a report to the end of the collection.
     ///
     /// This method takes ownership of the report and adds it to the collection.
-    /// The report must have the [`Cloneable`] ownership marker, which allows it to be
-    /// stored in the collection and cloned when needed.
+    /// The report must have the [`Cloneable`] ownership marker, which allows it
+    /// to be stored in the collection and cloned when needed.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// let report = report!("An error occurred").into_cloneable();
@@ -98,13 +104,13 @@ where
     ///
     /// Returns [`None`] if the collection is empty.
     ///
-    /// This method provides LIFO (last in, first out) behavior, making the collection
-    /// behave like a stack for the most recently added reports.
+    /// This method provides LIFO (last in, first out) behavior, making the
+    /// collection behave like a stack for the most recently added reports.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// let report1 = report!("First error").into_cloneable();
@@ -134,7 +140,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// assert_eq!(collection.len(), 0);
@@ -154,7 +160,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// collection.push(report!("First error").into_cloneable());
@@ -176,7 +182,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// assert!(collection.is_empty());
@@ -190,13 +196,13 @@ where
 
     /// Returns an iterator over references to the reports in the collection.
     ///
-    /// The iterator yields [`ReportRef`] items, which are lightweight references
-    /// to the reports in the collection.
+    /// The iterator yields [`ReportRef`] items, which are lightweight
+    /// references to the reports in the collection.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// collection.push(report!("Error 1").into_cloneable());
@@ -212,14 +218,15 @@ where
 
     /// Returns a reference view of the collection.
     ///
-    /// This method creates a [`ReportCollectionRef`] which provides a lightweight,
-    /// non-owning view of the collection. This is useful for passing the collection
-    /// to functions that don't need to take ownership.
+    /// This method creates a [`ReportCollectionRef`] which provides a
+    /// lightweight, non-owning view of the collection. This is useful for
+    /// passing the collection to functions that don't need to take
+    /// ownership.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, report};
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
     /// collection.push(report!("An error").into_cloneable());
@@ -233,12 +240,14 @@ where
 
     /// Converts the collection to use type-erased contexts via `dyn Any`.
     ///
-    /// This performs type erasure on the context type parameter, allowing collections
-    /// with different concrete context types to be stored together or passed to
-    /// functions that accept `ReportCollection<dyn Any, T>`.
+    /// This performs type erasure on the context type parameter, allowing
+    /// collections with different concrete context types to be stored
+    /// together or passed to functions that accept `ReportCollection<dyn
+    /// Any, T>`.
     ///
-    /// This method does not actually modify the collection in any way. It only has the effect of "forgetting"
-    /// that the context actually has the type `C`.
+    /// This method does not actually modify the collection in any way. It only
+    /// has the effect of "forgetting" that the context actually has the
+    /// type `C`.
     ///
     /// The thread safety marker `T` is preserved during this conversion.
     ///
@@ -246,7 +255,8 @@ where
     ///
     /// ```
     /// use std::any::Any;
-    /// use rootcause::{report_collection::ReportCollection, report};
+    ///
+    /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection: ReportCollection<dyn Any> = ReportCollection::new();
     /// collection.push(report!("String error").into_cloneable());
@@ -260,13 +270,14 @@ where
 
     /// Converts the collection to use `Local` thread safety semantics.
     ///
-    /// This changes the thread safety marker from any type to [`Local`], which means
-    /// the resulting collection will not implement [`Send`] or [`Sync`]. This is useful
-    /// when you want to use the collection in single-threaded contexts and potentially
-    /// store non-thread-safe data.
+    /// This changes the thread safety marker from any type to [`Local`], which
+    /// means the resulting collection will not implement [`Send`] or
+    /// [`Sync`]. This is useful when you want to use the collection in
+    /// single-threaded contexts and potentially store non-thread-safe data.
     ///
-    /// This method does not actually modify the collection in any way. It only has the effect of "forgetting" that
-    /// all objects in the [`ReportCollection`] are actually [`Send`] and [`Sync`].
+    /// This method does not actually modify the collection in any way. It only
+    /// has the effect of "forgetting" that all objects in the
+    /// [`ReportCollection`] are actually [`Send`] and [`Sync`].
     ///
     /// The context type `C` is preserved during this conversion.
     ///
@@ -285,16 +296,21 @@ where
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
-    /// Creates a new [`Report`] with the given context and sets the current report collection as the children of the new report.
+    /// Creates a new [`Report`] with the given context and sets the current
+    /// report collection as the children of the new report.
     ///
-    /// The new context will use the [`handlers::Display`] handler to format the context.
+    /// The new context will use the [`handlers::Display`] handler to format the
+    /// context.
     ///
-    /// This is a convenience method used for chaining method calls; it consumes the [`ReportCollection`] and returns a new [`Report`].
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`ReportCollection`] and returns a new [`Report`].
     ///
-    /// If you want a different context handler, you can use [`Report::context_custom`].
+    /// If you want a different context handler, you can use
+    /// [`Report::context_custom`].
     ///
-    /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
-    /// which is the underlying method used to implement this method.
+    /// If you want to more directly control the allocation of the new report,
+    /// you can use [`Report::from_parts`], which is the underlying method
+    /// used to implement this method.
     ///
     /// # Examples
     /// ```
@@ -313,12 +329,15 @@ where
         self.context_custom::<handlers::Display, _>(context)
     }
 
-    /// Creates a new [`Report`] with the given context and sets the current report collection as the children of the new report.
+    /// Creates a new [`Report`] with the given context and sets the current
+    /// report collection as the children of the new report.
     ///
-    /// This is a convenience method used for chaining method calls; it consumes the [`ReportCollection`] and returns a [`Report`].
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`ReportCollection`] and returns a [`Report`].
     ///
-    /// If you want to more directly control the allocation of the new report, you can use [`Report::from_parts`],
-    /// which is the underlying method used to implement this method.
+    /// If you want to more directly control the allocation of the new report,
+    /// you can use [`Report::from_parts`], which is the underlying method
+    /// used to implement this method.
     ///
     /// # Examples
     /// ```
@@ -355,14 +374,14 @@ where
 {
     /// Creates a new, empty `ReportCollection` with `SendSync` thread safety.
     ///
-    /// This is equivalent to calling [`new()`](Self::new) but makes the thread safety
-    /// marker explicit. The resulting collection can be safely sent between threads
-    /// and shared across threads.
+    /// This is equivalent to calling [`new()`](Self::new) but makes the thread
+    /// safety marker explicit. The resulting collection can be safely sent
+    /// between threads and shared across threads.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, markers::SendSync};
+    /// use rootcause::{markers::SendSync, report_collection::ReportCollection};
     ///
     /// let collection: ReportCollection<&str, SendSync> = ReportCollection::new_sendsync();
     /// assert!(collection.is_empty());
@@ -378,14 +397,15 @@ where
 {
     /// Creates a new, empty `ReportCollection` with `Local` thread safety.
     ///
-    /// This creates a collection that is not [`Send`] or [`Sync`], meaning it cannot be
-    /// transferred between threads or shared across threads. This is useful for
-    /// single-threaded applications or when you need to store non-thread-safe data.
+    /// This creates a collection that is not [`Send`] or [`Sync`], meaning it
+    /// cannot be transferred between threads or shared across threads. This
+    /// is useful for single-threaded applications or when you need to store
+    /// non-thread-safe data.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, markers::Local};
+    /// use rootcause::{markers::Local, report_collection::ReportCollection};
     ///
     /// let collection: ReportCollection<&str, Local> = ReportCollection::new_local();
     /// assert!(collection.is_empty());
@@ -578,8 +598,8 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    type Item = Report<C, Cloneable, T>;
     type IntoIter = ReportCollectionIntoIter<C, T>;
+    type Item = Report<C, Cloneable, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         unsafe { ReportCollectionIntoIter::from_raw(self.raw) }

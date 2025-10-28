@@ -1,8 +1,9 @@
-//! This module encapsulates the fields of the [`AttachmentData`]. Since this is the only place
-//! they are visible, this means that the type of the [`AttachmentVtable`] is guaranteed to always be in sync
-//! with the type of the actual attachment. This follows from the fact that they are in sync
-//! when created and that the API offers no way to change the [`AttachmentVtable`] or attachment type after
-//! creation.
+//! This module encapsulates the fields of the [`AttachmentData`]. Since this is
+//! the only place they are visible, this means that the type of the
+//! [`AttachmentVtable`] is guaranteed to always be in sync with the type of the
+//! actual attachment. This follows from the fact that they are in sync
+//! when created and that the API offers no way to change the
+//! [`AttachmentVtable`] or attachment type after creation.
 
 use crate::{
     attachment::{raw::RawAttachmentRef, vtable::AttachmentVtable},
@@ -11,8 +12,9 @@ use crate::{
 
 /// Type-erased attachment data structure with vtable-based dispatch.
 ///
-/// This struct uses `#[repr(C)]` to enable safe field access in type-erased contexts,
-/// allowing access to the vtable field even when the concrete attachment type `A` is unknown.
+/// This struct uses `#[repr(C)]` to enable safe field access in type-erased
+/// contexts, allowing access to the vtable field even when the concrete
+/// attachment type `A` is unknown.
 #[repr(C)]
 pub(super) struct AttachmentData<A: 'static> {
     /// The Vtable of this attachment
@@ -22,9 +24,11 @@ pub(super) struct AttachmentData<A: 'static> {
 }
 
 impl<A: 'static> AttachmentData<A> {
-    /// Creates a new [`AttachmentData`] with the specified handler and attachment.
+    /// Creates a new [`AttachmentData`] with the specified handler and
+    /// attachment.
     ///
-    /// This method creates the vtable for type-erased dispatch and pairs it with the attachment data.
+    /// This method creates the vtable for type-erased dispatch and pairs it
+    /// with the attachment data.
     pub(super) fn new<H: AttachmentHandler<A>>(attachment: A) -> Self {
         Self {
             vtable: AttachmentVtable::new::<A, H>(),
@@ -34,7 +38,8 @@ impl<A: 'static> AttachmentData<A> {
 }
 
 impl<'a> RawAttachmentRef<'a> {
-    /// Returns a reference to the [`AttachmentVtable`] of the [`AttachmentData`] instance.
+    /// Returns a reference to the [`AttachmentVtable`] of the
+    /// [`AttachmentData`] instance.
     pub(super) fn vtable(self) -> &'static AttachmentVtable {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner attachment type, but we do know
@@ -47,18 +52,21 @@ impl<'a> RawAttachmentRef<'a> {
         // since we don't have the right type.
         let vtable_ptr: *const &'static AttachmentVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: Deferencing the pointer and getting out the `&'static AttachmentVtable` is valid
-        // for the same reasons
+        // SAFETY: Deferencing the pointer and getting out the `&'static
+        // AttachmentVtable` is valid for the same reasons
         unsafe { *vtable_ptr }
     }
 
-    /// Accesses the inner attachment of the [`AttachmentData`] instance as a reference to the specified type.
+    /// Accesses the inner attachment of the [`AttachmentData`] instance as a
+    /// reference to the specified type.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `A` matches the actual attachment type stored in the [`AttachmentData`].
+    /// The caller must ensure that the type `A` matches the actual attachment
+    /// type stored in the [`AttachmentData`].
     pub unsafe fn attachment_downcast_unchecked<A: 'static>(self) -> &'a A {
-        // SAFETY: The inner function requires that `A` matches the type stored, but that is guaranteed by our caller.
+        // SAFETY: The inner function requires that `A` matches the type stored, but
+        // that is guaranteed by our caller.
         let this = unsafe { self.cast_inner::<A>() };
         &this.attachment
     }

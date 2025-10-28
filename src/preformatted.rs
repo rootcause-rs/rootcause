@@ -1,8 +1,9 @@
 //! Preformatted context and attachment types and their handler implementations.
 //!
-//! These types can be used to store preformatted `String` representations of contexts
-//! and attachments in a report. This is mostly useful because of the [`Report::preformat`] method,
-//! which creates a new report with the same structure as an existing one.
+//! These types can be used to store preformatted `String` representations of
+//! contexts and attachments in a report. This is mostly useful because of the
+//! [`Report::preformat`] method, which creates a new report with the same
+//! structure as an existing one.
 //!
 //! [`Report::preformat`]: crate::Report::preformat
 
@@ -45,7 +46,8 @@ impl PreformattedContext {
         }
     }
 
-    /// Get the `TypeId` of the original context type before it was preformatted.
+    /// Get the `TypeId` of the original context type before it was
+    /// preformatted.
     pub fn original_type_id(&self) -> TypeId {
         self.original_type_id
     }
@@ -79,7 +81,8 @@ impl PreformattedAttachment {
         }
     }
 
-    /// Get the `TypeId` of the original attachment type before it was preformatted.
+    /// Get the `TypeId` of the original attachment type before it was
+    /// preformatted.
     pub fn original_type_id(&self) -> TypeId {
         self.original_type_id
     }

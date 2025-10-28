@@ -26,8 +26,9 @@ where
     ///
     /// # Safety
     ///
-    /// The thread safety marker must match the contents of the attachments. More specifically if the marker is `SendSync`, then
-    /// all the inner attachments must be `Send+Sync`
+    /// The thread safety marker must match the contents of the attachments.
+    /// More specifically if the marker is `SendSync`, then all the inner
+    /// attachments must be `Send+Sync`
     pub(crate) unsafe fn from_raw(raw: Vec<RawAttachment>) -> Self {
         Self {
             raw,
@@ -111,8 +112,9 @@ impl From<ReportAttachments<SendSync>> for ReportAttachments<Local> {
     fn from(attachments: ReportAttachments<SendSync>) -> Self {
         let attachments = attachments.into_raw();
 
-        // SAFETY: We are turning our `SendSync` attachments into `Local` attachments, which is
-        // allowed since all `SendSync` attachments are also valid `Local` attachments.
+        // SAFETY: We are turning our `SendSync` attachments into `Local` attachments,
+        // which is allowed since all `SendSync` attachments are also valid
+        // `Local` attachments.
         unsafe { ReportAttachments::from_raw(attachments) }
     }
 }
@@ -146,8 +148,8 @@ impl<T> IntoIterator for ReportAttachments<T>
 where
     T: markers::ThreadSafetyMarker,
 {
-    type Item = ReportAttachment<dyn Any, T>;
     type IntoIter = ReportAttachmentsIntoIter<T>;
+    type Item = ReportAttachment<dyn Any, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         unsafe { ReportAttachmentsIntoIter::from_raw(self.raw.into_iter()) }

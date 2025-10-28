@@ -1,15 +1,15 @@
 /// Macro to generate a report
 ///
-/// This macro can be invoked in two different ways, using a format string or using
-/// a context object.
+/// This macro can be invoked in two different ways, using a format string or
+/// using a context object.
 ///
 /// ## Using a format string
 ///
 /// When invoked with a literal as the first argument, this macro will interpret
 /// and evaluate the arguments in the same way as the [`format!()`] macro.
 ///
-/// The resulting string will become the context of the new report. The resulting
-/// report will have the type `Report<dyn Any, Mutable, SendSync>`.
+/// The resulting string will become the context of the new report. The
+/// resulting report will have the type `Report<dyn Any, Mutable, SendSync>`.
 ///
 /// The inner context will typically be a `String`, but in cases where
 /// the format does not contain arguments, it is typically be optimized to
@@ -22,7 +22,8 @@
 /// This macro also accepts any other expression. When used like this, it is
 /// mostly equivalent to calling [`Report::new`], however it has some benefits:
 ///
-/// - It automatically infers the correct thread marker based on the context object.
+/// - It automatically infers the correct thread marker based on the context
+///   object.
 /// - It automatically infers the correct handler based on the context object.
 ///
 /// [`Report::new`]: crate::Report::new
@@ -46,14 +47,20 @@
 /// let report: Report<dyn Any, markers::Mutable, markers::SendSync> =
 ///     report!("Something broke hard: {}", "it was bad");
 /// assert_eq!(report.current_context_type_id(), TypeId::of::<String>());
-/// assert_eq!(report.current_context_handler_type_id(), TypeId::of::<handlers::Display>());
+/// assert_eq!(
+///     report.current_context_handler_type_id(),
+///     TypeId::of::<handlers::Display>()
+/// );
 ///
 /// # fn something_that_fails() -> Result<(), std::io::Error> {
 /// #    std::fs::read("/nonexistant")?; Ok(())
 /// # }
 /// let io_error: std::io::Error = something_that_fails().unwrap_err();
 /// let report: Report<std::io::Error, markers::Mutable, markers::SendSync> = report!(io_error);
-/// assert_eq!(report.current_context_handler_type_id(), TypeId::of::<handlers::Error>());
+/// assert_eq!(
+///     report.current_context_handler_type_id(),
+///     TypeId::of::<handlers::Error>()
+/// );
 ///
 /// # fn something_else_that_fails() -> Result<(), Rc<std::io::Error>> {
 /// #    std::fs::read("/nonexistant")?; Ok(())
@@ -61,7 +68,10 @@
 /// let local_io_error: Rc<std::io::Error> = something_else_that_fails().unwrap_err();
 /// let report: Report<Rc<std::io::Error>, markers::Mutable, markers::Local> =
 ///     report!(local_io_error);
-/// assert_eq!(report.current_context_handler_type_id(), TypeId::of::<handlers::Display>());
+/// assert_eq!(
+///     report.current_context_handler_type_id(),
+///     TypeId::of::<handlers::Display>()
+/// );
 /// ```
 #[macro_export]
 macro_rules! report {
@@ -109,12 +119,18 @@ macro_rules! report {
 /// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
 ///     report_attachment!("Additional context");
 /// assert_eq!(attachment.inner_type_id(), TypeId::of::<&'static str>());
-/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+/// assert_eq!(
+///     attachment.inner_handler_type_id(),
+///     TypeId::of::<handlers::Display>()
+/// );
 ///
 /// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
 ///     report_attachment!("Error occurred at line: {}", 42);
 /// assert_eq!(attachment.inner_type_id(), TypeId::of::<String>());
-/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+/// assert_eq!(
+///     attachment.inner_handler_type_id(),
+///     TypeId::of::<handlers::Display>()
+/// );
 ///
 /// # #[derive(Debug)]
 /// # struct ErrorData { code: i32, message: String }
@@ -132,11 +148,17 @@ macro_rules! report {
 ///     message: "Not found".to_string(),
 /// };
 /// let attachment: ReportAttachment<ErrorData, markers::SendSync> = report_attachment!(error_data);
-/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+/// assert_eq!(
+///     attachment.inner_handler_type_id(),
+///     TypeId::of::<handlers::Display>()
+/// );
 ///
 /// let local_data: Rc<String> = Rc::new("Local context".to_string());
 /// let attachment: ReportAttachment<Rc<String>, markers::Local> = report_attachment!(local_data);
-/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+/// assert_eq!(
+///     attachment.inner_handler_type_id(),
+///     TypeId::of::<handlers::Display>()
+/// );
 /// ```
 #[macro_export]
 macro_rules! report_attachment {
@@ -165,8 +187,9 @@ macro_rules! report_attachment {
 /// Return early with an error.
 ///
 /// This macro is similar to the [`bail!`] macro from the [`anyhow`] crate.
-/// It constructs a new report using the same arguments as the [`report!`] macro,
-/// and then returns early from the function with that report wrapped in an `Err`.
+/// It constructs a new report using the same arguments as the [`report!`]
+/// macro, and then returns early from the function with that report wrapped in
+/// an `Err`.
 ///
 /// This is equivalent to writing `return Err(report!(...).into());`
 ///

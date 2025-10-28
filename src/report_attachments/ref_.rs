@@ -35,8 +35,9 @@ where
     ///
     /// # Safety
     ///
-    /// The thread safety marker must match the contents of the attachments. More specifically if the marker is `SendSync`, then
-    /// all of the inner attachments must be `Send+Sync`
+    /// The thread safety marker must match the contents of the attachments.
+    /// More specifically if the marker is `SendSync`, then all of the inner
+    /// attachments must be `Send+Sync`
     pub(crate) unsafe fn from_raw(raw: &'a [RawAttachment]) -> Self {
         Self {
             raw,
@@ -66,8 +67,8 @@ impl<'a, T> IntoIterator for ReportAttachmentsRef<'a, T>
 where
     T: markers::ThreadSafetyMarker,
 {
-    type Item = ReportAttachmentRef<'a, dyn Any>;
     type IntoIter = ReportAttachmentsIter<'a>;
+    type Item = ReportAttachmentRef<'a, dyn Any>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()

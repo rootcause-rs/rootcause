@@ -1,7 +1,7 @@
 use crate::{markers, prelude::Report, report_collection::ReportCollection};
 
-/// Trait for converting an error or a report into a [`Report`] with the specified
-/// thread safety marker.
+/// Trait for converting an error or a report into a [`Report`] with the
+/// specified thread safety marker.
 pub trait IntoReport<T: markers::ThreadSafetyMarker> {
     /// The context type of the resulting report.
     type Context: markers::ObjectMarker + ?Sized;
@@ -67,14 +67,14 @@ where
     }
 }
 
-/// Trait for converting an error or a report into a [`ReportCollection`] with the specified
-/// thread safety marker.
+/// Trait for converting an error or a report into a [`ReportCollection`] with
+/// the specified thread safety marker.
 pub trait IntoReportCollection<T: markers::ThreadSafetyMarker> {
     /// The context type of the resulting report collection.
     type Context: markers::ObjectMarker + ?Sized;
 
-    /// Converts `self` into a [`ReportCollection`] with the specified context and
-    /// thread safety markers.
+    /// Converts `self` into a [`ReportCollection`] with the specified context
+    /// and thread safety markers.
     ///
     /// # Examples
     /// ```

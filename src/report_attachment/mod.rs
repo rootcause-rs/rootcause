@@ -1,17 +1,20 @@
 //! Individual attachments for error reports.
 //!
-//! This module provides types for creating and working with individual attachments
-//! that can be added to error reports. Attachments allow you to include additional
-//! context, data, or information alongside the main error message.
+//! This module provides types for creating and working with individual
+//! attachments that can be added to error reports. Attachments allow you to
+//! include additional context, data, or information alongside the main error
+//! message.
 //!
 //! # Core Types
 //!
 //! - [`ReportAttachment`]: An owned attachment that can be added to a report
-//! - [`ReportAttachmentRef`]: A reference to an attachment, typically obtained from a report
+//! - [`ReportAttachmentRef`]: A reference to an attachment, typically obtained
+//!   from a report
 //!
 //! # Creating Attachments
 //!
-//! Attachments can be created from using [`ReportAttachment::new`] method or the [`report_attachment!`] macro:
+//! Attachments can be created from using [`ReportAttachment::new`] method or
+//! the [`report_attachment!`] macro:
 //!
 //! ```
 //! use rootcause::{prelude::*, report_attachment::ReportAttachment};
@@ -41,7 +44,8 @@
 //! Both types have the same generic parameters:
 //!
 //! - **Attachment type**: Can be a concrete type or `dyn Any` for type erasure
-//! - **Thread safety**: [`SendSync`] (default) for thread-safe attachments, or [`Local`] for single-threaded use
+//! - **Thread safety**: [`SendSync`] (default) for thread-safe attachments, or
+//!   [`Local`] for single-threaded use
 //!
 //! ```
 //! use std::rc::Rc;
@@ -63,8 +67,9 @@
 //!
 //! # Attachment References
 //!
-//! When attachments are stored in reports, you typically work with [`ReportAttachmentRef`]
-//! which provides access to the attachment data without taking ownership:
+//! When attachments are stored in reports, you typically work with
+//! [`ReportAttachmentRef`] which provides access to the attachment data without
+//! taking ownership:
 //!
 //! ```
 //! use rootcause::{prelude::*, report_attachment::ReportAttachment};
@@ -81,7 +86,8 @@
 //! # Type Erasure and Downcasting
 //!
 //! Attachments support type erasure through `dyn Any`, allowing collections of
-//! different attachment types. You can downcast back to concrete types when needed:
+//! different attachment types. You can downcast back to concrete types when
+//! needed:
 //!
 //! ```
 //! use std::any::{Any, TypeId};

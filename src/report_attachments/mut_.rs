@@ -22,7 +22,8 @@ impl<'a, T> ReportAttachmentsMut<'a, T>
 where
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new AttachmentsMut from a mutable reference to a vec of raw attachments
+    /// Creates a new AttachmentsMut from a mutable reference to a vec of raw
+    /// attachments
     pub(crate) unsafe fn from_raw(raw: &'a mut Vec<RawAttachment>) -> Self {
         Self {
             raw,
