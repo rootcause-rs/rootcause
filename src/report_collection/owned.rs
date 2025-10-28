@@ -133,8 +133,7 @@ where
     /// let report_collection: ReportCollection = [report!("error A"), report!("error B")]
     ///     .into_iter()
     ///     .collect();
-    /// let repot: Report<&str> =
-    ///     report_collection.context_custom::<handlers::Debug, _>("context");
+    /// let report: Report<&str> = report_collection.context_custom::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]

@@ -19,7 +19,9 @@
 //! capture backtraces for all reports:
 //!
 //! ```rust
-//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::backtrace::BacktraceCollector};
+//! use rootcause::hooks::{
+//!     attachment_collectors::backtrace::BacktraceCollector, register_attachment_collector_hook,
+//! };
 //!
 //! register_attachment_collector_hook(BacktraceCollector::default());
 //! ```

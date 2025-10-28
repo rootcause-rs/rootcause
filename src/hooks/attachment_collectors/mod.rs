@@ -14,7 +14,9 @@
 //! These collectors are typically registered during application initialization:
 //!
 //! ```rust
-//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
+//! use rootcause::hooks::{
+//!     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+//! };
 //!
 //! // Register location collection for all reports
 //! register_attachment_collector_hook(LocationCollector);

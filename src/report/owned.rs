@@ -471,8 +471,7 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("initial error");
-    /// let contextual_report: Report<&str> =
-    ///     report.context_custom::<handlers::Debug, _>("context");
+    /// let contextual_report: Report<&str> = report.context_custom::<handlers::Debug, _>("context");
     /// ```
     #[track_caller]
     #[must_use]
@@ -884,8 +883,7 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let style =
-    ///     report.preferred_context_formatting_style(handlers::FormattingFunction::Display);
+    /// let style = report.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
@@ -909,8 +907,8 @@ where
     /// ```
     /// # use rootcause::prelude::*;
     /// let report: Report = report!("error message");
-    /// let style = report
-    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
+    /// let style =
+    ///     report.preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,

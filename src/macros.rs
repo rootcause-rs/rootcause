@@ -46,12 +46,14 @@
 /// let report: Report<dyn Any, markers::Mutable, markers::SendSync> =
 ///     report!("Something broke hard: {}", "it was bad");
 /// assert_eq!(report.current_context_type_id(), TypeId::of::<String>());
+/// assert_eq!(report.current_context_handler_type_id(), TypeId::of::<handlers::Display>());
 ///
 /// # fn something_that_fails() -> Result<(), std::io::Error> {
 /// #    std::fs::read("/nonexistant")?; Ok(())
 /// # }
 /// let io_error: std::io::Error = something_that_fails().unwrap_err();
 /// let report: Report<std::io::Error, markers::Mutable, markers::SendSync> = report!(io_error);
+/// assert_eq!(report.current_context_handler_type_id(), TypeId::of::<handlers::Error>());
 ///
 /// # fn something_else_that_fails() -> Result<(), Rc<std::io::Error>> {
 /// #    std::fs::read("/nonexistant")?; Ok(())
@@ -59,6 +61,7 @@
 /// let local_io_error: Rc<std::io::Error> = something_else_that_fails().unwrap_err();
 /// let report: Report<Rc<std::io::Error>, markers::Mutable, markers::Local> =
 ///     report!(local_io_error);
+/// assert_eq!(report.current_context_handler_type_id(), TypeId::of::<handlers::Display>());
 /// ```
 #[macro_export]
 macro_rules! report {
@@ -71,13 +74,87 @@ macro_rules! report {
             let context = $context;
             let handler = (&&&&Wrap(&context)).handler();
             let thread_safety = (&context).thread_safety();
-            macro_helper_new(handler, thread_safety, context)
+            macro_helper_new_report(handler, thread_safety, context)
         }
     };
     ($fmt:expr, $($arg:tt)*) => {
         $crate::Report::<
             _,
             $crate::markers::Mutable,
+            $crate::markers::SendSync
+        >::new_custom::<$crate::handlers::Display>(
+            $crate::__private::format!($fmt, $($arg)*)
+        ).into_dyn_any()
+    };
+}
+
+/// Macro to generate a report attachment
+///
+/// This macro can be invoked in the same ways as the [`report!`] macro, but it
+/// creates a [`ReportAttachment`] instead of a [`Report`].
+///
+/// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
+/// [`Report`]: crate::Report
+///
+/// # Examples
+///
+/// ```
+/// use std::{
+///     any::{Any, TypeId},
+///     rc::Rc,
+/// };
+///
+/// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
+///
+/// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
+///     report_attachment!("Additional context");
+/// assert_eq!(attachment.inner_type_id(), TypeId::of::<&'static str>());
+/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+///
+/// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
+///     report_attachment!("Error occurred at line: {}", 42);
+/// assert_eq!(attachment.inner_type_id(), TypeId::of::<String>());
+/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+///
+/// # #[derive(Debug)]
+/// # struct ErrorData { code: i32, message: String }
+/// # // We implement Error as well to make sure the macro also works in this case.
+/// # // The handlers::Error does not implemenet AttachmentHandler, so we
+/// # // want to verify that the macro uses the Display handler.
+/// # impl std::fmt::Display for ErrorData {
+/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+/// #         todo!()
+/// #     }
+/// # }
+/// # impl std::error::Error for ErrorData {}
+/// let error_data = ErrorData {
+///     code: 404,
+///     message: "Not found".to_string(),
+/// };
+/// let attachment: ReportAttachment<ErrorData, markers::SendSync> = report_attachment!(error_data);
+/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+///
+/// let local_data: Rc<String> = Rc::new("Local context".to_string());
+/// let attachment: ReportAttachment<Rc<String>, markers::Local> = report_attachment!(local_data);
+/// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<handlers::Display>());
+/// ```
+#[macro_export]
+macro_rules! report_attachment {
+    ($msg:literal $(,)?) => {
+        $crate::__private::format_report_attachment($crate::__private::format_args!($msg))
+    };
+    ($context:expr $(,)?) => {
+        {
+            use $crate::__private::kind::*;
+            let context = $context;
+            let handler = (&&&Wrap(&context)).handler();
+            let thread_safety = (&context).thread_safety();
+            macro_helper_new_report_attachment(handler, thread_safety, context)
+        }
+    };
+    ($fmt:expr, $($arg:tt)*) => {
+        $crate::report_attachment::ReportAttachment::<
+            _,
             $crate::markers::SendSync
         >::new_custom::<$crate::handlers::Display>(
             $crate::__private::format!($fmt, $($arg)*)

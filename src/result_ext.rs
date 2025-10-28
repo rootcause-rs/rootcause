@@ -641,10 +641,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// }
     ///
     /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> = result
-    ///     .local_attach_custom_with::<handlers::Debug, _, _>(
-    ///     || Rc::new(MyAttachment::new()),
-    /// );
+    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
+    ///     result.local_attach_custom_with::<handlers::Debug, _, _>(|| Rc::new(MyAttachment::new()));
     /// ```
     #[track_caller]
     fn local_attach_custom_with<H, A, F>(

@@ -9,7 +9,9 @@
     clippy::undocumented_unsafe_blocks,
     clippy::multiple_unsafe_ops_per_block,
     rustdoc::invalid_rust_codeblocks,
-    rustdoc::broken_intra_doc_links
+    rustdoc::broken_intra_doc_links,
+    missing_copy_implementations,
+    unused_doc_comments
 )]
 #![allow(rustdoc::private_intra_doc_links)]
 //! Internal crate for the `rootcause` crate.

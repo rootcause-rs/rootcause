@@ -14,11 +14,15 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     ///
     /// # Examples
     /// ```
-    /// use rootcause::{prelude::*, report_collection::ReportCollection};
     /// use std::collections::BTreeSet;
     ///
+    /// use rootcause::{prelude::*, report_collection::ReportCollection};
+    ///
     /// let inputs = vec!["1", "2", "foo", "4", "bar"];
-    /// let results: Result<BTreeSet<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> = inputs
+    /// let results: Result<
+    ///     BTreeSet<u8>,
+    ///     ReportCollection<std::num::ParseIntError, markers::SendSync>,
+    /// > = inputs
     ///     .into_iter()
     ///     .map(|s| s.parse::<u8>())
     ///     .collect_reports();
@@ -27,7 +31,10 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     /// assert_eq!(errors.len(), 2);
     ///
     /// let inputs = vec!["1", "2", "2"];
-    /// let results: Result<BTreeSet<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> = inputs
+    /// let results: Result<
+    ///     BTreeSet<u8>,
+    ///     ReportCollection<std::num::ParseIntError, markers::SendSync>,
+    /// > = inputs
     ///     .into_iter()
     ///     .map(|s| s.parse::<u8>())
     ///     .collect_reports();
@@ -53,19 +60,21 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     /// use rootcause::{prelude::*, report_collection::ReportCollection};
     ///
     /// let inputs = vec!["1", "2", "foo", "2", "bar"];
-    /// let results: Result<Vec<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> = inputs
-    ///     .into_iter()
-    ///     .map(|s| s.parse::<u8>())
-    ///     .collect_reports_vec();
+    /// let results: Result<Vec<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> =
+    ///     inputs
+    ///         .into_iter()
+    ///         .map(|s| s.parse::<u8>())
+    ///         .collect_reports_vec();
     /// assert!(results.is_err());
     /// let errors = results.unwrap_err();
     /// assert_eq!(errors.len(), 2);
     ///
     /// let inputs = vec!["1", "2", "2"];
-    /// let results: Result<Vec<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> = inputs
-    ///     .into_iter()
-    ///     .map(|s| s.parse::<u8>())
-    ///     .collect_reports_vec();
+    /// let results: Result<Vec<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> =
+    ///     inputs
+    ///         .into_iter()
+    ///         .map(|s| s.parse::<u8>())
+    ///         .collect_reports_vec();
     /// assert!(results.is_ok());
     /// let errors = results.unwrap();
     /// assert_eq!(errors, &[1, 2, 2]);

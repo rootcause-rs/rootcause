@@ -10,7 +10,10 @@
 //     clippy::undocumented_unsafe_blocks,
 //     clippy::multiple_unsafe_ops_per_block,
     rustdoc::invalid_rust_codeblocks,
-    rustdoc::broken_intra_doc_links
+    rustdoc::broken_intra_doc_links,
+    // rustdoc::missing_doc_code_examples,
+    missing_copy_implementations,
+    unused_doc_comments,
 )]
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
 //!
@@ -195,7 +198,7 @@ pub mod __private {
     #[doc(hidden)]
     pub use core::{any::Any, format_args, result::Result::Err};
 
-    use crate::{Report, handlers, markers};
+    use crate::{Report, handlers, markers, report_attachment::ReportAttachment};
 
     #[doc(hidden)]
     #[inline]
@@ -213,10 +216,26 @@ pub mod __private {
     }
 
     #[doc(hidden)]
+    #[inline]
+    #[cold]
+    #[must_use]
+    #[track_caller]
+    pub fn format_report_attachment(
+        args: fmt::Arguments<'_>,
+    ) -> ReportAttachment<dyn Any, markers::SendSync> {
+        if let Some(message) = args.as_str() {
+            ReportAttachment::new_sendsync_custom::<handlers::Display>(message).into_dyn_any()
+        } else {
+            ReportAttachment::new_sendsync_custom::<handlers::Display>(fmt::format(args))
+                .into_dyn_any()
+        }
+    }
+
+    #[doc(hidden)]
     pub mod kind {
         use crate::{
-            Report, handlers, markers, report_attachments::ReportAttachments,
-            report_collection::ReportCollection,
+            Report, handlers, markers, report_attachment::ReportAttachment,
+            report_attachments::ReportAttachments, report_collection::ReportCollection,
         };
 
         #[doc(hidden)]
@@ -279,7 +298,7 @@ pub mod __private {
         #[doc(hidden)]
         #[must_use]
         #[track_caller]
-        pub fn macro_helper_new<H, T, C>(
+        pub fn macro_helper_new_report<H, T, C>(
             _handler: H,
             _thread_safety: T,
             context: C,
@@ -290,6 +309,22 @@ pub mod __private {
             C: markers::ObjectMarkerFor<T>,
         {
             Report::from_parts::<H>(context, ReportCollection::new(), ReportAttachments::new())
+        }
+
+        #[doc(hidden)]
+        #[must_use]
+        #[track_caller]
+        pub fn macro_helper_new_report_attachment<H, T, A>(
+            _handler: H,
+            _thread_safety: T,
+            attachment: A,
+        ) -> ReportAttachment<A, T>
+        where
+            H: handlers::AttachmentHandler<A>,
+            T: markers::ThreadSafetyMarker,
+            A: markers::ObjectMarkerFor<T>,
+        {
+            ReportAttachment::new_custom::<H>(attachment)
         }
     }
 }

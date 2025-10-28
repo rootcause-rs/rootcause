@@ -16,7 +16,10 @@ use crate::{markers, util::format_helper};
 /// # Examples
 /// ```
 /// # use core::any::Any;
-/// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+/// use rootcause::{
+///     prelude::*,
+///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+/// };
 ///
 /// let attachment: ReportAttachment<&str> = ReportAttachment::new("An important attachment");
 /// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
@@ -80,7 +83,11 @@ where
     /// ```
     /// # use core::any::Any;
     /// use std::any::TypeId;
-    /// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+    ///
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
@@ -172,7 +179,10 @@ where
     ///
     /// # Examples
     /// ```
-    /// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
@@ -202,7 +212,10 @@ where
     /// # Examples
     /// ```
     /// # use core::any::Any;
-    /// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
@@ -244,14 +257,18 @@ where
     /// # Examples
     /// ```
     /// # use core::any::Any;
-    /// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
     /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
     ///
     /// // SAFETY: We know the attachment contains &str data
-    /// let typed_ref: ReportAttachmentRef<'_, &str> = unsafe { attachment_ref.downcast_attachment_unchecked() };
+    /// let typed_ref: ReportAttachmentRef<'_, &str> =
+    ///     unsafe { attachment_ref.downcast_attachment_unchecked() };
     /// ```
     pub unsafe fn downcast_attachment_unchecked<B>(self) -> ReportAttachmentRef<'a, B>
     where
@@ -270,7 +287,10 @@ where
     /// # Examples
     /// ```
     /// # use core::any::Any;
-    /// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
@@ -309,7 +329,10 @@ where
     /// # Examples
     /// ```
     /// # use core::any::Any;
-    /// use rootcause::{prelude::*, report_attachment::{ReportAttachment, ReportAttachmentRef}};
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();

@@ -370,7 +370,8 @@ where
     /// # let non_send_sync_error = NonSendSyncError::default();
     /// # let mut report = report!(non_send_sync_error);
     /// let report_mut: ReportMut<'_, NonSendSyncError, markers::Local> = report.as_mut();
-    /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> = report.preformat();
+    /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> =
+    ///     report.preformat();
     /// assert_eq!(format!("{report}"), format!("{preformatted}"));
     /// ```
     #[track_caller]
@@ -484,7 +485,8 @@ where
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
-    /// let style = report_mut.preferred_context_formatting_style(handlers::FormattingFunction::Display);
+    /// let style =
+    ///     report_mut.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style(
         &self,
@@ -508,8 +510,8 @@ where
     /// # use rootcause::prelude::*;
     /// let mut report: Report = report!("error message");
     /// let report_mut = report.as_mut();
-    /// let style =
-    ///     report_mut.preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
+    /// let style = report_mut
+    ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
     pub fn preferred_context_formatting_style_unhooked(
         &self,

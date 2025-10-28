@@ -16,9 +16,11 @@
 //! and debugged. This is useful when you want special formatting for certain data types.
 //!
 //! ```rust
-//! use rootcause::prelude::*;
-//! use rootcause::hooks::{AttachmentHook, register_attachment_hook};
-//! use rootcause::handlers::AttachmentFormattingStyle;
+//! use rootcause::{
+//!     handlers::AttachmentFormattingStyle,
+//!     hooks::{AttachmentHook, register_attachment_hook},
+//!     prelude::*,
+//! };
 //!
 //! #[derive(Debug)]
 //! struct CustomData(String);
@@ -42,7 +44,7 @@
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
 //!             placement: rootcause::handlers::AttachmentFormattingPlacement::InlineWithHeader {
-//!                 header: "Custom Data"
+//!                 header: "Custom Data",
 //!             },
 //!             function: rootcause::handlers::FormattingFunction::Display,
 //!             priority: 0,
@@ -60,8 +62,10 @@
 //! are displayed when they appear in reports.
 //!
 //! ```rust
-//! use rootcause::prelude::*;
-//! use rootcause::hooks::{ContextHook, register_context_hook};
+//! use rootcause::{
+//!     hooks::{ContextHook, register_context_hook},
+//!     prelude::*,
+//! };
 //!
 //! #[derive(Debug)]
 //! struct MyError {
@@ -74,7 +78,12 @@
 //! impl ContextHook<MyError> for MyErrorHook {
 //!     fn display(
 //!         &self,
-//!         report: rootcause::ReportRef<'_, MyError, rootcause::markers::Uncloneable, rootcause::markers::Local>,
+//!         report: rootcause::ReportRef<
+//!             '_,
+//!             MyError,
+//!             rootcause::markers::Uncloneable,
+//!             rootcause::markers::Local,
+//!         >,
 //!         formatter: &mut std::fmt::Formatter<'_>,
 //!     ) -> std::fmt::Result {
 //!         let context = report.current_context();
@@ -91,20 +100,30 @@
 //! for automatically collecting debug information like backtraces or caller location.
 //!
 //! ```rust
-//! use rootcause::prelude::*;
-//! use rootcause::hooks::{ReportCreationHook, register_report_creation_hook};
+//! use rootcause::{
+//!     hooks::{ReportCreationHook, register_report_creation_hook},
+//!     prelude::*,
+//! };
 //!
 //! struct DebugInfoCollector;
 //!
 //! impl ReportCreationHook for DebugInfoCollector {
-//!     fn on_sendsync_creation(&self, mut report: rootcause::ReportMut<'_, dyn std::any::Any, rootcause::markers::SendSync>) {
+//!     fn on_sendsync_creation(
+//!         &self,
+//!         mut report: rootcause::ReportMut<'_, dyn std::any::Any, rootcause::markers::SendSync>,
+//!     ) {
 //!         // Automatically attach debug information
-//!         let attachment = rootcause::report_attachment::ReportAttachment::new("Debug info collected");
+//!         let attachment =
+//!             rootcause::report_attachment::ReportAttachment::new("Debug info collected");
 //!         report.attachments_mut().push(attachment.into_dyn_any());
 //!     }
 //!
-//!     fn on_local_creation(&self, mut report: rootcause::ReportMut<'_, dyn std::any::Any, rootcause::markers::Local>) {
-//!         let attachment = rootcause::report_attachment::ReportAttachment::new("Local debug info");
+//!     fn on_local_creation(
+//!         &self,
+//!         mut report: rootcause::ReportMut<'_, dyn std::any::Any, rootcause::markers::Local>,
+//!     ) {
+//!         let attachment =
+//!             rootcause::report_attachment::ReportAttachment::new("Local debug info");
 //!         report.attachments_mut().push(attachment.into_dyn_any());
 //!     }
 //! }
@@ -118,20 +137,29 @@
 //! including their structure, colors, and layout.
 //!
 //! ```rust
-//! use rootcause::prelude::*;
-//! use rootcause::hooks::{ReportFormatterHook, register_report_formatter_hook};
+//! use rootcause::{
+//!     hooks::{ReportFormatterHook, register_report_formatter_hook},
+//!     prelude::*,
+//! };
 //!
 //! struct CompactFormatter;
 //!
 //! impl ReportFormatterHook for CompactFormatter {
 //!     fn format_reports(
 //!         &self,
-//!         reports: &[rootcause::ReportRef<'_, dyn std::any::Any, rootcause::markers::Uncloneable, rootcause::markers::Local>],
+//!         reports: &[rootcause::ReportRef<
+//!             '_,
+//!             dyn std::any::Any,
+//!             rootcause::markers::Uncloneable,
+//!             rootcause::markers::Local,
+//!         >],
 //!         formatter: &mut std::fmt::Formatter<'_>,
 //!         _function: rootcause::handlers::FormattingFunction,
 //!     ) -> std::fmt::Result {
 //!         for (i, report) in reports.iter().enumerate() {
-//!             if i > 0 { write!(formatter, " -> ")?; }
+//!             if i > 0 {
+//!                 write!(formatter, " -> ")?;
+//!             }
 //!             write!(formatter, "{}", report.format_current_context_unhooked())?;
 //!         }
 //!         Ok(())

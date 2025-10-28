@@ -9,7 +9,9 @@
 //! attach location information to all reports:
 //!
 //! ```rust
-//! use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
+//! use rootcause::hooks::{
+//!     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+//! };
 //!
 //! register_attachment_collector_hook(LocationCollector);
 //! ```
@@ -44,6 +46,7 @@ pub struct Location {
 ///
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug
+#[derive(Copy, Clone)]
 pub struct LocationHandler;
 impl AttachmentHandler<Location> for LocationHandler {
     fn display(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -74,11 +77,14 @@ impl AttachmentHandler<Location> for LocationHandler {
 /// ## Example
 ///
 /// ```rust
-/// use rootcause::hooks::{register_attachment_collector_hook, attachment_collectors::location::LocationCollector};
+/// use rootcause::hooks::{
+///     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+/// };
 ///
 /// // Register to automatically collect location for all reports
 /// register_attachment_collector_hook(LocationCollector);
 /// ```
+#[derive(Copy, Clone)]
 pub struct LocationCollector;
 
 impl AttachmentCollectorHook<Location> for LocationCollector {

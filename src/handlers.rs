@@ -12,6 +12,7 @@ pub use rootcause_internals::handlers::{
 /// [`Error::source`]: core::error::Error::source
 /// [`Display::fmt`]: core::fmt::Display::fmt
 /// [`Debug::fmt`]: core::fmt::Debug::fmt
+#[derive(Copy, Clone)]
 pub struct Error;
 
 impl<C> ContextHandler<C> for Error
@@ -43,6 +44,7 @@ where
 ///
 /// [`Display::fmt`]: core::fmt::Display::fmt
 /// [`Debug::fmt`]: core::fmt::Debug::fmt
+#[derive(Copy, Clone)]
 pub struct Display;
 
 impl<C> ContextHandler<C> for Display
@@ -88,6 +90,7 @@ where
 /// The [`ContextHandler::display`] and [`AttachmentHandler::display`] methods always output the string "An object of type {...}".
 ///
 /// [`Debug::fmt`]: core::fmt::Debug::fmt
+#[derive(Copy, Clone)]
 pub struct Debug;
 
 impl<C> ContextHandler<C> for Debug
@@ -129,6 +132,7 @@ where
 ///
 /// The [`ContextHandler::display`], [`ContextHandler::debug`], [`AttachmentHandler::display`]
 /// and [`AttachmentHandler::debug`] methods always output the string "An object of type {...}".
+#[derive(Copy, Clone)]
 pub struct Any;
 
 impl<A> AttachmentHandler<A> for Any {

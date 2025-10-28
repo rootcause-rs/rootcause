@@ -1,3 +1,60 @@
+//! Marker types and traits for defining ownership and thread-safety semantics.
+//!
+//! This module provides the type-level markers that control how reports and attachments
+//! behave with respect to ownership, cloning, and thread safety in the rootcause library.
+//! These markers are used as generic parameters to enforce compile-time guarantees about
+//! how data can be accessed and shared.
+//!
+//! # Ownership Markers
+//!
+//! Ownership markers control whether reports can be mutated and cloned:
+//!
+//! - [`Mutable`]: This [`Report`] has unique ownership and can be mutated
+//! - [`Cloneable`]: This [`Report`]/[`ReportRef`] can be cloned but not mutated (shared ownership)
+//! - [`Uncloneable`]: This [`ReportRef`] cannot be cloned
+//!
+//! [`Report`]: crate::Report
+//! [`ReportRef`]: crate::ReportRef
+//!
+//! # Thread Safety Markers
+//!
+//! Thread safety markers control whether reports can be sent between threads:
+//!
+//! - [`SendSync`]: The report and its contents are `Send + Sync` (thread-safe)
+//! - [`Local`]: The report is not thread-safe and cannot cross thread boundaries
+//!
+//! # Examples
+//!
+//! ## Creating reports with different ownership semantics:
+//!
+//! ```
+//! use rootcause::{markers, prelude::*};
+//!
+//! // Mutable report - can be modified
+//! let mut report: Report<String, markers::Mutable> = report!("Error".to_string());
+//! let report = report.attach("Additional context"); // attach consumes and returns the report
+//!
+//! // Cloneable report - can be cloned but not modified
+//! let cloneable: Report<String, markers::Cloneable> = report.into_cloneable();
+//! let cloned = cloneable.clone();
+//! ```
+//!
+//! ## Working with thread safety:
+//!
+//! ```
+//! use std::rc::Rc;
+//!
+//! use rootcause::{markers, prelude::*};
+//!
+//! // Thread-safe report (default)
+//! let thread_safe: Report<String, markers::Mutable, markers::SendSync> =
+//!     report!("Thread-safe error".to_string());
+//!
+//! // Local-only report (cannot be sent between threads)
+//! let local_data = Rc::new("Not thread-safe".to_string());
+//! let local_report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(local_data);
+//! ```
+
 use core::any::Any;
 
 /// Marker type indicating that a report is the unique owner of its context and attachments.
