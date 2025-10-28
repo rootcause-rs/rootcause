@@ -17,11 +17,11 @@ use crate::{
     preformatted::PreformattedContext,
 };
 
-type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHook>, rustc_hash::FxBuildHasher>;
+type HookMap = HashMap<TypeId, Arc<dyn UntypedContextHandlerOverride>, rustc_hash::FxBuildHasher>;
 
 static HOOKS: HookLock<HookMap> = HookLock::new();
 
-fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextHook>> {
+fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextHandlerOverride>> {
     HOOKS.read().get()?.get(&type_id).cloned()
 }
 
@@ -63,7 +63,9 @@ where
 {
 }
 
-pub(crate) trait UntypedContextHook: 'static + Send + Sync + core::fmt::Display {
+pub(crate) trait UntypedContextHandlerOverride:
+    'static + Send + Sync + core::fmt::Display
+{
     unsafe fn display(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -103,7 +105,7 @@ pub(crate) trait UntypedContextHook: 'static + Send + Sync + core::fmt::Display 
     ) -> ContextFormattingStyle;
 }
 
-pub trait ContextHook<C>: 'static + Send + Sync
+pub trait ContextHandlerOverride<C>: 'static + Send + Sync
 where
     C: markers::ObjectMarker + ?Sized,
 {
@@ -156,10 +158,10 @@ where
     }
 }
 
-impl<C, H> UntypedContextHook for Hook<C, H>
+impl<C, H> UntypedContextHandlerOverride for Hook<C, H>
 where
     C: markers::ObjectMarker + ?Sized,
-    H: ContextHook<C>,
+    H: ContextHandlerOverride<C>,
 {
     unsafe fn display(
         &self,
@@ -209,7 +211,7 @@ where
 pub fn register_context_hook<C, H>(hook: H)
 where
     C: markers::ObjectMarker + ?Sized,
-    H: ContextHook<C> + Send + Sync + 'static,
+    H: ContextHandlerOverride<C> + Send + Sync + 'static,
 {
     let added_location = Location::caller();
     let hook: Hook<C, H> = Hook {
@@ -218,7 +220,7 @@ where
         _hooked_type: PhantomData,
     };
     let hook: Arc<Hook<C, H>> = Arc::new(hook);
-    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedContextHook));
+    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedContextHandlerOverride));
 
     HOOKS
         .write()

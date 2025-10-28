@@ -14,7 +14,7 @@ use rootcause_internals::handlers::{
 
 use crate::{
     ReportRef,
-    hooks::ReportFormatterHook,
+    hooks::report_formatting::ReportFormatterHook,
     markers::{Local, Uncloneable},
     report_attachment::ReportAttachmentRef,
 };

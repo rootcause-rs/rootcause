@@ -114,7 +114,7 @@ where
         let reports: &'a [RawReport] = self.raw;
         let reports: &'a [ReportRef<'a, dyn Any, markers::Uncloneable, markers::Local>] =
             unsafe { core::mem::transmute(reports) };
-        crate::hooks::format_reports(reports, f, FormattingFunction::Display)
+        crate::hooks::report_formatting::format_reports(reports, f, FormattingFunction::Display)
     }
 }
 
@@ -127,7 +127,7 @@ where
         let reports: &'a [RawReport] = self.raw;
         let reports: &'a [ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>] =
             unsafe { core::mem::transmute(reports) };
-        crate::hooks::format_reports(reports, f, FormattingFunction::Display)
+        crate::hooks::report_formatting::format_reports(reports, f, FormattingFunction::Display)
     }
 }
 

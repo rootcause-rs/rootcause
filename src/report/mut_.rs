@@ -463,8 +463,8 @@ where
         let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
         format_helper(
             report,
-            |report, formatter| crate::hooks::display_context(report, formatter),
-            |report, formatter| crate::hooks::debug_context(report, formatter),
+            |report, formatter| crate::hooks::handler_overrides::display_context(report, formatter),
+            |report, formatter| crate::hooks::handler_overrides::debug_context(report, formatter),
         )
     }
 
@@ -511,7 +511,10 @@ where
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
-        crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
+        crate::hooks::handler_overrides::get_preferred_context_formatting_style(
+            report,
+            report_formatting_function,
+        )
     }
 
     /// Gets the preferred formatting style for the context without hook

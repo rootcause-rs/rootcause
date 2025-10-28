@@ -416,8 +416,8 @@ where
         let report = self.into_dyn_any().into_uncloneable().into_local();
         format_helper(
             report,
-            |report, formatter| crate::hooks::display_context(report, formatter),
-            |report, formatter| crate::hooks::debug_context(report, formatter),
+            |report, formatter| crate::hooks::handler_overrides::display_context(report, formatter),
+            |report, formatter| crate::hooks::handler_overrides::debug_context(report, formatter),
         )
     }
 
@@ -463,7 +463,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        crate::hooks::get_preferred_context_formatting_style(
+        crate::hooks::handler_overrides::get_preferred_context_formatting_style(
             self.into_dyn_any().into_uncloneable().into_local(),
             report_formatting_function,
         )
@@ -688,7 +688,7 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dyn_any().into_uncloneable().into_local();
-        crate::hooks::format_report(report, f, FormattingFunction::Display)
+        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Display)
     }
 }
 
@@ -700,7 +700,7 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dyn_any().into_uncloneable().into_local();
-        crate::hooks::format_report(report, f, FormattingFunction::Debug)
+        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Debug)
     }
 }
 

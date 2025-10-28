@@ -184,8 +184,12 @@ where
         let attachment: ReportAttachmentRef<'_, dyn Any> = self.as_ref().into_dyn_any();
         format_helper(
             attachment,
-            |attachment, formatter| crate::hooks::display_attachment(attachment, None, formatter),
-            |attachment, formatter| crate::hooks::debug_attachment(attachment, None, formatter),
+            |attachment, formatter| {
+                crate::hooks::handler_overrides::display_attachment(attachment, None, formatter)
+            },
+            |attachment, formatter| {
+                crate::hooks::handler_overrides::debug_attachment(attachment, None, formatter)
+            },
         )
     }
 
@@ -213,7 +217,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::get_preferred_formatting_style(
+        crate::hooks::handler_overrides::get_preferred_formatting_style(
             self.as_ref().into_dyn_any(),
             report_formatting_function,
         )

@@ -24,7 +24,7 @@ use alloc::borrow::Cow;
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, AttachmentHandler};
 
-use crate::hooks::AttachmentCollectorHook;
+use crate::hooks::report_creation::AttachmentCollectorHook;
 
 /// Source code location information.
 ///

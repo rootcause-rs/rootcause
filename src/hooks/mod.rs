@@ -193,11 +193,9 @@
 //! registration. Hook registration is thread-safe and can be done at any time,
 //! though it's typically done during application initialization.
 
-mod attachment_hooks;
 pub mod builtin_hooks;
-mod context_hooks;
-mod hook_lock;
-mod report_creation;
-mod report_formatting;
+pub mod handler_overrides;
+pub mod report_creation;
+pub mod report_formatting;
 
-pub use self::{attachment_hooks::*, context_hooks::*, report_creation::*, report_formatting::*};
+mod hook_lock;

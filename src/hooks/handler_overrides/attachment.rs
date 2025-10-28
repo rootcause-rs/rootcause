@@ -18,11 +18,12 @@ use crate::{
     report_attachment::ReportAttachmentRef,
 };
 
-type HookMap = HashMap<TypeId, Arc<dyn UntypedAttachmentHook>, rustc_hash::FxBuildHasher>;
+type HookMap =
+    HashMap<TypeId, Arc<dyn UntypedAttachmentHandlerOverride>, rustc_hash::FxBuildHasher>;
 
 static HOOKS: HookLock<HookMap> = HookLock::new();
 
-fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentHook>> {
+fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentHandlerOverride>> {
     HOOKS.read().get()?.get(&type_id).cloned()
 }
 
@@ -70,7 +71,9 @@ pub struct AttachmentParent<'a> {
     pub attachment_index: usize,
 }
 
-pub(crate) trait UntypedAttachmentHook: 'static + Send + Sync + core::fmt::Display {
+pub(crate) trait UntypedAttachmentHandlerOverride:
+    'static + Send + Sync + core::fmt::Display
+{
     unsafe fn display(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -114,7 +117,7 @@ pub(crate) trait UntypedAttachmentHook: 'static + Send + Sync + core::fmt::Displ
     ) -> AttachmentFormattingStyle;
 }
 
-pub trait AttachmentHook<A>: 'static + Send + Sync
+pub trait AttachmentHandlerOverride<A>: 'static + Send + Sync
 where
     A: markers::ObjectMarker + ?Sized,
 {
@@ -175,10 +178,10 @@ where
     }
 }
 
-impl<A, H> UntypedAttachmentHook for Hook<A, H>
+impl<A, H> UntypedAttachmentHandlerOverride for Hook<A, H>
 where
     A: markers::ObjectMarker + ?Sized,
-    H: AttachmentHook<A>,
+    H: AttachmentHandlerOverride<A>,
 {
     unsafe fn display(
         &self,
@@ -234,7 +237,7 @@ where
 pub fn register_attachment_hook<A, H>(hook: H)
 where
     A: 'static,
-    H: AttachmentHook<A> + Send + Sync + 'static,
+    H: AttachmentHandlerOverride<A> + Send + Sync + 'static,
 {
     let added_location = Location::caller();
     let hook: Hook<A, H> = Hook {
@@ -243,7 +246,7 @@ where
         _hooked_type: PhantomData,
     };
     let hook: Arc<Hook<A, H>> = Arc::new(hook);
-    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentHook));
+    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentHandlerOverride));
 
     HOOKS
         .write()

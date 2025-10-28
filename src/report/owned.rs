@@ -137,7 +137,7 @@ where
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        crate::hooks::__run_creation_hooks(report.as_mut().into_dyn_any());
+        crate::hooks::report_creation::__run_creation_hooks(report.as_mut().into_dyn_any());
         report
     }
 
@@ -891,8 +891,8 @@ where
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
         format_helper(
             report,
-            |report, formatter| crate::hooks::display_context(report, formatter),
-            |report, formatter| crate::hooks::debug_context(report, formatter),
+            |report, formatter| crate::hooks::handler_overrides::display_context(report, formatter),
+            |report, formatter| crate::hooks::handler_overrides::debug_context(report, formatter),
         )
     }
 
@@ -939,7 +939,10 @@ where
     ) -> ContextFormattingStyle {
         let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
+        crate::hooks::handler_overrides::get_preferred_context_formatting_style(
+            report,
+            report_formatting_function,
+        )
     }
 
     /// Gets the preferred formatting style for the context without hook
