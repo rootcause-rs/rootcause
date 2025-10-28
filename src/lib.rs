@@ -197,7 +197,7 @@ pub mod report_attachments;
 pub mod report_collection;
 
 mod into_report;
-pub mod iterator_ext;
+mod iterator_ext;
 pub mod prelude;
 mod result_ext;
 mod util;

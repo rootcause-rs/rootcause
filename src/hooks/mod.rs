@@ -193,8 +193,8 @@
 //! registration. Hook registration is thread-safe and can be done at any time,
 //! though it's typically done during application initialization.
 
-pub mod attachment_collectors;
 mod attachment_hooks;
+pub mod builtin_hooks;
 mod context_hooks;
 mod hook_lock;
 mod report_creation;

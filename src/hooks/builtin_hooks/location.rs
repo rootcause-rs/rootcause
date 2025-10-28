@@ -11,7 +11,7 @@
 //!
 //! ```rust
 //! use rootcause::hooks::{
-//!     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+//!     builtin_hooks::location::LocationCollector, register_attachment_collector_hook,
 //! };
 //!
 //! register_attachment_collector_hook(LocationCollector);
@@ -80,7 +80,7 @@ impl AttachmentHandler<Location> for LocationHandler {
 ///
 /// ```rust
 /// use rootcause::hooks::{
-///     attachment_collectors::location::LocationCollector, register_attachment_collector_hook,
+///     builtin_hooks::location::LocationCollector, register_attachment_collector_hook,
 /// };
 ///
 /// // Register to automatically collect location for all reports
