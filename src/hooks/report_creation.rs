@@ -9,27 +9,15 @@
 //!
 //! There are two main types of hooks:
 //!
-//! 1. **Report Creation Hooks** ([`ReportCreationHook`]) - General hooks that
-//!    get access to the entire report during creation and can perform arbitrary
-//!    operations.
+//! 1. [`ReportCreationHook`]: General hooks that get access to the entire
+//!    report during creation and can perform arbitrary operations.
 //!
-//! 2. **Attachment Collector Hooks** ([`AttachmentCollectorHook`]) -
-//!    Specialized hooks that collect specific types of data and automatically
-//!    attach them to reports.
+//! 2. [`AttachmentCollectorHook`]: Specialized hooks that collect specific
+//!    types of data and automatically attach them to reports.
 //!
 //! Internally the attachment collector hooks are converted to report creation
 //! hooks and registered using the same system. They exist to provide a simpler
 //! API for the common use case of adding attachments.
-//!
-//! # Default Hooks
-//!
-//! The system comes with several default hooks that are automatically
-//! registered:
-//!
-//! - **Location Collector** - Automatically captures the source code location
-//!   where a report was created using [`std::panic::Location`].
-//! - **Backtrace Collector** (if `backtrace` feature is enabled) -
-//!   Automatically captures a backtrace when a report is created.
 //!
 //! # Examples
 //!
@@ -316,9 +304,7 @@ fn default_hooks() -> HookSet {
 /// created.
 ///
 /// Once registered, the hook will be automatically invoked for every report
-/// that gets created in the application. The appropriate method
-/// (`on_local_creation` or `on_sendsync_creation`) will be called based on the
-/// thread safety marker of the report.
+/// that gets created in the application.
 ///
 /// # Registration Order
 ///
@@ -477,6 +463,10 @@ where
 /// Once registered, the collector will be automatically invoked for every
 /// report that gets created. The collected data will be formatted using the
 /// collector's associated handler and attached to the report.
+///
+/// Note that internally this function is converts the attachment collector into
+/// a report creation hook and registers it using the same system as
+/// [`register_report_creation_hook`].
 ///
 /// # Registration Order
 ///

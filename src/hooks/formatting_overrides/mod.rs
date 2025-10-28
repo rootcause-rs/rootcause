@@ -51,6 +51,25 @@
 //!
 //! // Register the hook globally
 //! register_attachment_hook(CustomDataHook);
+//!
+//! // Example: An attachment hook that silences certain attachments
+//! struct SilenceAttachmentHook;
+//! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook{
+//!     fn preferred_formatting_style(
+//!         &self,
+//!         _attachment: rootcause::report_attachment::ReportAttachmentRef<'_, dyn std::any::Any>,
+//!         _report_formatting_function: rootcause::handlers::FormattingFunction,
+//!     ) -> AttachmentFormattingStyle {
+//!         AttachmentFormattingStyle {
+//!             placement: rootcause::handlers::AttachmentFormattingPlacement::Hidden,
+//!             function: rootcause::handlers::FormattingFunction::Display,
+//!             priority: 0,
+//!         }
+//!     }
+//! }
+//!
+//! // Register the silencing hook globally to suppress the output of CustomData attachments
+//! register_attachment_hook::<CustomData, _>(SilenceAttachmentHook);
 //! ```
 //!
 //! ## Context Formatting Overrides

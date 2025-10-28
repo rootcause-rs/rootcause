@@ -6,7 +6,7 @@
 //! # Report Formatter Hooks
 //!
 //! Report formatting hooks allow you to control the entire presentation of a
-//! report. This includes how multiple reports in a chain are displayed, how
+//! report. This includes how multiple reports in a collection are displayed, how
 //! individual reports are formatted, and how attachments are integrated into
 //! the output.
 //!
@@ -69,59 +69,10 @@ static HOOK: HookLock<Hook> = HookLock::new();
 ///
 /// This trait allows you to completely control the presentation of reports,
 /// including their structure, layout, colors, and how multiple reports in a
-/// chain are displayed together. Only one report formatter hook can be active
+/// collection are displayed together. Only one report formatter hook can be active
 /// at a time.
 ///
-/// # Methods
-///
-/// - [`format_reports`](Self::format_reports) - Format multiple reports as a
-///   chain
-/// - [`format_report`](Self::format_report) - Format a single report (default
-///   implementation)
-///
-/// # Thread Safety
-///
-/// Implementations must be `Send + Sync + 'static` as they are stored globally
-/// and may be accessed from multiple threads.
-///
 /// # Examples
-///
-/// ## Basic Custom Formatter
-///
-/// ```rust
-/// use rootcause::{
-///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-///     prelude::*,
-/// };
-///
-/// struct SimpleFormatter;
-///
-/// impl ReportFormatterHook for SimpleFormatter {
-///     fn format_reports(
-///         &self,
-///         reports: &[rootcause::ReportRef<
-///             '_,
-///             dyn std::any::Any,
-///             rootcause::markers::Uncloneable,
-///             rootcause::markers::Local,
-///         >],
-///         formatter: &mut std::fmt::Formatter<'_>,
-///         _function: rootcause::handlers::FormattingFunction,
-///     ) -> std::fmt::Result {
-///         for (i, report) in reports.iter().enumerate() {
-///             if i > 0 {
-///                 writeln!(formatter, "Caused by:")?;
-///             }
-///             writeln!(formatter, "  {}", report.format_current_context_unhooked())?;
-///         }
-///         Ok(())
-///     }
-/// }
-///
-/// register_report_formatter_hook(SimpleFormatter);
-/// ```
-///
-/// ## Compact Chain Formatter
 ///
 /// ```rust
 /// use std::fmt;
@@ -143,8 +94,8 @@ static HOOK: HookLock<Hook> = HookLock::new();
 ///     for _ in 0..indentation {
 ///         write!(formatter, "  ")?;
 ///     }
-///     write!(formatter, "{}:", report.format_current_context_unhooked())?;
-///     // TODO: Also write the attachments
+///     writeln!(formatter, "{}:", report.format_current_context_unhooked())?;
+///     // TODO: Also format the attachments
 ///     for subreport in report.children() {
 ///         format_indented(subreport.into_uncloneable(), indentation + 1, formatter)?;
 ///     }
