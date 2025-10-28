@@ -38,7 +38,7 @@
 //! ```rust
 //! use rootcause::{
 //!     ReportMut,
-//!     hooks::{ReportCreationHook, register_report_creation_hook},
+//!     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
 //!     markers::{Local, SendSync},
 //!     prelude::*,
 //! };
@@ -67,7 +67,7 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::{AttachmentCollectorHook, register_attachment_collector_hook},
+//!     hooks::report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
 //!     prelude::*,
 //! };
 //!
@@ -97,7 +97,7 @@
 //! ## Using a Closure as an Attachment Collector
 //!
 //! ```rust
-//! use rootcause::hooks::register_attachment_collector_hook;
+//! use rootcause::hooks::report_creation::register_attachment_collector_hook;
 //!
 //! // Register a simple closure that collects the current timestamp
 //! register_attachment_collector_hook(|| {
@@ -157,10 +157,10 @@ trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
 ///
 /// ```rust
 /// use rootcause::{
-///     prelude::*,
 ///     ReportMut,
-///     hooks::{ReportCreationHook, register_report_creation_hook},
+///     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
 ///     markers::{Local, SendSync},
+///     prelude::*,
 /// };
 ///
 /// struct LoggingHook;
@@ -340,10 +340,10 @@ fn default_hooks() -> HookSet {
 ///
 /// ```rust
 /// use rootcause::{
-///     prelude::*,
 ///     ReportMut,
-///     hooks::{ReportCreationHook, register_report_creation_hook},
+///     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
 ///     markers::{Local, SendSync},
+///     prelude::*,
 ///     report_attachment::ReportAttachment,
 /// };
 ///
@@ -408,7 +408,7 @@ where
 /// handler:
 ///
 /// ```rust
-/// use rootcause::hooks::register_attachment_collector_hook;
+/// use rootcause::hooks::report_creation::register_attachment_collector_hook;
 ///
 /// // This closure automatically implements AttachmentCollectorHook<String>
 /// register_attachment_collector_hook(|| "timestamp".to_string());
@@ -420,8 +420,8 @@ where
 ///
 /// ```rust
 /// use rootcause::{
+///     hooks::report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
 ///     prelude::*,
-///     hooks::{AttachmentCollectorHook, register_attachment_collector_hook},
 /// };
 ///
 /// struct SystemInfoCollector;
@@ -445,7 +445,7 @@ where
 /// ## Using a Closure
 ///
 /// ```rust
-/// use rootcause::hooks::register_attachment_collector_hook;
+/// use rootcause::hooks::report_creation::register_attachment_collector_hook;
 ///
 /// // Register a closure that collects the current working directory
 /// register_attachment_collector_hook(|| {
@@ -511,8 +511,8 @@ where
 ///
 /// ```rust
 /// use rootcause::{
+///     hooks::report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
 ///     prelude::*,
-///     hooks::{AttachmentCollectorHook, register_attachment_collector_hook},
 /// };
 ///
 /// struct MemoryUsageCollector;
@@ -538,7 +538,7 @@ where
 /// ## Registering a Closure Collector
 ///
 /// ```rust
-/// use rootcause::hooks::register_attachment_collector_hook;
+/// use rootcause::hooks::report_creation::register_attachment_collector_hook;
 ///
 /// // Register a simple closure that collects the current thread ID as a string
 /// register_attachment_collector_hook(|| {

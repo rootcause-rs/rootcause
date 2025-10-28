@@ -22,7 +22,7 @@
 //! ```rust
 //! use rootcause::{
 //!     handlers::AttachmentFormattingStyle,
-//!     hooks::{AttachmentHook, register_attachment_hook},
+//!     hooks::handler_overrides::{AttachmentHandlerOverride, register_attachment_hook},
 //!     prelude::*,
 //! };
 //!
@@ -31,11 +31,11 @@
 //!
 //! struct CustomDataHook;
 //!
-//! impl AttachmentHook<CustomData> for CustomDataHook {
+//! impl AttachmentHandlerOverride<CustomData> for CustomDataHook {
 //!     fn display(
 //!         &self,
 //!         attachment: rootcause::report_attachment::ReportAttachmentRef<'_, CustomData>,
-//!         _parent: Option<rootcause::hooks::AttachmentParent<'_>>,
+//!         _parent: Option<rootcause::hooks::handler_overrides::AttachmentParent<'_>>,
 //!         formatter: &mut std::fmt::Formatter<'_>,
 //!     ) -> std::fmt::Result {
 //!         write!(formatter, "Custom: {}", attachment.inner().0)
@@ -67,7 +67,7 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::{ContextHook, register_context_hook},
+//!     hooks::handler_overrides::{ContextHandlerOverride, register_context_hook},
 //!     prelude::*,
 //! };
 //!
@@ -79,7 +79,7 @@
 //!
 //! struct MyErrorHook;
 //!
-//! impl ContextHook<MyError> for MyErrorHook {
+//! impl ContextHandlerOverride<MyError> for MyErrorHook {
 //!     fn display(
 //!         &self,
 //!         report: rootcause::ReportRef<
@@ -106,7 +106,7 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::{ReportCreationHook, register_report_creation_hook},
+//!     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
 //!     prelude::*,
 //! };
 //!
@@ -143,7 +143,7 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::{ReportFormatterHook, register_report_formatter_hook},
+//!     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
 //!     prelude::*,
 //! };
 //!
