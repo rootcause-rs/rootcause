@@ -678,7 +678,6 @@ where
     ///     Err(cloneable) => println!("Still cloneable"),
     /// }
     /// ```
-    #[must_use]
     pub fn try_into_mutable(self) -> Result<Report<C, Mutable, T>, Report<C, O, T>> {
         if self.as_raw_ref().strong_count() == 1 {
             unsafe { Ok(Report::from_raw(self.into_raw())) }
@@ -755,7 +754,6 @@ where
     /// assert_eq!(all_reports[1], "root error");
     /// assert_eq!(all_reports.len(), 6);
     /// ```
-    #[must_use]
     pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T> {
         self.as_ref().iter_reports()
     }
@@ -805,7 +803,6 @@ where
     /// assert_eq!(sub_reports[1], "context for error 1");
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
-    #[must_use]
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
         self.as_ref().iter_sub_reports()
     }
@@ -1089,7 +1086,6 @@ where
     /// let downcasted: Result<Report<MyError>, _> = dyn_report.downcast_report();
     /// assert!(downcasted.is_ok());
     /// ```
-    #[must_use]
     pub fn downcast_report<C>(self) -> Result<Report<C, O, T>, Self>
     where
         C: markers::ObjectMarker,

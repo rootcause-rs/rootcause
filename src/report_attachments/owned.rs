@@ -241,7 +241,6 @@ where
     /// ```
     ///
     /// [`into_iter()`]: Self::into_iter
-    #[must_use]
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
         ReportAttachmentsIter::from_raw(self.raw.iter())
     }

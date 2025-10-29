@@ -353,7 +353,6 @@ where
     /// assert_eq!(all_reports[2], "context for error 1");
     /// assert_eq!(all_reports.len(), 6);
     /// ```
-    #[must_use]
     pub fn iter_reports(&self) -> ReportIter<'_, Uncloneable, T> {
         let stack = vec![self.as_raw_ref()];
         unsafe { ReportIter::from_raw(stack) }
@@ -406,7 +405,6 @@ where
     /// assert_eq!(sub_reports[1], "context for error 1");
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
-    #[must_use]
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
         let stack = self
             .children()
@@ -691,7 +689,6 @@ where
     /// let downcasted: Result<_, _> = mut_report.downcast_report::<MyError>();
     /// assert!(downcasted.is_ok());
     /// ```
-    #[must_use]
     pub fn downcast_report<C>(self) -> Result<ReportMut<'a, C, T>, ReportMut<'a, dyn Any, T>>
     where
         C: markers::ObjectMarker + ?Sized,

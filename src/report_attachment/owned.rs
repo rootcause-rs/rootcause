@@ -376,7 +376,6 @@ where
     ///
     /// Returns `Ok(attachment)` if the inner attachment is of type `A`,
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
-    #[must_use]
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
     where
         A: markers::ObjectMarker + ?Sized,

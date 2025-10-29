@@ -152,7 +152,6 @@ where
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
     ///   actually of type `C` when `C` if is is a type different from `dyn
     ///   Any`.
-    #[must_use]
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
             iter: raw.into_iter(),

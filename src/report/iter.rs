@@ -37,7 +37,6 @@ where
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The ownership marker must match the ownership semantics of the report
     ///   references.
-    #[must_use]
     pub(crate) unsafe fn from_raw(stack: Vec<RawReportRef<'a>>) -> Self {
         Self {
             stack,

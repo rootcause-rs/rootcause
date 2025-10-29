@@ -253,7 +253,6 @@ where
     ///     println!("Report {}: {}", i, report_ref);
     /// }
     /// ```
-    #[must_use]
     pub fn iter(&self) -> ReportCollectionIter<'_, C, T> {
         unsafe { ReportCollectionIter::from_raw(&self.raw) }
     }

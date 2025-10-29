@@ -263,7 +263,6 @@ where
     /// assert_eq!(all_reports[2], "context for error 1");
     /// assert_eq!(all_reports.len(), 6);
     /// ```
-    #[must_use]
     pub fn iter_reports(self) -> ReportIter<'a, O, T> {
         let stack = vec![self.as_raw_ref()];
         unsafe { ReportIter::from_raw(stack) }
@@ -315,7 +314,6 @@ where
     /// assert_eq!(sub_reports[1], "context for error 1");
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
-    #[must_use]
     pub fn iter_sub_reports(self) -> ReportIter<'a, Cloneable, T> {
         let stack = self
             .children()
