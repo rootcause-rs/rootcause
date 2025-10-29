@@ -1,24 +1,30 @@
-//! Context formatting override system for customizing how error report contexts are displayed.
+//! Context formatting override system for customizing how error report contexts
+//! are displayed.
 //!
-//! This module provides a hook system that allows customization of how contexts (the main
-//! error types) are formatted in error reports. By registering hooks for specific context
-//! types, you can override the default Display and Debug formatting behavior to provide
-//! more detailed, context-aware, or domain-specific formatting.
+//! This module provides a hook system that allows customization of how contexts
+//! (the main error types) are formatted in error reports. By registering hooks
+//! for specific context types, you can override the default Display and Debug
+//! formatting behavior to provide more detailed, context-aware, or
+//! domain-specific formatting.
 //!
 //! # Key Components
 //!
-//! - [`ContextFormattingOverride`] - Trait for implementing custom context formatting
-//! - [`register_context_hook`] - Function to register formatting overrides for specific types
+//! - [`ContextFormattingOverride`] - Trait for implementing custom context
+//!   formatting
+//! - [`register_context_hook`] - Function to register formatting overrides for
+//!   specific types
 //! - [`debug_context_hooks`] - Utility to inspect registered hooks
 //!
 //! # Example
 //!
 //! ```rust
-//! use rootcause::hooks::formatting_overrides::{
-//!     ContextFormattingOverride, register_context_hook
-//! };
-//! use rootcause::{ReportRef, markers::{Local, Uncloneable}};
 //! use core::fmt;
+//!
+//! use rootcause::{
+//!     ReportRef,
+//!     hooks::formatting_overrides::context::{ContextFormattingOverride, register_context_hook},
+//!     markers::{Local, Uncloneable},
+//! };
 //!
 //! struct DatabaseError {
 //!     table: String,
@@ -32,11 +38,14 @@
 //!     fn display(
 //!         &self,
 //!         report: ReportRef<'_, DatabaseError, Uncloneable, Local>,
-//!         f: &mut fmt::Formatter<'_>
+//!         f: &mut fmt::Formatter<'_>,
 //!     ) -> fmt::Result {
 //!         let err = report.current_context();
-//!         write!(f, "Database {} failed on table '{}': {}",
-//!                err.operation, err.table, err.details)
+//!         write!(
+//!             f,
+//!             "Database {} failed on table '{}': {}",
+//!             err.operation, err.table, err.details
+//!         )
 //!     }
 //! }
 //!
@@ -144,11 +153,13 @@ pub(crate) trait UntypedContextFormattingOverride:
     ) -> ContextFormattingStyle;
 }
 
-/// Trait for customizing how contexts of a specific type are formatted in error reports.
+/// Trait for customizing how contexts of a specific type are formatted in error
+/// reports.
 ///
-/// This trait allows you to override the default formatting behavior for contexts
-/// (the main error types) of type `C`. You can customize both Display and Debug
-/// formatting, handle preformatted contexts, and specify preferred formatting styles.
+/// This trait allows you to override the default formatting behavior for
+/// contexts (the main error types) of type `C`. You can customize both Display
+/// and Debug formatting, handle preformatted contexts, and specify preferred
+/// formatting styles.
 ///
 /// # Type Parameters
 ///
@@ -156,16 +167,21 @@ pub(crate) trait UntypedContextFormattingOverride:
 ///
 /// # Default Implementations
 ///
-/// All methods have default implementations that delegate to the unhooked formatting,
-/// so you only need to override the methods for the formatting you want to customize.
+/// All methods have default implementations that delegate to the unhooked
+/// formatting, so you only need to override the methods for the formatting you
+/// want to customize.
 ///
 /// # Examples
 ///
 /// Custom Display formatting for a business logic error:
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::ContextFormattingOverride;
-/// use rootcause::{ReportRef, markers::{Local, Uncloneable}};
 /// use core::fmt;
+///
+/// use rootcause::{
+///     ReportRef,
+///     hooks::formatting_overrides::context::ContextFormattingOverride,
+///     markers::{Local, Uncloneable},
+/// };
 ///
 /// struct ValidationError {
 ///     field: String,
@@ -179,11 +195,14 @@ pub(crate) trait UntypedContextFormattingOverride:
 ///     fn display(
 ///         &self,
 ///         report: ReportRef<'_, ValidationError, Uncloneable, Local>,
-///         f: &mut fmt::Formatter<'_>
+///         f: &mut fmt::Formatter<'_>,
 ///     ) -> fmt::Result {
 ///         let err = report.current_context();
-///         write!(f, "Validation failed for field '{}': value '{}' violates rule '{}'",
-///                err.field, err.value, err.rule)
+///         write!(
+///             f,
+///             "Validation failed for field '{}': value '{}' violates rule '{}'",
+///             err.field, err.value, err.rule
+///         )
 ///     }
 /// }
 /// ```
@@ -193,9 +212,9 @@ where
 {
     /// Formats the context using Display formatting.
     ///
-    /// This method is called when the context needs to be displayed in a user-friendly
-    /// format. The default implementation delegates to the context's unhooked Display
-    /// formatting.
+    /// This method is called when the context needs to be displayed in a
+    /// user-friendly format. The default implementation delegates to the
+    /// context's unhooked Display formatting.
     ///
     /// # Arguments
     ///
@@ -205,9 +224,13 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rootcause::hooks::formatting_overrides::ContextFormattingOverride;
-    /// use rootcause::{ReportRef, markers::{Local, Uncloneable}};
     /// use core::fmt;
+    ///
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     hooks::formatting_overrides::context::ContextFormattingOverride,
+    ///     markers::{Local, Uncloneable},
+    /// };
     ///
     /// struct HttpError {
     ///     status: u16,
@@ -220,7 +243,7 @@ where
     ///     fn display(
     ///         &self,
     ///         report: ReportRef<'_, HttpError, Uncloneable, Local>,
-    ///         f: &mut fmt::Formatter<'_>
+    ///         f: &mut fmt::Formatter<'_>,
     ///     ) -> fmt::Result {
     ///         let err = report.current_context();
     ///         write!(f, "HTTP {} - {}", err.status, err.message)
@@ -238,8 +261,9 @@ where
     /// Formats a preformatted context using Display formatting.
     ///
     /// This method handles contexts that have been preformatted (typically done
-    /// using [`ReportRef::preformat`]performance or consistency reasons). The default implementation delegates
-    /// to the context's unhooked Display formatting.
+    /// using [`ReportRef::preformat`]performance or consistency reasons). The
+    /// default implementation delegates to the context's unhooked Display
+    /// formatting.
     ///
     /// # Arguments
     ///
@@ -273,8 +297,9 @@ where
 
     /// Formats a preformatted context using Debug formatting.
     ///
-    /// This method handles preformatted contexts when debug formatting is requested.
-    /// The default implementation delegates to the context's unhooked Debug formatting.
+    /// This method handles preformatted contexts when debug formatting is
+    /// requested. The default implementation delegates to the context's
+    /// unhooked Debug formatting.
     ///
     /// # Arguments
     ///
@@ -291,17 +316,21 @@ where
     /// Determines the preferred formatting style for this context.
     ///
     /// This method allows the formatter to specify how the context should be
-    /// presented, including which formatting function should be used. The default
-    /// implementation delegates to the context's unhooked preference.
+    /// presented, including which formatting function should be used. The
+    /// default implementation delegates to the context's unhooked
+    /// preference.
     ///
     /// # Arguments
     ///
-    /// * `report` - Reference to the report (as `dyn Any` as it can be either a `C` or a [`PreformattedContext`])
-    /// * `report_formatting_function` - Whether the overall report uses Display or Debug formatting
+    /// * `report` - Reference to the report (as `dyn Any` as it can be either a
+    ///   `C` or a [`PreformattedContext`])
+    /// * `report_formatting_function` - Whether the overall report uses Display
+    ///   or Debug formatting
     ///
     /// # Returns
     ///
-    /// A `ContextFormattingStyle` that specifies the preferred formatting approach
+    /// A `ContextFormattingStyle` that specifies the preferred formatting
+    /// approach
     fn preferred_context_formatting_style(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -366,8 +395,8 @@ where
 /// specific type are formatted in error reports. Once registered, the hook will
 /// be called whenever a context of type `C` needs to be formatted.
 ///
-/// The registration includes location tracking for debugging purposes, so you can
-/// identify where hooks were registered using [`debug_context_hooks`].
+/// The registration includes location tracking for debugging purposes, so you
+/// can identify where hooks were registered using [`debug_context_hooks`].
 ///
 /// # Type Parameters
 ///
@@ -381,11 +410,13 @@ where
 /// # Examples
 ///
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::{
-///     ContextFormattingOverride, register_context_hook
-/// };
-/// use rootcause::{ReportRef, markers::{Local, Uncloneable}};
 /// use core::fmt;
+///
+/// use rootcause::{
+///     ReportRef,
+///     hooks::formatting_overrides::context::{ContextFormattingOverride, register_context_hook},
+///     markers::{Local, Uncloneable},
+/// };
 ///
 /// struct FileSystemError {
 ///     path: String,
@@ -399,11 +430,14 @@ where
 ///     fn display(
 ///         &self,
 ///         report: ReportRef<'_, FileSystemError, Uncloneable, Local>,
-///         f: &mut fmt::Formatter<'_>
+///         f: &mut fmt::Formatter<'_>,
 ///     ) -> fmt::Result {
 ///         let err = report.current_context();
-///         write!(f, "File system error during {} on '{}' (code: {})",
-///                err.operation, err.path, err.error_code)
+///         write!(
+///             f,
+///             "File system error during {} on '{}' (code: {})",
+///             err.operation, err.path, err.error_code
+///         )
 ///     }
 /// }
 ///
@@ -484,27 +518,28 @@ pub(crate) fn get_preferred_context_formatting_style(
     }
 }
 
-/// Calls a function for each registered context formatting hook for debugging purposes.
+/// Calls a function for each registered context formatting hook for debugging
+/// purposes.
 ///
 /// This utility function allows you to inspect all currently registered context
-/// formatting hooks. Each hook provides information about the hook type, the context
-/// type it handles, and where it was registered.
+/// formatting hooks. Each hook provides information about the hook type, the
+/// context type it handles, and where it was registered.
 ///
 /// # Arguments
 ///
 /// * `f` - A function that will be called once for each registered hook with a
-///         displayable representation of the hook information
+///   displayable representation of the hook information
 ///
 /// # Warning
 ///
-/// This function will lock the internal hook registry for reading, so it can potentially
-/// cause deadlocks if [`register_context_hook`] is called while the function
-/// is executing.
+/// This function will lock the internal hook registry for reading, so it can
+/// potentially cause deadlocks if [`register_context_hook`] is called while the
+/// function is executing.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::debug_context_hooks;
+/// use rootcause::hooks::formatting_overrides::context::debug_context_hooks;
 ///
 /// // Print all registered context hooks
 /// debug_context_hooks(|hook| {

@@ -2,7 +2,9 @@ use indexmap::IndexMap;
 use rootcause::{
     Report,
     handlers::{self, FormattingFunction},
-    hooks::formatting_overrides::{AttachmentFormattingOverride, register_attachment_hook},
+    hooks::formatting_overrides::attachment::{
+        AttachmentFormattingOverride, register_attachment_hook,
+    },
     prelude::ResultExt,
     report,
     report_attachment::ReportAttachmentRef,

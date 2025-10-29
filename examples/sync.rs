@@ -1,6 +1,8 @@
 use rootcause::{
     handlers::FormattingFunction,
-    hooks::formatting_overrides::{AttachmentFormattingOverride, register_attachment_hook},
+    hooks::formatting_overrides::attachment::{
+        AttachmentFormattingOverride, register_attachment_hook,
+    },
     prelude::*,
     report_attachment::ReportAttachmentRef,
     report_attachments::ReportAttachments,

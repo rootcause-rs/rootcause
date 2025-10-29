@@ -15,8 +15,11 @@
 //! ```rust
 //! use rootcause::{
 //!     handlers::AttachmentFormattingStyle,
-//!     hooks::formatting_overrides::{AttachmentFormattingOverride, register_attachment_hook},
+//!     hooks::formatting_overrides::attachment::{
+//!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
+//!     },
 //!     prelude::*,
+//!     report_attachment::ReportAttachmentRef,
 //! };
 //!
 //! #[derive(Debug)]
@@ -27,8 +30,8 @@
 //! impl AttachmentFormattingOverride<CustomData> for CustomDataHook {
 //!     fn display(
 //!         &self,
-//!         attachment: rootcause::report_attachment::ReportAttachmentRef<'_, CustomData>,
-//!         _parent: Option<rootcause::hooks::formatting_overrides::AttachmentParent<'_>>,
+//!         attachment: ReportAttachmentRef<'_, CustomData>,
+//!         _parent: Option<AttachmentParent<'_>>,
 //!         formatter: &mut std::fmt::Formatter<'_>,
 //!     ) -> std::fmt::Result {
 //!         write!(formatter, "Custom: {}", attachment.inner().0)
@@ -36,7 +39,7 @@
 //!
 //!     fn preferred_formatting_style(
 //!         &self,
-//!         _attachment: rootcause::report_attachment::ReportAttachmentRef<'_, dyn std::any::Any>,
+//!         _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
 //!         _report_formatting_function: rootcause::handlers::FormattingFunction,
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
@@ -57,7 +60,7 @@
 //! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook {
 //!     fn preferred_formatting_style(
 //!         &self,
-//!         _attachment: rootcause::report_attachment::ReportAttachmentRef<'_, dyn std::any::Any>,
+//!         _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
 //!         _report_formatting_function: rootcause::handlers::FormattingFunction,
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
@@ -79,7 +82,7 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::formatting_overrides::{ContextFormattingOverride, register_context_hook},
+//!     hooks::formatting_overrides::context::{ContextFormattingOverride, register_context_hook},
 //!     prelude::*,
 //! };
 //!
@@ -110,8 +113,5 @@
 //! register_context_hook(MyErrorHook);
 //! ```
 
-mod attachment;
-mod context;
-
-pub use attachment::*;
-pub use context::*;
+pub mod attachment;
+pub mod context;

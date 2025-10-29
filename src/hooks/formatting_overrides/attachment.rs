@@ -1,25 +1,31 @@
-//! Attachment formatting override system for customizing how error report attachments are displayed.
+//! Attachment formatting override system for customizing how error report
+//! attachments are displayed.
 //!
-//! This module provides a hook system that allows customization of how attachments are formatted
-//! in error reports. By registering hooks for specific attachment types, you can override the
-//! default Display and Debug formatting behavior to provide more context-aware or specialized
-//! formatting.
+//! This module provides a hook system that allows customization of how
+//! attachments are formatted in error reports. By registering hooks for
+//! specific attachment types, you can override the default Display and Debug
+//! formatting behavior to provide more context-aware or specialized formatting.
 //!
 //! # Key Components
 //!
-//! - [`AttachmentFormattingOverride`] - Trait for implementing custom attachment formatting
+//! - [`AttachmentFormattingOverride`] - Trait for implementing custom
+//!   attachment formatting
 //! - [`AttachmentParent`] - Context about the report containing an attachment
-//! - [`register_attachment_hook`] - Function to register formatting overrides for specific types
+//! - [`register_attachment_hook`] - Function to register formatting overrides
+//!   for specific types
 //! - [`debug_attachment_hooks`] - Utility to inspect registered hooks
 //!
 //! # Example
 //!
 //! ```rust
-//! use rootcause::hooks::formatting_overrides::{
-//!     AttachmentFormattingOverride, AttachmentParent, register_attachment_hook
-//! };
-//! use rootcause::report_attachment::ReportAttachmentRef;
 //! use core::fmt;
+//!
+//! use rootcause::{
+//!     hooks::formatting_overrides::attachment::{
+//!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
+//!     },
+//!     report_attachment::ReportAttachmentRef,
+//! };
 //!
 //! struct MyError(String);
 //!
@@ -30,7 +36,7 @@
 //!         &self,
 //!         attachment: ReportAttachmentRef<'_, MyError>,
 //!         _parent: Option<AttachmentParent<'_>>,
-//!         f: &mut fmt::Formatter<'_>
+//!         f: &mut fmt::Formatter<'_>,
 //!     ) -> fmt::Result {
 //!         write!(f, "Custom format: {}", attachment.inner().0)
 //!     }
@@ -107,20 +113,23 @@ where
 {
 }
 
-/// Information about the parent report that contains an attachment being formatted.
+/// Information about the parent report that contains an attachment being
+/// formatted.
 ///
-/// This struct provides context about where an attachment exists within the report hierarchy,
-/// which can be useful for custom formatting logic that needs to understand the attachment's
-/// position or relationship to its containing report.
+/// This struct provides context about where an attachment exists within the
+/// report hierarchy, which can be useful for custom formatting logic that needs
+/// to understand the attachment's position or relationship to its containing
+/// report.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::{
-///     AttachmentFormattingOverride, AttachmentParent
-/// };
-/// use rootcause::report_attachment::ReportAttachmentRef;
 /// use core::fmt;
+///
+/// use rootcause::{
+///     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, AttachmentParent},
+///     report_attachment::ReportAttachmentRef,
+/// };
 ///
 /// struct MyFormatter;
 ///
@@ -129,10 +138,15 @@ where
 ///         &self,
 ///         attachment: ReportAttachmentRef<'_, String>,
 ///         parent: Option<AttachmentParent<'_>>,
-///         f: &mut fmt::Formatter<'_>
+///         f: &mut fmt::Formatter<'_>,
 ///     ) -> fmt::Result {
 ///         if let Some(parent) = parent {
-///             write!(f, "[Attachment {}] {}", parent.attachment_index, attachment.inner())
+///             write!(
+///                 f,
+///                 "[Attachment {}] {}",
+///                 parent.attachment_index,
+///                 attachment.inner()
+///             )
 ///         } else {
 ///             write!(f, "{}", attachment.inner())
 ///         }
@@ -185,11 +199,13 @@ pub(crate) trait UntypedAttachmentFormattingOverride:
     ) -> AttachmentFormattingStyle;
 }
 
-/// Trait for customizing how attachments of a specific type are formatted in error reports.
+/// Trait for customizing how attachments of a specific type are formatted in
+/// error reports.
 ///
-/// This trait allows you to override the default formatting behavior for attachments
-/// of type `A`. You can customize both Display and Debug formatting, as well as handle
-/// preformatted attachments and specify preferred formatting styles.
+/// This trait allows you to override the default formatting behavior for
+/// attachments of type `A`. You can customize both Display and Debug
+/// formatting, as well as handle preformatted attachments and specify preferred
+/// formatting styles.
 ///
 /// # Type Parameters
 ///
@@ -197,18 +213,20 @@ pub(crate) trait UntypedAttachmentFormattingOverride:
 ///
 /// # Default Implementations
 ///
-/// All methods have default implementations that delegate to the unhooked formatting,
-/// so you only need to override the methods for the formatting you want to customize.
+/// All methods have default implementations that delegate to the unhooked
+/// formatting, so you only need to override the methods for the formatting you
+/// want to customize.
 ///
 /// # Examples
 ///
 /// Basic custom Display formatting:
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::{
-///     AttachmentFormattingOverride, AttachmentParent
-/// };
-/// use rootcause::report_attachment::ReportAttachmentRef;
 /// use core::fmt;
+///
+/// use rootcause::{
+///     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, AttachmentParent},
+///     report_attachment::ReportAttachmentRef,
+/// };
 ///
 /// struct MyData {
 ///     value: i32,
@@ -222,7 +240,7 @@ pub(crate) trait UntypedAttachmentFormattingOverride:
 ///         &self,
 ///         attachment: ReportAttachmentRef<'_, MyData>,
 ///         _parent: Option<AttachmentParent<'_>>,
-///         f: &mut fmt::Formatter<'_>
+///         f: &mut fmt::Formatter<'_>,
 ///     ) -> fmt::Result {
 ///         let data = attachment.inner();
 ///         write!(f, "{}: {}", data.name, data.value)
@@ -235,9 +253,9 @@ where
 {
     /// Formats the attachment using Display formatting.
     ///
-    /// This method is called when the attachment needs to be displayed in a user-friendly
-    /// format. The default implementation delegates to the attachment's unhooked Display
-    /// formatting.
+    /// This method is called when the attachment needs to be displayed in a
+    /// user-friendly format. The default implementation delegates to the
+    /// attachment's unhooked Display formatting.
     ///
     /// # Arguments
     ///
@@ -248,11 +266,12 @@ where
     /// # Examples
     ///
     /// ```rust
-    /// use rootcause::hooks::formatting_overrides::{
-    ///     AttachmentFormattingOverride, AttachmentParent
-    /// };
-    /// use rootcause::report_attachment::ReportAttachmentRef;
     /// use core::fmt;
+    ///
+    /// use rootcause::{
+    ///     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, AttachmentParent},
+    ///     report_attachment::ReportAttachmentRef,
+    /// };
     ///
     /// struct ErrorCode(u32);
     /// struct ErrorCodeFormatter;
@@ -262,7 +281,7 @@ where
     ///         &self,
     ///         attachment: ReportAttachmentRef<'_, ErrorCode>,
     ///         _parent: Option<AttachmentParent<'_>>,
-    ///         f: &mut fmt::Formatter<'_>
+    ///         f: &mut fmt::Formatter<'_>,
     ///     ) -> fmt::Result {
     ///         write!(f, "Error Code: 0x{:04X}", attachment.inner().0)
     ///     }
@@ -280,9 +299,9 @@ where
 
     /// Formats a preformatted attachment using Display formatting.
     ///
-    /// This method handles attachments that have been preformatted (typically done
-    /// using [`ReportRef::preformat`]). The default implementation delegates
-    /// to the attachment's unhooked Display formatting.
+    /// This method handles attachments that have been preformatted (typically
+    /// done using [`ReportRef::preformat`]). The default implementation
+    /// delegates to the attachment's unhooked Display formatting.
     ///
     /// # Arguments
     ///
@@ -322,9 +341,9 @@ where
 
     /// Formats a preformatted attachment using Debug formatting.
     ///
-    /// This method handles attachments that have been preformatted (typically done
-    /// using [`ReportRef::preformat`]). The default implementation delegates
-    /// to the attachment's unhooked Debug formatting.
+    /// This method handles attachments that have been preformatted (typically
+    /// done using [`ReportRef::preformat`]). The default implementation
+    /// delegates to the attachment's unhooked Debug formatting.
     ///
     /// # Arguments
     ///
@@ -344,13 +363,16 @@ where
     /// Determines the preferred formatting style for this attachment.
     ///
     /// This method allows the formatter to specify how the attachment should be
-    /// presented in the overall report structure (inline, with header, in appendix, etc.).
-    /// The default implementation delegates to the attachment's unhooked preference.
+    /// presented in the overall report structure (inline, with header, in
+    /// appendix, etc.). The default implementation delegates to the
+    /// attachment's unhooked preference.
     ///
     /// # Arguments
     ///
-    /// * `attachment` - Reference to the attachment (as `dyn Any` as it can be either `A` or a [`PreformattedAttachment`])
-    /// * `report_formatting_function` - Whether the overall report uses Display or Debug formatting
+    /// * `attachment` - Reference to the attachment (as `dyn Any` as it can be
+    ///   either `A` or a [`PreformattedAttachment`])
+    /// * `report_formatting_function` - Whether the overall report uses Display
+    ///   or Debug formatting
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -418,11 +440,11 @@ where
 /// Registers a formatting override hook for attachments of type `A`.
 ///
 /// This function allows you to customize how attachments of a specific type are
-/// formatted in error reports. Once registered, the hook will be called whenever
-/// an attachment of type `A` needs to be formatted.
+/// formatted in error reports. Once registered, the hook will be called
+/// whenever an attachment of type `A` needs to be formatted.
 ///
-/// The registration includes location tracking for debugging purposes, so you can
-/// identify where hooks were registered using [`debug_attachment_hooks`].
+/// The registration includes location tracking for debugging purposes, so you
+/// can identify where hooks were registered using [`debug_attachment_hooks`].
 ///
 /// # Type Parameters
 ///
@@ -436,11 +458,14 @@ where
 /// # Examples
 ///
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::{
-///     AttachmentFormattingOverride, AttachmentParent, register_attachment_hook
-/// };
-/// use rootcause::report_attachment::ReportAttachmentRef;
 /// use core::fmt;
+///
+/// use rootcause::{
+///     hooks::formatting_overrides::attachment::{
+///         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
+///     },
+///     report_attachment::ReportAttachmentRef,
+/// };
 ///
 /// struct ApiError {
 ///     code: u32,
@@ -454,7 +479,7 @@ where
 ///         &self,
 ///         attachment: ReportAttachmentRef<'_, ApiError>,
 ///         _parent: Option<AttachmentParent<'_>>,
-///         f: &mut fmt::Formatter<'_>
+///         f: &mut fmt::Formatter<'_>,
 ///     ) -> fmt::Result {
 ///         let err = attachment.inner();
 ///         write!(f, "API Error {}: {}", err.code, err.message)
@@ -532,27 +557,28 @@ pub(crate) fn get_preferred_formatting_style(
     }
 }
 
-/// Calls a function for each registered attachment formatting hook for debugging purposes.
+/// Calls a function for each registered attachment formatting hook for
+/// debugging purposes.
 ///
-/// This utility function allows you to inspect all currently registered attachment
-/// formatting hooks. Each hook provides information about the hook type, the attachment
-/// type it handles, and where it was registered.
+/// This utility function allows you to inspect all currently registered
+/// attachment formatting hooks. Each hook provides information about the hook
+/// type, the attachment type it handles, and where it was registered.
 ///
 /// # Arguments
 ///
 /// * `f` - A function that will be called once for each registered hook with a
-///         displayable representation of the hook information
+///   displayable representation of the hook information
 ///
 /// # Warning
 ///
-/// This function will lock the internal hook registry for reading, so it can potentially
-/// cause deadlocks if [`register_attachment_hook`] is called while the function
-/// is executing.
+/// This function will lock the internal hook registry for reading, so it can
+/// potentially cause deadlocks if [`register_attachment_hook`] is called while
+/// the function is executing.
 ///
 /// # Examples
 ///
 /// ```rust
-/// use rootcause::hooks::formatting_overrides::debug_attachment_hooks;
+/// use rootcause::hooks::formatting_overrides::attachment::debug_attachment_hooks;
 ///
 /// // Print all registered attachment hooks
 /// debug_attachment_hooks(|hook| {

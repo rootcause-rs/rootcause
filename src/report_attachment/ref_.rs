@@ -156,10 +156,14 @@ where
         format_helper(
             attachment,
             |attachment, formatter| {
-                crate::hooks::formatting_overrides::display_attachment(attachment, None, formatter)
+                crate::hooks::formatting_overrides::attachment::display_attachment(
+                    attachment, None, formatter,
+                )
             },
             |attachment, formatter| {
-                crate::hooks::formatting_overrides::debug_attachment(attachment, None, formatter)
+                crate::hooks::formatting_overrides::attachment::debug_attachment(
+                    attachment, None, formatter,
+                )
             },
         )
     }
@@ -395,7 +399,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::formatting_overrides::get_preferred_formatting_style(
+        crate::hooks::formatting_overrides::attachment::get_preferred_formatting_style(
             self.into_dyn_any(),
             report_formatting_function,
         )
@@ -433,7 +437,7 @@ where
 {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let report: ReportAttachmentRef<'_, dyn Any> = self.into_dyn_any();
-        crate::hooks::formatting_overrides::display_attachment(report, None, formatter)
+        crate::hooks::formatting_overrides::attachment::display_attachment(report, None, formatter)
     }
 }
 
@@ -443,7 +447,7 @@ where
 {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let report: ReportAttachmentRef<'_, dyn Any> = self.into_dyn_any();
-        crate::hooks::formatting_overrides::debug_attachment(report, None, formatter)
+        crate::hooks::formatting_overrides::attachment::debug_attachment(report, None, formatter)
     }
 }
 
