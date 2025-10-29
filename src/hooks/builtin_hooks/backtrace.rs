@@ -55,11 +55,15 @@ pub struct FramePath {
     pub suffix: String,
 }
 
+/// A common prefix for a frame path.
 pub struct FramePrefix {
+    /// The key used to identify this prefix (e.g., index name or "rust-src").
     pub key: String,
+    /// The full prefix path value.
     pub value: String,
 }
 
+/// Handler for formatting [`Backtrace`] attachments.
 #[derive(Copy, Clone)]
 pub struct BacktraceHandler;
 
@@ -128,9 +132,18 @@ impl AttachmentHandler<Backtrace> for BacktraceHandler {
     }
 }
 
+/// Attachment collector for capturing stack backtraces.
+///
+/// When registered as a report creation hook, this collector automatically
+/// captures the current stack backtrace and attaches it as a [`Backtrace`]
+/// attachment.
 #[derive(Copy, Clone)]
 pub struct BacktraceCollector {
+    /// Maximum number of frames to capture in the backtrace.
     pub max_frame_count: usize,
+
+    /// Whether to filter out frames from the backtrace that are part of
+    /// the report creation process, standard library and tokio internals.
     pub do_capture_filtering: bool,
 }
 
