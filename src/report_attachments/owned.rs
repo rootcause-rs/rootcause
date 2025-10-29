@@ -16,8 +16,8 @@ use crate::{
 /// You can think of a [`ReportAttachments<T>`] as a wrapper around a
 /// `Vec<ReportAttachment<dyn Any, T>>`, however, it has a slightly
 /// different API:
-/// - It has convenience methods to convert between different thread
-///   safety markers such as [`into_local`](Self::into_local).
+/// - It has convenience methods to convert between different thread safety
+///   markers such as [`into_local`](Self::into_local).
 /// - It also possible to convert between different context and thread safety
 ///   markers using the [`From`] and [`Into`] traits.
 #[repr(transparent)]
@@ -33,13 +33,14 @@ impl<T> ReportAttachments<T>
 where
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new Attachments from a vector of raw attachments
+    /// Creates a new [`ReportAttachments`] from a vector of raw attachments
     ///
     /// # Safety
     ///
     /// The thread safety marker must match the contents of the attachments.
     /// More specifically if the marker is `SendSync`, then all the inner
     /// attachments must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: Vec<RawAttachment>) -> Self {
         Self {
             raw,
@@ -47,14 +48,33 @@ where
         }
     }
 
+    /// Creates a reference to [`ReportAttachments`] from reference to a vector
+    /// of raw attachments
+    ///
+    /// # Safety
+    ///
+    /// The thread safety marker must match the contents of the attachments.
+    /// More specifically if the marker is `SendSync`, then all the inner
+    /// attachments must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
         unsafe { &*(raw as *const Vec<RawAttachment> as *const Self) }
     }
 
+    /// Creates a mutable reference to [`ReportAttachments`] from a mutable
+    /// vector of raw attachments
+    ///
+    /// # Safety
+    ///
+    /// The thread safety marker must match the contents of the attachments.
+    /// More specifically if the marker is `SendSync`, then all the inner
+    /// attachments must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
         unsafe { &mut *(raw as *mut Vec<RawAttachment> as *mut Self) }
     }
 
+    #[must_use]
     pub(crate) fn into_raw(self) -> Vec<RawAttachment> {
         self.raw
     }
@@ -69,7 +89,7 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_attachments::ReportAttachments, markers::SendSync};
+    /// use rootcause::{markers::SendSync, report_attachments::ReportAttachments};
     ///
     /// let attachments: ReportAttachments<SendSync> = ReportAttachments::new();
     /// assert!(attachments.is_empty());
@@ -78,15 +98,17 @@ where
     ///
     /// [`new_sendsync()`]: ReportAttachments<SendSync>::new_sendsync
     /// [`new_local()`]: ReportAttachments<Local>::new_local
+    #[must_use]
     pub fn new() -> Self {
         unsafe { Self::from_raw(Vec::new()) }
     }
 
     /// Appends an attachment to the end of the collection.
     ///
-    /// This method takes ownership of the attachment and adds it to the collection.
-    /// The attachment must be type-erased to `dyn Any` to be stored in the
-    /// collection alongside other attachments of potentially different types.
+    /// This method takes ownership of the attachment and adds it to the
+    /// collection. The attachment must be type-erased to `dyn Any` to be
+    /// stored in the collection alongside other attachments of potentially
+    /// different types.
     ///
     /// # Examples
     ///
@@ -150,6 +172,7 @@ where
     /// attachments.push(ReportAttachment::new(42).into_dyn_any());
     /// assert_eq!(attachments.len(), 2);
     /// ```
+    #[must_use]
     pub fn len(&self) -> usize {
         self.raw.len()
     }
@@ -172,6 +195,7 @@ where
     ///
     /// assert!(attachments.get(10).is_none());
     /// ```
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<ReportAttachmentRef<'_, dyn Any>> {
         let attachment = self.raw.get(index)?.as_ref();
         unsafe { Some(ReportAttachmentRef::from_raw(attachment)) }
@@ -190,11 +214,13 @@ where
     /// attachments.push(ReportAttachment::new("info").into_dyn_any());
     /// assert!(!attachments.is_empty());
     /// ```
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.raw.is_empty()
     }
 
-    /// Returns an iterator over references to the attachments in the collection.
+    /// Returns an iterator over references to the attachments in the
+    /// collection.
     ///
     /// The iterator yields [`ReportAttachmentRef`] items, which provide
     /// non-owning access to the attachments. For owning iteration, use
@@ -215,8 +241,9 @@ where
     /// ```
     ///
     /// [`into_iter()`]: Self::into_iter
+    #[must_use]
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
-        unsafe { ReportAttachmentsIter::from_raw(self.raw.iter()) }
+        ReportAttachmentsIter::from_raw(self.raw.iter())
     }
 
     /// Converts this collection to use the [`Local`] thread safety marker.
@@ -229,7 +256,11 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments, markers::{SendSync, Local}};
+    /// use rootcause::{
+    ///     markers::{Local, SendSync},
+    ///     report_attachment::ReportAttachment,
+    ///     report_attachments::ReportAttachments,
+    /// };
     ///
     /// let mut attachments: ReportAttachments<SendSync> = ReportAttachments::new_sendsync();
     /// attachments.push(ReportAttachment::new("info").into_dyn_any());
@@ -237,11 +268,13 @@ where
     /// let local_attachments: ReportAttachments<Local> = attachments.into_local();
     /// assert_eq!(local_attachments.len(), 1);
     /// ```
+    #[must_use]
     pub fn into_local(self) -> ReportAttachments<Local> {
         unsafe { ReportAttachments::from_raw(self.into_raw()) }
     }
 
-    /// Returns a reference to this collection with the [`Local`] thread safety marker.
+    /// Returns a reference to this collection with the [`Local`] thread safety
+    /// marker.
     ///
     /// This method provides a zero-cost view of the collection with local
     /// thread safety semantics, without consuming the original collection.
@@ -251,7 +284,11 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments, markers::{SendSync, Local}};
+    /// use rootcause::{
+    ///     markers::{Local, SendSync},
+    ///     report_attachment::ReportAttachment,
+    ///     report_attachments::ReportAttachments,
+    /// };
     ///
     /// let mut attachments: ReportAttachments<SendSync> = ReportAttachments::new_sendsync();
     /// attachments.push(ReportAttachment::new("info").into_dyn_any());
@@ -260,44 +297,55 @@ where
     /// assert_eq!(local_view.len(), 1);
     /// assert_eq!(attachments.len(), 1); // Original is still usable
     /// ```
+    #[must_use]
     pub fn as_local(&self) -> &ReportAttachments<Local> {
         unsafe { ReportAttachments::from_raw_ref(&self.raw) }
     }
 }
 
 impl ReportAttachments<SendSync> {
-    /// Creates a new, empty attachments collection with [`SendSync`] thread safety.
+    /// Creates a new, empty attachments collection with [`SendSync`] thread
+    /// safety.
     ///
-    /// Attachments in this collection must be `Send + Sync`, making the collection
-    /// itself safe to share across threads. This is the most common thread safety
-    /// mode and is used by default.
+    /// Attachments in this collection must be `Send + Sync`, making the
+    /// collection itself safe to share across threads. This is the most
+    /// common thread safety mode and is used by default.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments, markers::SendSync};
+    /// use rootcause::{
+    ///     markers::SendSync, report_attachment::ReportAttachment,
+    ///     report_attachments::ReportAttachments,
+    /// };
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
     /// attachments.push(ReportAttachment::new("thread-safe attachment").into_dyn_any());
     /// assert_eq!(attachments.len(), 1);
     /// ```
+    #[must_use]
     pub fn new_sendsync() -> Self {
         Self::new()
     }
 }
 
 impl ReportAttachments<Local> {
-    /// Creates a new, empty attachments collection with [`Local`] thread safety.
+    /// Creates a new, empty attachments collection with [`Local`] thread
+    /// safety.
     ///
     /// Attachments in this collection can be any type and are not required to
-    /// be `Send + Sync`. This collection itself cannot be shared across threads,
-    /// but is useful when you need to store non-thread-safe attachments.
+    /// be `Send + Sync`. This collection itself cannot be shared across
+    /// threads, but is useful when you need to store non-thread-safe
+    /// attachments.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments, markers::Local};
     /// use std::rc::Rc;
+    ///
+    /// use rootcause::{
+    ///     markers::Local, report_attachment::ReportAttachment, report_attachments::ReportAttachments,
+    /// };
     ///
     /// let mut attachments = ReportAttachments::new_local();
     /// // Rc is not Send+Sync, but can be stored in a Local collection
@@ -305,6 +353,7 @@ impl ReportAttachments<Local> {
     /// attachments.push(rc_attachment);
     /// assert_eq!(attachments.len(), 1);
     /// ```
+    #[must_use]
     pub fn new_local() -> Self {
         Self::new()
     }
@@ -373,7 +422,7 @@ where
     type Item = ReportAttachmentRef<'a, dyn Any>;
 
     fn into_iter(self) -> Self::IntoIter {
-        unsafe { ReportAttachmentsIter::from_raw(self.raw.iter()) }
+        self.iter()
     }
 }
 

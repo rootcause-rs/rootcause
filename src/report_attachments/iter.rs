@@ -18,7 +18,10 @@ use crate::{
 /// # Examples
 ///
 /// ```
-/// use rootcause::{report_attachment::ReportAttachment, report_attachments::{ReportAttachments, ReportAttachmentsIter}};
+/// use rootcause::{
+///     report_attachment::ReportAttachment,
+///     report_attachments::{ReportAttachments, ReportAttachmentsIter},
+/// };
 ///
 /// let mut attachments = ReportAttachments::new_sendsync();
 /// attachments.push(ReportAttachment::new("debug info").into_dyn_any());
@@ -26,19 +29,15 @@ use crate::{
 ///
 /// let iterator: ReportAttachmentsIter<'_> = attachments.iter();
 /// ```
+#[must_use]
 pub struct ReportAttachmentsIter<'a> {
     iter: core::slice::Iter<'a, RawAttachment>,
 }
 
 impl<'a> ReportAttachmentsIter<'a> {
     /// Creates a new `AttachmentsIter` from an iterator of raw attachments
-    ///
-    /// # Safety
-    ///
-    /// The thread safety marker must match the contents of the attachments.
-    /// More specifically if the marker is `SendSync`, then all of the inner
-    /// attachments must be `Send+Sync`
-    pub(crate) unsafe fn from_raw(iter: core::slice::Iter<'a, RawAttachment>) -> Self {
+    #[must_use]
+    pub(crate) fn from_raw(iter: core::slice::Iter<'a, RawAttachment>) -> Self {
         Self { iter }
     }
 }
@@ -93,6 +92,7 @@ impl<'a> FusedIterator for ReportAttachmentsIter<'a> {}
 ///
 /// let iterator: ReportAttachmentsIntoIter<_> = attachments.into_iter();
 /// ```
+#[must_use]
 pub struct ReportAttachmentsIntoIter<T>
 where
     T: markers::ThreadSafetyMarker,
@@ -113,6 +113,7 @@ where
     /// The thread safety marker must match the contents of the attachments.
     /// More specifically if the marker is `SendSync`, then all of the inner
     /// attachments must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw(iter: alloc::vec::IntoIter<RawAttachment>) -> Self {
         Self {
             iter,

@@ -42,7 +42,7 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new ReportCollection from a vector of raw reports
+    /// Creates a new [`ReportCollection`] from a vector of raw reports
     ///
     /// # Safety
     /// - The thread safety marker must match the contents of the reports. More
@@ -51,6 +51,7 @@ where
     /// - The caller must ensure that the contexts of the `RawReport`s are
     ///   actually of type `C` when `C` if is is a type different from `dyn
     ///   Any`.
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
             raw,
@@ -59,14 +60,39 @@ where
         }
     }
 
+    /// Creates a reference to [`ReportCollection`] from reference to a vector
+    /// of raw reports
+    ///
+    /// # Safety
+    ///
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is [`SendSync`], then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the [`RawReport`]s are
+    ///   actually of type `C` when `C` if is is a type different from `dyn
+    ///   Any`.
+    #[must_use]
     pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
         unsafe { &*(raw as *const Vec<RawReport> as *const Self) }
     }
 
+    /// Creates a mutable reference to [`ReportCollection`] from mutable
+    /// reference
+    ///
+    /// # Safety
+    ///
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is [`SendSync`], then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the [`RawReport`]s are
+    ///   actually of type `C` when `C` if is is a type different from `dyn
+    ///   Any`.
+    #[must_use]
     pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
         unsafe { &mut *(raw as *mut Vec<RawReport> as *mut Self) }
     }
 
+    #[must_use]
     pub(crate) fn into_raw(self) -> Vec<RawReport> {
         self.raw
     }
@@ -86,6 +112,7 @@ where
     /// assert!(collection.is_empty());
     /// assert_eq!(collection.len(), 0);
     /// ```
+    #[must_use]
     pub fn new() -> Self {
         unsafe { Self::from_raw(Vec::new()) }
     }
@@ -160,6 +187,7 @@ where
     /// collection.push(report!("Error 2").into_cloneable());
     /// assert_eq!(collection.len(), 2);
     /// ```
+    #[must_use]
     pub fn len(&self) -> usize {
         self.raw.len()
     }
@@ -183,6 +211,7 @@ where
     ///
     /// assert!(out_of_bounds.is_none());
     /// ```
+    #[must_use]
     pub fn get(&self, index: usize) -> Option<ReportRef<'_, C, Cloneable, T>> {
         let raw = self.raw.get(index)?.as_ref();
         unsafe { Some(ReportRef::from_raw(raw)) }
@@ -201,6 +230,7 @@ where
     /// collection.push(report!("An error").into_cloneable());
     /// assert!(!collection.is_empty());
     /// ```
+    #[must_use]
     pub fn is_empty(&self) -> bool {
         self.raw.is_empty()
     }
@@ -223,6 +253,7 @@ where
     ///     println!("Report {}: {}", i, report_ref);
     /// }
     /// ```
+    #[must_use]
     pub fn iter(&self) -> ReportCollectionIter<'_, C, T> {
         unsafe { ReportCollectionIter::from_raw(&self.raw) }
     }
@@ -253,12 +284,14 @@ where
     /// let erased: ReportCollection<dyn Any> = collection.into_dyn_any();
     /// assert_eq!(erased.len(), 1);
     /// ```
+    #[must_use]
     pub fn into_dyn_any(self) -> ReportCollection<dyn Any, T> {
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
     /// Returns a reference to the collection with type-erased contexts via
     /// `dyn Any`.
+    #[must_use]
     pub fn as_dyn_any(&self) -> &ReportCollection<dyn Any, T> {
         unsafe { ReportCollection::from_raw_ref(&self.raw) }
     }
@@ -287,12 +320,14 @@ where
     /// let local_collection: ReportCollection<dyn std::any::Any, Local> = collection.into_local();
     /// assert_eq!(local_collection.len(), 1);
     /// ```
+    #[must_use]
     pub fn into_local(self) -> ReportCollection<C, Local> {
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
     /// Returns a reference to the collection with `Local` thread safety
     /// semantics.
+    #[must_use]
     pub fn as_local(&self) -> &ReportCollection<C, Local> {
         unsafe { ReportCollection::from_raw_ref(&self.raw) }
     }
@@ -387,6 +422,7 @@ where
     /// let collection: ReportCollection<&str, SendSync> = ReportCollection::new_sendsync();
     /// assert!(collection.is_empty());
     /// ```
+    #[must_use]
     pub fn new_sendsync() -> Self {
         Self::new()
     }
@@ -411,6 +447,7 @@ where
     /// let collection: ReportCollection<&str, Local> = ReportCollection::new_local();
     /// assert!(collection.is_empty());
     /// ```
+    #[must_use]
     pub fn new_local() -> Self {
         Self::new()
     }

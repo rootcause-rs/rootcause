@@ -83,16 +83,16 @@ fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextFormattingOverride>
 
 struct Hook<C, H>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: 'static,
 {
     hook: H,
     added_at: &'static Location<'static>,
-    _hooked_type: PhantomData<C>,
+    _hooked_type: PhantomData<fn(C) -> C>,
 }
 
 impl<C, H> core::fmt::Display for Hook<C, H>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -106,28 +106,31 @@ where
     }
 }
 
-unsafe impl<C, H> Send for Hook<C, H>
-where
-    C: markers::ObjectMarker + ?Sized,
-    H: Send + Sync,
-{
-}
-unsafe impl<C, H> Sync for Hook<C, H>
-where
-    C: markers::ObjectMarker + ?Sized,
-    H: Send + Sync,
-{
-}
-
-pub(crate) trait UntypedContextFormattingOverride:
-    'static + Send + Sync + core::fmt::Display
-{
+trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Display {
+    /// Formats the context using Display formatting.
+    ///
+    /// # Safety
+    ///
+    /// The implementation of this trait is free to make assumptions about the
+    /// type of the context contained in the report and call
+    /// [`ReportRef::downcast_report_unchecked`]. It is the responsibility
+    /// of the caller to ensure that whatever those assumptions might be for
+    /// the type in question, they hold for the report given as the argument.
     unsafe fn display(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
+    /// Formats the context using Debug formatting.
+    ///
+    /// # Safety
+    ///
+    /// The implementation of this trait is free to make assumptions about the
+    /// type of the context contained in the report and call
+    /// [`ReportRef::downcast_report_unchecked`]. It is the responsibility
+    /// of the caller to ensure that whatever those assumptions might be for
+    /// the type in question, they hold for the report given as the argument.
     unsafe fn debug(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -208,7 +211,7 @@ pub(crate) trait UntypedContextFormattingOverride:
 /// ```
 pub trait ContextFormattingOverride<C>: 'static + Send + Sync
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: markers::ObjectMarker,
 {
     /// Formats the context using Display formatting.
     ///
@@ -342,9 +345,19 @@ where
 
 impl<C, H> UntypedContextFormattingOverride for Hook<C, H>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: 'static,
     H: ContextFormattingOverride<C>,
 {
+    /// Formats the context using Display formatting.
+    ///
+    /// # Safety
+    ///
+    /// As specified in the trait, the implementer can make assumptions about
+    /// the type of the context contained in the report.
+    ///
+    /// This implementation will downcast the report to the expected type `C`,
+    /// so the caller must ensure that the report indeed contains a context
+    /// of type `C`.
     unsafe fn display(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -354,6 +367,16 @@ where
         self.hook.display(report, formatter)
     }
 
+    /// Formats the context using Debug formatting.
+    ///
+    /// # Safety
+    ///
+    /// As specified in the trait, the implementer can make assumptions about
+    /// the type of the context contained in the report.
+    ///
+    /// This implementation will downcast the report to the expected type `C`,
+    /// so the caller must ensure that the report indeed contains a context
+    /// of type `C`.
     unsafe fn debug(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -446,7 +469,7 @@ where
 #[track_caller]
 pub fn register_context_hook<C, H>(hook: H)
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: markers::ObjectMarker,
     H: ContextFormattingOverride<C> + Send + Sync + 'static,
 {
     let added_location = Location::caller();

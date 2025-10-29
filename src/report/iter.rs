@@ -12,6 +12,7 @@ use crate::{ReportRef, markers};
 /// in the hierarchy. The iterator traverses the report tree in a depth-first
 /// manner, starting from the root report and visiting each child report before
 /// moving to the next sibling.
+#[must_use]
 pub struct ReportIter<'a, Ownership, ThreadSafety>
 where
     Ownership: markers::ReportRefOwnershipMarker,
@@ -27,6 +28,16 @@ where
     O: crate::markers::ReportRefOwnershipMarker,
     T: crate::markers::ThreadSafetyMarker,
 {
+    /// Creates a new `ReportIter` from a vector of raw report references
+    ///
+    /// # Safety
+    ///
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is `SendSync`, then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The ownership marker must match the ownership semantics of the report
+    ///   references.
+    #[must_use]
     pub(crate) unsafe fn from_raw(stack: Vec<RawReportRef<'a>>) -> Self {
         Self {
             stack,

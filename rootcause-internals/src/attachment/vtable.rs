@@ -60,12 +60,14 @@ impl AttachmentVtable {
 
     /// Gets the [`TypeId`] of the attachment type that was used to create this
     /// [`AttachmentVtable`].
+    #[inline]
     pub(super) fn type_id(&self) -> TypeId {
         (self.type_id)()
     }
 
     /// Gets the [`TypeId`] of the handler that was used to create this
     /// [`AttachmentVtable`].
+    #[inline]
     pub(super) fn handler_type_id(&self) -> TypeId {
         (self.handler_type_id)()
     }
@@ -80,6 +82,7 @@ impl AttachmentVtable {
     /// - The attachment type `A` stored in the [`AttachmentData`] must match
     ///   the `A` used when creating this [`AttachmentVtable`].
     /// - After calling this method, the pointer must no longer be used.
+    #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<AttachmentData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<A>` below.
         // That function has three requirements, all of which are guaranteed by our
@@ -101,6 +104,7 @@ impl AttachmentVtable {
     ///
     /// The attachment type `A` used when creating this [`AttachmentVtable`]
     /// must match the type stored in the [`RawAttachmentRef`].
+    #[inline]
     pub(super) unsafe fn display(
         &self,
         ptr: RawAttachmentRef<'_>,
@@ -122,6 +126,7 @@ impl AttachmentVtable {
     ///
     /// The attachment type `A` used when creating this [`AttachmentVtable`]
     /// must match the type stored in the [`RawAttachmentRef`].
+    #[inline]
     pub(super) unsafe fn debug(
         &self,
         ptr: RawAttachmentRef<'_>,
@@ -144,6 +149,7 @@ impl AttachmentVtable {
     ///
     /// The attachment type `A` used when creating this [`AttachmentVtable`]
     /// must match the type stored in the [`RawAttachmentRef`].
+    #[inline]
     pub(super) unsafe fn preferred_formatting_style(
         &self,
         ptr: RawAttachmentRef<'_>,

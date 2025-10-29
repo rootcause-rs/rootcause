@@ -29,6 +29,7 @@ use crate::{
 /// ```
 ///
 /// [`ReportCollection`]: crate::report_collection::ReportCollection
+#[must_use]
 pub struct ReportCollectionIter<
     'a,
     Context: markers::ObjectMarker + ?Sized = dyn Any,
@@ -44,6 +45,15 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
+    /// Creates a new `ReportCollectionIter` from an iterator of raw reports
+    ///
+    /// # Safety
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is [`SendSync`], then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the [`RawReport`]s are
+    ///   actually of type `C` when `C` if is is a type different from `dyn
+    ///   Any`.
     pub(crate) unsafe fn from_raw(raw: &'a [RawReport]) -> Self {
         Self {
             iter: raw.iter(),
@@ -120,6 +130,7 @@ where
 /// ```
 ///
 /// [`ReportCollection`]: crate::report_collection::ReportCollection
+#[must_use]
 pub struct ReportCollectionIntoIter<Context: ?Sized + 'static = dyn Any, ThreadSafety = SendSync> {
     iter: alloc::vec::IntoIter<RawReport>,
     _context: PhantomData<Context>,
@@ -131,6 +142,17 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
+    /// Creates a new [`ReportCollectionIntoIter`] from a vector of raw reports
+    ///
+    /// # Safety
+    ///
+    /// - The thread safety marker must match the contents of the reports. More
+    ///   specifically if the marker is [`SendSync`], then all the data
+    ///   (recursively) contained by the reports must be `Send+Sync`.
+    /// - The caller must ensure that the contexts of the [`RawReport`]s are
+    ///   actually of type `C` when `C` if is is a type different from `dyn
+    ///   Any`.
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
             iter: raw.into_iter(),

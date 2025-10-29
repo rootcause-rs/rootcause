@@ -29,6 +29,7 @@ impl<A: 'static> AttachmentData<A> {
     ///
     /// This method creates the vtable for type-erased dispatch and pairs it
     /// with the attachment data.
+    #[inline]
     pub(super) fn new<H: AttachmentHandler<A>>(attachment: A) -> Self {
         Self {
             vtable: AttachmentVtable::new::<A, H>(),
@@ -40,6 +41,7 @@ impl<A: 'static> AttachmentData<A> {
 impl<'a> RawAttachmentRef<'a> {
     /// Returns a reference to the [`AttachmentVtable`] of the
     /// [`AttachmentData`] instance.
+    #[inline]
     pub(super) fn vtable(self) -> &'static AttachmentVtable {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner attachment type, but we do know
@@ -64,6 +66,7 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// The caller must ensure that the type `A` matches the actual attachment
     /// type stored in the [`AttachmentData`].
+    #[inline]
     pub unsafe fn attachment_downcast_unchecked<A: 'static>(self) -> &'a A {
         // SAFETY: The inner function requires that `A` matches the type stored, but
         // that is guaranteed by our caller.

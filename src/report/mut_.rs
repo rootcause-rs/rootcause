@@ -56,6 +56,7 @@ where
     /// - The thread safety marker must match the contents of the report. More
     ///   specifically if the marker is `SendSync`, then all contexts and
     ///   attachments must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawReportMut<'a>) -> Self {
         Self {
             raw,
@@ -64,10 +65,12 @@ where
         }
     }
 
+    #[must_use]
     pub(crate) fn into_raw(self) -> RawReportMut<'a> {
         self.raw
     }
 
+    #[must_use]
     pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
         self.raw.as_ref()
     }
@@ -83,6 +86,7 @@ where
     /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
     /// let context: &MyError = report_mut.current_context();
     /// ```
+    #[must_use]
     pub fn current_context(&self) -> &C
     where
         C: Sized,
@@ -101,6 +105,7 @@ where
     /// let context: &mut String = report_mut.into_current_context_mut();
     /// context.push_str(" and that's bad");
     /// ```
+    #[must_use]
     pub fn into_current_context_mut(self) -> &'a mut C
     where
         C: Sized,
@@ -119,6 +124,7 @@ where
     /// let context: &mut String = report_mut.current_context_mut();
     /// context.push_str(" and that's bad");
     /// ```
+    #[must_use]
     pub fn current_context_mut(&mut self) -> &mut C
     where
         C: Sized,
@@ -136,6 +142,7 @@ where
     /// let children: &ReportCollection = report_mut.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
+    #[must_use]
     pub fn children(&self) -> &ReportCollection<dyn Any, T> {
         self.as_ref().children()
     }
@@ -149,6 +156,7 @@ where
     /// let mut report_mut: ReportMut<'_> = report.as_mut();
     /// let children_mut: &mut ReportCollection = report_mut.children_mut();
     /// ```
+    #[must_use]
     pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
         let raw = self.raw.reborrow().into_children_mut();
         unsafe { ReportCollection::from_raw_mut(raw) }
@@ -164,6 +172,7 @@ where
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// let children_mut: &mut ReportCollection = report_mut.into_children_mut();
     /// ```
+    #[must_use]
     pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
         let raw = self.into_raw().into_children_mut();
         unsafe { ReportCollection::from_raw_mut(raw) }
@@ -178,6 +187,7 @@ where
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// let attachments: &ReportAttachments = report_mut.attachments();
     /// ```
+    #[must_use]
     pub fn attachments(&self) -> &ReportAttachments<T> {
         self.as_ref().attachments()
     }
@@ -191,6 +201,7 @@ where
     /// let mut report_mut: ReportMut<'_> = report.as_mut();
     /// let attachments_mut: &mut ReportAttachments = report_mut.attachments_mut();
     /// ```
+    #[must_use]
     pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
         let raw = self.raw.reborrow().into_attachments_mut();
         unsafe { ReportAttachments::from_raw_mut(raw) }
@@ -206,6 +217,7 @@ where
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// let attachments_mut: &mut ReportAttachments = report_mut.into_attachments_mut();
     /// ```
+    #[must_use]
     pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
         let raw = self.into_raw().into_attachments_mut();
         unsafe { ReportAttachments::from_raw_mut(raw) }
@@ -236,6 +248,7 @@ where
     /// let report: ReportMut<'_, MyError> = report.as_mut();
     /// let local_report: ReportMut<'_, dyn Any> = report.into_dyn_any();
     /// ```
+    #[must_use]
     pub fn into_dyn_any(self) -> ReportMut<'a, dyn Any, T> {
         unsafe { ReportMut::from_raw(self.into_raw()) }
     }
@@ -250,6 +263,7 @@ where
     /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
     /// let report_ref: ReportRef<'_, MyError, markers::Uncloneable> = report_mut.as_ref();
     /// ```
+    #[must_use]
     pub fn as_ref(&self) -> ReportRef<'_, C, Uncloneable, T> {
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
@@ -265,6 +279,7 @@ where
     /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
     /// let report_ref: ReportRef<'_, MyError, markers::Uncloneable> = report_mut.into_ref();
     /// ```
+    #[must_use]
     pub fn into_ref(self) -> ReportRef<'a, C, Uncloneable, T> {
         unsafe { ReportRef::from_raw(self.raw.into_ref()) }
     }
@@ -285,6 +300,7 @@ where
     /// // After dropping the inner reference report, we can still use the outer one
     /// let _context: &MyError = report_mut.current_context();
     /// ```
+    #[must_use]
     pub fn reborrow(&mut self) -> ReportMut<'_, C, T> {
         // SAFETY: The reborrow does not change the context or thread safety markers
         unsafe { ReportMut::from_raw(self.raw.reborrow()) }
@@ -337,6 +353,7 @@ where
     /// assert_eq!(all_reports[2], "context for error 1");
     /// assert_eq!(all_reports.len(), 6);
     /// ```
+    #[must_use]
     pub fn iter_reports(&self) -> ReportIter<'_, Uncloneable, T> {
         let stack = vec![self.as_raw_ref()];
         unsafe { ReportIter::from_raw(stack) }
@@ -389,6 +406,7 @@ where
     /// assert_eq!(sub_reports[1], "context for error 1");
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
+    #[must_use]
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
         let stack = self
             .children()
@@ -439,6 +457,7 @@ where
     /// let type_id = report_mut.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     /// ```
+    #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
         self.as_raw_ref().context_type_id()
     }
@@ -457,6 +476,7 @@ where
     /// let handler_type = report_mut.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
+    #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().context_handler_type_id()
     }
@@ -473,6 +493,7 @@ where
     /// let source = report_mut.current_context_error_source();
     /// assert!(source.is_none()); // The context does not implement Error, so no source
     /// ```
+    #[must_use]
     pub fn current_context_error_source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         self.as_raw_ref().context_source()
     }
@@ -487,6 +508,7 @@ where
     /// let formatted = report_mut.format_current_context();
     /// println!("{formatted}");
     /// ```
+    #[must_use]
     pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
         let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
         format_helper(
@@ -510,6 +532,7 @@ where
     /// let formatted = report_mut.format_current_context_unhooked();
     /// println!("{formatted}");
     /// ```
+    #[must_use]
     pub fn format_current_context_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.as_raw_ref(),
@@ -538,6 +561,7 @@ where
     /// let style =
     ///     report_mut.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
+    #[must_use]
     pub fn preferred_context_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
@@ -569,6 +593,7 @@ where
     /// let style = report_mut
     ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
+    #[must_use]
     pub fn preferred_context_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
@@ -586,6 +611,7 @@ where
     /// let report_mut = report.as_mut();
     /// assert_eq!(report_mut.strong_count(), 1);
     /// ```
+    #[must_use]
     pub fn strong_count(&self) -> usize {
         self.as_raw_ref().strong_count()
     }
@@ -610,18 +636,12 @@ where
     /// let context: Option<&MyError> = mut_report.downcast_current_context();
     /// assert!(context.is_some());
     /// ```
+    #[must_use]
     pub fn downcast_current_context<C>(&self) -> Option<&C>
     where
         C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == self.current_context_type_id() {
-            // SAFETY:
-            // - The context is valid because we just checked that it matches
-            // - The thread marker is valid, because does not change
-            Some(unsafe { self.downcast_current_context_unchecked() })
-        } else {
-            None
-        }
+        self.as_ref().downcast_current_context()
     }
 
     /// Downcasts the current context to a specific type without checking.
@@ -648,11 +668,12 @@ where
     ///     let context: &MyError = unsafe { mut_report.downcast_current_context_unchecked() };
     /// }
     /// ```
+    #[must_use]
     pub unsafe fn downcast_current_context_unchecked<C>(&self) -> &C
     where
         C: markers::ObjectMarker,
     {
-        unsafe { self.as_raw_ref().context_downcast_unchecked::<C>() }
+        unsafe { self.as_ref().downcast_current_context_unchecked() }
     }
 
     /// Attempts to downcast the entire report to a specific context type.
@@ -670,6 +691,7 @@ where
     /// let downcasted: Result<_, _> = mut_report.downcast_report::<MyError>();
     /// assert!(downcasted.is_ok());
     /// ```
+    #[must_use]
     pub fn downcast_report<C>(self) -> Result<ReportMut<'a, C, T>, ReportMut<'a, dyn Any, T>>
     where
         C: markers::ObjectMarker + ?Sized,
@@ -710,6 +732,7 @@ where
     ///     let downcasted = unsafe { mut_report.downcast_report_unchecked::<MyError>() };
     /// }
     /// ```
+    #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportMut<'a, C, T>
     where
         C: markers::ObjectMarker + ?Sized,

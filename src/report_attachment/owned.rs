@@ -51,6 +51,7 @@ where
     /// - The thread safety marker must match the contents of the attachment.
     ///   More specifically if the marker is [`SendSync`], then the inner
     ///   attachment must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
         ReportAttachment {
             raw,
@@ -61,12 +62,14 @@ where
 
     /// Consumes the [`ReportAttachment`] and returns the inner
     /// [`RawAttachment`].
+    #[must_use]
     pub(crate) fn into_raw(self) -> RawAttachment {
         self.raw
     }
 
     /// Creates a lifetime-bound [`RawAttachmentRef`] from the inner
     /// [`RawAttachment`].
+    #[must_use]
     pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
         self.raw.as_ref()
     }
@@ -86,6 +89,7 @@ where
     /// let mut report = report!("An error occurred");
     /// report.attachments_mut().push(attachment.into_dyn_any());
     /// ```
+    #[must_use]
     pub fn new(attachment: A) -> Self
     where
         A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug + Sized,
@@ -110,6 +114,7 @@ where
     /// let mut report = report!("An error occurred");
     /// report.attachments_mut().push(attachment.into_dyn_any());
     /// ```
+    #[must_use]
     pub fn new_custom<H>(attachment: A) -> Self
     where
         A: markers::ObjectMarkerFor<T> + Sized,
@@ -137,6 +142,7 @@ where
     ///
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachment::downcast_attachment`].
+    #[must_use]
     pub fn into_dyn_any(self) -> ReportAttachment<dyn Any, T> {
         unsafe { ReportAttachment::from_raw(self.into_raw()) }
     }
@@ -153,6 +159,7 @@ where
     /// This method does not actually modify the attachment in any way. It only
     /// has the effect of "forgetting" that the object in the
     /// [`ReportAttachment`] might actually be [`Send`] and [`Sync`].
+    #[must_use]
     pub fn into_local(self) -> ReportAttachment<A, Local> {
         unsafe { ReportAttachment::from_raw(self.into_raw()) }
     }
@@ -161,6 +168,7 @@ where
     ///
     /// This method is only available when the attachment type is a specific
     /// type, and not `dyn Any`.
+    #[must_use]
     pub fn inner(&self) -> &A
     where
         A: Sized,
@@ -169,17 +177,20 @@ where
     }
 
     /// Returns the [`TypeId`] of the inner attachment.
+    #[must_use]
     pub fn inner_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
 
     /// Returns the [`TypeId`] of the handler used when creating this
     /// attachment.
+    #[must_use]
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
     /// Formats the attachment with hook processing.
+    #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
         let attachment: ReportAttachmentRef<'_, dyn Any> = self.as_ref().into_dyn_any();
         format_helper(
@@ -198,6 +209,7 @@ where
     }
 
     /// Formats the attachment without hook processing.
+    #[must_use]
     pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.as_raw_ref(),
@@ -217,6 +229,7 @@ where
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    #[must_use]
     pub fn preferred_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
@@ -238,6 +251,7 @@ where
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    #[must_use]
     pub fn preferred_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
@@ -247,6 +261,7 @@ where
     }
 
     /// Returns an reference to the attachment.
+    #[must_use]
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
@@ -264,6 +279,7 @@ where
     ///
     /// The context will use the [`handlers::Display`] handler to format the
     /// attachment.
+    #[must_use]
     pub fn new_sendsync(attachment: A) -> Self
     where
         A: core::fmt::Display + core::fmt::Debug + Send + Sync,
@@ -278,6 +294,7 @@ where
     /// with explicit [`SendSync`] thread safety. Use this method when
     /// you're having trouble with type inference for the thread safety
     /// parameter.
+    #[must_use]
     pub fn new_sendsync_custom<H>(attachment: A) -> Self
     where
         A: Send + Sync + 'static,
@@ -299,6 +316,7 @@ where
     ///
     /// The context will use the [`handlers::Display`] handler to format the
     /// attachment.
+    #[must_use]
     pub fn new_local(attachment: A) -> Self
     where
         A: core::fmt::Display + core::fmt::Debug,
@@ -312,6 +330,7 @@ where
     /// This is a convenience method that calls [`ReportAttachment::new_custom`]
     /// with explicit [`Local`] thread safety. Use this method when you're
     /// having trouble with type inference for the thread safety parameter.
+    #[must_use]
     pub fn new_local_custom<H>(attachment: A) -> Self
     where
         H: AttachmentHandler<A>,
@@ -328,6 +347,7 @@ where
     ///
     /// Returns `Some(&A)` if the current context is of type `A`, otherwise
     /// returns `None`.
+    #[must_use]
     pub fn downcast_inner<A>(&self) -> Option<&A>
     where
         A: ObjectMarker,
@@ -343,6 +363,7 @@ where
     /// `A`. This can be verified by calling [`inner_type_id()`] first.
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    #[must_use]
     pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
     where
         A: ObjectMarker,
@@ -355,6 +376,7 @@ where
     ///
     /// Returns `Ok(attachment)` if the inner attachment is of type `A`,
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
+    #[must_use]
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
     where
         A: markers::ObjectMarker + ?Sized,
@@ -376,6 +398,7 @@ where
     /// `A`. This can be verified by calling [`inner_type_id()`] first.
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    #[must_use]
     pub unsafe fn downcast_unchecked<A>(self) -> ReportAttachment<A, T>
     where
         A: markers::ObjectMarker + ?Sized,

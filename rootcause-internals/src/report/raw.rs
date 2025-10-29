@@ -35,6 +35,7 @@ pub struct RawReport {
 
 impl RawReport {
     /// Creates a new [`RawReport`] from a [`triomphe::Arc<ReportData<C>>`].
+    #[inline]
     pub(super) fn from_arc<C: 'static>(data: triomphe::Arc<ReportData<C>>) -> Self {
         let ptr: *const ReportData<C> = triomphe::Arc::into_raw(data);
         let ptr: *mut ReportData<Erased> = ptr as _;
@@ -47,6 +48,7 @@ impl RawReport {
 
     /// Consumes the RawReport without decrementing the reference count and
     /// returns the inner pointer.
+    #[inline]
     pub(super) fn into_non_null(self) -> NonNull<ReportData<Erased>> {
         let ptr = self.ptr;
         core::mem::forget(self);
@@ -55,6 +57,7 @@ impl RawReport {
 
     /// Creates a new [`RawReport`] with the specified handler, context,
     /// children, and attachments.
+    #[inline]
     pub fn new<C, H>(context: C, children: Vec<RawReport>, attachments: Vec<RawAttachment>) -> Self
     where
         C: 'static,
@@ -65,6 +68,7 @@ impl RawReport {
     }
 
     /// Returns a reference to the [`ReportData`] instance.
+    #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
         RawReportRef {
             ptr: self.ptr,
@@ -78,6 +82,7 @@ impl RawReport {
     ///
     /// The caller must ensure that this is the only existing reference pointing
     /// to the inner [`ReportData`].
+    #[inline]
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
         RawReportMut {
             ptr: self.ptr,
@@ -87,6 +92,7 @@ impl RawReport {
 }
 
 impl core::ops::Drop for RawReport {
+    #[inline]
     fn drop(&mut self) {
         let vtable = self.as_ref().vtable();
 
@@ -133,6 +139,7 @@ impl<'a> RawReportRef<'a> {
     ///
     /// The caller must ensure that the type `C` matches the actual context type
     /// stored in the [`ReportData`].
+    #[inline]
     pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a ReportData<C::Target> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<C>());
@@ -144,22 +151,26 @@ impl<'a> RawReportRef<'a> {
     }
 
     /// Returns a [`NonNull`] pointer to the [`ReportData`] instance.
+    #[inline]
     pub(super) fn as_ptr(self) -> *const ReportData<Erased> {
         self.ptr.as_ptr()
     }
 
     /// Returns the [`TypeId`] of the context.
+    #[inline]
     pub fn context_type_id(self) -> TypeId {
         self.vtable().type_id()
     }
 
     /// Returns the [`TypeId`] of the context.
+    #[inline]
     pub fn context_handler_type_id(self) -> TypeId {
         self.vtable().handler_type_id()
     }
 
     /// Checks if the type of the context matches the specified type and returns
     /// a reference to it if it does.
+    #[inline]
     pub fn context_downcast<C: 'static>(self) -> Option<&'a C> {
         if self.context_type_id() == core::any::TypeId::of::<C>() {
             // SAFETY: We must ensure that the `C` in the ReportData matches the `C` we are
@@ -173,6 +184,7 @@ impl<'a> RawReportRef<'a> {
 
     /// Returns the source of the context using the [`ContextHandler::source`]
     /// method specified when the [`ReportData`] was created.
+    #[inline]
     pub fn context_source(self) -> Option<&'a (dyn core::error::Error + 'static)> {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
@@ -183,6 +195,7 @@ impl<'a> RawReportRef<'a> {
 
     /// Formats the context by using the [`ContextHandler::display`] method
     /// specified by the handler used to create the [`ReportData`].
+    #[inline]
     pub fn context_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
@@ -193,6 +206,7 @@ impl<'a> RawReportRef<'a> {
 
     /// Formats the context by using the [`ContextHandler::debug`] method
     /// specified by the handler used to create the [`ReportData`].
+    #[inline]
     pub fn context_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
@@ -212,6 +226,7 @@ impl<'a> RawReportRef<'a> {
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    #[inline]
     pub fn preferred_context_formatting_style(
         self,
         report_formatting_function: FormattingFunction,
@@ -230,6 +245,7 @@ impl<'a> RawReportRef<'a> {
     ///
     /// There must be no external assumptions that there is unique ownership of
     /// the [`triomphe::Arc`].
+    #[inline]
     pub unsafe fn clone_arc(self) -> RawReport {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
@@ -243,6 +259,7 @@ impl<'a> RawReportRef<'a> {
     }
 
     /// Gets the strong_count of the inner [`triomphe::Arc`].
+    #[inline]
     pub fn strong_count(self) -> usize {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `C` of the `ReportData` matches the `C` of
@@ -276,6 +293,7 @@ impl<'a> RawReportMut<'a> {
     ///
     /// The caller must ensure that the type `C` matches the actual context type
     /// stored in the [`ReportData`].
+    #[inline]
     pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a mut ReportData<C::Target> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
@@ -288,6 +306,7 @@ impl<'a> RawReportMut<'a> {
 
     /// Reborrows the mutable reference to the [`ReportData`] with a shorter
     /// lifetime.
+    #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawReportMut<'b> {
         RawReportMut {
             ptr: self.ptr,
@@ -296,6 +315,7 @@ impl<'a> RawReportMut<'a> {
     }
 
     /// Returns a reference to the [`ReportData`] instance.
+    #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
         RawReportRef {
             ptr: self.ptr,
@@ -305,6 +325,7 @@ impl<'a> RawReportMut<'a> {
 
     /// Consumes the mutable reference and returns an immutable one with the
     /// same lifetime.
+    #[inline]
     pub fn into_ref(self) -> RawReportRef<'a> {
         RawReportRef {
             ptr: self.ptr,
@@ -317,6 +338,7 @@ impl<'a> RawReportMut<'a> {
     ///
     /// This method is primarily used for internal operations that require
     /// direct pointer access.
+    #[inline]
     pub(super) fn into_mut_ptr(self) -> *mut ReportData<Erased> {
         self.ptr.as_ptr()
     }

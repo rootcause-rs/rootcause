@@ -41,6 +41,7 @@ impl<C: 'static> ReportData<C> {
     ///
     /// This method creates the vtable for type-erased dispatch and pairs it
     /// with the report data.
+    #[inline]
     pub(super) fn new<H: ContextHandler<C>>(
         context: C,
         children: Vec<RawReport>,
@@ -98,6 +99,7 @@ impl RawReport {
 impl<'a> RawReportRef<'a> {
     /// Returns a reference to the [`ReportVtable`] of the [`ReportData`]
     /// instance.
+    #[inline]
     pub(super) fn vtable(self) -> &'static ReportVtable {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner context type, but we do know
@@ -116,6 +118,7 @@ impl<'a> RawReportRef<'a> {
     }
 
     /// Returns the child reports of this report.
+    #[inline]
     pub fn children(self) -> &'a Vec<RawReport> {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner context type, but we do know
@@ -135,6 +138,7 @@ impl<'a> RawReportRef<'a> {
     }
 
     /// Returns the attachments of this report.
+    #[inline]
     pub fn attachments(self) -> &'a Vec<RawAttachment> {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner context type, but we do know
@@ -160,6 +164,7 @@ impl<'a> RawReportRef<'a> {
     ///
     /// The caller must ensure that the type `C` matches the actual context type
     /// stored in the [`ReportData`].
+    #[inline]
     pub unsafe fn context_downcast_unchecked<C: 'static>(self) -> &'a C {
         // SAFETY: The inner function requires that `C` matches the type stored, but
         // that is guaranteed by our caller.
@@ -170,6 +175,7 @@ impl<'a> RawReportRef<'a> {
 
 impl<'a> RawReportMut<'a> {
     /// Gets a mutable reference to the child reports.
+    #[inline]
     pub fn into_children_mut(self) -> &'a mut Vec<RawReport> {
         let ptr = self.into_mut_ptr();
 
@@ -190,6 +196,7 @@ impl<'a> RawReportMut<'a> {
     }
 
     /// Gets a mutable reference to the attachments.
+    #[inline]
     pub fn into_attachments_mut(self) -> &'a mut Vec<RawAttachment> {
         let ptr = self.into_mut_ptr();
 
@@ -216,6 +223,7 @@ impl<'a> RawReportMut<'a> {
     ///
     /// The caller must ensure that the type `C` matches the actual context type
     /// stored in the [`ReportData`].
+    #[inline]
     pub unsafe fn into_context_downcast_unchecked<C: 'static>(self) -> &'a mut C {
         // SAFETY: The inner function requires that `C` matches the type stored, but
         // that is guaranteed by our caller.

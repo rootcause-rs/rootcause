@@ -134,16 +134,16 @@ fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverri
 
 struct Hook<A, H>
 where
-    A: markers::ObjectMarker + ?Sized,
+    A: 'static,
 {
     hook: H,
     added_at: &'static Location<'static>,
-    _hooked_type: PhantomData<A>,
+    _hooked_type: PhantomData<fn(A) -> A>,
 }
 
 impl<A, H> core::fmt::Display for Hook<A, H>
 where
-    A: markers::ObjectMarker + ?Sized,
+    A: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -155,19 +155,6 @@ where
             self.added_at.line()
         )
     }
-}
-
-unsafe impl<A, H> Send for Hook<A, H>
-where
-    A: markers::ObjectMarker + ?Sized,
-    H: Send + Sync,
-{
-}
-unsafe impl<A, H> Sync for Hook<A, H>
-where
-    A: markers::ObjectMarker + ?Sized,
-    H: Send + Sync,
-{
 }
 
 /// Information about the parent report that contains an attachment being
@@ -218,9 +205,17 @@ pub struct AttachmentParent<'a> {
     pub attachment_index: usize,
 }
 
-pub(crate) trait UntypedAttachmentFormattingOverride:
-    'static + Send + Sync + core::fmt::Display
-{
+trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Display {
+    /// Formats the attachment using Display formatting.
+    ///
+    /// # Safety
+    ///
+    /// The implementation of this trait is free to make assumptions about the
+    /// type of the inner attachment and call
+    /// [`ReportAttachmentRef::downcast_attachment_unchecked`]. It is the
+    /// responsibility of the caller to ensure that whatever those
+    /// assumptions might be for the type in question, they hold for the
+    /// attachment given as the argument.
     unsafe fn display(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -228,6 +223,16 @@ pub(crate) trait UntypedAttachmentFormattingOverride:
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
+    /// Formats the attachment using Debug formatting.
+    ///
+    /// # Safety
+    ///
+    /// The implementation of this trait is free to make assumptions about the
+    /// type of the inner attachment and call
+    /// [`ReportAttachmentRef::downcast_attachment_unchecked`]. It is the
+    /// responsibility of the caller to ensure that whatever those
+    /// assumptions might be for the type in question, they hold for the
+    /// attachment given as the argument.
     unsafe fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -306,7 +311,7 @@ pub(crate) trait UntypedAttachmentFormattingOverride:
 /// ```
 pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync
 where
-    A: markers::ObjectMarker + ?Sized,
+    A: markers::ObjectMarker,
 {
     /// Formats the attachment using Display formatting.
     ///
@@ -441,9 +446,19 @@ where
 
 impl<A, H> UntypedAttachmentFormattingOverride for Hook<A, H>
 where
-    A: markers::ObjectMarker + ?Sized,
+    A: markers::ObjectMarker,
     H: AttachmentFormattingOverride<A>,
 {
+    /// Formats the attachment using Display formatting.
+    ///
+    /// # Safety
+    ///
+    /// As specified in the trait, the implementer can make assumptions about
+    /// the type of the inner attachment contained in the argument.
+    ///
+    /// This implementation will downcast the attachment to the expected type
+    /// `A`, so the caller must ensure that the argument indeed contains a
+    /// attachment of type `A`.
     unsafe fn display(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -454,6 +469,16 @@ where
         self.hook.display(attachment, attachment_parent, formatter)
     }
 
+    /// Formats the attachment using Debug formatting.
+    ///
+    /// # Safety
+    ///
+    /// As specified in the trait, the implementer can make assumptions about
+    /// the type of the inner attachment contained in the argument.
+    ///
+    /// This implementation will downcast the attachment to the expected type
+    /// `A`, so the caller must ensure that the argument indeed contains a
+    /// attachment of type `A`.
     unsafe fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,

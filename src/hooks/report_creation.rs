@@ -113,7 +113,7 @@ use crate::{
         builtin_hooks::location::{LocationCollector, LocationHandler},
         hook_lock::{HookLock, HookLockReadGuard},
     },
-    markers::{self, Local, SendSync},
+    markers::{self, Local, SendSync, ThreadSafetyMarker},
     report_attachment::ReportAttachment,
 };
 
@@ -227,14 +227,16 @@ where
     H: AttachmentHandler<A>,
     C: AttachmentCollectorHook<A> + Send + Sync + 'static,
 {
-    struct Hook<A, H, C> {
+    struct Hook<A, H, C>
+    where
+        A: 'static,
+        H: 'static,
+    {
         collector: C,
         added_at: &'static Location<'static>,
-        _handled_type: core::marker::PhantomData<A>,
-        _handler: core::marker::PhantomData<H>,
+        _handled_type: core::marker::PhantomData<fn(A) -> A>,
+        _handler: core::marker::PhantomData<fn(H) -> H>,
     }
-    unsafe impl<A, H, C> Send for Hook<A, H, C> where C: 'static + Send + Sync {}
-    unsafe impl<A, H, C> Sync for Hook<A, H, C> where C: 'static + Send + Sync {}
 
     impl<A, H, C> UntypedReportCreationHook for Hook<A, H, C>
     where
@@ -561,19 +563,34 @@ fn run_creation_hooks_sendsync(mut report: ReportMut<'_, dyn Any, SendSync>) {
     }
 }
 
+#[inline(always)]
+fn safe_transmute_thread_marker<'a, T1, T2>(
+    report: &'a mut ReportMut<'_, dyn Any, T1>,
+) -> Option<ReportMut<'a, dyn Any, T2>>
+where
+    T1: ThreadSafetyMarker,
+    T2: ThreadSafetyMarker,
+{
+    if core::any::TypeId::of::<T1>() == core::any::TypeId::of::<T2>() {
+        let report: ReportMut<'a, dyn Any, T1> = report.reborrow();
+        // SAFETY: The type IDs match, so the transmute does not change the actual
+        // type.
+        let report: ReportMut<'a, dyn Any, T2> = unsafe { core::mem::transmute(report) };
+        Some(report)
+    } else {
+        None
+    }
+}
+
 #[track_caller]
 #[inline(never)]
-pub(crate) fn __run_creation_hooks<T>(report: ReportMut<'_, dyn Any, T>)
+pub(crate) fn __run_creation_hooks<T>(mut report: ReportMut<'_, dyn Any, T>)
 where
     T: markers::ThreadSafetyMarker,
 {
-    if TypeId::of::<T>() == TypeId::of::<Local>() {
-        let report: ReportMut<'_, dyn Any, Local> =
-            unsafe { ReportMut::from_raw(report.into_raw()) };
+    if let Some(report) = safe_transmute_thread_marker::<T, Local>(&mut report) {
         run_creation_hooks_local(report);
-    } else if TypeId::of::<T>() == TypeId::of::<SendSync>() {
-        let report: ReportMut<'_, dyn Any, SendSync> =
-            unsafe { ReportMut::from_raw(report.into_raw()) };
+    } else if let Some(report) = safe_transmute_thread_marker::<T, SendSync>(&mut report) {
         run_creation_hooks_sendsync(report);
     } else {
         unreachable!(
