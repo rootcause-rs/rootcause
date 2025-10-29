@@ -142,14 +142,6 @@ where
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
     }
 
-    /// # Arguments
-    ///
-    /// - `report_formatting_function`: Whether the report in which this context
-    ///   will be embedded is being formatted using [`Display`] formatting or
-    ///   [`Debug`]
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
     fn preferred_context_formatting_style(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,

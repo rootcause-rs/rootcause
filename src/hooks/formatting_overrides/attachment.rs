@@ -102,14 +102,6 @@ pub(crate) trait UntypedAttachmentFormattingOverride:
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
-    /// # Arguments
-    ///
-    /// - `report_formatting_function`: Whether the report in which this
-    ///   attachment will be embedded is being formatted using [`Display`]
-    ///   formatting or [`Debug`]
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,

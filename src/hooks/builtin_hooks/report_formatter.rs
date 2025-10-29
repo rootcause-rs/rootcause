@@ -1,3 +1,45 @@
+//! Default report formatter implementation for the rootcause error handling
+//! library.
+//!
+//! This module provides [`DefaultReportFormatter`], a comprehensive and
+//! configurable report formatter that handles the visual presentation of error
+//! reports with hierarchical structures, attachments, and appendices.
+//!
+//! The formatter supports multiple output styles:
+//! - **Unicode with ANSI colors** ([`DefaultReportFormatter::UNICODE_ANSI`]) -
+//!   Rich visual experience for modern terminals
+//! - **ASCII-only** ([`DefaultReportFormatter::ASCII_NO_ANSI`]) - Compatible
+//!   with basic terminals and text-only outputs
+//!
+//! # Usage
+//!
+//! This formatter is the one used by default when no other formatter is
+//! registered. It is also possible to explicitly register it:
+//!
+//! ```rust
+//! use rootcause::hooks::{
+//!     builtin_hooks::report_formatter::DefaultReportFormatter,
+//!     report_formatting::register_report_formatter_hook,
+//! };
+//!
+//! // Use the default Unicode + ANSI configuration
+//! register_report_formatter_hook(DefaultReportFormatter::default());
+//!
+//! // Or use ASCII-only for compatibility
+//! register_report_formatter_hook(DefaultReportFormatter::ASCII_NO_ANSI);
+//! ```
+//!
+//! # Configuration Structures
+//!
+//! The formatter uses a hierarchy of configuration structures:
+//! - [`LineFormatting`] - Basic line prefix/suffix formatting
+//! - [`ItemFormatting`] - Multi-line item formatting with different rules for
+//!   first/middle/last lines
+//! - [`NodeConfig`] - Hierarchical node formatting with header and child
+//!   indentation
+//! - [`DefaultReportFormatter`] - Main configuration struct combining all
+//!   formatting options
+
 use alloc::{
     string::{String, ToString},
     vec::Vec,
@@ -19,99 +61,239 @@ use crate::{
     report_attachment::ReportAttachmentRef,
 };
 
+/// The default report formatter implementation that provides comprehensive
+/// formatting for error reports with configurable styling and layout options.
+///
+/// This formatter supports both ASCII-only output (suitable for environments
+/// without Unicode or ANSI support) and Unicode output with ANSI color codes
+/// for enhanced visual presentation. It handles hierarchical report structures
+/// with contexts, attachments, and appendices.
+///
+/// # Examples
+///
+/// Basic usage with default formatting:
+/// ```rust
+/// use rootcause::hooks::{
+///     builtin_hooks::report_formatter::DefaultReportFormatter,
+///     report_formatting::register_report_formatter_hook,
+/// };
+///
+/// register_report_formatter_hook(DefaultReportFormatter::default());
+/// // Use with report formatting system
+/// ```
+///
+/// Using ASCII-only formatting for compatibility:
+/// ```rust
+/// use rootcause::hooks::{
+///     builtin_hooks::report_formatter::DefaultReportFormatter,
+///     report_formatting::register_report_formatter_hook,
+/// };
+///
+/// register_report_formatter_hook(DefaultReportFormatter::ASCII_NO_ANSI);
+/// // Use in environments without Unicode/ANSI support
+/// ```
 pub struct DefaultReportFormatter {
+    /// Header text displayed at the beginning of report output
     pub report_header: &'static str,
+
+    /// Prefix applied to every line of report content
     pub report_line_prefix_always: &'static str,
+
+    /// Prefix applied to every line of appendix content
     pub appendix_line_prefix_always: &'static str,
-    pub context_standalone_formatting: NodeConfig,
-    pub context_middle_formatting: NodeConfig,
-    pub context_last_formatting: NodeConfig,
-    pub attachment_middle_formatting: ItemFormatting,
-    pub attachment_last_formatting: ItemFormatting,
-    pub headered_attachment_middle_formatting: NodeConfig,
-    pub headered_attachment_last_formatting: NodeConfig,
-    pub headered_attachment_data_formatting: ItemFormatting,
-    pub headered_attachment_data_prefix: Option<&'static str>,
-    pub headered_attachment_data_suffix: Option<&'static str>,
-    pub see_also_notice_middle_formatting: LineFormatting,
-    pub see_also_notice_last_formatting: LineFormatting,
-    pub opaque_notice_middle_formatting: LineFormatting,
-    pub opaque_notice_last_formatting: LineFormatting,
+
+    /// Formatting configuration for standalone report nodes, i.e. those without
+    /// siblings
+    pub report_node_standalone_formatting: NodeConfig,
+
+    /// Formatting configuration for report nodes that have siblings below them
+    pub report_node_middle_formatting: NodeConfig,
+
+    /// Formatting configuration for the last report node in a sequence of more
+    /// than one sibling
+    pub report_node_last_formatting: NodeConfig,
+
+    /// Formatting configuration for attachment items that output in [`Inline`]
+    /// mode and have more data below them from the same report node
+    ///
+    /// [`Inline`]: AttachmentFormattingPlacement::Inline
+    pub attachment_inline_formatting_middle: ItemFormatting,
+
+    /// Formatting configuration for attachment items that output in [`Inline`]
+    /// mode and are the last piece of data for the report node
+    ///
+    /// [`Inline`]: AttachmentFormattingPlacement::Inline
+    pub attachment_inline_formatting_last: ItemFormatting,
+
+    /// Formatting configuration for attachment items that output in
+    /// [`InlineWithHeader`] mode and have more data below them from the
+    /// same report node
+    ///
+    /// [`InlineWithHeader`]: AttachmentFormattingPlacement::InlineWithHeader
+    pub attachment_headered_formatting_middle: NodeConfig,
+
+    /// Formatting configuration for attachment items that output in
+    /// [`InlineWithHeader`] mode and are the last piece of data for the
+    /// report node
+    ///
+    /// [`InlineWithHeader`]: AttachmentFormattingPlacement::InlineWithHeader
+    pub attachment_headered_formatting_last: NodeConfig,
+
+    /// Formatting configuration for the data of the attachments that output in
+    /// [`InlineWithHeader`] mode.
+    ///
+    /// [`InlineWithHeader`]: AttachmentFormattingPlacement::InlineWithHeader
+    pub attachment_headered_formatting_data: ItemFormatting,
+
+    /// Optional prefix text for the data of the attachments that output in
+    /// [`InlineWithHeader`] mode.
+    ///
+    /// [`InlineWithHeader`]: AttachmentFormattingPlacement::InlineWithHeader
+    pub attachment_headered_data_prefix: Option<&'static str>,
+
+    /// Optional suffix text for the data of the attachments that output in
+    /// [`InlineWithHeader`] mode.
+    ///
+    /// [`InlineWithHeader`]: AttachmentFormattingPlacement::InlineWithHeader
+    pub attachment_headered_data_suffix: Option<&'static str>,
+
+    /// The formatting for the "see also" notice when this notice *is not* the
+    /// last piece of data to render for the report node.
+    ///
+    /// The "see also" notice occur when an attachment item outputs in
+    /// [`Appendix`] mode.
+    ///
+    /// [`Appendix`]: AttachmentFormattingPlacement::Appendix
+    pub notice_see_also_middle_formatting: LineFormatting,
+
+    /// The formatting for the "see also" notice when this notice *is* the last
+    /// piece of data to render for the report node.
+    ///
+    /// The "see also" notice occur when an attachment item outputs in
+    /// [`Appendix`] mode.
+    ///
+    /// [`Appendix`]: AttachmentFormattingPlacement::Appendix
+    pub notice_see_also_last_formatting: LineFormatting,
+
+    /// The formatting for the `N additional opaque attachments` notice when
+    /// this notice *is not* the last piece of data to render for the report
+    /// node.
+    ///
+    /// This notice occurs when one or more attachment items output in
+    /// [`Opaque`] mode.
+    ///
+    /// [`Opaque`]: AttachmentFormattingPlacement::Opaque
+    pub notice_opaque_middle_formatting: LineFormatting,
+
+    /// The formatting for the `N additional opaque attachments` notice when
+    /// this notice *is* the last piece of data to render for the report
+    /// node.
+    ///
+    /// This notice occurs when one or more attachment items output in
+    /// [`Opaque`] mode.
+    ///
+    /// [`Opaque`]: AttachmentFormattingPlacement::Opaque
+    pub notice_opaque_last_formatting: LineFormatting,
+
+    /// Optional separator inserted between attachments and child contexts
     pub attachment_child_separator: Option<&'static str>,
+
+    /// Optional separator inserted between sibling child contexts
     pub child_child_separator: Option<&'static str>,
+
+    /// Separator text inserted between multiple reports
     pub report_report_separator: &'static str,
+
+    /// Separator text inserted between report content and appendices
     pub report_appendix_separator: &'static str,
+
+    /// Separator text inserted between multiple appendices
     pub appendix_appendix_separator: &'static str,
+
+    /// Formatting configuration for appendix headers
     pub appendix_header: LineFormatting,
+
+    /// Formatting configuration for appendix body content
     pub appendix_body: ItemFormatting,
+
+    /// Footer text displayed after all appendices
     pub appendices_footer: &'static str,
+
+    /// Footer text displayed when there are no appendices
     pub no_appendices_footer: &'static str,
 }
 
 impl DefaultReportFormatter {
+    /// A predefined configuration that uses only ASCII characters without ANSI
+    /// color codes.
+    ///
+    /// This configuration is suitable for environments that don't support
+    /// Unicode characters or ANSI color codes, such as basic terminals, log
+    /// files, or text-only outputs. Uses simple ASCII box-drawing
+    /// alternatives like `|-`, `o`, and `--`.
     pub const ASCII_NO_ANSI: Self = Self {
         report_header: "\n",
         report_line_prefix_always: "",
         appendix_line_prefix_always: "",
-        context_standalone_formatting: NodeConfig::new(
+        report_node_standalone_formatting: NodeConfig::new(
             ("o  ", "\n"),
             ("o  ", "\n"),
             ("|  ", "\n"),
             ("|  ", "\n"),
             "",
         ),
-        context_middle_formatting: NodeConfig::new(
+        report_node_middle_formatting: NodeConfig::new(
             ("|--> o  ", "\n"),
             ("|--> o  ", "\n"),
             ("|    |  ", "\n"),
             ("|    |  ", "\n"),
             "|    ",
         ),
-        context_last_formatting: NodeConfig::new(
+        report_node_last_formatting: NodeConfig::new(
             (r"|--> o  ", "\n"),
             (r"|--> o  ", "\n"),
             ("     |  ", "\n"),
             ("     |  ", "\n"),
             "     ",
         ),
-        attachment_middle_formatting: ItemFormatting::new(
+        attachment_inline_formatting_middle: ItemFormatting::new(
             ("|- ", "\n"),
             ("|- ", "\n"),
             ("|  ", "\n"),
             ("|  ", "\n"),
         ),
-        attachment_last_formatting: ItemFormatting::new(
+        attachment_inline_formatting_last: ItemFormatting::new(
             (r"|- ", "\n"),
             (r"|- ", "\n"),
             ("   ", "\n"),
             ("   ", "\n"),
         ),
-        headered_attachment_middle_formatting: NodeConfig::new(
+        attachment_headered_formatting_middle: NodeConfig::new(
             (r"|- ", "\n"),
             ("|- ", "\n"),
             ("|  ", "\n"),
             ("|  ", "\n"),
             "| ",
         ),
-        headered_attachment_last_formatting: NodeConfig::new(
+        attachment_headered_formatting_last: NodeConfig::new(
             (r"|- ", "\n"),
             (r"|- ", "\n"),
             ("  ", "\n"),
             ("  ", "\n"),
             "  ",
         ),
-        headered_attachment_data_formatting: ItemFormatting::new(
+        attachment_headered_formatting_data: ItemFormatting::new(
             (r"|- ", "\n"),
             ("|- ", "\n"),
             ("|- ", "\n"),
             (r"|- ", "\n"),
         ),
-        headered_attachment_data_prefix: None,
-        headered_attachment_data_suffix: None,
-        see_also_notice_middle_formatting: LineFormatting::new("|- See ", " below\n"),
-        see_also_notice_last_formatting: LineFormatting::new(r"|- See ", " below\n"),
-        opaque_notice_middle_formatting: LineFormatting::new("|- ", "\n"),
-        opaque_notice_last_formatting: LineFormatting::new(r"|- ", "\n"),
+        attachment_headered_data_prefix: None,
+        attachment_headered_data_suffix: None,
+        notice_see_also_middle_formatting: LineFormatting::new("|- See ", " below\n"),
+        notice_see_also_last_formatting: LineFormatting::new(r"|- See ", " below\n"),
+        notice_opaque_middle_formatting: LineFormatting::new("|- ", "\n"),
+        notice_opaque_last_formatting: LineFormatting::new(r"|- ", "\n"),
         attachment_child_separator: None,
         child_child_separator: None,
         report_report_separator: "--\n",
@@ -122,70 +304,82 @@ impl DefaultReportFormatter {
         appendices_footer: "----------------------------------------\n",
         no_appendices_footer: "",
     };
+    /// The default formatter configuration, which is an alias for
+    /// [`UNICODE_ANSI`](Self::UNICODE_ANSI).
+    ///
+    /// This provides the best visual experience for terminals that support
+    /// Unicode and ANSI colors.
     pub const DEFAULT: Self = Self::UNICODE_ANSI;
+    /// A predefined configuration that uses Unicode box-drawing characters with
+    /// ANSI color codes.
+    ///
+    /// This configuration provides the richest visual experience with Unicode
+    /// box-drawing characters (like `├`, `╰`, `│`) and ANSI color codes for
+    /// enhanced readability. Suitable for modern terminals and development
+    /// environments.
     pub const UNICODE_ANSI: Self = Self {
         report_header: "\n",
         report_line_prefix_always: " ",
         appendix_line_prefix_always: "",
-        context_standalone_formatting: NodeConfig::new(
+        report_node_standalone_formatting: NodeConfig::new(
             ("\x1b[97m● \x1b[1m", "\x1b[0m\n"),
             ("\x1b[97m● \x1b[1m", "\x1b[0m\n"),
             ("│ \x1b[1;97m", "\x1b[0m\n"),
             ("│ \x1b[1;97m", "\x1b[0m\n"),
             "",
         ),
-        context_middle_formatting: NodeConfig::new(
+        report_node_middle_formatting: NodeConfig::new(
             ("├─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
             ("├─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
             ("│  │ \x1b[1;97m", "\x1b[0m\n"),
             ("│  │ \x1b[1;97m", "\x1b[0m\n"),
             "│  ",
         ),
-        context_last_formatting: NodeConfig::new(
+        report_node_last_formatting: NodeConfig::new(
             ("╰─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
             ("╰─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
             ("   │ \x1b[1;97m", "\x1b[0m\n"),
             ("   │ \x1b[1;97m", "\x1b[0m\n"),
             "   ",
         ),
-        attachment_middle_formatting: ItemFormatting::new(
+        attachment_inline_formatting_middle: ItemFormatting::new(
             ("├ ", "\n"),
             ("├ ", "\n"),
             ("│ ", "\n"),
             ("│ ", "\n"),
         ),
-        attachment_last_formatting: ItemFormatting::new(
+        attachment_inline_formatting_last: ItemFormatting::new(
             ("╰ ", "\n"),
             ("╰ ", "\n"),
             ("  ", "\n"),
             ("  ", "\n"),
         ),
-        headered_attachment_middle_formatting: NodeConfig::new(
+        attachment_headered_formatting_middle: NodeConfig::new(
             ("├ \x1b[4m", "\x1b[0m\n"),
             ("├ \x1b[4m", "\x1b[0m\n"),
             ("│\x1b[4m", "\x1b[0m\n"),
             ("│\x1b[4m", "\x1b[0m\n"),
             "│ ",
         ),
-        headered_attachment_last_formatting: NodeConfig::new(
+        attachment_headered_formatting_last: NodeConfig::new(
             ("╰ \x1b[4m", "\x1b[0m\n"),
             ("╰ \x1b[4m", "\x1b[0m\n"),
             (" \x1b[4m", "\x1b[0m\n"),
             (" \x1b[4m", "\x1b[0m\n"),
             "  ",
         ),
-        headered_attachment_data_formatting: ItemFormatting::new(
+        attachment_headered_formatting_data: ItemFormatting::new(
             ("│ ", "\n"),
             ("│ ", "\n"),
             ("│ ", "\n"),
             ("│ ", "\n"),
         ),
-        headered_attachment_data_prefix: None,
-        headered_attachment_data_suffix: Some("╰─\n"),
-        see_also_notice_middle_formatting: LineFormatting::new("├ See \x1b[4m", "\x1b[0m below\n"),
-        see_also_notice_last_formatting: LineFormatting::new("╰ See \x1b[4m", "\x1b[0m below\n"),
-        opaque_notice_middle_formatting: LineFormatting::new("├ ", "\n"),
-        opaque_notice_last_formatting: LineFormatting::new("╰ ", "\n"),
+        attachment_headered_data_prefix: None,
+        attachment_headered_data_suffix: Some("╰─\n"),
+        notice_see_also_middle_formatting: LineFormatting::new("├ See \x1b[4m", "\x1b[0m below\n"),
+        notice_see_also_last_formatting: LineFormatting::new("╰ See \x1b[4m", "\x1b[0m below\n"),
+        notice_opaque_middle_formatting: LineFormatting::new("├ ", "\n"),
+        notice_opaque_last_formatting: LineFormatting::new("╰ ", "\n"),
         attachment_child_separator: Some("│\n"),
         child_child_separator: Some("│\n"),
         report_report_separator: "━━\n",
@@ -204,6 +398,203 @@ impl Default for DefaultReportFormatter {
     }
 }
 
+/// Configuration for formatting individual lines with prefix and suffix text.
+///
+/// This is the fundamental building block for all report formatting, allowing
+/// each line to be decorated with consistent prefix and suffix strings that
+/// can include tree characters, ANSI color codes, or other visual elements.
+///
+/// # Examples
+///
+/// Creating line formatting with tree characters:
+/// ```rust
+/// use rootcause::hooks::builtin_hooks::report_formatter::LineFormatting;
+///
+/// let formatting = LineFormatting::new("├─ ", "\n");
+/// // This will format lines as: "├─ content\n"
+/// ```
+///
+/// Creating line formatting with ANSI colors:
+/// ```rust
+/// use rootcause::hooks::builtin_hooks::report_formatter::LineFormatting;
+///
+/// let formatting = LineFormatting::new("\x1b[31m● ", "\x1b[0m\n");
+/// // This will format lines as: "\x1b[31m● content\x1b[0m\n" (red bullet)
+/// ```
+#[derive(Copy, Clone)]
+pub struct LineFormatting {
+    /// Text prefix prepended to the beginning of each line
+    pub prefix: &'static str,
+    /// Text suffix appended to the end of each line
+    pub suffix: &'static str,
+}
+
+impl LineFormatting {
+    /// Creates a new line formatting configuration with the specified prefix
+    /// and suffix.
+    ///
+    /// # Arguments
+    ///
+    /// * `prefix` - Text to prepend to each formatted line
+    /// * `suffix` - Text to append to each formatted line
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rootcause::hooks::builtin_hooks::report_formatter::LineFormatting;
+    ///
+    /// let formatting = LineFormatting::new("→ ", "\n");
+    /// ```
+    pub const fn new(prefix: &'static str, suffix: &'static str) -> Self {
+        Self { prefix, suffix }
+    }
+}
+/// Configuration for formatting items that may span multiple lines, with
+/// different formatting rules based on the line's position within the item.
+///
+/// This allows for sophisticated formatting where the first, middle, and last
+/// lines of multi-line content can have different prefixes and suffixes,
+/// enabling tree-like structures and visual connection between related lines.
+///
+/// # Examples
+///
+/// Creating formatting for a tree structure:
+/// ```rust
+/// use rootcause::hooks::builtin_hooks::report_formatter::ItemFormatting;
+///
+/// let formatting = ItemFormatting::new(
+///     ("● ", "\n"), // single line: "● content\n"
+///     ("┌ ", "\n"), // first line:  "┌ first line\n"
+///     ("│ ", "\n"), // middle line: "│ middle line\n"
+///     ("└ ", "\n"), // last line:   "└ last line\n"
+/// );
+/// ```
+#[derive(Copy, Clone)]
+pub struct ItemFormatting {
+    /// Formatting applied when the item consists of only one line
+    pub standalone_line: LineFormatting,
+    /// Formatting applied to the first line of a multi-line item
+    pub first_line: LineFormatting,
+    /// Formatting applied to middle lines of a multi-line item
+    pub middle_line: LineFormatting,
+    /// Formatting applied to the last line of a multi-line item
+    pub last_line: LineFormatting,
+}
+
+impl ItemFormatting {
+    /// Creates a new item formatting configuration with line-specific
+    /// formatting rules.
+    ///
+    /// # Arguments
+    ///
+    /// * `standalone_line` - Prefix and suffix for single-line items: `(prefix,
+    ///   suffix)`
+    /// * `first_line` - Prefix and suffix for the first line of multi-line
+    ///   items: `(prefix, suffix)`
+    /// * `middle_line` - Prefix and suffix for middle lines of multi-line
+    ///   items: `(prefix, suffix)`
+    /// * `last_line` - Prefix and suffix for the last line of multi-line items:
+    ///   `(prefix, suffix)`
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rootcause::hooks::builtin_hooks::report_formatter::ItemFormatting;
+    ///
+    /// let formatting = ItemFormatting::new(
+    ///     ("■ ", "\n"), // standalone: "■ content\n"
+    ///     ("┌ ", "\n"), // first:      "┌ first line\n"
+    ///     ("│ ", "\n"), // middle:     "│ middle line\n"
+    ///     ("└ ", "\n"), // last:       "└ last line\n"
+    /// );
+    /// ```
+    pub const fn new(
+        standalone_line: (&'static str, &'static str),
+        first_line: (&'static str, &'static str),
+        middle_line: (&'static str, &'static str),
+        last_line: (&'static str, &'static str),
+    ) -> Self {
+        Self {
+            standalone_line: LineFormatting::new(standalone_line.0, standalone_line.1),
+            first_line: LineFormatting::new(first_line.0, first_line.1),
+            middle_line: LineFormatting::new(middle_line.0, middle_line.1),
+            last_line: LineFormatting::new(last_line.0, last_line.1),
+        }
+    }
+}
+
+/// Configuration for formatting hierarchical nodes that contain both header
+/// content and child elements with specific indentation.
+///
+/// A node represents a hierarchical element in the report structure, such as a
+/// context or a headered attachment, that has both a header line and potential
+/// child content that needs to be indented relative to the header.
+///
+/// # Examples
+///
+/// Creating a node configuration with tree-like formatting:
+/// ```rust
+/// use rootcause::hooks::builtin_hooks::report_formatter::{ItemFormatting, NodeConfig};
+///
+/// let config = NodeConfig::new(
+///     ("● ", "\n"),  // standalone header
+///     ("├─ ", "\n"), // first line of multi-line header
+///     ("│  ", "\n"), // middle lines of multi-line header
+///     ("╰─ ", "\n"), // last line of multi-line header
+///     "   ",         // prefix for child content
+/// );
+/// ```
+#[derive(Copy, Clone)]
+pub struct NodeConfig {
+    /// Formatting configuration for the node's header content
+    pub header: ItemFormatting,
+    /// Text prefix applied to all child content lines for proper indentation
+    pub prefix_children: &'static str,
+}
+
+impl NodeConfig {
+    /// Creates a new node configuration with header formatting and child
+    /// indentation.
+    ///
+    /// # Arguments
+    ///
+    /// * `standalone_line` - Prefix and suffix for single-line headers:
+    ///   `(prefix, suffix)`
+    /// * `first_line` - Prefix and suffix for the first line of multi-line
+    ///   headers: `(prefix, suffix)`
+    /// * `middle_line` - Prefix and suffix for middle lines of multi-line
+    ///   headers: `(prefix, suffix)`
+    /// * `last_line` - Prefix and suffix for the last line of multi-line
+    ///   headers: `(prefix, suffix)`
+    /// * `prefix_children` - Text prefix applied to all child content for
+    ///   proper indentation
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rootcause::hooks::builtin_hooks::report_formatter::NodeConfig;
+    ///
+    /// let config = NodeConfig::new(
+    ///     ("◆ ", "\n"), // standalone header
+    ///     ("◆ ", "\n"), // first line of a multi-line header
+    ///     ("│ ", "\n"), // middle lines of multi-line header
+    ///     ("╰ ", "\n"), // last line of multi-line header
+    ///     "  ",         // indent for children
+    /// );
+    /// ```
+    pub const fn new(
+        standalone_line: (&'static str, &'static str),
+        first_line: (&'static str, &'static str),
+        middle_line: (&'static str, &'static str),
+        last_line: (&'static str, &'static str),
+        prefix_children: &'static str,
+    ) -> Self {
+        Self {
+            header: ItemFormatting::new(standalone_line, first_line, middle_line, last_line),
+            prefix_children,
+        }
+    }
+}
 type Appendices<'a> = IndexMap<
     &'static str,
     Vec<(ReportAttachmentRef<'a, dyn Any>, FormattingFunction)>,
@@ -228,63 +619,6 @@ impl ReportFormatterHook for DefaultReportFormatter {
         formatter.write_str(self.report_header)?;
         DefaultFormatterState::new(self, formatter, report_formatting_function)
             .format_reports(reports)
-    }
-}
-
-#[derive(Copy, Clone)]
-pub struct NodeConfig {
-    pub header: ItemFormatting,
-    pub prefix_children: &'static str,
-}
-
-#[derive(Copy, Clone)]
-pub struct ItemFormatting {
-    pub standalone_line: LineFormatting,
-    pub first_line: LineFormatting,
-    pub middle_line: LineFormatting,
-    pub last_line: LineFormatting,
-}
-
-#[derive(Copy, Clone)]
-pub struct LineFormatting {
-    pub prefix: &'static str,
-    pub suffix: &'static str,
-}
-
-impl LineFormatting {
-    pub const fn new(prefix: &'static str, suffix: &'static str) -> Self {
-        Self { prefix, suffix }
-    }
-}
-
-impl ItemFormatting {
-    pub const fn new(
-        standalone_line: (&'static str, &'static str),
-        first_line: (&'static str, &'static str),
-        middle_line: (&'static str, &'static str),
-        last_line: (&'static str, &'static str),
-    ) -> Self {
-        Self {
-            standalone_line: LineFormatting::new(standalone_line.0, standalone_line.1),
-            first_line: LineFormatting::new(first_line.0, first_line.1),
-            middle_line: LineFormatting::new(middle_line.0, middle_line.1),
-            last_line: LineFormatting::new(last_line.0, last_line.1),
-        }
-    }
-}
-
-impl NodeConfig {
-    pub const fn new(
-        standalone_line: (&'static str, &'static str),
-        first_line: (&'static str, &'static str),
-        middle_line: (&'static str, &'static str),
-        last_line: (&'static str, &'static str),
-        prefix_children: &'static str,
-    ) -> Self {
-        Self {
-            header: ItemFormatting::new(standalone_line, first_line, middle_line, last_line),
-            prefix_children,
-        }
     }
 }
 
@@ -407,11 +741,11 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         is_last_child: bool,
     ) -> fmt::Result {
         let formatting = if is_first_child && is_last_child {
-            &self.config.context_standalone_formatting
+            &self.config.report_node_standalone_formatting
         } else if is_last_child {
-            &self.config.context_last_formatting
+            &self.config.report_node_last_formatting
         } else {
-            &self.config.context_middle_formatting
+            &self.config.report_node_middle_formatting
         };
         self.format_node(
             tmp_value_buffer,
@@ -475,9 +809,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
 
         if opaque_attachment_count != 0 {
             let item_info = if has_children {
-                &self.config.opaque_notice_middle_formatting
+                &self.config.notice_opaque_middle_formatting
             } else {
-                &self.config.opaque_notice_last_formatting
+                &self.config.notice_opaque_last_formatting
             };
             self.format_line(
                 item_info,
@@ -529,9 +863,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         match attachment_formatting_style.placement {
             AttachmentFormattingPlacement::Inline => {
                 let formatting = if is_last {
-                    &self.config.attachment_last_formatting
+                    &self.config.attachment_inline_formatting_last
                 } else {
-                    &self.config.attachment_middle_formatting
+                    &self.config.attachment_inline_formatting_middle
                 };
                 self.format_item(
                     tmp_value_buffer,
@@ -542,9 +876,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             }
             AttachmentFormattingPlacement::InlineWithHeader { header } => {
                 let formatting = if is_last {
-                    &self.config.headered_attachment_last_formatting
+                    &self.config.attachment_headered_formatting_last
                 } else {
-                    &self.config.headered_attachment_middle_formatting
+                    &self.config.attachment_headered_formatting_middle
                 };
 
                 self.format_node(
@@ -553,20 +887,20 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     header,
                     FormattingFunction::Display,
                     |this, tmp_value_buffer| {
-                        if let Some(headered_attachment_data_prefix) =
-                            this.config.headered_attachment_data_prefix
+                        if let Some(attachment_headered_data_prefix) =
+                            this.config.attachment_headered_data_prefix
                         {
-                            this.format_with_line_prefix(headered_attachment_data_prefix)?;
+                            this.format_with_line_prefix(attachment_headered_data_prefix)?;
                         }
 
                         this.format_item(
                             tmp_value_buffer,
-                            &self.config.headered_attachment_data_formatting,
+                            &self.config.attachment_headered_formatting_data,
                             attachment.format_inner(),
                             attachment_formatting_style.function,
                         )?;
                         if let Some(headered_attachment_data_suffix) =
-                            this.config.headered_attachment_data_suffix
+                            this.config.attachment_headered_data_suffix
                         {
                             this.format_with_line_prefix(headered_attachment_data_suffix)?;
                         }
@@ -579,9 +913,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 let appendices = self.appendices.entry(appendix_name).or_default();
                 appendices.push((attachment, attachment_formatting_style.function));
                 let formatting = if is_last {
-                    &self.config.see_also_notice_last_formatting
+                    &self.config.notice_see_also_last_formatting
                 } else {
-                    &self.config.see_also_notice_middle_formatting
+                    &self.config.notice_see_also_middle_formatting
                 };
                 let line = format_args!("{appendix_name} #{}", appendices.len());
                 self.format_line(formatting, line)?;
