@@ -1,6 +1,6 @@
 [package]
 name = "rootcause"
-version = "0.5.0"
+version = "0.6.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 description = "A flexible, ergonomic, and inspectable error reporting library for Rust"
@@ -29,7 +29,7 @@ backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
 regex = { version = "1.12.2", optional = true }
 
 # Internal dependencies
-rootcause-internals = { path = "rootcause-internals", version = "=0.5.0" }
+rootcause-internals = { path = "rootcause-internals", version = "=0.6.0" }
 
 [dev-dependencies]
 indexmap = "2.12.0"
