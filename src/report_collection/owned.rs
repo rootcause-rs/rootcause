@@ -257,6 +257,8 @@ where
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
+    /// Returns a reference to the collection with type-erased contexts via
+    /// `dyn Any`.
     pub fn as_dyn_any(&self) -> &ReportCollection<dyn Any, T> {
         unsafe { ReportCollection::from_raw_ref(&self.raw) }
     }
@@ -289,6 +291,8 @@ where
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
+    /// Returns a reference to the collection with `Local` thread safety
+    /// semantics.
     pub fn as_local(&self) -> &ReportCollection<C, Local> {
         unsafe { ReportCollection::from_raw_ref(&self.raw) }
     }

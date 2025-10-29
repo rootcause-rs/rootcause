@@ -154,6 +154,16 @@ where
         unsafe { ReportCollection::from_raw_mut(raw) }
     }
 
+    /// Consumes the [`ReportMut`] and returns a mutable reference to the child
+    /// reports with the same lifetime.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollection};
+    /// # let mut report = report!("error message");
+    /// let report_mut: ReportMut<'_> = report.as_mut();
+    /// let children_mut: &mut ReportCollection = report_mut.into_children_mut();
+    /// ```
     pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
         let raw = self.into_raw().into_children_mut();
         unsafe { ReportCollection::from_raw_mut(raw) }
@@ -186,6 +196,16 @@ where
         unsafe { ReportAttachments::from_raw_mut(raw) }
     }
 
+    /// Consumes the [`ReportMut`] and returns a mutable reference to the
+    /// attachments with the same lifetime.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachments};
+    /// # let mut report = report!("error message");
+    /// let report_mut: ReportMut<'_> = report.as_mut();
+    /// let attachments_mut: &mut ReportAttachments = report_mut.into_attachments_mut();
+    /// ```
     pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
         let raw = self.into_raw().into_attachments_mut();
         unsafe { ReportAttachments::from_raw_mut(raw) }
