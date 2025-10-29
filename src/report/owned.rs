@@ -1002,14 +1002,7 @@ where
     where
         C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == self.current_context_type_id() {
-            // SAFETY:
-            // - The context is valid because we just checked that it matches
-            // - The thread marker is valid, because does not change
-            Some(unsafe { self.downcast_current_context_unchecked() })
-        } else {
-            None
-        }
+        self.as_ref().downcast_current_context()
     }
 
     /// Downcasts the current context to a specific type without checking.

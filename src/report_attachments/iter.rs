@@ -7,6 +7,25 @@ use crate::{
     report_attachment::{ReportAttachment, ReportAttachmentRef},
 };
 
+/// An iterator over references to report attachments.
+///
+/// This iterator yields [`ReportAttachmentRef`] items and is created by calling
+/// [`ReportAttachments::iter`].
+///
+/// [`ReportAttachmentRef`]: crate::report_attachment::ReportAttachmentRef
+/// [`ReportAttachments::iter`]: crate::report_attachments::ReportAttachments::iter
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::{report_attachment::ReportAttachment, report_attachments::{ReportAttachments, ReportAttachmentsIter}};
+///
+/// let mut attachments = ReportAttachments::new_sendsync();
+/// attachments.push(ReportAttachment::new("debug info").into_dyn_any());
+/// attachments.push(ReportAttachment::new(42).into_dyn_any());
+///
+/// let iterator: ReportAttachmentsIter<'_> = attachments.iter();
+/// ```
 pub struct ReportAttachmentsIter<'a> {
     iter: core::slice::Iter<'a, RawAttachment>,
 }
@@ -52,6 +71,28 @@ impl<'a> ExactSizeIterator for ReportAttachmentsIter<'a> {
 
 impl<'a> FusedIterator for ReportAttachmentsIter<'a> {}
 
+/// An iterator that consumes report attachments and yields owned values.
+///
+/// This iterator yields [`ReportAttachment`] items and is created by calling
+/// [`ReportAttachments::into_iter`].
+///
+/// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
+/// [`ReportAttachments::into_iter`]: crate::report_attachments::ReportAttachments::into_iter
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::{
+///     report_attachment::ReportAttachment,
+///     report_attachments::{ReportAttachments, ReportAttachmentsIntoIter},
+/// };
+///
+/// let mut attachments = ReportAttachments::new_sendsync();
+/// attachments.push(ReportAttachment::new("debug info").into_dyn_any());
+/// attachments.push(ReportAttachment::new(42).into_dyn_any());
+///
+/// let iterator: ReportAttachmentsIntoIter<_> = attachments.into_iter();
+/// ```
 pub struct ReportAttachmentsIntoIter<T>
 where
     T: markers::ThreadSafetyMarker,
@@ -64,7 +105,8 @@ impl<T> ReportAttachmentsIntoIter<T>
 where
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new `AttachmentsIntoIter` from an iterator of raw attachments
+    /// Creates a new [`ReportAttachmentsIntoIter`] from an iterator of raw
+    /// attachments
     ///
     /// # Safety
     ///

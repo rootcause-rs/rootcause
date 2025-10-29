@@ -100,9 +100,9 @@ where
 
 /// An owning iterator over reports in a [`ReportCollection`].
 ///
-/// This iterator consumes a [`ReportCollection`] and yields owned [`Report`] instances.
-/// Unlike [`ReportCollectionIter`], this iterator takes ownership of the reports,
-/// allowing you to move them out of the collection.
+/// This iterator consumes a [`ReportCollection`] and yields owned [`Report`]
+/// instances. Unlike [`ReportCollectionIter`], this iterator takes ownership of
+/// the reports, allowing you to move them out of the collection.
 ///
 /// # Examples
 ///

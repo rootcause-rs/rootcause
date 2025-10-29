@@ -165,7 +165,7 @@ where
     where
         A: Sized,
     {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+        self.as_ref().inner()
     }
 
     /// Returns the [`TypeId`] of the inner attachment.
@@ -347,7 +347,7 @@ where
     where
         A: ObjectMarker,
     {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+        unsafe { self.as_ref().downcast_inner_unchecked() }
     }
 
     /// Attempts to downcast the [`ReportAttachment`] to a specific attachment

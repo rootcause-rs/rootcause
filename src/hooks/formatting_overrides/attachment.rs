@@ -21,7 +21,7 @@
 //! use core::{any::Any, fmt};
 //!
 //! use rootcause::{
-//!     handlers::{AttachmentFormattingStyle, AttachmentFormattingPlacement, FormattingFunction},
+//!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
 //!     hooks::formatting_overrides::attachment::{
 //!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
 //!     },
@@ -71,12 +71,15 @@
 //! setting their placement to `Hidden`:
 //!
 //! ```rust
+//! use core::any::Any;
+//!
 //! use rootcause::{
-//!     handlers::{AttachmentFormattingStyle, AttachmentFormattingPlacement, FormattingFunction},
-//!     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, register_attachment_hook},
+//!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
+//!     hooks::formatting_overrides::attachment::{
+//!         AttachmentFormattingOverride, register_attachment_hook,
+//!     },
 //!     report_attachment::ReportAttachmentRef,
 //! };
-//! use core::any::Any;
 //!
 //! struct SensitiveData(String);
 //!
