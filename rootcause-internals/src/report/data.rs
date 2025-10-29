@@ -116,7 +116,7 @@ impl<'a> RawReportRef<'a> {
     }
 
     /// Returns the child reports of this report.
-    pub fn children(self) -> &'a [RawReport] {
+    pub fn children(self) -> &'a Vec<RawReport> {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner context type, but we do know
         // that it points to an instance of `ReportData<C>` for some specific `C`.
@@ -135,7 +135,7 @@ impl<'a> RawReportRef<'a> {
     }
 
     /// Returns the attachments of this report.
-    pub fn attachments(self) -> &'a [RawAttachment] {
+    pub fn attachments(self) -> &'a Vec<RawAttachment> {
         let ptr = self.as_ptr();
         // SAFETY: We don't know the actual inner context type, but we do know
         // that it points to an instance of `ReportData<C>` for some specific `C`.

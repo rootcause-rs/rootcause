@@ -14,8 +14,8 @@ use crate::{
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::{self, PreformattedAttachment, PreformattedContext},
     report_attachment::ReportAttachment,
-    report_attachments::ReportAttachmentsRef,
-    report_collection::ReportCollectionRef,
+    report_attachments::ReportAttachments,
+    report_collection::ReportCollection,
     util::format_helper,
 };
 
@@ -90,29 +90,29 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportRef, report_collection::ReportCollectionRef};
+    /// # use rootcause::{prelude::*, ReportRef, report_collection::ReportCollection};
     /// let report = report!("parent error").into_cloneable();
     /// let report_ref: ReportRef<'_, _, _> = report.as_ref();
-    /// let children: ReportCollectionRef<'_> = report_ref.children();
+    /// let children: &ReportCollection = report_ref.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
-    pub fn children(self) -> ReportCollectionRef<'a, dyn Any, T> {
+    pub fn children(self) -> &'a ReportCollection<dyn Any, T> {
         let raw = self.as_raw_ref().children();
-        unsafe { ReportCollectionRef::from_raw(raw) }
+        unsafe { ReportCollection::from_raw_ref(raw) }
     }
 
     /// Returns a reference to the attachments.
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportRef, report_attachments::ReportAttachmentsRef};
+    /// # use rootcause::{prelude::*, ReportRef, report_attachments::ReportAttachments};
     /// # let report = report!("error with attachment").into_cloneable();
     /// let report_ref: ReportRef<'_> = report.as_ref();
-    /// let attachments: ReportAttachmentsRef<'_> = report_ref.attachments();
+    /// let attachments: &ReportAttachments = report_ref.attachments();
     /// ```
-    pub fn attachments(self) -> ReportAttachmentsRef<'a, T> {
+    pub fn attachments(self) -> &'a ReportAttachments<T> {
         let raw = self.as_raw_ref().attachments();
-        unsafe { ReportAttachmentsRef::from_raw(raw) }
+        unsafe { ReportAttachments::from_raw_ref(raw) }
     }
 
     /// Changes the context type of the [`ReportRef`] to `dyn Any`.
@@ -416,8 +416,12 @@ where
         let report = self.into_dyn_any().into_uncloneable().into_local();
         format_helper(
             report,
-            |report, formatter| crate::hooks::display_context(report, formatter),
-            |report, formatter| crate::hooks::debug_context(report, formatter),
+            |report, formatter| {
+                crate::hooks::formatting_overrides::context::display_context(report, formatter)
+            },
+            |report, formatter| {
+                crate::hooks::formatting_overrides::context::debug_context(report, formatter)
+            },
         )
     }
 
@@ -463,7 +467,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        crate::hooks::get_preferred_context_formatting_style(
+        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
             self.into_dyn_any().into_uncloneable().into_local(),
             report_formatting_function,
         )
@@ -688,7 +692,7 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dyn_any().into_uncloneable().into_local();
-        crate::hooks::format_report(report, f, FormattingFunction::Display)
+        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Display)
     }
 }
 
@@ -700,7 +704,7 @@ where
 {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dyn_any().into_uncloneable().into_local();
-        crate::hooks::format_report(report, f, FormattingFunction::Debug)
+        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Debug)
     }
 }
 

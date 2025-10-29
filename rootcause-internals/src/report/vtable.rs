@@ -56,16 +56,18 @@ impl ReportVtable {
     /// Creates a new [`ReportVtable`] for the context type `C` and the handler
     /// type `H`.
     pub(super) const fn new<C: 'static, H: ContextHandler<C>>() -> &'static Self {
-        &Self {
-            type_id: TypeId::of::<C>,
-            handler_type_id: TypeId::of::<H>,
-            drop: drop::<C>,
-            clone_arc: clone_arc::<C>,
-            strong_count: strong_count::<C>,
-            source: source::<C, H>,
-            display: display::<C, H>,
-            debug: debug::<C, H>,
-            preferred_context_formatting_style: preferred_context_formatting_style::<C, H>,
+        const {
+            &Self {
+                type_id: TypeId::of::<C>,
+                handler_type_id: TypeId::of::<H>,
+                drop: drop::<C>,
+                clone_arc: clone_arc::<C>,
+                strong_count: strong_count::<C>,
+                source: source::<C, H>,
+                display: display::<C, H>,
+                debug: debug::<C, H>,
+                preferred_context_formatting_style: preferred_context_formatting_style::<C, H>,
+            }
         }
     }
 

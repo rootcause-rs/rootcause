@@ -165,7 +165,7 @@ where
     where
         A: Sized,
     {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+        self.as_ref().inner()
     }
 
     /// Returns the [`TypeId`] of the inner attachment.
@@ -184,8 +184,16 @@ where
         let attachment: ReportAttachmentRef<'_, dyn Any> = self.as_ref().into_dyn_any();
         format_helper(
             attachment,
-            |attachment, formatter| crate::hooks::display_attachment(attachment, None, formatter),
-            |attachment, formatter| crate::hooks::debug_attachment(attachment, None, formatter),
+            |attachment, formatter| {
+                crate::hooks::formatting_overrides::attachment::display_attachment(
+                    attachment, None, formatter,
+                )
+            },
+            |attachment, formatter| {
+                crate::hooks::formatting_overrides::attachment::debug_attachment(
+                    attachment, None, formatter,
+                )
+            },
         )
     }
 
@@ -213,7 +221,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::get_preferred_formatting_style(
+        crate::hooks::formatting_overrides::attachment::get_preferred_formatting_style(
             self.as_ref().into_dyn_any(),
             report_formatting_function,
         )
@@ -339,7 +347,7 @@ where
     where
         A: ObjectMarker,
     {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+        unsafe { self.as_ref().downcast_inner_unchecked() }
     }
 
     /// Attempts to downcast the [`ReportAttachment`] to a specific attachment

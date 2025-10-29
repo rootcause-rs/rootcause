@@ -2,7 +2,9 @@ use indexmap::IndexMap;
 use rootcause::{
     Report,
     handlers::{self, FormattingFunction},
-    hooks::{AttachmentHook, register_attachment_hook},
+    hooks::formatting_overrides::attachment::{
+        AttachmentFormattingOverride, register_attachment_hook,
+    },
     prelude::ResultExt,
     report,
     report_attachment::ReportAttachmentRef,
@@ -28,7 +30,7 @@ impl core::fmt::Display for Wat {
 
 struct WatHandler;
 
-impl AttachmentHook<Wat> for WatHandler {
+impl AttachmentFormattingOverride<Wat> for WatHandler {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,

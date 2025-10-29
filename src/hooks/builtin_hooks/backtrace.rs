@@ -3,32 +3,6 @@
 //! This module provides functionality to automatically capture and attach stack
 //! backtraces to reports when they are created. This is useful for debugging to
 //! see the call stack that led to an error.
-//!
-//! ## Feature Requirement
-//!
-//! This module is only available when the `backtrace` feature is enabled in
-//! `Cargo.toml`:
-//!
-//! ```toml
-//! [dependencies]
-//! rootcause = { version = "0.3", features = ["backtrace"] }
-//! ```
-//!
-//! ## Usage
-//!
-//! The [`BacktraceCollector`] can be registered as an attachment collector hook
-//! to automatically capture backtraces for all reports:
-//!
-//! ```rust
-//! use rootcause::hooks::{
-//!     attachment_collectors::backtrace::BacktraceCollector, register_attachment_collector_hook,
-//! };
-//!
-//! register_attachment_collector_hook(BacktraceCollector::default());
-//! ```
-//!
-//! Once registered, all reports will automatically include a backtrace showing
-//! the call stack from where the report was created.
 
 use core::fmt;
 use std::{
@@ -42,7 +16,7 @@ use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
 };
 
-use crate::hooks::AttachmentCollectorHook;
+use crate::hooks::report_creation::AttachmentCollectorHook;
 
 /// Stack backtrace information.
 ///
@@ -81,11 +55,15 @@ pub struct FramePath {
     pub suffix: String,
 }
 
+/// A common prefix for a frame path.
 pub struct FramePrefix {
+    /// The key used to identify this prefix (e.g., index name or "rust-src").
     pub key: String,
+    /// The full prefix path value.
     pub value: String,
 }
 
+/// Handler for formatting [`Backtrace`] attachments.
 #[derive(Copy, Clone)]
 pub struct BacktraceHandler;
 
@@ -154,9 +132,18 @@ impl AttachmentHandler<Backtrace> for BacktraceHandler {
     }
 }
 
+/// Attachment collector for capturing stack backtraces.
+///
+/// When registered as a report creation hook, this collector automatically
+/// captures the current stack backtrace and attaches it as a [`Backtrace`]
+/// attachment.
 #[derive(Copy, Clone)]
 pub struct BacktraceCollector {
+    /// Maximum number of frames to capture in the backtrace.
     pub max_frame_count: usize,
+
+    /// Whether to filter out frames from the backtrace that are part of
+    /// the report creation process, standard library and tokio internals.
     pub do_capture_filtering: bool,
 }
 

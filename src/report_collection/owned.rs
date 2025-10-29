@@ -1,13 +1,16 @@
 use alloc::vec::Vec;
 use core::{any::Any, marker::PhantomData};
 
-use rootcause_internals::{RawReport, handlers::ContextHandler};
+use rootcause_internals::{
+    RawReport,
+    handlers::{ContextHandler, FormattingFunction},
+};
 
 use crate::{
     Report, ReportRef, handlers,
     markers::{self, Cloneable, Local, Mutable, SendSync},
     report_attachments::ReportAttachments,
-    report_collection::{ReportCollectionIntoIter, ReportCollectionIter, ReportCollectionRef},
+    report_collection::{ReportCollectionIntoIter, ReportCollectionIter},
 };
 
 /// A collection of reports.
@@ -54,6 +57,14 @@ where
             _context: PhantomData,
             _thread_safety: PhantomData,
         }
+    }
+
+    pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
+        unsafe { &*(raw as *const Vec<RawReport> as *const Self) }
+    }
+
+    pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
+        unsafe { &mut *(raw as *mut Vec<RawReport> as *mut Self) }
     }
 
     pub(crate) fn into_raw(self) -> Vec<RawReport> {
@@ -213,29 +224,7 @@ where
     /// }
     /// ```
     pub fn iter(&self) -> ReportCollectionIter<'_, C, T> {
-        self.as_ref().into_iter()
-    }
-
-    /// Returns a reference view of the collection.
-    ///
-    /// This method creates a [`ReportCollectionRef`] which provides a
-    /// lightweight, non-owning view of the collection. This is useful for
-    /// passing the collection to functions that don't need to take
-    /// ownership.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rootcause::{report, report_collection::ReportCollection};
-    ///
-    /// let mut collection = ReportCollection::new();
-    /// collection.push(report!("An error").into_cloneable());
-    ///
-    /// let collection_ref = collection.as_ref();
-    /// assert_eq!(collection_ref.len(), 1);
-    /// ```
-    pub fn as_ref(&self) -> ReportCollectionRef<'_, C, T> {
-        unsafe { ReportCollectionRef::from_raw(self.raw.as_slice()) }
+        unsafe { ReportCollectionIter::from_raw(&self.raw) }
     }
 
     /// Converts the collection to use type-erased contexts via `dyn Any`.
@@ -268,6 +257,12 @@ where
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
+    /// Returns a reference to the collection with type-erased contexts via
+    /// `dyn Any`.
+    pub fn as_dyn_any(&self) -> &ReportCollection<dyn Any, T> {
+        unsafe { ReportCollection::from_raw_ref(&self.raw) }
+    }
+
     /// Converts the collection to use `Local` thread safety semantics.
     ///
     /// This changes the thread safety marker from any type to [`Local`], which
@@ -294,6 +289,12 @@ where
     /// ```
     pub fn into_local(self) -> ReportCollection<C, Local> {
         unsafe { ReportCollection::from_raw(self.into_raw()) }
+    }
+
+    /// Returns a reference to the collection with `Local` thread safety
+    /// semantics.
+    pub fn as_local(&self) -> &ReportCollection<C, Local> {
+        unsafe { ReportCollection::from_raw_ref(&self.raw) }
     }
 
     /// Creates a new [`Report`] with the given context and sets the current
@@ -520,8 +521,13 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.as_ref(), f)
+    fn fmt<'a>(&'a self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let reports: &'a [RawReport] = &self.raw;
+        let reports: &'a [ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>] = unsafe {
+            &*(reports as *const [RawReport]
+                as *const [ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>])
+        };
+        crate::hooks::report_formatting::format_reports(reports, f, FormattingFunction::Display)
     }
 }
 
@@ -530,8 +536,13 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.as_ref(), f)
+    fn fmt<'a>(&'a self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let reports: &'a [RawReport] = &self.raw;
+        let reports: &'a [ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>] = unsafe {
+            &*(reports as *const [RawReport]
+                as *const [ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>])
+        };
+        crate::hooks::report_formatting::format_reports(reports, f, FormattingFunction::Display)
     }
 }
 
@@ -603,6 +614,19 @@ where
 
     fn into_iter(self) -> Self::IntoIter {
         unsafe { ReportCollectionIntoIter::from_raw(self.raw) }
+    }
+}
+
+impl<'a, C, T> IntoIterator for &'a ReportCollection<C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
+    type IntoIter = ReportCollectionIter<'a, C, T>;
+    type Item = ReportRef<'a, C, Cloneable, T>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

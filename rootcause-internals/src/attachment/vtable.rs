@@ -46,13 +46,15 @@ impl AttachmentVtable {
     /// Creates a new [`AttachmentVtable`] for the attachment type `A` and the
     /// handler type `H`.
     pub(super) const fn new<A: 'static, H: AttachmentHandler<A>>() -> &'static Self {
-        &Self {
-            type_id: TypeId::of::<A>,
-            handler_type_id: TypeId::of::<H>,
-            drop: drop::<A>,
-            display: display::<A, H>,
-            debug: debug::<A, H>,
-            preferred_formatting_style: preferred_formatting_style::<A, H>,
+        const {
+            &Self {
+                type_id: TypeId::of::<A>,
+                handler_type_id: TypeId::of::<H>,
+                drop: drop::<A>,
+                display: display::<A, H>,
+                debug: debug::<A, H>,
+                preferred_formatting_style: preferred_formatting_style::<A, H>,
+            }
         }
     }
 

@@ -1,4 +1,3 @@
-use alloc::vec;
 use core::{
     any::{Any, TypeId},
     marker::PhantomData,
@@ -15,8 +14,8 @@ use crate::{
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
     report_attachment::ReportAttachment,
-    report_attachments::{ReportAttachments, ReportAttachmentsMut, ReportAttachmentsRef},
-    report_collection::{ReportCollection, ReportCollectionMut, ReportCollectionRef},
+    report_attachments::ReportAttachments,
+    report_collection::ReportCollection,
     util::format_helper,
 };
 
@@ -137,7 +136,7 @@ where
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        crate::hooks::__run_creation_hooks(report.as_mut().into_dyn_any());
+        crate::hooks::report_creation::__run_creation_hooks(report.as_mut().into_dyn_any());
         report
     }
 
@@ -356,26 +355,24 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, report_collection::ReportCollectionMut};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection};
     /// let mut report: Report = report!("error message");
-    /// let children_mut: ReportCollectionMut<'_> = report.children_mut();
+    /// let children_mut: &mut ReportCollection = report.children_mut();
     /// ```
-    pub fn children_mut(&mut self) -> ReportCollectionMut<'_, dyn Any, T> {
-        let raw = unsafe { self.raw.as_mut().into_children_mut() };
-        unsafe { ReportCollectionMut::from_raw(raw) }
+    pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
+        self.as_mut().into_children_mut()
     }
 
     /// Returns a mutable reference to the attachments.
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, report_attachments::ReportAttachmentsMut};
+    /// # use rootcause::{prelude::*, report_attachments::ReportAttachments};
     /// let mut report: Report = report!("error message");
-    /// let attachments_mut: ReportAttachmentsMut<'_> = report.attachments_mut();
+    /// let attachments_mut: &mut ReportAttachments = report.attachments_mut();
     /// ```
-    pub fn attachments_mut(&mut self) -> ReportAttachmentsMut<'_, T> {
-        let raw = unsafe { self.raw.as_mut().into_attachments_mut() };
-        unsafe { ReportAttachmentsMut::from_raw(raw) }
+    pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
+        self.as_mut().into_attachments_mut()
     }
 
     /// Returns a mutable reference to the report.
@@ -516,27 +513,25 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, report_collection::ReportCollectionRef};
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection};
     /// let report: Report = report!("error message");
-    /// let children: ReportCollectionRef<'_> = report.children();
+    /// let children: &ReportCollection = report.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
-    pub fn children(&self) -> ReportCollectionRef<'_, dyn Any, T> {
-        let raw = self.as_raw_ref().children();
-        unsafe { ReportCollectionRef::from_raw(raw) }
+    pub fn children(&self) -> &ReportCollection<dyn Any, T> {
+        self.as_ref().children()
     }
 
     /// Returns a reference to the attachments.
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, report_attachments::ReportAttachmentsRef};
+    /// # use rootcause::{prelude::*, report_attachments::ReportAttachments};
     /// let report: Report = report!("error message");
-    /// let attachments: ReportAttachmentsRef<'_> = report.attachments();
+    /// let attachments: &ReportAttachments = report.attachments();
     /// ```
-    pub fn attachments(&self) -> ReportAttachmentsRef<'_, T> {
-        let raw = self.as_raw_ref().attachments();
-        unsafe { ReportAttachmentsRef::from_raw(raw) }
+    pub fn attachments(&self) -> &ReportAttachments<T> {
+        self.as_ref().attachments()
     }
 
     /// Changes the context type of the [`Report`] to [`dyn Any`].
@@ -732,8 +727,7 @@ where
     /// assert_eq!(all_reports.len(), 6);
     /// ```
     pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T> {
-        let stack = vec![self.as_raw_ref()];
-        unsafe { ReportIter::from_raw(stack) }
+        self.as_ref().iter_reports()
     }
 
     /// Returns an iterator over child reports in the report hierarchy
@@ -782,13 +776,7 @@ where
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
-        let stack = self
-            .children()
-            .iter()
-            .map(|r| r.as_raw_ref())
-            .rev()
-            .collect();
-        unsafe { ReportIter::from_raw(stack) }
+        self.as_ref().iter_sub_reports()
     }
 
     /// Creates a new report, which has the same structure as the current
@@ -891,8 +879,12 @@ where
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
         format_helper(
             report,
-            |report, formatter| crate::hooks::display_context(report, formatter),
-            |report, formatter| crate::hooks::debug_context(report, formatter),
+            |report, formatter| {
+                crate::hooks::formatting_overrides::context::display_context(report, formatter)
+            },
+            |report, formatter| {
+                crate::hooks::formatting_overrides::context::debug_context(report, formatter)
+            },
         )
     }
 
@@ -939,7 +931,10 @@ where
     ) -> ContextFormattingStyle {
         let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        crate::hooks::get_preferred_context_formatting_style(report, report_formatting_function)
+        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
+            report,
+            report_formatting_function,
+        )
     }
 
     /// Gets the preferred formatting style for the context without hook
@@ -1007,14 +1002,7 @@ where
     where
         C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == self.current_context_type_id() {
-            // SAFETY:
-            // - The context is valid because we just checked that it matches
-            // - The thread marker is valid, because does not change
-            Some(unsafe { self.downcast_current_context_unchecked() })
-        } else {
-            None
-        }
+        self.as_ref().downcast_current_context()
     }
 
     /// Downcasts the current context to a specific type without checking.

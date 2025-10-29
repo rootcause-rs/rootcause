@@ -1,11 +1,12 @@
+//! Collections of reports.
+//!
+//! This module provides types and functionality for managing collections of
+//! reports.
+
 mod iter;
-mod mut_;
 mod owned;
-mod ref_;
 
 pub use self::{
     iter::{ReportCollectionIntoIter, ReportCollectionIter},
-    mut_::ReportCollectionMut,
     owned::ReportCollection,
-    ref_::ReportCollectionRef,
 };
