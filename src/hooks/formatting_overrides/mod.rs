@@ -1,117 +1,31 @@
-//! Formatting overrides for customizing how specific types are formatted.
+//! Formatting overrides for customizing how specific types are formatted in error reports.
 //!
-//! This module provides hooks that allow you to customize how specific types
-//! of attachments and contexts are displayed when they appear in reports.
-//! This is useful when you want special formatting for certain data types.
+//! This module provides a hook system that allows you to customize how specific types
+//! of data are displayed when they appear in error reports. This is particularly useful
+//! when you want domain-specific formatting, enhanced readability, or consistent
+//! presentation across your application.
 //!
-//! # Hook Types
+//! # Overview
 //!
-//! ## Attachment Formatting Overrides
+//! The formatting override system works by registering hooks for specific types that
+//! will be called whenever those types need to be formatted in an error report. There
+//! are two main categories of formatting overrides:
 //!
-//! Attachment formatting overrides allow you to customize how specific types of
-//! attachments are displayed and debugged. This is useful when you want
-//! special formatting for certain data types.
+//! ## Submodules
 //!
-//! ```rust
-//! use rootcause::{
-//!     handlers::AttachmentFormattingStyle,
-//!     hooks::formatting_overrides::attachment::{
-//!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
-//!     },
-//!     prelude::*,
-//!     report_attachment::ReportAttachmentRef,
-//! };
+//! - [`attachment`] - Customize formatting of error report attachments (additional data)
+//!   - Custom display formatting for attachment types
+//!   - Control attachment placement (inline, with headers, in appendix, hidden)
+//!   - Set priorities for attachment ordering
+//!   - Handle sensitive data by hiding attachments
 //!
-//! #[derive(Debug)]
-//! struct CustomData(String);
+//! - [`context`] - Customize formatting of error report contexts (main error types)
+//!   - Custom display and debug formatting for error types
+//!   - Domain-specific error presentation
+//!   - Enhanced debugging information
 //!
-//! struct CustomDataHook;
-//!
-//! impl AttachmentFormattingOverride<CustomData> for CustomDataHook {
-//!     fn display(
-//!         &self,
-//!         attachment: ReportAttachmentRef<'_, CustomData>,
-//!         _parent: Option<AttachmentParent<'_>>,
-//!         formatter: &mut std::fmt::Formatter<'_>,
-//!     ) -> std::fmt::Result {
-//!         write!(formatter, "Custom: {}", attachment.inner().0)
-//!     }
-//!
-//!     fn preferred_formatting_style(
-//!         &self,
-//!         _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
-//!         _report_formatting_function: rootcause::handlers::FormattingFunction,
-//!     ) -> AttachmentFormattingStyle {
-//!         AttachmentFormattingStyle {
-//!             placement: rootcause::handlers::AttachmentFormattingPlacement::InlineWithHeader {
-//!                 header: "Custom Data",
-//!             },
-//!             function: rootcause::handlers::FormattingFunction::Display,
-//!             priority: 0,
-//!         }
-//!     }
-//! }
-//!
-//! // Register the hook globally
-//! register_attachment_hook(CustomDataHook);
-//!
-//! // Example: An attachment hook that silences certain attachments
-//! struct SilenceAttachmentHook;
-//! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook {
-//!     fn preferred_formatting_style(
-//!         &self,
-//!         _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
-//!         _report_formatting_function: rootcause::handlers::FormattingFunction,
-//!     ) -> AttachmentFormattingStyle {
-//!         AttachmentFormattingStyle {
-//!             placement: rootcause::handlers::AttachmentFormattingPlacement::Hidden,
-//!             function: rootcause::handlers::FormattingFunction::Display,
-//!             priority: 0,
-//!         }
-//!     }
-//! }
-//!
-//! // Register the silencing hook globally to suppress the output of CustomData attachments
-//! register_attachment_hook::<CustomData, _>(SilenceAttachmentHook);
-//! ```
-//!
-//! ## Context Formatting Overrides
-//!
-//! Context formatting overrides allow you to customize how specific context
-//! types (the main error types) are displayed when they appear in reports.
-//!
-//! ```rust
-//! use rootcause::{
-//!     hooks::formatting_overrides::context::{ContextFormattingOverride, register_context_hook},
-//!     prelude::*,
-//! };
-//!
-//! #[derive(Debug)]
-//! struct MyError {
-//!     code: u32,
-//!     message: String,
-//! }
-//!
-//! struct MyErrorHook;
-//!
-//! impl ContextFormattingOverride<MyError> for MyErrorHook {
-//!     fn display(
-//!         &self,
-//!         report: rootcause::ReportRef<
-//!             '_,
-//!             MyError,
-//!             rootcause::markers::Uncloneable,
-//!             rootcause::markers::Local,
-//!         >,
-//!         formatter: &mut std::fmt::Formatter<'_>,
-//!     ) -> std::fmt::Result {
-//!         let context = report.current_context();
-//!         write!(formatter, "Error {}: {}", context.code, context.message)
-//!     }
-//! }
-//!
-//! register_context_hook(MyErrorHook);
-//! ```
+//! See the individual submodule documentation for detailed examples and comprehensive
+//! API reference.
 
 pub mod attachment;
 pub mod context;

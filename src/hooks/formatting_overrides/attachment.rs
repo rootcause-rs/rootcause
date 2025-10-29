@@ -15,35 +15,89 @@
 //!   for specific types
 //! - [`debug_attachment_hooks`] - Utility to inspect registered hooks
 //!
-//! # Example
+//! # Example: Displaying an Attachment with Custom Formatting
 //!
 //! ```rust
-//! use core::fmt;
+//! use core::{any::Any, fmt};
 //!
 //! use rootcause::{
+//!     handlers::{AttachmentFormattingStyle, AttachmentFormattingPlacement, FormattingFunction},
 //!     hooks::formatting_overrides::attachment::{
 //!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
 //!     },
 //!     report_attachment::ReportAttachmentRef,
 //! };
 //!
-//! struct MyError(String);
+//! struct ApiInformation {
+//!     code: u32,
+//!     message: String,
+//! }
 //!
-//! struct MyErrorFormatter;
+//! struct ApiInformationFormatter;
 //!
-//! impl AttachmentFormattingOverride<MyError> for MyErrorFormatter {
+//! impl AttachmentFormattingOverride<ApiInformation> for ApiInformationFormatter {
 //!     fn display(
 //!         &self,
-//!         attachment: ReportAttachmentRef<'_, MyError>,
+//!         attachment: ReportAttachmentRef<'_, ApiInformation>,
 //!         _parent: Option<AttachmentParent<'_>>,
 //!         f: &mut fmt::Formatter<'_>,
 //!     ) -> fmt::Result {
-//!         write!(f, "Custom format: {}", attachment.inner().0)
+//!         let err = attachment.inner();
+//!         write!(f, "API Error {}: {}", err.code, err.message)
+//!     }
+//!
+//!     fn preferred_formatting_style(
+//!         &self,
+//!         _attachment: ReportAttachmentRef<'_, dyn Any>,
+//!         _report_formatting_function: FormattingFunction,
+//!     ) -> AttachmentFormattingStyle {
+//!         AttachmentFormattingStyle {
+//!             placement: AttachmentFormattingPlacement::InlineWithHeader {
+//!                 header: "API Error Details",
+//!             },
+//!             function: FormattingFunction::Display,
+//!             priority: 100, // High priority for API errors
+//!         }
 //!     }
 //! }
 //!
 //! // Register the custom formatter
-//! register_attachment_hook(MyErrorFormatter);
+//! register_attachment_hook(ApiInformationFormatter);
+//! ```
+//!
+//! # Example: Hiding Attachments
+//!
+//! You can also use formatting overrides to conditionally hide attachments by
+//! setting their placement to `Hidden`:
+//!
+//! ```rust
+//! use rootcause::{
+//!     handlers::{AttachmentFormattingStyle, AttachmentFormattingPlacement, FormattingFunction},
+//!     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, register_attachment_hook},
+//!     report_attachment::ReportAttachmentRef,
+//! };
+//! use core::any::Any;
+//!
+//! struct SensitiveData(String);
+//!
+//! struct SilenceAttachmentHook;
+//!
+//! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook {
+//!     fn preferred_formatting_style(
+//!         &self,
+//!         _attachment: ReportAttachmentRef<'_, dyn Any>,
+//!         _report_formatting_function: FormattingFunction,
+//!     ) -> AttachmentFormattingStyle {
+//!         AttachmentFormattingStyle {
+//!             placement: AttachmentFormattingPlacement::Hidden,
+//!             function: FormattingFunction::Display,
+//!             priority: 0,
+//!         }
+//!     }
+//! }
+//!
+//! // Register the silencing hook to suppress sensitive data in error reports
+//! register_attachment_hook::<SensitiveData, _>(SilenceAttachmentHook);
 //! ```
 
 use alloc::fmt;
