@@ -1,4 +1,3 @@
-use alloc::vec;
 use core::{
     any::{Any, TypeId},
     marker::PhantomData,
@@ -728,8 +727,7 @@ where
     /// assert_eq!(all_reports.len(), 6);
     /// ```
     pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T> {
-        let stack = vec![self.as_raw_ref()];
-        unsafe { ReportIter::from_raw(stack) }
+        self.as_ref().iter_reports()
     }
 
     /// Returns an iterator over child reports in the report hierarchy
@@ -778,13 +776,7 @@ where
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
-        let stack = self
-            .children()
-            .iter()
-            .map(|r| r.as_raw_ref())
-            .rev()
-            .collect();
-        unsafe { ReportIter::from_raw(stack) }
+        self.as_ref().iter_sub_reports()
     }
 
     /// Creates a new report, which has the same structure as the current
