@@ -34,6 +34,7 @@ pub struct RawAttachment {
 impl RawAttachment {
     /// Creates a new [`RawAttachment`] with the specified handler and
     /// attachment.
+    #[inline]
     pub fn new<A, H>(attachment: A) -> Self
     where
         A: 'static,
@@ -50,6 +51,7 @@ impl RawAttachment {
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
+    #[inline]
     pub fn as_ref(&self) -> RawAttachmentRef<'_> {
         RawAttachmentRef {
             ptr: self.ptr,
@@ -59,6 +61,7 @@ impl RawAttachment {
 }
 
 impl core::ops::Drop for RawAttachment {
+    #[inline]
     fn drop(&mut self) {
         let vtable = self.as_ref().vtable();
 
@@ -104,6 +107,7 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// The caller must ensure that the type `A` matches the actual attachment
     /// type stored in the [`AttachmentData`].
+    #[inline]
     pub(super) unsafe fn cast_inner<A: CastTo>(self) -> &'a AttachmentData<A::Target> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<A>());
@@ -116,22 +120,26 @@ impl<'a> RawAttachmentRef<'a> {
     }
 
     /// Returns a [`NonNull`] pointer to the [`AttachmentData`] instance.
+    #[inline]
     pub(super) fn as_ptr(self) -> *const AttachmentData<Erased> {
         self.ptr.as_ptr()
     }
 
     /// Returns the [`TypeId`] of the attachment.
+    #[inline]
     pub fn attachment_type_id(self) -> TypeId {
         self.vtable().type_id()
     }
 
     /// Returns the [`TypeId`] of the attachment.
+    #[inline]
     pub fn attachment_handler_type_id(self) -> TypeId {
         self.vtable().handler_type_id()
     }
 
     /// Checks if the type of the attachment matches the specified type and
     /// returns a reference to it if it does.
+    #[inline]
     pub fn attachment_downcast<A: 'static>(self) -> Option<&'a A> {
         if self.attachment_type_id() == core::any::TypeId::of::<A>() {
             // SAFETY: We must ensure that the `A` in the AttachmentData matches the `A` we
@@ -146,6 +154,7 @@ impl<'a> RawAttachmentRef<'a> {
     /// Formats the attachment by using the [`AttachmentHandler::display`]
     /// method specified by the handler used to create the
     /// [`AttachmentData`].
+    #[inline]
     pub fn attachment_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
@@ -157,6 +166,7 @@ impl<'a> RawAttachmentRef<'a> {
 
     /// Formats the attachment by using the [`AttachmentHandler::debug`] method
     /// specified by the handler used to create the [`AttachmentData`].
+    #[inline]
     pub fn attachment_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
@@ -177,6 +187,7 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    #[inline]
     pub fn preferred_formatting_style(
         self,
         report_formatting_function: FormattingFunction,

@@ -1,19 +1,21 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![allow(clippy::missing_safety_doc)]
 #![forbid(
     missing_docs,
     clippy::alloc_instead_of_core,
     clippy::std_instead_of_alloc,
     clippy::std_instead_of_core,
-//     clippy::missing_safety_doc,
+    clippy::missing_safety_doc,
 //     clippy::undocumented_unsafe_blocks,
-//     clippy::multiple_unsafe_ops_per_block,
+    clippy::multiple_unsafe_ops_per_block,
     rustdoc::invalid_rust_codeblocks,
     rustdoc::broken_intra_doc_links,
-    // rustdoc::missing_doc_code_examples,
     missing_copy_implementations,
     unused_doc_comments,
 )]
+// Extra checks on nightly
+#![cfg_attr(nightly_extra_checks, feature(rustdoc_missing_doc_code_examples))]
+#![cfg_attr(nightly_extra_checks, forbid(rustdoc::missing_doc_code_examples))]
+
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
 //!
 //! <img src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png" width="192">
@@ -260,6 +262,7 @@ pub mod __private {
 
         #[doc(hidden)]
         pub trait SendSyncKind {
+            #[inline(always)]
             fn thread_safety(&self) -> markers::SendSync {
                 markers::SendSync
             }
@@ -269,6 +272,7 @@ pub mod __private {
 
         #[doc(hidden)]
         pub trait LocalKind {
+            #[inline(always)]
             fn thread_safety(&self) -> markers::Local {
                 markers::Local
             }
@@ -278,6 +282,7 @@ pub mod __private {
 
         #[doc(hidden)]
         pub trait HandlerErrorKind {
+            #[inline(always)]
             fn handler(&self) -> handlers::Error {
                 handlers::Error
             }
@@ -287,6 +292,7 @@ pub mod __private {
 
         #[doc(hidden)]
         pub trait HandlerDisplayKind {
+            #[inline(always)]
             fn handler(&self) -> handlers::Display {
                 handlers::Display
             }
@@ -296,6 +302,7 @@ pub mod __private {
 
         #[doc(hidden)]
         pub trait HandlerDebugKind {
+            #[inline(always)]
             fn handler(&self) -> handlers::Debug {
                 handlers::Debug
             }
@@ -305,6 +312,7 @@ pub mod __private {
 
         #[doc(hidden)]
         pub trait HandlerAnyKind {
+            #[inline(always)]
             fn handler(&self) -> handlers::Any {
                 handlers::Any
             }

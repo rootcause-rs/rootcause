@@ -61,13 +61,9 @@ where
     ///
     /// To call this method you must ensure the following:
     ///
-    /// - The attachment embedded in the RawAttachmentRef must match the `C` of
-    ///   the output type, or the `C` of the output type must be `dyn Any`
-    /// - The thread safety marker must match the contents of the attachment.
-    ///   More specifically if the marker is [`SendSync`], then the inner
-    ///   attachment must be `Send+Sync`
-    ///
-    /// [`SendSync`]: crate::markers::SendSync
+    /// - The attachment embedded in the RawAttachmentRef must match the `A` of
+    ///   the output type, or the `A` of the output type must be `dyn Any`
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
         ReportAttachmentRef {
             raw,
@@ -75,6 +71,7 @@ where
         }
     }
 
+    #[must_use]
     pub(crate) fn as_raw_ref(self) -> RawAttachmentRef<'a> {
         self.raw
     }
@@ -96,6 +93,7 @@ where
     /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
     /// assert_eq!(attachment_ref.inner_type_id(), TypeId::of::<&str>());
     /// ```
+    #[must_use]
     pub fn inner_type_id(self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
@@ -110,6 +108,7 @@ where
     ///
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
+    #[must_use]
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
@@ -128,6 +127,7 @@ where
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner`]: Self::format_inner
+    #[must_use]
     pub fn format_inner_unhooked(self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.as_raw_ref(),
@@ -150,6 +150,7 @@ where
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
+    #[must_use]
     pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
         let attachment: ReportAttachmentRef<'a, dyn Any> =
             unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) };
@@ -184,6 +185,7 @@ where
     ///
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachmentRef::downcast_attachment`].
+    #[must_use]
     pub fn into_dyn_any(self) -> ReportAttachmentRef<'a, dyn Any> {
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
     }
@@ -214,167 +216,10 @@ where
     /// ```
     ///
     /// [`downcast_inner`]: Self::downcast_inner
+    #[must_use]
     pub fn inner(self) -> &'a A
     where
         A: Sized,
-    {
-        unsafe { self.downcast_inner_unchecked() }
-    }
-
-    /// Attempts to downcast the attachment reference to a different type `B`.
-    ///
-    /// This method performs a safe type cast, returning [`Some`] if the
-    /// attachment actually contains data of type `B`, or [`None`] if the
-    /// types don't match.
-    ///
-    /// This method is most useful when going from a `dyn Any` to a concrete
-    /// `B`.
-    ///
-    /// It is possible to use this when you have a concrete type `A`, however
-    /// this is unlikely to be useful outside of very generic or macro-heavy
-    /// code.
-    ///
-    /// # Examples
-    /// ```
-    /// # use core::any::Any;
-    /// use rootcause::{
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
-    ///
-    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
-    ///
-    /// // Try to downcast to the correct type
-    /// let typed_ref: Option<ReportAttachmentRef<'_, &str>> = attachment_ref.downcast_attachment();
-    /// assert!(typed_ref.is_some());
-    ///
-    /// // Try to downcast to an incorrect type
-    /// let wrong_ref: Option<ReportAttachmentRef<'_, i32>> = attachment_ref.downcast_attachment();
-    /// assert!(wrong_ref.is_none());
-    /// ```
-    pub fn downcast_attachment<B>(self) -> Option<ReportAttachmentRef<'a, B>>
-    where
-        B: markers::ObjectMarker + ?Sized,
-    {
-        if TypeId::of::<B>() == TypeId::of::<dyn Any>() || TypeId::of::<B>() == self.inner_type_id()
-        {
-            Some(unsafe { self.downcast_attachment_unchecked() })
-        } else {
-            None
-        }
-    }
-
-    /// Performs an unchecked downcast of the attachment reference to type `B`.
-    ///
-    /// This method bypasses type checking and performs the cast without
-    /// verifying that the attachment actually contains data of type `B`. It
-    /// is the caller's responsibility to ensure the cast is valid.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure that the inner attachment is actually of type
-    /// `A`. This can be verified by calling [`inner_type_id()`] first.
-    ///
-    /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
-    ///
-    /// # Examples
-    /// ```
-    /// # use core::any::Any;
-    /// use rootcause::{
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
-    ///
-    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
-    ///
-    /// // SAFETY: We know the attachment contains &str data
-    /// let typed_ref: ReportAttachmentRef<'_, &str> =
-    ///     unsafe { attachment_ref.downcast_attachment_unchecked() };
-    /// ```
-    pub unsafe fn downcast_attachment_unchecked<B>(self) -> ReportAttachmentRef<'a, B>
-    where
-        B: markers::ObjectMarker + ?Sized,
-    {
-        unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
-    }
-
-    /// Attempts to downcast the inner attachment data to a reference of type
-    /// `B`.
-    ///
-    /// This method performs a safe type cast, returning [`Some`] with a
-    /// reference to the data if the attachment actually contains data of
-    /// type `B`, or [`None`] if the types don't match. Unlike
-    /// [`downcast_attachment`], this method returns a direct reference to
-    /// the data rather than a [`ReportAttachmentRef`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use core::any::Any;
-    /// use rootcause::{
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
-    ///
-    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
-    ///
-    /// // Try to downcast to the correct type
-    /// let data: Option<&&str> = attachment_ref.downcast_inner();
-    /// assert_eq!(data, Some(&"text data"));
-    ///
-    /// // Try to downcast to an incorrect type
-    /// let wrong_data: Option<&i32> = attachment_ref.downcast_inner();
-    /// assert!(wrong_data.is_none());
-    /// ```
-    ///
-    /// [`downcast_attachment`]: Self::downcast_attachment
-    pub fn downcast_inner<B>(self) -> Option<&'a B>
-    where
-        B: markers::ObjectMarker,
-    {
-        self.as_raw_ref().attachment_downcast()
-    }
-
-    /// Performs an unchecked downcast of the inner attachment data to a
-    /// reference of type `B`.
-    ///
-    /// This method bypasses type checking and performs the cast without
-    /// verifying that the attachment actually contains data of type `B`. It
-    /// returns a direct reference to the data. It is the caller's
-    /// responsibility to ensure the cast is valid.
-    ///
-    /// # Safety
-    /// The caller must guarantee that the attachment actually contains data of
-    /// type `B`. Violating this requirement leads to undefined behavior.
-    ///
-    /// # Type Parameters
-    /// - `B`: The target type to downcast to. Must implement
-    ///   [`markers::ObjectMarker`] and be [`Sized`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use core::any::Any;
-    /// use rootcause::{
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
-    ///
-    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
-    ///
-    /// // SAFETY: We know the attachment contains &str data
-    /// let data: &&str = unsafe { attachment_ref.downcast_inner_unchecked() };
-    /// assert_eq!(*data, "text data");
-    /// ```
-    pub unsafe fn downcast_inner_unchecked<B>(self) -> &'a B
-    where
-        B: markers::ObjectMarker,
     {
         unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
@@ -395,6 +240,7 @@ where
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    #[must_use]
     pub fn preferred_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
@@ -422,12 +268,173 @@ where
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
+    #[must_use]
     pub fn preferred_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
             .preferred_formatting_style(report_formatting_function)
+    }
+}
+
+impl<'a> ReportAttachmentRef<'a, dyn Any> {
+    /// Attempts to downcast the attachment reference to a different type `A`.
+    ///
+    /// This method performs a safe type cast, returning [`Some`] if the
+    /// attachment actually contains data of type `A`, or [`None`] if the
+    /// types don't match.
+    ///
+    /// This method is most useful when going from a `dyn Any` to a concrete
+    /// `A`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use core::any::Any;
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
+    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    ///
+    /// // Try to downcast to the correct type
+    /// let typed_ref: Option<ReportAttachmentRef<'_, &str>> = attachment_ref.downcast_attachment();
+    /// assert!(typed_ref.is_some());
+    ///
+    /// // Try to downcast to an incorrect type
+    /// let wrong_ref: Option<ReportAttachmentRef<'_, i32>> = attachment_ref.downcast_attachment();
+    /// assert!(wrong_ref.is_none());
+    /// ```
+    #[must_use]
+    pub fn downcast_attachment<A>(self) -> Option<ReportAttachmentRef<'a, A>>
+    where
+        A: markers::ObjectMarker + ?Sized,
+    {
+        if TypeId::of::<A>() == TypeId::of::<dyn Any>() || TypeId::of::<A>() == self.inner_type_id()
+        {
+            Some(unsafe { self.downcast_attachment_unchecked() })
+        } else {
+            None
+        }
+    }
+
+    /// Performs an unchecked downcast of the attachment reference to type `A`.
+    ///
+    /// This method bypasses type checking and performs the cast without
+    /// verifying that the attachment actually contains data of type `A`. It
+    /// is the caller's responsibility to ensure the cast is valid.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure that the inner attachment is actually of type
+    /// `A`. This can be verified by calling [`inner_type_id()`] first.
+    ///
+    /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
+    ///
+    /// # Examples
+    /// ```
+    /// # use core::any::Any;
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
+    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    ///
+    /// // SAFETY: We know the attachment contains &str data
+    /// let typed_ref: ReportAttachmentRef<'_, &str> =
+    ///     unsafe { attachment_ref.downcast_attachment_unchecked() };
+    /// ```
+    #[must_use]
+    pub unsafe fn downcast_attachment_unchecked<A>(self) -> ReportAttachmentRef<'a, A>
+    where
+        A: markers::ObjectMarker + ?Sized,
+    {
+        unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
+    }
+
+    /// Attempts to downcast the inner attachment data to a reference of type
+    /// `A`.
+    ///
+    /// This method performs a safe type cast, returning [`Some`] with a
+    /// reference to the data if the attachment actually contains data of
+    /// type `A`, or [`None`] if the types don't match. Unlike
+    /// [`downcast_attachment`], this method returns a direct reference to
+    /// the data rather than a [`ReportAttachmentRef`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use core::any::Any;
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
+    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    ///
+    /// // Try to downcast to the correct type
+    /// let data: Option<&&str> = attachment_ref.downcast_inner();
+    /// assert_eq!(data, Some(&"text data"));
+    ///
+    /// // Try to downcast to an incorrect type
+    /// let wrong_data: Option<&i32> = attachment_ref.downcast_inner();
+    /// assert!(wrong_data.is_none());
+    /// ```
+    ///
+    /// [`downcast_attachment`]: Self::downcast_attachment
+    #[must_use]
+    pub fn downcast_inner<A>(self) -> Option<&'a A>
+    where
+        A: markers::ObjectMarker,
+    {
+        self.as_raw_ref().attachment_downcast()
+    }
+
+    /// Performs an unchecked downcast of the inner attachment data to a
+    /// reference of type `A`.
+    ///
+    /// This method bypasses type checking and performs the cast without
+    /// verifying that the attachment actually contains data of type `A`. It
+    /// returns a direct reference to the data. It is the caller's
+    /// responsibility to ensure the cast is valid.
+    ///
+    /// # Safety
+    /// The caller must guarantee that the attachment actually contains data of
+    /// type `A`. Violating this requirement leads to undefined behavior.
+    ///
+    /// # Type Parameters
+    /// - `A`: The target type to downcast to. Must implement
+    ///   [`markers::ObjectMarker`] and be [`Sized`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use core::any::Any;
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
+    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    ///
+    /// // SAFETY: We know the attachment contains &str data
+    /// let data: &&str = unsafe { attachment_ref.downcast_inner_unchecked() };
+    /// assert_eq!(*data, "text data");
+    /// ```
+    #[must_use]
+    pub unsafe fn downcast_inner_unchecked<A>(self) -> &'a A
+    where
+        A: markers::ObjectMarker,
+    {
+        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
     }
 }
 

@@ -41,3 +41,6 @@ tokio = { version = "1.48.0", features = ["full"] }
 
 [package.metadata.docs.rs]
 all-features = true
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(nightly_extra_checks)'] }

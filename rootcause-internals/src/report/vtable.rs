@@ -73,12 +73,14 @@ impl ReportVtable {
 
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].
+    #[inline]
     pub(super) fn type_id(&self) -> TypeId {
         (self.type_id)()
     }
 
     /// Gets the [`TypeId`] of the handler that was used to create this
     /// [`ReportVtable`].
+    #[inline]
     pub(super) fn handler_type_id(&self) -> TypeId {
         (self.handler_type_id)()
     }
@@ -94,6 +96,7 @@ impl ReportVtable {
     /// - The context type `C` stored in the [`ReportData`] must match the `C`
     ///   used when creating this [`ReportVtable`].
     /// - After calling this method, the pointer must no longer be used.
+    #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<ReportData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<C>` below.
         // That function has three requirements, all of which are guaranteed by our
@@ -117,6 +120,7 @@ impl ReportVtable {
     ///   used when creating this [`ReportVtable`].
     /// - There must be no external assumptions that there is a unique ownership
     ///   of the [`triomphe::Arc`].
+    #[inline]
     pub(super) unsafe fn clone_arc(&self, ptr: NonNull<ReportData<Erased>>) -> RawReport {
         // SAFETY: We know that `self.clone_arc` points to the function `clone_arc::<C>`
         // below. That function has three requirements, all of which are
@@ -137,6 +141,7 @@ impl ReportVtable {
     ///   using [`triomphe::Arc::into_raw`].
     /// - The context type `C` stored in the [`ReportData`] must match the `C`
     ///   used when creating this [`ReportVtable`].
+    #[inline]
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
         // `strong_count::<C>` below. That function has three requirements, all
@@ -156,6 +161,7 @@ impl ReportVtable {
     /// [`RawReportRef`].
     ///
     /// [`H::source`]: ContextHandler::source
+    #[inline]
     pub(super) unsafe fn source<'a>(
         &self,
         ptr: RawReportRef<'a>,
@@ -176,6 +182,7 @@ impl ReportVtable {
     ///
     /// The context type `C` used when creating this [`ReportVtable`] must match
     /// the type stored in the [`ReportData`].
+    #[inline]
     pub(super) unsafe fn display(
         &self,
         ptr: RawReportRef<'_>,
@@ -197,6 +204,7 @@ impl ReportVtable {
     ///
     /// The context type `C` used when creating this [`ReportVtable`] must match
     /// the type stored in the [`ReportData`].
+    #[inline]
     pub(super) unsafe fn debug(
         &self,
         ptr: RawReportRef<'_>,
@@ -219,6 +227,7 @@ impl ReportVtable {
     ///
     /// The context type `C` used when creating this [`ReportVtable`] must match
     /// the type stored in the [`ReportData`].
+    #[inline]
     pub(super) unsafe fn preferred_context_formatting_style(
         &self,
         ptr: RawReportRef<'_>,

@@ -45,6 +45,7 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     /// let errors = results.unwrap();
     /// assert_eq!(errors, BTreeSet::from([1u8, 2]));
     /// ```
+    #[track_caller]
     fn collect_reports<Container, ThreadSafety>(
         self,
     ) -> Result<Container, ReportCollection<E::Context, ThreadSafety>>
@@ -84,6 +85,7 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     /// let errors = results.unwrap();
     /// assert_eq!(errors, &[1, 2, 2]);
     /// ```
+    #[track_caller]
     fn collect_reports_vec<ThreadSafety>(
         self,
     ) -> Result<Vec<A>, ReportCollection<E::Context, ThreadSafety>>
@@ -110,6 +112,7 @@ where
 {
     type Item = Object;
 
+    #[inline]
     fn next(&mut self) -> Option<Self::Item> {
         if self.error_collection.is_some() {
             return None;
@@ -129,6 +132,7 @@ where
         }
     }
 
+    #[inline]
     fn size_hint(&self) -> (usize, Option<usize>) {
         if self.error_collection.is_some() {
             (0, Some(0))
@@ -152,6 +156,7 @@ impl<A, E, I> IteratorExt<A, E> for I
 where
     I: Iterator<Item = Result<A, E>>,
 {
+    #[inline]
     fn collect_reports<Container, ThreadSafety>(
         self,
     ) -> Result<Container, ReportCollection<E::Context, ThreadSafety>>
@@ -172,6 +177,7 @@ where
         }
     }
 
+    #[inline]
     fn collect_reports_vec<ThreadSafety>(
         mut self,
     ) -> Result<Vec<A>, ReportCollection<E::Context, ThreadSafety>>

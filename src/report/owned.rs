@@ -226,6 +226,7 @@ where
     ///     attachments,
     /// );
     /// ```
+    #[must_use]
     pub fn into_parts(self) -> (C, ReportCollection<dyn Any, T>, ReportAttachments<T>)
     where
         C: Sized,
@@ -278,6 +279,7 @@ where
     /// assert_eq!(extracted_error.code, 500);
     /// assert_eq!(extracted_error.message, "database connection failed");
     /// ```
+    #[must_use]
     pub fn into_current_context(self) -> C
     where
         C: Sized,
@@ -359,6 +361,7 @@ where
     /// let mut report: Report = report!("error message");
     /// let children_mut: &mut ReportCollection = report.children_mut();
     /// ```
+    #[must_use]
     pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
         self.as_mut().into_children_mut()
     }
@@ -371,6 +374,7 @@ where
     /// let mut report: Report = report!("error message");
     /// let attachments_mut: &mut ReportAttachments = report.attachments_mut();
     /// ```
+    #[must_use]
     pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
         self.as_mut().into_attachments_mut()
     }
@@ -383,10 +387,28 @@ where
     /// let mut report: Report = report!("error message");
     /// let report_mut: ReportMut<'_> = report.as_mut();
     /// ```
+    #[must_use]
     pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY: We are guaranteed that the report is mutable, because we are in a
-        // `Mutable` report and we have a mutable reference to it.
-        unsafe { ReportMut::from_raw(self.raw.as_mut()) }
+        // SAFETY: The function requires that we ensure that there are no other
+        // references to the inner [`ReportData`]. This is guaranteed because we have
+        // a mutable reference to `self`, and `self` is a `Mutable` report.
+        let raw = unsafe { self.raw.as_mut() };
+
+        // SAFETY: There are two requirements:
+        // - The context embedded in the RawReport must match the `C` of the output
+        //   type, or the `C` of the output type must be `dyn Any`
+        // - The thread safety marker must match the contents of the report. More
+        //   specifically if the marker is `SendSync`, then all contexts and
+        //   attachments must be `Send+Sync`
+        //
+        // These requirements are satisfied because:
+        // - The `Self` type which is where the `raw` argument comes from is a
+        //   `Report<C, Mutable, T>`. This means that either `C = dyn Any` and we
+        //   are fine, or the `C` matches the context in the `RawReport`.
+        // - The `Self` type has the thread safety marker `T`, so if `T = SendSync`,
+        //   then the entire report (including context and attachments) are
+        //   `Send+Sync`.
+        unsafe { ReportMut::from_raw(raw) }
     }
 }
 
@@ -411,6 +433,7 @@ where
     /// - The thread safety marker must match the contents of the report. More
     ///   specifically if the marker is [`SendSync`], then all contexts and
     ///   attachments must be [`Send`]+[`Sync`]
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
         Self {
             raw,
@@ -421,11 +444,13 @@ where
     }
 
     /// Consumes the [`Report`] and returns the inner [`RawReport`].
+    #[must_use]
     pub(crate) fn into_raw(self) -> RawReport {
         self.raw
     }
 
     /// Creates a lifetime-bound [`RawReportRef`] from the inner [`RawReport`].
+    #[must_use]
     pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
         self.raw.as_ref()
     }
@@ -518,6 +543,7 @@ where
     /// let children: &ReportCollection = report.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
+    #[must_use]
     pub fn children(&self) -> &ReportCollection<dyn Any, T> {
         self.as_ref().children()
     }
@@ -530,6 +556,7 @@ where
     /// let report: Report = report!("error message");
     /// let attachments: &ReportAttachments = report.attachments();
     /// ```
+    #[must_use]
     pub fn attachments(&self) -> &ReportAttachments<T> {
         self.as_ref().attachments()
     }
@@ -670,6 +697,7 @@ where
     /// let report: Report<_, Cloneable> = report!("error message").into_cloneable();
     /// let report_ref: ReportRef<'_, _, Cloneable> = report.as_ref();
     /// ```
+    #[must_use]
     pub fn as_ref(&self) -> ReportRef<'_, C, O::RefMarker, T> {
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
@@ -817,6 +845,7 @@ where
     /// let type_id = report.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     /// ```
+    #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
         self.as_raw_ref().context_type_id()
     }
@@ -834,6 +863,7 @@ where
     /// let handler_type = report.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
+    #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().context_handler_type_id()
     }
@@ -861,6 +891,7 @@ where
     /// let source: Option<&dyn std::error::Error> = report.current_context_error_source();
     /// assert_eq!(format!("{}", source.unwrap()), "My inner error");
     /// ```
+    #[must_use]
     pub fn current_context_error_source(&self) -> Option<&(dyn core::error::Error + 'static)> {
         self.as_raw_ref().context_source()
     }
@@ -874,6 +905,7 @@ where
     /// let formatted = report.format_current_context();
     /// println!("{formatted}");
     /// ```
+    #[must_use]
     pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
         let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
             unsafe { ReportRef::from_raw(self.as_raw_ref()) };
@@ -897,6 +929,7 @@ where
     /// let formatted = report.format_current_context_unhooked();
     /// println!("{formatted}");
     /// ```
+    #[must_use]
     pub fn format_current_context_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.as_raw_ref(),
@@ -925,6 +958,7 @@ where
     /// let report: Report = report!("error message");
     /// let style = report.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
+    #[must_use]
     pub fn preferred_context_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
@@ -956,6 +990,7 @@ where
     /// let style =
     ///     report.preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
+    #[must_use]
     pub fn preferred_context_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
@@ -972,6 +1007,7 @@ where
     /// let report: Report = report!("error message");
     /// assert_eq!(report.strong_count(), 1); // We just created the report so it has a single owner
     /// ```
+    #[must_use]
     pub fn strong_count(&self) -> usize {
         self.as_raw_ref().strong_count()
     }

@@ -53,9 +53,16 @@ where
     ///
     /// - The context embedded in the [`RawReportRef`] must either be of type
     ///   `C`, or the `C` must be `dyn Any`
+    /// - The ownership marker must match the ownership semantics of the
+    ///   [`RawReportRef`]. That is, if the ownership marker is [`Cloneable`],
+    ///   then there must not be other exist owners of the [`RawReport`] that
+    ///   assumes that they are able to mutate the report. Specifically this
+    ///   means that there cannot be any [`Report`] with a [`Mutable`] ownership
+    ///   marker or any [`ReportMut`] that shares the same underlying report.
     /// - The thread safety marker must match the contents of the report. More
     ///   specifically if the marker is [`SendSync`], then all contexts and
     ///   attachments must be `Send+Sync`
+    #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawReportRef<'a>) -> Self {
         Self {
             raw,
@@ -65,6 +72,7 @@ where
         }
     }
 
+    #[must_use]
     pub(crate) fn as_raw_ref(self) -> RawReportRef<'a> {
         self.raw
     }
@@ -79,6 +87,7 @@ where
     /// let report_ref: ReportRef<'_, MyError> = report.as_ref();
     /// let context: &MyError = report_ref.current_context();
     /// ```
+    #[must_use]
     pub fn current_context(self) -> &'a C
     where
         C: Sized,
@@ -96,6 +105,7 @@ where
     /// let children: &ReportCollection = report_ref.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
+    #[must_use]
     pub fn children(self) -> &'a ReportCollection<dyn Any, T> {
         let raw = self.as_raw_ref().children();
         unsafe { ReportCollection::from_raw_ref(raw) }
@@ -110,6 +120,7 @@ where
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let attachments: &ReportAttachments = report_ref.attachments();
     /// ```
+    #[must_use]
     pub fn attachments(self) -> &'a ReportAttachments<T> {
         let raw = self.as_raw_ref().attachments();
         unsafe { ReportAttachments::from_raw_ref(raw) }
@@ -140,6 +151,7 @@ where
     /// let report_ref: ReportRef<'_, MyError> = report.as_ref();
     /// let dyn_report_ref: ReportRef<'_, dyn Any> = report_ref.into_dyn_any();
     /// ```
+    #[must_use]
     pub fn into_dyn_any(self) -> ReportRef<'a, dyn Any, O, T> {
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
@@ -168,6 +180,7 @@ where
     /// let report_ref: ReportRef<'_, MyError, Cloneable> = report.as_ref();
     /// let dyn_report_ref: ReportRef<'_, MyError, Uncloneable> = report_ref.into_uncloneable();
     /// ```
+    #[must_use]
     pub fn into_uncloneable(self) -> ReportRef<'a, C, Uncloneable, T> {
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
@@ -196,6 +209,7 @@ where
     /// let report_ref: ReportRef<'_, _, _, SendSync> = report.as_ref();
     /// let local_report_ref: ReportRef<'_, _, _, Local> = report_ref.into_local();
     /// ```
+    #[must_use]
     pub fn into_local(self) -> ReportRef<'a, C, O, Local> {
         unsafe { ReportRef::from_raw(self.as_raw_ref()) }
     }
@@ -365,6 +379,7 @@ where
     /// let type_id = report_ref.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     /// ```
+    #[must_use]
     pub fn current_context_type_id(self) -> TypeId {
         self.as_raw_ref().context_type_id()
     }
@@ -383,6 +398,7 @@ where
     /// let handler_type = report_ref.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
+    #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().context_handler_type_id()
     }
@@ -398,6 +414,7 @@ where
     /// let report_ref: ReportRef<'_> = report.as_ref();
     /// let source: Option<&dyn core::error::Error> = report_ref.current_context_error_source();
     /// ```
+    #[must_use]
     pub fn current_context_error_source(self) -> Option<&'a (dyn core::error::Error + 'static)> {
         self.as_raw_ref().context_source()
     }
@@ -412,6 +429,7 @@ where
     /// let formatted = report_ref.format_current_context();
     /// println!("{formatted}");
     /// ```
+    #[must_use]
     pub fn format_current_context(self) -> impl core::fmt::Display + core::fmt::Debug {
         let report = self.into_dyn_any().into_uncloneable().into_local();
         format_helper(
@@ -435,6 +453,7 @@ where
     /// let formatted = report_ref.format_current_context_unhooked();
     /// println!("{formatted}");
     /// ```
+    #[must_use]
     pub fn format_current_context_unhooked(self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.as_raw_ref(),
@@ -463,6 +482,7 @@ where
     /// let style =
     ///     report_ref.preferred_context_formatting_style(handlers::FormattingFunction::Display);
     /// ```
+    #[must_use]
     pub fn preferred_context_formatting_style(
         &self,
         report_formatting_function: FormattingFunction,
@@ -493,6 +513,7 @@ where
     /// let style = report_ref
     ///     .preferred_context_formatting_style_unhooked(handlers::FormattingFunction::Display);
     /// ```
+    #[must_use]
     pub fn preferred_context_formatting_style_unhooked(
         &self,
         report_formatting_function: FormattingFunction,
@@ -510,6 +531,7 @@ where
     /// let report_ref: ReportRef<'_, _, _> = report.as_ref();
     /// assert_eq!(report_ref.strong_count(), 1); // The report has just been created, so it has a single owner
     /// ```
+    #[must_use]
     pub fn strong_count(&self) -> usize {
         self.as_raw_ref().strong_count()
     }
@@ -536,6 +558,7 @@ where
     /// let context: Option<&MyError> = dyn_report_ref.downcast_current_context();
     /// assert!(context.is_some());
     /// ```
+    #[must_use]
     pub fn downcast_current_context<C>(self) -> Option<&'a C>
     where
         C: markers::ObjectMarker,
@@ -573,6 +596,7 @@ where
     ///     let context: &MyError = unsafe { report_ref.downcast_current_context_unchecked() };
     /// }
     /// ```
+    #[must_use]
     pub unsafe fn downcast_current_context_unchecked<C>(self) -> &'a C
     where
         C: markers::ObjectMarker,
@@ -596,6 +620,7 @@ where
     /// let downcasted: Option<ReportRef<'_, MyError>> = dyn_report_ref.downcast_report::<MyError>();
     /// assert!(downcasted.is_some());
     /// ```
+    #[must_use]
     pub fn downcast_report<C>(self) -> Option<ReportRef<'a, C, O, T>>
     where
         C: markers::ObjectMarker + ?Sized,
@@ -635,6 +660,7 @@ where
     ///     let downcasted = unsafe { report_ref.downcast_report_unchecked::<MyError>() };
     /// }
     /// ```
+    #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportRef<'a, C, O, T>
     where
         C: markers::ObjectMarker + ?Sized,
@@ -650,6 +676,7 @@ where
 {
     /// Clones the underlying [`triomphe::Arc`] of the report returning
     /// you a new [`Report`] the references the same root node.
+    #[must_use]
     pub fn clone_arc(self) -> Report<C, Cloneable, T> {
         let raw = unsafe { self.as_raw_ref().clone_arc() };
         unsafe { Report::from_raw(raw) }

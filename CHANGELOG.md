@@ -13,12 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- More docs [#35](https://github.com/rootcause-rs/rootcause/pull/35), [#37](https://github.com/rootcause-rs/rootcause/pull/37)
+- More docs [#35](https://github.com/rootcause-rs/rootcause/pull/35), [#37](https://github.com/rootcause-rs/rootcause/pull/37), [#38](https://github.com/rootcause-rs/rootcause/pull/38)
 - The `report_attachment!()` macro [#35](https://github.com/rootcause-rs/rootcause/pull/35)
 
 ### Changed
 
-- More reorganization before we get users [#37](https://github.com/rootcause-rs/rootcause/pull/37).
+- Do more re-organization while it's free to do so [#37](https://github.com/rootcause-rs/rootcause/pull/37)
 
 ## [0.5.0] - 2025-10-27
 
