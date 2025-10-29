@@ -96,7 +96,7 @@
 //! });
 //! ```
 
-use alloc::vec::Vec;
+use alloc::{boxed::Box, vec::Vec};
 use core::{
     any::{Any, TypeId},
     fmt,
@@ -104,8 +104,6 @@ use core::{
 };
 
 use rootcause_internals::handlers::AttachmentHandler;
-use triomphe::Arc;
-use unsize::CoerceUnsize;
 
 #[cfg(feature = "backtrace")]
 use crate::hooks::builtin_hooks::backtrace::{BacktraceCollector, BacktraceHandler};
@@ -119,7 +117,7 @@ use crate::{
     report_attachment::ReportAttachment,
 };
 
-type HookSet = Vec<Arc<dyn UntypedReportCreationHook>>;
+type HookSet = Vec<Box<dyn UntypedReportCreationHook>>;
 
 static HOOKS: HookLock<HookSet> = HookLock::new();
 
@@ -181,7 +179,7 @@ pub trait ReportCreationHook: 'static + Send + Sync {
 }
 
 #[track_caller]
-fn creation_hook_to_untyped<H>(hook: H) -> Arc<dyn UntypedReportCreationHook>
+fn creation_hook_to_untyped<H>(hook: H) -> Box<dyn UntypedReportCreationHook>
 where
     H: ReportCreationHook + Send + Sync + 'static,
 {
@@ -219,11 +217,11 @@ where
         hook,
         added_at: Location::caller(),
     };
-    Arc::new(hook).unsize(unsize::Coercion!(to dyn UntypedReportCreationHook))
+    Box::new(hook)
 }
 
 #[track_caller]
-fn attachment_hook_to_untyped<A, H, C>(collector: C) -> Arc<dyn UntypedReportCreationHook>
+fn attachment_hook_to_untyped<A, H, C>(collector: C) -> Box<dyn UntypedReportCreationHook>
 where
     A: 'static + Send + Sync,
     H: AttachmentHandler<A>,
@@ -280,9 +278,9 @@ where
         _handled_type: core::marker::PhantomData,
         _handler: core::marker::PhantomData,
     };
-    let hook: Arc<Hook<A, H, C>> = Arc::new(hook);
+    let hook: Box<Hook<A, H, C>> = Box::new(hook);
 
-    hook.unsize(unsize::Coercion!(to dyn UntypedReportCreationHook))
+    hook
 }
 
 #[track_caller]
