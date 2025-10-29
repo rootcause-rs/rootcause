@@ -38,7 +38,7 @@ fn fetch_document_with_retry(s: &str, retry_count: usize) -> Result<Vec<u8>, Rep
         match fetch_document(s).attach_with(|| format!("Attempt #{i}")) {
             Ok(v) => return Ok(v),
             Err(e) => {
-                errors.push(e.into());
+                errors.push(e.into_cloneable());
             }
         }
     }

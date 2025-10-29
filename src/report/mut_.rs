@@ -13,8 +13,8 @@ use crate::{
     Report, ReportIter, ReportRef,
     markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
-    report_attachments::{ReportAttachmentsMut, ReportAttachmentsRef},
-    report_collection::{ReportCollectionMut, ReportCollectionRef},
+    report_attachments::ReportAttachments,
+    report_collection::ReportCollection,
     util::format_helper,
 };
 
@@ -130,57 +130,65 @@ where
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollectionRef};
+    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollection};
     /// let mut report: Report = report!("error message");
     /// let report_mut: ReportMut<'_> = report.as_mut();
-    /// let children: ReportCollectionRef<'_> = report_mut.children();
+    /// let children: &ReportCollection = report_mut.children();
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
-    pub fn children(&self) -> ReportCollectionRef<'_, dyn Any, T> {
-        let raw = self.as_raw_ref().children();
-        unsafe { ReportCollectionRef::from_raw(raw) }
+    pub fn children(&self) -> &ReportCollection<dyn Any, T> {
+        self.as_ref().children()
     }
 
     /// Returns a mutable reference to the child reports.
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollectionMut};
+    /// # use rootcause::{prelude::*, ReportMut, report_collection::ReportCollection};
     /// # let mut report = report!("error message");
     /// let mut report_mut: ReportMut<'_> = report.as_mut();
-    /// let children_mut: ReportCollectionMut<'_> = report_mut.children_mut();
+    /// let children_mut: &mut ReportCollection = report_mut.children_mut();
     /// ```
-    pub fn children_mut(&mut self) -> ReportCollectionMut<'_, dyn Any, T> {
+    pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
         let raw = self.raw.reborrow().into_children_mut();
-        unsafe { ReportCollectionMut::from_raw(raw) }
+        unsafe { ReportCollection::from_raw_mut(raw) }
+    }
+
+    pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
+        let raw = self.into_raw().into_children_mut();
+        unsafe { ReportCollection::from_raw_mut(raw) }
     }
 
     /// Returns an immutable reference to the attachments.
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachmentsRef};
+    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachments};
     /// # let mut report = report!("error message");
     /// let report_mut: ReportMut<'_> = report.as_mut();
-    /// let attachments: ReportAttachmentsRef<'_> = report_mut.attachments();
+    /// let attachments: &ReportAttachments = report_mut.attachments();
     /// ```
-    pub fn attachments(&self) -> ReportAttachmentsRef<'_, T> {
-        let raw = self.as_raw_ref().attachments();
-        unsafe { ReportAttachmentsRef::from_raw(raw) }
+    pub fn attachments(&self) -> &ReportAttachments<T> {
+        self.as_ref().attachments()
     }
 
     /// Returns a mutable reference to the attachments.
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachmentsMut};
+    /// # use rootcause::{prelude::*, ReportMut, report_attachments::ReportAttachments};
     /// # let mut report = report!("error message");
     /// let mut report_mut: ReportMut<'_> = report.as_mut();
-    /// let attachments_mut: ReportAttachmentsMut<'_> = report_mut.attachments_mut();
+    /// let attachments_mut: &mut ReportAttachments = report_mut.attachments_mut();
     /// ```
-    pub fn attachments_mut(&mut self) -> ReportAttachmentsMut<'_, T> {
+    pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
         let raw = self.raw.reborrow().into_attachments_mut();
-        unsafe { ReportAttachmentsMut::from_raw(raw) }
+        unsafe { ReportAttachments::from_raw_mut(raw) }
+    }
+
+    pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
+        let raw = self.into_raw().into_attachments_mut();
+        unsafe { ReportAttachments::from_raw_mut(raw) }
     }
 
     /// Changes the context type of the [`ReportMut`] to [`dyn Any`].

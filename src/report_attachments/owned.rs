@@ -6,7 +6,7 @@ use rootcause_internals::RawAttachment;
 use crate::{
     markers::{self, Local, SendSync},
     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter, ReportAttachmentsRef},
+    report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
 };
 
 #[repr(transparent)]
@@ -34,6 +34,14 @@ where
             raw,
             _thread_safety: PhantomData,
         }
+    }
+
+    pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
+        unsafe { &*(raw as *const Vec<RawAttachment> as *const Self) }
+    }
+
+    pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
+        unsafe { &mut *(raw as *mut Vec<RawAttachment> as *mut Self) }
     }
 
     pub(crate) fn into_raw(self) -> Vec<RawAttachment> {
@@ -72,15 +80,15 @@ where
     }
 
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
-        self.as_ref().into_iter()
-    }
-
-    pub fn as_ref(&self) -> ReportAttachmentsRef<'_, T> {
-        unsafe { ReportAttachmentsRef::from_raw(self.raw.as_slice()) }
+        unsafe { ReportAttachmentsIter::from_raw(self.raw.iter()) }
     }
 
     pub fn into_local(self) -> ReportAttachments<Local> {
         unsafe { ReportAttachments::from_raw(self.into_raw()) }
+    }
+
+    pub fn as_local(&self) -> &ReportAttachments<Local> {
+        unsafe { ReportAttachments::from_raw_ref(&self.raw) }
     }
 }
 
