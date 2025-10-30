@@ -2,33 +2,40 @@
 //! [`core::error::Error`], [`core::fmt::Display`] and [`core::fmt::Debug`] when
 //! creating an attachment or report.
 
-//! Handlers that define formatting and error-chaining behavior for reports and attachments.
+//! Handlers that define formatting and error-chaining behavior for reports and
+//! attachments.
 //!
-//! This module provides the core traits and types for implementing custom handlers
-//! that control how context objects and attachments are formatted and displayed in
-//! error reports.
+//! This module provides the core traits and types for implementing custom
+//! handlers that control how context objects and attachments are formatted and
+//! displayed in error reports.
 
-/// Trait for implementing custom formatting and error-chaining behavior for report contexts.
+/// Trait for implementing custom formatting and error-chaining behavior for
+/// report contexts.
 ///
-/// This trait defines how a context type should be formatted when displayed or debugged
-/// as part of an error report, and how to navigate to its error source (if any).
+/// This trait defines how a context type should be formatted when displayed or
+/// debugged as part of an error report, and how to navigate to its error source
+/// (if any).
 ///
 /// # When to Implement
 ///
-/// You typically don't need to implement this trait directly. The rootcause library
-/// provides built-in handlers (`Error`, `Display`, `Debug`, `Any`) that cover most
-/// use cases.
+/// You typically don't need to implement this trait directly. The rootcause
+/// library provides built-in handlers (`Error`, `Display`, `Debug`, `Any`) that
+/// cover most use cases.
 ///
-/// Implement this trait when you need custom formatting behavior that the built-in
-/// handlers don't provide, such as:
-/// - Custom source chain navigation for types that don't implement `std::error::Error`
-/// - Special display formatting that differs from the type's `Display` implementation
+/// Implement this trait when you need custom formatting behavior that the
+/// built-in handlers don't provide, such as:
+/// - Custom source chain navigation for types that don't implement
+///   `std::error::Error`
+/// - Special display formatting that differs from the type's `Display`
+///   implementation
 /// - Dynamic formatting based on the context value
 ///
 /// # Required Methods
 ///
-/// - [`source`](ContextHandler::source): Returns the underlying error source, if any
-/// - [`display`](ContextHandler::display): Formats the context for display output
+/// - [`source`](ContextHandler::source): Returns the underlying error source,
+///   if any
+/// - [`display`](ContextHandler::display): Formats the context for display
+///   output
 /// - [`debug`](ContextHandler::debug): Formats the context for debug output
 ///
 /// # Optional Methods
@@ -40,8 +47,11 @@
 /// # Examples
 ///
 /// ```rust
-/// use rootcause_internals::handlers::{ContextHandler, ContextFormattingStyle, FormattingFunction};
 /// use std::error::Error;
+///
+/// use rootcause_internals::handlers::{
+///     ContextFormattingStyle, ContextHandler, FormattingFunction,
+/// };
 ///
 /// // Custom context type
 /// struct CustomError {
@@ -62,7 +72,11 @@
 ///     }
 ///
 ///     fn debug(context: &CustomError, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-///         write!(f, "CustomError {{ code: {}, message: {:?} }}", context.code, context.message)
+///         write!(
+///             f,
+///             "CustomError {{ code: {}, message: {:?} }}",
+///             context.code, context.message
+///         )
 ///     }
 /// }
 /// ```
@@ -80,11 +94,13 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// For types implementing `std::error::Error`, delegate to their `source` method:
+    /// For types implementing `std::error::Error`, delegate to their `source`
+    /// method:
     ///
     /// ```rust
-    /// use rootcause_internals::handlers::ContextHandler;
     /// use std::error::Error;
+    ///
+    /// use rootcause_internals::handlers::ContextHandler;
     ///
     /// struct ErrorHandler;
     ///
@@ -132,9 +148,9 @@ pub trait ContextHandler<C>: 'static {
 
     /// Formats the context using debug-style formatting.
     ///
-    /// This method is called when the context needs to be debug-formatted. It should
-    /// produce detailed output suitable for developers, potentially including internal
-    /// state and implementation details.
+    /// This method is called when the context needs to be debug-formatted. It
+    /// should produce detailed output suitable for developers, potentially
+    /// including internal state and implementation details.
     ///
     /// # Examples
     ///
@@ -159,13 +175,15 @@ pub trait ContextHandler<C>: 'static {
     /// ```
     fn debug(value: &C, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// Specifies the preferred formatting style when this context is embedded in a report.
+    /// Specifies the preferred formatting style when this context is embedded
+    /// in a report.
     ///
-    /// This method allows the handler to choose between display and debug formatting
-    /// based on how the report itself is being formatted. The default implementation
-    /// always returns [`FormattingFunction::Display`], meaning the context will use
-    /// its [`display`](ContextHandler::display) method even when the report is being
-    /// debug-formatted.
+    /// This method allows the handler to choose between display and debug
+    /// formatting based on how the report itself is being formatted. The
+    /// default implementation always returns
+    /// [`FormattingFunction::Display`], meaning the context will use
+    /// its [`display`](ContextHandler::display) method even when the report is
+    /// being debug-formatted.
     ///
     /// # Arguments
     ///
@@ -175,15 +193,18 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Default Behavior
     ///
-    /// The default implementation ignores the report's formatting style and always
-    /// uses display formatting. This is the behavior of all built-in handlers.
+    /// The default implementation ignores the report's formatting style and
+    /// always uses display formatting. This is the behavior of all built-in
+    /// handlers.
     ///
     /// # Examples
     ///
     /// Custom handler that mirrors the report's formatting:
     ///
     /// ```rust
-    /// use rootcause_internals::handlers::{ContextHandler, ContextFormattingStyle, FormattingFunction};
+    /// use rootcause_internals::handlers::{
+    ///     ContextFormattingStyle, ContextHandler, FormattingFunction,
+    /// };
     ///
     /// struct MirrorHandler;
     ///
@@ -222,23 +243,25 @@ pub trait ContextHandler<C>: 'static {
 
 /// Trait for implementing custom formatting behavior for report attachments.
 ///
-/// This trait defines how an attachment type should be formatted when displayed or
-/// debugged as part of an error report. Unlike [`ContextHandler`], this trait also
-/// allows specifying placement preferences (inline vs appendix).
+/// This trait defines how an attachment type should be formatted when displayed
+/// or debugged as part of an error report. Unlike [`ContextHandler`], this
+/// trait also allows specifying placement preferences (inline vs appendix).
 ///
 /// # When to Implement
 ///
-/// You typically don't need to implement this trait directly. The rootcause library
-/// provides built-in handlers that cover most use cases. Implement this trait when
-/// you need:
+/// You typically don't need to implement this trait directly. The rootcause
+/// library provides built-in handlers that cover most use cases. Implement this
+/// trait when you need:
 /// - Custom formatting for attachment types
 /// - Special placement logic (e.g., large data in appendices)
 /// - Dynamic formatting based on attachment content
 ///
 /// # Required Methods
 ///
-/// - [`display`](AttachmentHandler::display): Formats the attachment for display output
-/// - [`debug`](AttachmentHandler::debug): Formats the attachment for debug output
+/// - [`display`](AttachmentHandler::display): Formats the attachment for
+///   display output
+/// - [`debug`](AttachmentHandler::debug): Formats the attachment for debug
+///   output
 ///
 /// # Optional Methods
 ///
@@ -251,7 +274,7 @@ pub trait ContextHandler<C>: 'static {
 ///
 /// ```rust
 /// use rootcause_internals::handlers::{
-///     AttachmentHandler, AttachmentFormattingStyle, AttachmentFormattingPlacement,
+///     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
 ///     FormattingFunction,
 /// };
 ///
@@ -295,8 +318,9 @@ pub trait ContextHandler<C>: 'static {
 pub trait AttachmentHandler<A>: 'static {
     /// Formats the attachment using display-style formatting.
     ///
-    /// This method is called when the attachment needs to be displayed as part of
-    /// an error report. It should produce human-readable output suitable for end users.
+    /// This method is called when the attachment needs to be displayed as part
+    /// of an error report. It should produce human-readable output suitable
+    /// for end users.
     ///
     /// # Examples
     ///
@@ -323,18 +347,22 @@ pub trait AttachmentHandler<A>: 'static {
 
     /// Formats the attachment using debug-style formatting.
     ///
-    /// This method is called when the attachment needs to be debug-formatted. It should
-    /// produce detailed output suitable for developers.
+    /// This method is called when the attachment needs to be debug-formatted.
+    /// It should produce detailed output suitable for developers.
     fn debug(value: &A, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// Specifies the preferred formatting style and placement for this attachment.
+    /// Specifies the preferred formatting style and placement for this
+    /// attachment.
     ///
     /// This method allows the handler to control:
-    /// - **Placement**: Whether the attachment appears inline, in an appendix, or is hidden
+    /// - **Placement**: Whether the attachment appears inline, in an appendix,
+    ///   or is hidden
     /// - **Formatting**: Whether to use display or debug formatting
-    /// - **Priority**: The order in which attachments are displayed (higher = earlier)
+    /// - **Priority**: The order in which attachments are displayed (higher =
+    ///   earlier)
     ///
-    /// The default implementation returns inline display formatting with priority 0.
+    /// The default implementation returns inline display formatting with
+    /// priority 0.
     ///
     /// # Examples
     ///
@@ -342,7 +370,7 @@ pub trait AttachmentHandler<A>: 'static {
     ///
     /// ```rust
     /// use rootcause_internals::handlers::{
-    ///     AttachmentHandler, AttachmentFormattingStyle, AttachmentFormattingPlacement,
+    ///     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
     ///     FormattingFunction,
     /// };
     ///
@@ -383,9 +411,10 @@ pub trait AttachmentHandler<A>: 'static {
 
 /// Formatting preferences for a context when displayed in a report.
 ///
-/// This struct allows a [`ContextHandler`] to specify how it prefers to be formatted
-/// when its context is displayed as part of an error report. The formatting system
-/// may or may not respect these preferences depending on the formatter implementation.
+/// This struct allows a [`ContextHandler`] to specify how it prefers to be
+/// formatted when its context is displayed as part of an error report. The
+/// formatting system may or may not respect these preferences depending on the
+/// formatter implementation.
 ///
 /// # Fields
 ///
@@ -418,13 +447,15 @@ pub struct ContextFormattingStyle {
 
 /// Formatting preferences for an attachment when displayed in a report.
 ///
-/// This struct allows an [`AttachmentHandler`] to specify how and where it prefers
-/// to be displayed when included in an error report. The formatting system may or may
-/// not respect these preferences depending on the formatter implementation.
+/// This struct allows an [`AttachmentHandler`] to specify how and where it
+/// prefers to be displayed when included in an error report. The formatting
+/// system may or may not respect these preferences depending on the formatter
+/// implementation.
 ///
 /// # Fields
 ///
-/// - `placement`: Where the attachment should appear (inline, appendix, hidden, etc.)
+/// - `placement`: Where the attachment should appear (inline, appendix, hidden,
+///   etc.)
 /// - `function`: Whether to use [`Display`](core::fmt::Display) or
 ///   [`Debug`](core::fmt::Debug) formatting
 /// - `priority`: Display order preference (higher values appear earlier)
@@ -437,7 +468,7 @@ pub struct ContextFormattingStyle {
 ///
 /// ```rust
 /// use rootcause_internals::handlers::{
-///     AttachmentFormattingStyle, AttachmentFormattingPlacement, FormattingFunction,
+///     AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
 /// };
 ///
 /// // Default: inline display formatting
@@ -466,7 +497,8 @@ pub struct AttachmentFormattingStyle {
     pub priority: i32,
 }
 
-/// Specifies whether to use display or debug formatting for a context or attachment.
+/// Specifies whether to use display or debug formatting for a context or
+/// attachment.
 ///
 /// This enum is used by handlers to indicate their formatting preference when
 /// a context or attachment is displayed as part of an error report. The actual
@@ -499,17 +531,19 @@ pub enum FormattingFunction {
 
 /// Specifies where an attachment should be placed when displayed in a report.
 ///
-/// This enum allows attachments to indicate their preferred placement in error reports.
-/// Different placements are suitable for different types of content:
+/// This enum allows attachments to indicate their preferred placement in error
+/// reports. Different placements are suitable for different types of content:
 ///
-/// - **Inline**: Short, contextual information that flows with the error message
+/// - **Inline**: Short, contextual information that flows with the error
+///   message
 /// - **InlineWithHeader**: Multi-line content that needs a header for clarity
-/// - **Appendix**: Large or detailed content better suited to a separate section
+/// - **Appendix**: Large or detailed content better suited to a separate
+///   section
 /// - **Opaque**: Content that shouldn't be shown but should be counted
 /// - **Hidden**: Content that shouldn't appear at all
 ///
-/// The actual formatting system may or may not respect these preferences depending
-/// on the implementation.
+/// The actual formatting system may or may not respect these preferences
+/// depending on the implementation.
 ///
 /// # Examples
 ///
@@ -553,9 +587,9 @@ pub enum AttachmentFormattingPlacement {
 
     /// Display the attachment in a separate appendix section.
     ///
-    /// Suitable for large or detailed content that would disrupt the flow of the
-    /// main error message, such as full stack traces, large data dumps, or
-    /// detailed diagnostic information.
+    /// Suitable for large or detailed content that would disrupt the flow of
+    /// the main error message, such as full stack traces, large data dumps,
+    /// or detailed diagnostic information.
     Appendix {
         /// The name of the appendix section for this attachment
         appendix_name: &'static str,
