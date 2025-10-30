@@ -21,12 +21,44 @@ use crate::{
 
 /// An error report that contains a context, child reports, and attachments.
 ///
-/// # Examples
+/// [`Report`] is the main type for creating and working with error reports in
+/// this library. It can contain a root context (typically an error), zero or
+/// more child reports, and zero or more attachments.
+///
+/// # Type Parameters
+///
+/// [`Report`] has three type parameters that control its behavior:
+///
+/// - **Context (`C`)**: The type of the root error or context (defaults to `dyn Any`)
+/// - **Ownership (`O`)**: Controls whether the report can be cloned
+///   - [`Mutable`]: Unique ownership, can modify but cannot clone (default)
+///   - [`Cloneable`]: Shared ownership via [`Arc`], can clone but cannot modify root
+/// - **Thread Safety (`T`)**: Controls whether the report can be sent across threads
+///   - [`SendSync`]: Can be sent across threads (default, requires all data is [`Send`]+[`Sync`])
+///   - [`Local`]: Cannot be sent across threads (allows non-thread-safe data)
+///
+/// # Common Usage
+///
+/// The easiest way to create a [`Report`] is with the [`report!()`] macro:
+///
 /// ```
 /// # use rootcause::prelude::*;
 /// let report: Report = report!("file missing");
 /// println!("{report}");
 /// ```
+///
+/// You can add context and attachments using method chaining:
+///
+/// ```
+/// # use rootcause::prelude::*;
+/// let report = report!("database query failed")
+///     .context("failed to fetch user data")
+///     .attach("user_id: 12345");
+/// println!("{report}");
+/// ```
+///
+/// [`Arc`]: triomphe::Arc
+/// [`report!()`]: crate::report!
 #[repr(transparent)]
 pub struct Report<Context = dyn Any, Ownership = Mutable, ThreadSafety = SendSync>
 where
@@ -52,12 +84,12 @@ where
     ///
     /// See also:
     ///
-    /// - The [`report!()`] macro will also create a new report, but can
+    /// - The [`report!()`] macro will also create a new [`Report`], but can
     ///   auto-detect the thread safety marker and handler.
-    /// - The [`Report::new_sendsync`] and [`Report::new_local`] are more
+    /// - [`Report::new_sendsync`] and [`Report::new_local`] are more
     ///   restrictive variants of this function that might help avoid type
     ///   inference issues.
-    /// - The [`Report::new_custom`] methods also allows you to manually specify
+    /// - [`Report::new_custom`] also allows you to manually specify
     ///   the handler.
     ///
     /// [`report!()`]: crate::report!
@@ -640,7 +672,7 @@ where
     /// the effect of "forgetting" that all objects in the [`Report`] might
     /// actually be [`Send`] and [`Sync`].
     ///
-    /// After calling this method, you can add objects to the [`Report`] that
+    /// After calling this method, you can add objects to the [`Report`] that are
     /// neither [`Send`] nor [`Sync`], but the report itself will no longer
     /// be [`Send`]+[`Sync`].
     ///
@@ -659,9 +691,9 @@ where
     /// Checks if there is only a single unique owner of the root node of the
     /// [`Report`].
     ///
-    /// If there is only a single unique owner of the [`Report`], this method
-    /// marks the current report as [`Mutable`] report and returns,
-    /// otherwise it gives back the current report.
+    /// If there is only a single unique owner, this method
+    /// marks the current [`Report`] as [`Mutable`] and returns `Ok`,
+    /// otherwise it returns `Err` with the original [`Report`].
     ///
     /// This method does not actually modify the report in any way. It only has
     /// the effect of checking for unique ownership and returns the same
