@@ -6,13 +6,13 @@
 //!
 //! # What Are Handlers?
 //!
-//! A handler implements the [`ContextHandler`] and/or [`AttachmentHandler`] traits,
-//! defining how to:
-//! - Display an error context (via [`Display`](core::fmt::Display))
-//! - Debug-format an error context (via [`Debug`](core::fmt::Debug))
-//! - Navigate to the error's source (via [`Error::source`](core::error::Error::source))
-//! - Format attachments when they're shown with reports
-//! - Specify formatting preferences (inline vs appendix, display vs debug)
+//! Handlers are types that implement the [`ContextHandler`] and/or [`AttachmentHandler`]
+//! traits. They define how to format your error contexts and attachments, including:
+//! - How to display an error context (via [`Display`](core::fmt::Display))
+//! - How to debug-format an error context (via [`Debug`](core::fmt::Debug))
+//! - How to navigate to the error's source (via [`Error::source`](core::error::Error::source))
+//! - How to format attachments when they appear in reports
+//! - Formatting preferences (inline vs appendix, display vs debug)
 //!
 //! # Formatting Behavior
 //!
@@ -23,12 +23,12 @@
 //! The [`ContextHandler::preferred_formatting_style`] and
 //! [`AttachmentHandler::preferred_formatting_style`] methods allow handlers to specify
 //! whether they prefer [`Display`](core::fmt::Display) or [`Debug`](core::fmt::Debug)
-//! formatting when embedded in a report. The default is to use `Display` formatting
-//! regardless of how the report itself is being formatted.
+//! formatting when shown in a report. The default behavior is to always use `Display`
+//! formatting, regardless of how the report itself is being formatted.
 //!
-//! All built-in handlers ([`Error`], [`Display`], [`struct@Debug`], [`Any`]) use the default
-//! behavior, which means they call their `display` method even when the report is being
-//! debug-formatted.
+//! All built-in handlers ([`Error`], [`Display`], [`struct@Debug`], [`Any`]) use this
+//! default behavior, which means they use their `display` method even when the report
+//! is being debug-formatted with `{:?}`.
 //!
 //! ## 2. Attachment Placement
 //!
@@ -94,7 +94,7 @@ pub use rootcause_internals::handlers::{
 ///
 /// This handler delegates to the error type's existing implementations of
 /// [`Error::source`](core::error::Error::source), [`Display`](core::fmt::Display),
-/// and [`Debug`](core::fmt::Debug). It's the default handler for any type that
+/// and [`Debug`](core::fmt::Debug). This is the default handler for any type that
 /// implements the `Error` trait.
 ///
 /// # When to Use
@@ -138,14 +138,14 @@ where
 /// Handler for types implementing [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug).
 ///
 /// This handler delegates to the type's `Display` and `Debug` implementations for formatting.
-/// It's suitable for custom context types that aren't errors but can be meaningfully displayed.
-/// The [`source`](ContextHandler::source) method always returns `None` since these types don't
-/// have error sources.
+/// This is suitable for custom context types that aren't errors but can be meaningfully
+/// displayed. The [`source`](ContextHandler::source) method always returns `None` since
+/// these types don't have error sources.
 ///
 /// # When to Use
 ///
 /// This handler is automatically selected for types that implement `Display` and `Debug` but
-/// not `std::error::Error`. It's ideal for custom context types like configuration objects,
+/// not `std::error::Error`. This is ideal for custom context types like configuration objects,
 /// request parameters, or descriptive messages.
 ///
 /// # Examples
@@ -220,7 +220,7 @@ where
 /// # When to Use
 ///
 /// This handler is automatically selected for types that implement `Debug` but not `Display`.
-/// It's useful for internal data structures or types where displaying the full debug output
+/// This is useful for internal data structures or types where displaying the full debug output
 /// as the primary message would be too verbose.
 ///
 /// # Formatting Behavior
@@ -228,8 +228,8 @@ where
 /// - **`display` method**: Shows "Context of type `TypeName`"
 /// - **`debug` method**: Uses the type's `Debug` implementation
 /// - **`source` method**: Always returns `None`
-/// - **Preferred formatting**: Uses `Display` (the default), so even when the report is
-///   formatted with `{:?}`, the context will use its `display` method
+/// - **Preferred formatting**: Uses `Display` by default, so contexts show the generic
+///   type name message even when the report is formatted with `{:?}`
 ///
 /// # Example
 ///
@@ -249,13 +249,12 @@ where
 ///
 /// let report: Report<InternalState> = report!(state);
 ///
-/// // When formatting with Display, it shows a generic message
+/// // Display formatting shows a generic message with the type name
 /// let display_output = format!("{}", report);
 /// assert!(display_output.contains("InternalState"));
 /// assert!(!display_output.contains("connection_count")); // Details not shown
 ///
-/// // When formatting with Debug, the handler still uses Display (the default)
-/// // so you still get the generic message, not the full Debug output
+/// // Debug formatting also uses the handler's Display method (the default behavior)
 /// let debug_output = format!("{:?}", report);
 /// assert!(debug_output.contains("InternalState"));
 /// ```
