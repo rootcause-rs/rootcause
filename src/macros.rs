@@ -1,14 +1,15 @@
 /// Creates a new error report.
 ///
-/// This macro provides a convenient way to create [`Report`](crate::Report) instances with automatic
-/// type inference for thread-safety markers and error handlers.
+/// This macro provides a convenient way to create [`Report`](crate::Report)
+/// instances with automatic type inference for thread-safety markers and error
+/// handlers.
 ///
 /// # Two Usage Modes
 ///
 /// ## Format String Mode
 ///
-/// When the first argument is a string literal, the macro works like [`format!()`],
-/// creating a report with a formatted string as context:
+/// When the first argument is a string literal, the macro works like
+/// [`format!()`], creating a report with a formatted string as context:
 ///
 /// ```rust
 /// use rootcause::prelude::*;
@@ -17,9 +18,9 @@
 /// let report: Report = report!("Failed to open {}", "config.toml");
 /// ```
 ///
-/// The resulting report has type `Report<dyn Any, Mutable, SendSync>`. The context
-/// is typically a `String`, but when there are no format arguments, it may be
-/// optimized to a `&'static str`.
+/// The resulting report has type `Report<dyn Any, Mutable, SendSync>`. The
+/// context is typically a `String`, but when there are no format arguments, it
+/// may be optimized to a `&'static str`.
 ///
 /// ## Context Object Mode
 ///
@@ -37,7 +38,8 @@
 /// ```
 ///
 /// This mode automatically:
-/// - Infers the thread-safety marker based on whether the context type is `Send + Sync`
+/// - Infers the thread-safety marker based on whether the context type is `Send
+///   + Sync`
 /// - Selects the appropriate handler based on the context type
 ///
 /// This is similar to calling [`Report::new`], but with better type inference.
@@ -74,10 +76,7 @@
 /// ## Error Type Reports
 ///
 /// ```
-/// use std::{
-///     any::TypeId,
-///     io,
-/// };
+/// use std::{any::TypeId, io};
 ///
 /// use rootcause::prelude::*;
 ///
@@ -98,10 +97,7 @@
 /// automatically infers the [`Local`](crate::markers::Local) marker:
 ///
 /// ```
-/// use std::{
-///     any::TypeId,
-///     rc::Rc,
-/// };
+/// use std::{any::TypeId, rc::Rc};
 ///
 /// use rootcause::prelude::*;
 ///
@@ -147,12 +143,12 @@ macro_rules! report {
 /// Creates a report attachment with contextual data.
 ///
 /// This macro creates a [`ReportAttachment`] that can be added to error reports
-/// to provide additional context. It accepts the same arguments as the [`report!`]
-/// macro but produces an attachment instead of a full report.
+/// to provide additional context. It accepts the same arguments as the
+/// [`report!`] macro but produces an attachment instead of a full report.
 ///
-/// Attachments are useful for adding supplementary information to errors without
-/// changing the main error context. For example, you might attach configuration
-/// values, request parameters, or debugging information.
+/// Attachments are useful for adding supplementary information to errors
+/// without changing the main error context. For example, you might attach
+/// configuration values, request parameters, or debugging information.
 ///
 /// # Usage Modes
 ///
@@ -165,6 +161,7 @@ macro_rules! report {
 ///
 /// ```
 /// use std::any::{Any, TypeId};
+///
 /// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
 ///
 /// // Static string
@@ -190,6 +187,7 @@ macro_rules! report {
 ///
 /// ```
 /// use std::any::TypeId;
+///
 /// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
 ///
 /// #[derive(Debug)]
@@ -210,8 +208,7 @@ macro_rules! report {
 ///     code: 404,
 ///     message: "Not found".to_string(),
 /// };
-/// let attachment: ReportAttachment<ErrorData, markers::SendSync> =
-///     report_attachment!(error_data);
+/// let attachment: ReportAttachment<ErrorData, markers::SendSync> = report_attachment!(error_data);
 /// assert_eq!(
 ///     attachment.inner_handler_type_id(),
 ///     TypeId::of::<handlers::Display>()
@@ -222,11 +219,11 @@ macro_rules! report {
 ///
 /// ```
 /// use std::rc::Rc;
+///
 /// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
 ///
 /// let local_data: Rc<String> = Rc::new("Local context".to_string());
-/// let attachment: ReportAttachment<Rc<String>, markers::Local> =
-///     report_attachment!(local_data);
+/// let attachment: ReportAttachment<Rc<String>, markers::Local> = report_attachment!(local_data);
 /// ```
 ///
 /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
@@ -257,11 +254,11 @@ macro_rules! report_attachment {
 
 /// Returns early from a function with an error report.
 ///
-/// This macro creates a new [`Report`] and immediately returns it wrapped in an `Err`.
-/// It's a convenience shorthand for `return Err(report!(...).into())`.
+/// This macro creates a new [`Report`] and immediately returns it wrapped in an
+/// `Err`. It's a convenience shorthand for `return Err(report!(...).into())`.
 ///
-/// The macro is similar to the [`bail!`] macro from the [`anyhow`] crate and accepts
-/// the same arguments as the [`report!`] macro.
+/// The macro is similar to the [`bail!`] macro from the [`anyhow`] crate and
+/// accepts the same arguments as the [`report!`] macro.
 ///
 /// # When to Use
 ///

@@ -20,8 +20,8 @@ mod sealed {
 ///
 /// The methods in this trait fall into several categories:
 ///
-/// - **Converting to reports**: [`into_report`](ResultExt::into_report) converts
-///   the error into a [`Report`]
+/// - **Converting to reports**: [`into_report`](ResultExt::into_report)
+///   converts the error into a [`Report`]
 /// - **Adding context**: [`context`](ResultExt::context),
 ///   [`context_with`](ResultExt::context_with), and variants add a new context
 ///   layer to the error
@@ -44,8 +44,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// fn read_config() -> Result<String, io::Error> {
     ///     std::fs::read_to_string("config.toml")
@@ -79,8 +80,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// fn fetch_data(path: &str) -> Result<Vec<u8>, io::Error> {
     ///     std::fs::read(path)
@@ -117,15 +119,16 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// fn get_timestamp() -> String {
     ///     "12:34:56".to_string()
     /// }
     ///
-    /// let result: Result<Vec<u8>, Report<String>> = std::fs::read("user_data.bz2")
-    ///     .context_with(|| format!("Failed at {}", get_timestamp()));
+    /// let result: Result<Vec<u8>, Report<String>> =
+    ///     std::fs::read("user_data.bz2").context_with(|| format!("Failed at {}", get_timestamp()));
     /// ```
     #[track_caller]
     fn context_with<C, F>(self, context: F) -> Result<V, Report<C, Mutable, SendSync>>
@@ -155,8 +158,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// enum ErrorContext {
@@ -164,8 +168,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     IoError,
     /// }
     ///
-    /// let result: Result<Vec<u8>, Report<ErrorContext>> = std::fs::read("user_data.bz2")
-    ///     .context_custom::<handlers::Debug, _>(ErrorContext::IoError);
+    /// let result: Result<Vec<u8>, Report<ErrorContext>> =
+    ///     std::fs::read("user_data.bz2").context_custom::<handlers::Debug, _>(ErrorContext::IoError);
     /// ```
     #[track_caller]
     fn context_custom<H, C>(self, context: C) -> Result<V, Report<C, Mutable, SendSync>>
@@ -195,8 +199,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
@@ -211,8 +216,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     }
     /// }
     ///
-    /// let result: Result<Vec<u8>, Report<ErrorContext>> = std::fs::read("user_data.bz2")
-    ///     .context_custom_with::<handlers::Debug, _, _>(expensive_computation);
+    /// let result: Result<Vec<u8>, Report<ErrorContext>> =
+    ///     std::fs::read("user_data.bz2")
+    ///         .context_custom_with::<handlers::Debug, _, _>(expensive_computation);
     /// ```
     #[track_caller]
     fn context_custom_with<H, C, F>(self, context: F) -> Result<V, Report<C, Mutable, SendSync>>
@@ -236,11 +242,12 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
-    ///     .attach("while reading user_data.bz2");
+    /// use rootcause::prelude::*;
+    ///
+    /// let result: Result<Vec<u8>, Report<io::Error>> =
+    ///     std::fs::read("user_data.bz2").attach("while reading user_data.bz2");
     /// ```
     #[track_caller]
     fn attach<A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, SendSync>>
@@ -263,15 +270,16 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// fn get_debug_info() -> String {
     ///     "complex computation result".to_string()
     /// }
     ///
-    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
-    ///     .attach_with(|| format!("debug info: {}", get_debug_info()));
+    /// let result: Result<Vec<u8>, Report<io::Error>> =
+    ///     std::fs::read("user_data.bz2").attach_with(|| format!("debug info: {}", get_debug_info()));
     /// ```
     #[track_caller]
     fn attach_with<A, F>(self, attachment: F) -> Result<V, Report<E::Context, Mutable, SendSync>>
@@ -296,8 +304,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct RequestMetadata {
@@ -310,8 +319,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     user_id: 67890,
     /// };
     ///
-    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
-    ///     .attach_custom::<handlers::Debug, _>(metadata);
+    /// let result: Result<Vec<u8>, Report<io::Error>> =
+    ///     std::fs::read("user_data.bz2").attach_custom::<handlers::Debug, _>(metadata);
     /// ```
     #[track_caller]
     fn attach_custom<H, A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, SendSync>>
@@ -334,8 +343,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::io;
+    ///
+    /// use rootcause::prelude::*;
     ///
     /// #[derive(Debug)]
     /// struct RequestMetadata {
@@ -381,6 +391,7 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use std::{fmt, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
     ///
     /// // This error is neither Send nor Sync
@@ -428,9 +439,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// fn fetch_data(path: &str) -> Result<Vec<u8>, io::Error> {
     ///     std::fs::read(path)
@@ -467,9 +478,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// struct ContextData {
@@ -523,9 +534,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// enum ErrorContext {
@@ -566,9 +577,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
@@ -609,9 +620,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// // In this case it might make more sense to use `local_attach_with`, but
     /// // you can assume that the attachment is pre-computed.
@@ -640,9 +651,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// fn get_debug_info() -> String {
     ///     "complex computation result".to_string()
@@ -678,9 +689,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// struct RequestMetadata {
@@ -723,9 +734,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
+    /// use std::{io, rc::Rc};
+    ///
     /// use rootcause::prelude::*;
-    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// struct RequestMetadata {

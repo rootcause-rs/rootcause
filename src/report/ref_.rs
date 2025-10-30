@@ -21,38 +21,36 @@ use crate::{
 
 /// A reference to a [`Report`].
 ///
-/// [`ReportRef`] is a lightweight, copyable reference to a report that allows you
-/// to inspect report data without taking ownership. It's the primary way to work
-/// with reports in a read-only manner.
+/// [`ReportRef`] is a lightweight, copyable reference to a report that allows
+/// you to inspect report data without taking ownership. It's the primary way to
+/// work with reports in a read-only manner.
 ///
 /// # Key Characteristics
 ///
-/// - **Always `Copy` + `Clone`**: Unlike [`Report`], all [`ReportRef`] instances can
-///   be freely copied regardless of their ownership marker
+/// - **Always `Copy` + `Clone`**: Unlike [`Report`], all [`ReportRef`]
+///   instances can be freely copied regardless of their ownership marker
 /// - **Lifetime-bound**: Tied to the lifetime of the underlying report
-/// - **Type parameters**: Like [`Report`], has context type `C`, ownership marker
-///   `O`, and thread safety marker `T`
+/// - **Type parameters**: Like [`Report`], has context type `C`, ownership
+///   marker `O`, and thread safety marker `T`
 ///
 /// # Ownership Markers
 ///
-/// The ownership marker on [`ReportRef`] indicates what the *underlying* report's
-/// ownership status is:
+/// The ownership marker on [`ReportRef`] indicates what the *underlying*
+/// report's ownership status is:
 ///
-/// - [`Cloneable`]: The underlying report is shared (can use [`clone_arc`] to get
-///   an owned [`Report`])
+/// - [`Cloneable`]: The underlying report is shared (can use [`clone_arc`] to
+///   get an owned [`Report`])
 /// - [`Uncloneable`]: The underlying report has unique ownership (cannot use
 ///   [`clone_arc`])
 ///
-/// Note that when you create a [`ReportRef`] from a [`Report`] marked as [`Mutable`],
-/// it becomes a [`ReportRef`] with the [`Uncloneable`] marker to prevent cloning
-/// while mutable access exists.
+/// Note that when you create a [`ReportRef`] from a [`Report`] marked as
+/// [`Mutable`], it becomes a [`ReportRef`] with the [`Uncloneable`] marker to
+/// prevent cloning while mutable access exists.
 ///
 /// # Examples
 ///
 /// ```
-/// use rootcause::prelude::*;
-/// use rootcause::ReportRef;
-/// use rootcause::markers::Uncloneable;
+/// use rootcause::{ReportRef, markers::Uncloneable, prelude::*};
 ///
 /// let report: Report = report!("error message");
 ///
@@ -240,9 +238,9 @@ where
     /// the effect of "forgetting" that all objects in the [`ReportRef`] are
     /// actually [`Send`] and [`Sync`].
     ///
-    /// This is useful when you need to work with a report reference in a context
-    /// that doesn't require [`Send`] + [`Sync`], or when the report may contain
-    /// thread-local data that isn't actually being used.
+    /// This is useful when you need to work with a report reference in a
+    /// context that doesn't require [`Send`] + [`Sync`], or when the report
+    /// may contain thread-local data that isn't actually being used.
     ///
     /// # Examples
     /// ```
@@ -719,15 +717,14 @@ where
     /// Clones the underlying [`triomphe::Arc`] of the report, returning
     /// a new owned [`Report`] that references the same root node.
     ///
-    /// This method is only available when the ownership marker is [`Cloneable`],
-    /// indicating that the underlying report can be safely cloned.
+    /// This method is only available when the ownership marker is
+    /// [`Cloneable`], indicating that the underlying report can be safely
+    /// cloned.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
-    /// use rootcause::ReportRef;
-    /// use rootcause::markers::Cloneable;
+    /// use rootcause::{ReportRef, markers::Cloneable, prelude::*};
     ///
     /// let report1: Report<_, Cloneable> = report!("error").into_cloneable();
     /// let report_ref: ReportRef<'_, _, Cloneable> = report1.as_ref();

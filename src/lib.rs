@@ -174,10 +174,10 @@
 //!     allocating a new root node is to call [`Report::context`].
 //! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable,
 //!   SendSync>`:
-//!   - You can preformat the entire report using [`Report::preformat`].
-//!     This creates an entirely new report that has the same structure and will
-//!     look the same as the current one if printed, but all contexts and
-//!     attachments will be replaced with a [`PreformattedContext`] version.
+//!   - You can preformat the entire report using [`Report::preformat`]. This
+//!     creates an entirely new report that has the same structure and will look
+//!     the same as the current one if printed, but all contexts and attachments
+//!     will be replaced with a [`PreformattedContext`] version.
 //!
 //! # Acknowledgements
 //!

@@ -6,8 +6,8 @@ use crate::{IntoReport, markers, report_collection::ReportCollection};
 /// Extension methods for iterators over `Result` types to collect errors.
 ///
 /// This trait provides methods to collect successful values while accumulating
-/// all errors into a [`ReportCollection`], rather than stopping at the first error
-/// like [`Iterator::collect`] does.
+/// all errors into a [`ReportCollection`], rather than stopping at the first
+/// error like [`Iterator::collect`] does.
 ///
 /// # When to Use
 ///
@@ -27,10 +27,7 @@ use crate::{IntoReport, markers, report_collection::ReportCollection};
 /// let inputs = vec!["1", "2", "invalid", "4", "bad"];
 ///
 /// // Standard collect stops at first error
-/// let standard: Result<Vec<u8>, _> = inputs
-///     .iter()
-///     .map(|s| s.parse::<u8>())
-///     .collect();
+/// let standard: Result<Vec<u8>, _> = inputs.iter().map(|s| s.parse::<u8>()).collect();
 /// assert!(standard.is_err()); // Stopped at "invalid", never saw "bad"
 ///
 /// // collect_reports_vec processes ALL items and collects ALL errors
@@ -44,24 +41,28 @@ use crate::{IntoReport, markers, report_collection::ReportCollection};
 /// assert_eq!(all_errors.len(), 2); // Both "invalid" and "bad" collected
 /// ```
 pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
-    /// Collects successful values into a container, or all errors into a [`ReportCollection`].
+    /// Collects successful values into a container, or all errors into a
+    /// [`ReportCollection`].
     ///
-    /// This method processes the entire iterator, collecting all `Ok` values into the
-    /// specified container type. If any `Err` values are encountered, iteration continues
-    /// to collect **all** errors before returning them in a [`ReportCollection`].
+    /// This method processes the entire iterator, collecting all `Ok` values
+    /// into the specified container type. If any `Err` values are
+    /// encountered, iteration continues to collect **all** errors before
+    /// returning them in a [`ReportCollection`].
     ///
-    /// This is different from using [`Iterator::collect`] on `Result`s, which stops at
-    /// the first error.
+    /// This is different from using [`Iterator::collect`] on `Result`s, which
+    /// stops at the first error.
     ///
     /// # Type Parameters
     ///
-    /// - `Container`: The collection type for successful values (e.g., `Vec`, `HashSet`)
+    /// - `Container`: The collection type for successful values (e.g., `Vec`,
+    ///   `HashSet`)
     /// - `ThreadSafety`: The thread-safety marker for the error collection
     ///
     /// # Returns
     ///
     /// - `Ok(Container)`: If all items were successful
-    /// - `Err(ReportCollection)`: If any errors occurred, containing all of them
+    /// - `Err(ReportCollection)`: If any errors occurred, containing all of
+    ///   them
     ///
     /// # Examples
     ///
@@ -69,6 +70,7 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     ///
     /// ```
     /// use std::collections::BTreeSet;
+    ///
     /// use rootcause::{prelude::*, report_collection::ReportCollection};
     ///
     /// let inputs = vec!["1", "2", "foo", "4", "bar"];
@@ -87,6 +89,7 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     ///
     /// ```
     /// use std::collections::BTreeSet;
+    ///
     /// use rootcause::{prelude::*, report_collection::ReportCollection};
     ///
     /// let inputs = vec!["1", "2", "2"];
@@ -108,15 +111,18 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
         ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>;
 
-    /// Collects successful values into a `Vec`, or all errors into a [`ReportCollection`].
+    /// Collects successful values into a `Vec`, or all errors into a
+    /// [`ReportCollection`].
     ///
-    /// This is a specialized version of [`collect_reports`](IteratorExt::collect_reports)
-    /// that always collects into a `Vec`. It may help with type inference and could
+    /// This is a specialized version of
+    /// [`collect_reports`](IteratorExt::collect_reports) that always
+    /// collects into a `Vec`. It may help with type inference and could
     /// generate slightly more optimized code.
     ///
     /// # When to Use
     ///
-    /// Use this method instead of [`collect_reports`](IteratorExt::collect_reports) when:
+    /// Use this method instead of
+    /// [`collect_reports`](IteratorExt::collect_reports) when:
     /// - You're collecting into a `Vec` and want simpler type annotations
     /// - You're in performance-critical code and want potential optimization
     /// - Type inference is having trouble with the generic container parameter
@@ -124,7 +130,8 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     /// # Returns
     ///
     /// - `Ok(Vec<A>)`: If all items were successful
-    /// - `Err(ReportCollection)`: If any errors occurred, containing all of them
+    /// - `Err(ReportCollection)`: If any errors occurred, containing all of
+    ///   them
     ///
     /// # Examples
     ///

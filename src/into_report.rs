@@ -1,10 +1,12 @@
 use crate::{markers, prelude::Report, report_collection::ReportCollection};
 
-/// Converts errors and reports into [`Report`] instances with specific thread-safety markers.
+/// Converts errors and reports into [`Report`] instances with specific
+/// thread-safety markers.
 ///
-/// This trait is primarily used internally by the rootcause library for trait bounds in
-/// extension methods like [`ResultExt`](crate::result_ext::ResultExt). While it's available
-/// for direct use, most applications will find the [`report!`](crate::report!) macro more
+/// This trait is primarily used internally by the rootcause library for trait
+/// bounds in extension methods like
+/// [`ResultExt`](crate::result_ext::ResultExt). While it's available for direct
+/// use, most applications will find the [`report!`](crate::report!) macro more
 /// convenient for creating reports.
 ///
 /// # Internal Usage
@@ -22,26 +24,32 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// # Thread Safety
 ///
 /// The type parameter `T` specifies the desired thread-safety marker:
-/// - [`markers::SendSync`](crate::markers::SendSync): Report can be sent between threads
-/// - [`markers::Local`](crate::markers::Local): Report is restricted to the current thread
+/// - [`markers::SendSync`](crate::markers::SendSync): Report can be sent
+///   between threads
+/// - [`markers::Local`](crate::markers::Local): Report is restricted to the
+///   current thread
 ///
-/// When converting from `SendSync` to `Local`, the conversion always succeeds. Converting
-/// from `Local` to `SendSync` is only available if the context type is `Send + Sync`.
+/// When converting from `SendSync` to `Local`, the conversion always succeeds.
+/// Converting from `Local` to `SendSync` is only available if the context type
+/// is `Send + Sync`.
 ///
 /// # Typical Usage
 ///
 /// Most applications won't need to call this trait directly. Instead, consider:
 /// - Using [`report!`](crate::report!) to create reports from errors or strings
-/// - Using [`ResultExt`](crate::result_ext::ResultExt) methods to add context to `Result` types
+/// - Using [`ResultExt`](crate::result_ext::ResultExt) methods to add context
+///   to `Result` types
 /// - Using the `From` trait for generic type conversions
 ///
 /// # Examples
 ///
-/// Direct usage is possible, though the alternatives above are often more ergonomic:
+/// Direct usage is possible, though the alternatives above are often more
+/// ergonomic:
 ///
 /// ```rust
-/// use rootcause::{IntoReport, prelude::*};
 /// use std::io;
+///
+/// use rootcause::{IntoReport, prelude::*};
 ///
 /// // Direct usage
 /// let error: io::Error = io::Error::new(io::ErrorKind::NotFound, "file not found");
@@ -58,10 +66,11 @@ pub trait IntoReport<T: markers::ThreadSafetyMarker> {
     /// The ownership marker of the resulting report.
     type Ownership: markers::ReportOwnershipMarker;
 
-    /// Converts `self` into a [`Report`] with the specified thread-safety marker.
+    /// Converts `self` into a [`Report`] with the specified thread-safety
+    /// marker.
     ///
-    /// Most applications will find the [`report!`](crate::report!) macro more convenient
-    /// for creating reports.
+    /// Most applications will find the [`report!`](crate::report!) macro more
+    /// convenient for creating reports.
     #[track_caller]
     #[must_use]
     fn into_report(self) -> Report<Self::Context, Self::Ownership, T>;
@@ -112,19 +121,22 @@ where
 
 /// Converts errors and reports into [`ReportCollection`] instances.
 ///
-/// This trait is primarily used internally by the rootcause library for trait bounds.
-/// While it's available for direct use, most applications will find the `From` trait
-/// or iterator methods more convenient for creating collections of reports.
+/// This trait is primarily used internally by the rootcause library for trait
+/// bounds. While it's available for direct use, most applications will find the
+/// `From` trait or iterator methods more convenient for creating collections of
+/// reports.
 ///
 /// # Internal Usage
 ///
-/// This trait provides trait bounds for generic conversions to [`ReportCollection`],
-/// similar to how [`IntoReport`] works for single reports.
+/// This trait provides trait bounds for generic conversions to
+/// [`ReportCollection`], similar to how [`IntoReport`] works for single
+/// reports.
 ///
 /// # Automatic Implementations
 ///
 /// This trait is automatically implemented for:
-/// - All types implementing `std::error::Error` (creates single-item collection)
+/// - All types implementing `std::error::Error` (creates single-item
+///   collection)
 /// - `Report` instances (creates single-item collection)
 /// - `ReportCollection` instances (identity or marker conversion)
 ///
@@ -137,11 +149,13 @@ where
 ///
 /// # Examples
 ///
-/// Direct usage is possible, though the alternatives above are often more ergonomic:
+/// Direct usage is possible, though the alternatives above are often more
+/// ergonomic:
 ///
 /// ```rust
-/// use rootcause::{IntoReportCollection, prelude::*, report_collection::ReportCollection};
 /// use std::io;
+///
+/// use rootcause::{IntoReportCollection, prelude::*, report_collection::ReportCollection};
 ///
 /// // Direct usage
 /// let error: io::Error = io::Error::other("An error occurred");
@@ -150,19 +164,17 @@ where
 ///
 /// // Alternative using iterators (often more convenient for multiple errors)
 /// let errors: Vec<io::Error> = vec![io::Error::other("error 1")];
-/// let collection2: ReportCollection = errors
-///     .into_iter()
-///     .map(|e| report!(e))
-///     .collect();
+/// let collection2: ReportCollection = errors.into_iter().map(|e| report!(e)).collect();
 /// ```
 pub trait IntoReportCollection<T: markers::ThreadSafetyMarker> {
     /// The context type of the resulting report collection.
     type Context: markers::ObjectMarker + ?Sized;
 
-    /// Converts `self` into a [`ReportCollection`] with the specified thread-safety marker.
+    /// Converts `self` into a [`ReportCollection`] with the specified
+    /// thread-safety marker.
     ///
-    /// Most applications will find iterator methods or the `From` trait more convenient
-    /// for creating collections.
+    /// Most applications will find iterator methods or the `From` trait more
+    /// convenient for creating collections.
     #[track_caller]
     #[must_use]
     fn into_report_collection(self) -> ReportCollection<Self::Context, T>;

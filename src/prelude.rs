@@ -1,8 +1,8 @@
 //! Commonly used items for convenient importing.
 //!
-//! The prelude module re-exports the most frequently used types, traits, and macros
-//! from the rootcause library. This allows you to import everything you need with a
-//! single use statement.
+//! The prelude module re-exports the most frequently used types, traits, and
+//! macros from the rootcause library. This allows you to import everything you
+//! need with a single use statement.
 //!
 //! # Usage
 //!
@@ -29,7 +29,8 @@
 //! - **[`Report`]**: The main error reporting type
 //! - **[`ResultExt`]**: Extension methods for `Result` types
 //! - **[`IteratorExt`]**: Extension methods for iterators
-//! - **[`report!`]** and **[`bail!`]**: Macros for creating and returning errors
+//! - **[`report!`]** and **[`bail!`]**: Macros for creating and returning
+//!   errors
 //! - **[`handlers`]**: Built-in error handlers for common scenarios
 //! - **[`markers`]**: Type markers for controlling report behavior
 //! - **[`report_attachment!`]**: Macro for attaching contextual data
@@ -38,8 +39,8 @@
 //! # When to Use the Prelude
 //!
 //! Use the prelude when you need standard error handling functionality without
-//! writing multiple import statements. For more specialized needs, import specific
-//! items directly from their respective modules.
+//! writing multiple import statements. For more specialized needs, import
+//! specific items directly from their respective modules.
 
 pub use core::any::Any;
 

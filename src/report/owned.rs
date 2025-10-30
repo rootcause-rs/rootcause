@@ -29,12 +29,16 @@ use crate::{
 ///
 /// [`Report`] has three type parameters that control its behavior:
 ///
-/// - **Context (`C`)**: The type of the root error or context (defaults to `dyn Any`)
+/// - **Context (`C`)**: The type of the root error or context (defaults to `dyn
+///   Any`)
 /// - **Ownership (`O`)**: Controls whether the report can be cloned
 ///   - [`Mutable`]: Unique ownership, can modify but cannot clone (default)
-///   - [`Cloneable`]: Shared ownership via [`Arc`], can clone but cannot modify root
-/// - **Thread Safety (`T`)**: Controls whether the report can be sent across threads
-///   - [`SendSync`]: Can be sent across threads (default, requires all data is [`Send`]+[`Sync`])
+///   - [`Cloneable`]: Shared ownership via [`Arc`], can clone but cannot modify
+///     root
+/// - **Thread Safety (`T`)**: Controls whether the report can be sent across
+///   threads
+///   - [`SendSync`]: Can be sent across threads (default, requires all data is
+///     [`Send`]+[`Sync`])
 ///   - [`Local`]: Cannot be sent across threads (allows non-thread-safe data)
 ///
 /// # Common Usage
@@ -89,8 +93,8 @@ where
     /// - [`Report::new_sendsync`] and [`Report::new_local`] are more
     ///   restrictive variants of this function that might help avoid type
     ///   inference issues.
-    /// - [`Report::new_custom`] also allows you to manually specify
-    ///   the handler.
+    /// - [`Report::new_custom`] also allows you to manually specify the
+    ///   handler.
     ///
     /// [`report!()`]: crate::report!
     ///
@@ -430,16 +434,15 @@ where
         // - The context embedded in the RawReport must match the `C` of the output
         //   type, or the `C` of the output type must be `dyn Any`
         // - The thread safety marker must match the contents of the report. More
-        //   specifically if the marker is `SendSync`, then all contexts and
-        //   attachments must be `Send+Sync`
+        //   specifically if the marker is `SendSync`, then all contexts and attachments
+        //   must be `Send+Sync`
         //
         // These requirements are satisfied because:
         // - The `Self` type which is where the `raw` argument comes from is a
-        //   `Report<C, Mutable, T>`. This means that either `C = dyn Any` and we
-        //   are fine, or the `C` matches the context in the `RawReport`.
+        //   `Report<C, Mutable, T>`. This means that either `C = dyn Any` and we are
+        //   fine, or the `C` matches the context in the `RawReport`.
         // - The `Self` type has the thread safety marker `T`, so if `T = SendSync`,
-        //   then the entire report (including context and attachments) are
-        //   `Send+Sync`.
+        //   then the entire report (including context and attachments) are `Send+Sync`.
         unsafe { ReportMut::from_raw(raw) }
     }
 }
@@ -672,9 +675,9 @@ where
     /// the effect of "forgetting" that all objects in the [`Report`] might
     /// actually be [`Send`] and [`Sync`].
     ///
-    /// After calling this method, you can add objects to the [`Report`] that are
-    /// neither [`Send`] nor [`Sync`], but the report itself will no longer
-    /// be [`Send`]+[`Sync`].
+    /// After calling this method, you can add objects to the [`Report`] that
+    /// are neither [`Send`] nor [`Sync`], but the report itself will no
+    /// longer be [`Send`]+[`Sync`].
     ///
     /// # Examples
     /// ```

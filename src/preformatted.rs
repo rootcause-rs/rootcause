@@ -2,31 +2,35 @@
 //!
 //! # Overview
 //!
-//! This module provides types that store preformatted `String` representations of
-//! report contexts and attachments. These types are primarily used through the
-//! [`Report::preformat`] method, which converts any report into a version where
-//! all contexts and attachments have been formatted into strings.
+//! This module provides types that store preformatted `String` representations
+//! of report contexts and attachments. These types are primarily used through
+//! the [`Report::preformat`] method, which converts any report into a version
+//! where all contexts and attachments have been formatted into strings.
 //!
 //! # Why Preformat?
 //!
 //! Preformatting a report is useful in several scenarios:
 //!
 //! - **Regaining mutability**: After preformatting, you get back a [`Mutable`]
-//!   report even if the original was [`Cloneable`], allowing you to add more context
-//!   or attachments to the root node.
-//! - **Thread safety**: Non-`Send`/`Sync` error types can be preformatted to create a
-//!   `Send + Sync` report that can be transferred across thread boundaries.
-//! - **Preserving formatting**: The preformatted version will always display the same
-//!   way, even if the original types or handlers are no longer available.
+//!   report even if the original was [`Cloneable`], allowing you to add more
+//!   context or attachments to the root node.
+//! - **Thread safety**: Non-`Send`/`Sync` error types can be preformatted to
+//!   create a `Send + Sync` report that can be transferred across thread
+//!   boundaries.
+//! - **Preserving formatting**: The preformatted version will always display
+//!   the same way, even if the original types or handlers are no longer
+//!   available.
 //!
 //! # Usage
 //!
 //! The typical usage is to call [`Report::preformat`] on an existing report:
 //!
 //! ```
-//! use rootcause::prelude::*;
-//! use rootcause::preformatted::PreformattedContext;
-//! use rootcause::markers::{Mutable, SendSync};
+//! use rootcause::{
+//!     markers::{Mutable, SendSync},
+//!     preformatted::PreformattedContext,
+//!     prelude::*,
+//! };
 //!
 //! let report: Report = report!("database connection failed");
 //! let preformatted: Report<PreformattedContext, Mutable, SendSync> = report.preformat();
@@ -38,10 +42,13 @@
 //! # Non-Send/Sync Example
 //!
 //! ```
-//! use rootcause::prelude::*;
-//! use rootcause::preformatted::PreformattedContext;
-//! use rootcause::markers::{Local, SendSync};
 //! use core::cell::Cell;
+//!
+//! use rootcause::{
+//!     markers::{Local, SendSync},
+//!     preformatted::PreformattedContext,
+//!     prelude::*,
+//! };
 //!
 //! // Cell is !Send and !Sync
 //! #[derive(Debug)]
@@ -83,8 +90,9 @@ use crate::{ReportRef, markers, report_attachment::ReportAttachmentRef};
 /// `Display` and `Debug`.
 ///
 /// This type stores the formatted output of a context along with metadata about
-/// the original type and preferred formatting styles. It's created automatically
-/// by [`Report::preformat`] and should not typically be constructed manually.
+/// the original type and preferred formatting styles. It's created
+/// automatically by [`Report::preformat`] and should not typically be
+/// constructed manually.
 ///
 /// # Stored Information
 ///
@@ -96,9 +104,9 @@ use crate::{ReportRef, markers, report_attachment::ReportAttachmentRef};
 /// # Examples
 ///
 /// ```
-/// use rootcause::prelude::*;
-/// use rootcause::preformatted::PreformattedContext;
 /// use core::any::TypeId;
+///
+/// use rootcause::{preformatted::PreformattedContext, prelude::*};
 ///
 /// #[derive(Debug)]
 /// struct MyError;
@@ -114,7 +122,10 @@ use crate::{ReportRef, markers, report_attachment::ReportAttachmentRef};
 /// let preformatted: Report<PreformattedContext> = original.preformat();
 ///
 /// // The preformatted context remembers its original type
-/// assert_eq!(preformatted.current_context().original_type_id(), original_type_id);
+/// assert_eq!(
+///     preformatted.current_context().original_type_id(),
+///     original_type_id
+/// );
 /// ```
 ///
 /// [`Report::preformat`]: crate::Report::preformat
@@ -151,15 +162,15 @@ impl PreformattedContext {
     /// Get the [`TypeId`] of the original context type before it was
     /// preformatted.
     ///
-    /// This can be useful for debugging or for implementing custom logic based on
-    /// the original type, even though the actual type has been erased.
+    /// This can be useful for debugging or for implementing custom logic based
+    /// on the original type, even though the actual type has been erased.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
-    /// use rootcause::preformatted::PreformattedContext;
     /// use core::any::TypeId;
+    ///
+    /// use rootcause::{preformatted::PreformattedContext, prelude::*};
     ///
     /// #[derive(Debug)]
     /// struct DatabaseError {
@@ -192,9 +203,10 @@ impl PreformattedContext {
 /// An attachment that has been preformatted into `String`s for both
 /// `Display` and `Debug`.
 ///
-/// This type stores the formatted output of an attachment along with metadata about
-/// the original type and preferred formatting styles. It's created automatically
-/// by [`Report::preformat`] and should not typically be constructed manually.
+/// This type stores the formatted output of an attachment along with metadata
+/// about the original type and preferred formatting styles. It's created
+/// automatically by [`Report::preformat`] and should not typically be
+/// constructed manually.
 ///
 /// # Stored Information
 ///
@@ -206,9 +218,9 @@ impl PreformattedContext {
 /// # Examples
 ///
 /// ```
-/// use rootcause::prelude::*;
-/// use rootcause::preformatted::PreformattedAttachment;
 /// use core::any::TypeId;
+///
+/// use rootcause::{preformatted::PreformattedAttachment, prelude::*};
 ///
 /// // When a report is preformatted, all attachments become PreformattedAttachment
 /// let report: Report = report!("error").attach("some data");
@@ -254,15 +266,16 @@ impl PreformattedAttachment {
     /// Get the [`TypeId`] of the original attachment type before it was
     /// preformatted.
     ///
-    /// This can be useful for debugging or for implementing custom logic based on
-    /// the original attachment type, even though the actual type has been erased.
+    /// This can be useful for debugging or for implementing custom logic based
+    /// on the original attachment type, even though the actual type has
+    /// been erased.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
-    /// use rootcause::preformatted::PreformattedAttachment;
     /// use core::any::TypeId;
+    ///
+    /// use rootcause::{preformatted::PreformattedAttachment, prelude::*};
     ///
     /// let report: Report = report!("error").attach(42u32);
     /// let preformatted = report.preformat();
@@ -288,8 +301,8 @@ impl PreformattedAttachment {
 /// Internal handler for preformatted contexts and attachments.
 ///
 /// This handler is automatically registered for [`PreformattedContext`] and
-/// [`PreformattedAttachment`] types. It retrieves the pre-stored formatted strings
-/// rather than performing any formatting at display time.
+/// [`PreformattedAttachment`] types. It retrieves the pre-stored formatted
+/// strings rather than performing any formatting at display time.
 ///
 /// [`Report::preformat`]: crate::Report::preformat
 pub(crate) struct PreformattedHandler;

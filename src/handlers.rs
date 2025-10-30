@@ -1,16 +1,19 @@
-//! Handlers that control how errors and attachments are formatted and displayed.
+//! Handlers that control how errors and attachments are formatted and
+//! displayed.
 //!
-//! Handlers determine how context objects and attachments are formatted when displaying
-//! or debugging error reports. The rootcause library provides several built-in handlers
-//! that cover common use cases.
+//! Handlers determine how context objects and attachments are formatted when
+//! displaying or debugging error reports. The rootcause library provides
+//! several built-in handlers that cover common use cases.
 //!
 //! # What Are Handlers?
 //!
-//! Handlers are types that implement the [`ContextHandler`] and/or [`AttachmentHandler`]
-//! traits. They define how to format your error contexts and attachments, including:
+//! Handlers are types that implement the [`ContextHandler`] and/or
+//! [`AttachmentHandler`] traits. They define how to format your error contexts
+//! and attachments, including:
 //! - How to display an error context (via [`Display`](core::fmt::Display))
 //! - How to debug-format an error context (via [`Debug`](core::fmt::Debug))
-//! - How to navigate to the error's source (via [`Error::source`](core::error::Error::source))
+//! - How to navigate to the error's source (via
+//!   [`Error::source`](core::error::Error::source))
 //! - How to format attachments when they appear in reports
 //! - Formatting preferences (inline vs appendix, display vs debug)
 //!
@@ -21,21 +24,23 @@
 //! ## 1. Formatting Function Selection
 //!
 //! The [`ContextHandler::preferred_formatting_style`] and
-//! [`AttachmentHandler::preferred_formatting_style`] methods allow handlers to specify
-//! whether they prefer [`Display`](core::fmt::Display) or [`Debug`](core::fmt::Debug)
-//! formatting when shown in a report. The default behavior is to always use `Display`
-//! formatting, regardless of how the report itself is being formatted.
+//! [`AttachmentHandler::preferred_formatting_style`] methods allow handlers to
+//! specify whether they prefer [`Display`](core::fmt::Display) or
+//! [`Debug`](core::fmt::Debug) formatting when shown in a report. The default
+//! behavior is to always use `Display` formatting, regardless of how the report
+//! itself is being formatted.
 //!
-//! All built-in handlers ([`Error`], [`Display`], [`struct@Debug`], [`Any`]) use this
-//! default behavior, which means they use their `display` method even when the report
-//! is being debug-formatted with `{:?}`.
+//! All built-in handlers ([`Error`], [`Display`], [`struct@Debug`], [`Any`])
+//! use this default behavior, which means they use their `display` method even
+//! when the report is being debug-formatted with `{:?}`.
 //!
 //! ## 2. Attachment Placement
 //!
 //! For attachments, handlers can also specify placement preferences via
 //! [`AttachmentFormattingStyle`]:
 //! - **Inline**: Rendered directly in the error chain
-//! - **InlineWithHeader**: Rendered inline but with a header (for multi-line content)
+//! - **InlineWithHeader**: Rendered inline but with a header (for multi-line
+//!   content)
 //! - **Appendix**: Rendered in a separate appendix section
 //! - **Opaque**: Not shown, but counted in a summary
 //! - **Hidden**: Not shown at all
@@ -44,37 +49,40 @@
 //!
 //! ## [`Error`]
 //!
-//! For types implementing [`std::error::Error`](core::error::Error). Delegates to the
-//! type's `Display`, `Debug`, and `source` implementations. This is the default handler
-//! for error types.
+//! For types implementing [`std::error::Error`](core::error::Error). Delegates
+//! to the type's `Display`, `Debug`, and `source` implementations. This is the
+//! default handler for error types.
 //!
 //! ## [`Display`]
 //!
-//! For types implementing [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug).
-//! Useful for custom context types that aren't errors. Always returns `None` for `source`.
+//! For types implementing [`Display`](core::fmt::Display) and
+//! [`Debug`](core::fmt::Debug). Useful for custom context types that aren't
+//! errors. Always returns `None` for `source`.
 //!
 //! ## [`struct@Debug`]
 //!
-//! For types implementing [`Debug`](core::fmt::Debug). Uses debug formatting for the
-//! `debug` method and shows "Context of type `TypeName`" for the `display` method.
-//! Useful for types that don't implement `Display`.
+//! For types implementing [`Debug`](core::fmt::Debug). Uses debug formatting
+//! for the `debug` method and shows "Context of type `TypeName`" for the
+//! `display` method. Useful for types that don't implement `Display`.
 //!
 //! ## [`Any`]
 //!
-//! For any type. Shows "An object of type TypeName" for both `display` and `debug`.
-//! Used when no other formatting is available.
+//! For any type. Shows "An object of type TypeName" for both `display` and
+//! `debug`. Used when no other formatting is available.
 //!
 //! # When Handlers Are Selected
 //!
-//! Handlers are typically selected automatically by the [`report!`](crate::report!) macro
-//! based on the traits implemented by your context type. You can also specify a handler
-//! explicitly using [`Report::new_custom`](crate::Report::new_custom).
+//! Handlers are typically selected automatically by the
+//! [`report!`](crate::report!) macro based on the traits implemented by your
+//! context type. You can also specify a handler explicitly using
+//! [`Report::new_custom`](crate::Report::new_custom).
 //!
 //! # Examples
 //!
 //! ```rust
-//! use rootcause::prelude::*;
 //! use std::io;
+//!
+//! use rootcause::prelude::*;
 //!
 //! // Error handler (automatic for std::error::Error types)
 //! let io_err: io::Error = io::Error::new(io::ErrorKind::NotFound, "file.txt");
@@ -93,21 +101,22 @@ pub use rootcause_internals::handlers::{
 /// Handler for types implementing [`std::error::Error`](core::error::Error).
 ///
 /// This handler delegates to the error type's existing implementations of
-/// [`Error::source`](core::error::Error::source), [`Display`](core::fmt::Display),
-/// and [`Debug`](core::fmt::Debug). This is the default handler for any type that
-/// implements the `Error` trait.
+/// [`Error::source`](core::error::Error::source),
+/// [`Display`](core::fmt::Display), and [`Debug`](core::fmt::Debug). This is
+/// the default handler for any type that implements the `Error` trait.
 ///
 /// # When to Use
 ///
-/// This handler is automatically selected by the [`report!`](crate::report!) macro
-/// when you create a report from a type implementing `std::error::Error`. You rarely
-/// need to specify it explicitly.
+/// This handler is automatically selected by the [`report!`](crate::report!)
+/// macro when you create a report from a type implementing `std::error::Error`.
+/// You rarely need to specify it explicitly.
 ///
 /// # Example
 ///
 /// ```rust
-/// use rootcause::prelude::*;
 /// use std::io;
+///
+/// use rootcause::prelude::*;
 ///
 /// let error: io::Error = io::Error::new(io::ErrorKind::NotFound, "config.toml");
 /// let report: Report<io::Error> = report!(error);
@@ -135,18 +144,20 @@ where
     }
 }
 
-/// Handler for types implementing [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug).
+/// Handler for types implementing [`Display`](core::fmt::Display) and
+/// [`Debug`](core::fmt::Debug).
 ///
-/// This handler delegates to the type's `Display` and `Debug` implementations for formatting.
-/// This is suitable for custom context types that aren't errors but can be meaningfully
-/// displayed. The [`source`](ContextHandler::source) method always returns `None` since
-/// these types don't have error sources.
+/// This handler delegates to the type's `Display` and `Debug` implementations
+/// for formatting. This is suitable for custom context types that aren't errors
+/// but can be meaningfully displayed. The [`source`](ContextHandler::source)
+/// method always returns `None` since these types don't have error sources.
 ///
 /// # When to Use
 ///
-/// This handler is automatically selected for types that implement `Display` and `Debug` but
-/// not `std::error::Error`. This is ideal for custom context types like configuration objects,
-/// request parameters, or descriptive messages.
+/// This handler is automatically selected for types that implement `Display`
+/// and `Debug` but not `std::error::Error`. This is ideal for custom context
+/// types like configuration objects, request parameters, or descriptive
+/// messages.
 ///
 /// # Examples
 ///
@@ -213,23 +224,25 @@ where
 
 /// Handler for types implementing [`Debug`](core::fmt::Debug).
 ///
-/// This handler uses the type's `Debug` implementation for the `debug` method, but shows
-/// a generic message like "Context of type `TypeName`" for the `display` method. This is
-/// useful for types that have debug information but don't implement `Display`.
+/// This handler uses the type's `Debug` implementation for the `debug` method,
+/// but shows a generic message like "Context of type `TypeName`" for the
+/// `display` method. This is useful for types that have debug information but
+/// don't implement `Display`.
 ///
 /// # When to Use
 ///
-/// This handler is automatically selected for types that implement `Debug` but not `Display`.
-/// This is useful for internal data structures or types where displaying the full debug output
-/// as the primary message would be too verbose.
+/// This handler is automatically selected for types that implement `Debug` but
+/// not `Display`. This is useful for internal data structures or types where
+/// displaying the full debug output as the primary message would be too
+/// verbose.
 ///
 /// # Formatting Behavior
 ///
 /// - **`display` method**: Shows "Context of type `TypeName`"
 /// - **`debug` method**: Uses the type's `Debug` implementation
 /// - **`source` method**: Always returns `None`
-/// - **Preferred formatting**: Uses `Display` by default, so contexts show the generic
-///   type name message even when the report is formatted with `{:?}`
+/// - **Preferred formatting**: Uses `Display` by default, so contexts show the
+///   generic type name message even when the report is formatted with `{:?}`
 ///
 /// # Example
 ///
@@ -293,15 +306,16 @@ where
 
 /// Handler for any type, regardless of implemented traits.
 ///
-/// This is the most generic handler, working with any type without requiring `Display`,
-/// `Debug`, or `Error` implementations. Both `Display` and `Debug` output show
-/// "An object of type TypeName" using [`type_name`](core::any::type_name).
+/// This is the most generic handler, working with any type without requiring
+/// `Display`, `Debug`, or `Error` implementations. Both `Display` and `Debug`
+/// output show "An object of type TypeName" using
+/// [`type_name`](core::any::type_name).
 ///
 /// # When to Use
 ///
-/// This handler is a fallback for types that don't implement any formatting traits.
-/// It's automatically selected when no more specific handler applies, or can be used
-/// explicitly when you want to hide the details of a type.
+/// This handler is a fallback for types that don't implement any formatting
+/// traits. It's automatically selected when no more specific handler applies,
+/// or can be used explicitly when you want to hide the details of a type.
 ///
 /// # Formatting Behavior
 ///
@@ -312,7 +326,7 @@ where
 /// # Example
 ///
 /// ```rust
-/// use rootcause::{prelude::*, handlers};
+/// use rootcause::{handlers, prelude::*};
 ///
 /// struct Opaque {
 ///     secret: String,

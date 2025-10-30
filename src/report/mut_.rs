@@ -22,8 +22,8 @@ use crate::{
 ///
 /// [`ReportMut`] provides mutable access to a report's children and attachments
 /// while maintaining safe borrowing semantics. Unlike owned reports, mutable
-/// references cannot be consumed for chaining operations like [`Report::context`]
-/// or [`Report::attach`].
+/// references cannot be consumed for chaining operations like
+/// [`Report::context`] or [`Report::attach`].
 ///
 /// # Key Characteristics
 ///
@@ -40,19 +40,21 @@ use crate::{
 /// - You cannot convert [`SendSync`] → [`Local`] because that would allow
 ///   adding non-thread-safe data to a report that should remain thread-safe
 /// - You cannot convert [`Local`] → [`SendSync`] because that would allow
-///   cloning a child report with thread-local data and sending it across threads
+///   cloning a child report with thread-local data and sending it across
+///   threads
 ///
 /// # Common Usage
 ///
 /// ```
-/// use rootcause::prelude::*;
-/// use rootcause::ReportMut;
+/// use rootcause::{ReportMut, prelude::*};
 ///
 /// let mut report: Report = report!("error message");
 ///
 /// // Get mutable access to modify children or attachments
 /// let mut report_mut: ReportMut<'_> = report.as_mut();
-/// report_mut.children_mut().push(report!("child error").into_cloneable());
+/// report_mut
+///     .children_mut()
+///     .push(report!("child error").into_cloneable());
 ///
 /// println!("{}", report);
 /// ```
