@@ -13,6 +13,57 @@ This document establishes consistent standards for documentation across the root
 - **Clear and direct**: Avoid unnecessary jargon while being precise about technical details
 - **Helpful and encouraging**: Guide users toward success rather than just documenting what exists
 
+## Documentation Depth by Visibility
+
+Different visibility levels require different levels of documentation detail:
+
+### Public Items (`pub`)
+
+**These are the user-facing API and require comprehensive documentation:**
+
+- Complete documentation with multiple examples showing different use cases
+- Clear explanations of when and why to use the item
+- Full cross-references to related functionality
+- Panics, errors, and safety sections when applicable
+- Multiple examples demonstrating different scenarios
+- Target audience: Library users
+- **Required** for all public items
+
+### Internal Items (`pub(crate)`, private, or private modules)
+
+**These are implementation details for maintainers:**
+
+- Brief, concise documentation explaining what it does and why it exists
+- No need for extensive examples or multiple scenarios
+- Focus on implementation details rather than user-facing usage
+- Target audience: Library developers and contributors
+- **Optional** - add documentation when it meaningfully helps readers understand the implementation, but it's not required for all internal items
+
+**Example:**
+
+````rust
+/// Creates a report with the given context.
+///
+/// This is the primary way to create reports. Use the `report!()` macro
+/// for more convenient report creation with format string support.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::prelude::*;
+/// let report: Report<&str> = Report::new("error message");
+/// ```
+pub fn new(context: C) -> Report { /* ... */ }
+
+/// Internal helper to construct a report without triggering hooks.
+///
+/// Used by preformat() to avoid infinite recursion.
+pub(crate) fn from_parts_unhooked(/* ... */) -> Report { /* ... */ }
+
+// Helper to validate report structure invariants.
+fn check_invariants(&self) -> bool { /* ... */ }
+````
+
 ## Structure Patterns
 
 ### Module-Level Documentation (`//!`)
@@ -53,10 +104,12 @@ This document establishes consistent standards for documentation across the root
 
 ### Code References
 
-- Use backticks for types: [`Report`], [`Error`]
-- Use backticks for methods: [`Report::new`], [`into_dyn_any`]
-- Use backticks for modules: [`crate::handlers`]
-- Use full paths for external crates: [`std::error::Error`]
+- **Use intra-doc links for types**: [`Report`], [`Error`] (not `Report` or `Error`)
+- **Use intra-doc links for methods**: [`Report::new`], [`into_dyn_any`] (not `into_dyn_any()`)
+- **Use intra-doc links for modules**: [`crate::handlers`]
+- **Use full paths for external crates**: [`std::error::Error`]
+- **Especially important for internal references**: Always use [`ReportRef`], [`ReportMut`], [`Cloneable`], etc. rather than plain backticks
+- **Rationale**: Intra-doc links enable IDE navigation and rustdoc verification of link validity
 
 ## Example Standards
 

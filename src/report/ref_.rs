@@ -21,11 +21,50 @@ use crate::{
 
 /// A reference to a [`Report`].
 ///
-/// Note that if you create a [`ReportRef`] from a [`Report`] marked as
-/// [`Mutable`], then it will become a [`ReportRef`] with the [`Uncloneable`]
-/// marker instead.
+/// [`ReportRef`] is a lightweight, copyable reference to a report that allows you
+/// to inspect report data without taking ownership. It's the primary way to work
+/// with reports in a read-only manner.
 ///
-/// [`Mutable`]: crate::markers::Mutable
+/// # Key Characteristics
+///
+/// - **Always `Copy` + `Clone`**: Unlike [`Report`], all [`ReportRef`] instances can
+///   be freely copied regardless of their ownership marker
+/// - **Lifetime-bound**: Tied to the lifetime of the underlying report
+/// - **Type parameters**: Like [`Report`], has context type `C`, ownership marker
+///   `O`, and thread safety marker `T`
+///
+/// # Ownership Markers
+///
+/// The ownership marker on [`ReportRef`] indicates what the *underlying* report's
+/// ownership status is:
+///
+/// - [`Cloneable`]: The underlying report is shared (can use [`clone_arc`] to get
+///   an owned [`Report`])
+/// - [`Uncloneable`]: The underlying report has unique ownership (cannot use
+///   [`clone_arc`])
+///
+/// Note that when you create a [`ReportRef`] from a [`Report`] marked as [`Mutable`],
+/// it becomes a [`ReportRef`] with the [`Uncloneable`] marker to prevent cloning
+/// while mutable access exists.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::prelude::*;
+/// use rootcause::ReportRef;
+/// use rootcause::markers::Uncloneable;
+///
+/// let report: Report = report!("error message");
+///
+/// // Get a reference - this is Uncloneable because report is Mutable
+/// let report_ref: ReportRef<'_, _, Uncloneable> = report.as_ref();
+///
+/// // Inspect the report
+/// println!("{}", report_ref);
+/// assert_eq!(report_ref.children().len(), 0);
+/// ```
+///
+/// [`clone_arc`]: ReportRef::clone_arc
 #[repr(transparent)]
 pub struct ReportRef<'a, Context = dyn Any, Ownership = Cloneable, ThreadSafety = SendSync>
 where
@@ -136,7 +175,7 @@ where
     /// readability, as it more clearly communicates intent.
     ///
     /// This method does not actually modify the report in any way. It only has
-    /// the effect of "forgetting" that that the context actually has the
+    /// the effect of "forgetting" that the context actually has the
     /// type `C`.
     ///
     /// To get back the report with a concrete `C` you can use the method
@@ -166,11 +205,14 @@ where
     /// readability, as it more clearly communicates intent.
     ///
     /// This method does not actually modify the report in any way. It only has
-    /// the effect of "forgetting" that the [`ReportRef`] is cloneable.
+    /// the effect of "forgetting" that the [`ReportRef`] references a report
+    /// that could potentially be cloned via [`clone_arc`].
     ///
-    /// After calling this method, you can add objects to the [`ReportRef`] that
-    /// neither [`Send`] nor [`Sync`], but the report itself will no longer
-    /// be [`Send`]+[`Sync`].
+    /// This is useful when you need a type that explicitly cannot use
+    /// [`clone_arc`], typically for API boundaries or when working with
+    /// mutable reports.
+    ///
+    /// [`clone_arc`]: ReportRef::clone_arc
     ///
     /// # Examples
     /// ```
@@ -198,9 +240,9 @@ where
     /// the effect of "forgetting" that all objects in the [`ReportRef`] are
     /// actually [`Send`] and [`Sync`].
     ///
-    /// After calling this method, you can add objects to the [`ReportRef`] that
-    /// neither [`Send`] nor [`Sync`], but the report itself will no longer
-    /// be [`Send`]+[`Sync`].
+    /// This is useful when you need to work with a report reference in a context
+    /// that doesn't require [`Send`] + [`Sync`], or when the report may contain
+    /// thread-local data that isn't actually being used.
     ///
     /// # Examples
     /// ```
@@ -674,8 +716,30 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    /// Clones the underlying [`triomphe::Arc`] of the report returning
-    /// you a new [`Report`] the references the same root node.
+    /// Clones the underlying [`triomphe::Arc`] of the report, returning
+    /// a new owned [`Report`] that references the same root node.
+    ///
+    /// This method is only available when the ownership marker is [`Cloneable`],
+    /// indicating that the underlying report can be safely cloned.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::prelude::*;
+    /// use rootcause::ReportRef;
+    /// use rootcause::markers::Cloneable;
+    ///
+    /// let report1: Report<_, Cloneable> = report!("error").into_cloneable();
+    /// let report_ref: ReportRef<'_, _, Cloneable> = report1.as_ref();
+    ///
+    /// // Clone the Arc to get a new owned Report
+    /// let report2: Report<_, Cloneable> = report_ref.clone_arc();
+    ///
+    /// // Both reports reference the same underlying data
+    /// assert_eq!(format!("{}", report1), format!("{}", report2));
+    /// ```
+    ///
+    /// [`Cloneable`]: crate::markers::Cloneable
     #[must_use]
     pub fn clone_arc(self) -> Report<C, Cloneable, T> {
         let raw = unsafe { self.as_raw_ref().clone_arc() };

@@ -291,9 +291,6 @@ impl PreformattedAttachment {
 /// [`PreformattedAttachment`] types. It retrieves the pre-stored formatted strings
 /// rather than performing any formatting at display time.
 ///
-/// You should not need to use this handler directly - it's used internally by the
-/// [`Report::preformat`] method.
-///
 /// [`Report::preformat`]: crate::Report::preformat
 pub(crate) struct PreformattedHandler;
 
