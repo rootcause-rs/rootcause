@@ -14,9 +14,23 @@ mod sealed {
 /// Extension trait for `Result` that provides error handling and reporting
 /// functionality.
 ///
-/// This trait adds methods to `Result` types that allow converting errors into
-/// [`Report`]s with additional context and attachments. It provides both
-/// thread-safe (Send + Sync) and local-only variants of each method.
+/// This trait adds methods to `Result` types that allow you to convert errors
+/// into [`Report`]s with additional context and attachments. It provides both
+/// thread-safe (`Send + Sync`) and local-only variants of each method.
+///
+/// The methods in this trait fall into several categories:
+///
+/// - **Converting to reports**: [`into_report`](ResultExt::into_report) converts
+///   the error into a [`Report`]
+/// - **Adding context**: [`context`](ResultExt::context),
+///   [`context_with`](ResultExt::context_with), and variants add a new context
+///   layer to the error
+/// - **Adding attachments**: [`attach`](ResultExt::attach),
+///   [`attach_with`](ResultExt::attach_with), and variants add supplementary
+///   data to the error
+///
+/// Each method has a `local_*` variant for working with types that are not
+/// `Send + Sync`.
 pub trait ResultExt<V, E>: sealed::Sealed {
     /// Converts the error into a [`Report`].
     ///
@@ -24,25 +38,20 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// `Err`, converts the error into a [`Report`].
     ///
     /// See also [`local_into_report`](ResultExt::local_into_report) for a
-    /// non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)]
-    /// # struct SomeError;
-    /// # impl std::fmt::Display for SomeError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    /// #         todo!()
-    /// #     }
-    /// # }
-    /// # impl std::error::Error for SomeError {}
-    /// # impl SomeError { fn new(s: &str) -> Self { Self } }
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<i32, SomeError> = Err(SomeError::new("something went wrong"));
-    /// let report_result: Result<i32, Report<SomeError>> = result.into_report();
+    /// fn read_config() -> Result<String, io::Error> {
+    ///     std::fs::read_to_string("config.toml")
+    /// }
+    ///
+    /// let result: Result<String, Report<io::Error>> = read_config().into_report();
     /// ```
     #[track_caller]
     fn into_report(self) -> Result<V, Report<E::Context, E::Ownership, SendSync>>
@@ -62,20 +71,23 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// are set as children of the new [`Report`].
     ///
     /// See also [`local_context`](ResultExt::local_context) for a
-    /// non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     ///
     /// # Examples
     ///
     /// ```
-    /// # type NetworkError = std::io::Error;
-    /// # fn fetch_data(path: &str) -> Result<Vec<u8>, NetworkError> { Ok(Vec::new()) }
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, NetworkError> = fetch_data("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<&str>> = result.context("Failed to fetch user data");
+    /// fn fetch_data(path: &str) -> Result<Vec<u8>, io::Error> {
+    ///     std::fs::read(path)
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, Report<&str>> =
+    ///     fetch_data("user_data.bz2").context("Failed to fetch user data");
     /// ```
     #[track_caller]
     fn context<C>(self, context: C) -> Result<V, Report<C, Mutable, SendSync>>
@@ -97,8 +109,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// are set as children of the new [`Report`].
     ///
     /// See also [`local_context_with`](ResultExt::local_context_with) for a
-    /// non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     ///
@@ -106,10 +118,14 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<String>> =
-    ///     result.context_with(|| format!("Failed at {}", "12:34:56"));
+    /// fn get_timestamp() -> String {
+    ///     "12:34:56".to_string()
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, Report<String>> = std::fs::read("user_data.bz2")
+    ///     .context_with(|| format!("Failed at {}", get_timestamp()));
     /// ```
     #[track_caller]
     fn context_with<C, F>(self, context: F) -> Result<V, Report<C, Mutable, SendSync>>
@@ -130,8 +146,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// are set as children of the new [`Report`].
     ///
     /// See also [`local_context_custom`](ResultExt::local_context_custom) for a
-    /// non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// [`ContextHandler`]: handlers::ContextHandler
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
@@ -140,6 +156,7 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// enum ErrorContext {
@@ -147,9 +164,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     IoError,
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<ErrorContext>> =
-    ///     result.context_custom::<handlers::Debug, _>(ErrorContext::IoError);
+    /// let result: Result<Vec<u8>, Report<ErrorContext>> = std::fs::read("user_data.bz2")
+    ///     .context_custom::<handlers::Debug, _>(ErrorContext::IoError);
     /// ```
     #[track_caller]
     fn context_custom<H, C>(self, context: C) -> Result<V, Report<C, Mutable, SendSync>>
@@ -170,31 +186,33 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// [`ReportCollection`], in which case all errors in that collection
     /// are set as children of the new [`Report`].
     ///
-    /// See also [`local_context_custom_with`](ResultExt::local_context_custom_with) for a non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// See also [`local_context_custom_with`](ResultExt::local_context_custom_with)
+    /// for a non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     ///
     /// # Examples
     ///
     /// ```
-    /// # fn expensive_computation() -> ErrorContext { ErrorContext {} }
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
-    ///     // ...
+    ///     timestamp: String,
+    ///     operation: String,
     /// }
     ///
-    /// impl ErrorContext {
-    ///     pub fn new() -> Self {
-    ///         expensive_computation()
+    /// fn expensive_computation() -> ErrorContext {
+    ///     ErrorContext {
+    ///         timestamp: "12:34:56".to_string(),
+    ///         operation: "file_read".to_string(),
     ///     }
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<ErrorContext>> =
-    ///     result.context_custom_with::<handlers::Debug, _, _>(|| ErrorContext::new());
+    /// let result: Result<Vec<u8>, Report<ErrorContext>> = std::fs::read("user_data.bz2")
+    ///     .context_custom_with::<handlers::Debug, _, _>(expensive_computation);
     /// ```
     #[track_caller]
     fn context_custom_with<H, C, F>(self, context: F) -> Result<V, Report<C, Mutable, SendSync>>
@@ -213,16 +231,16 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// context without changing the primary error message.
     ///
     /// See also [`local_attach`](ResultExt::local_attach) for a non-thread-safe
-    /// version that works with objects that are not `Send` and `Sync`.
+    /// version that works with types that are not `Send + Sync`.
     ///
     /// # Examples
     ///
     /// ```
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error>> =
-    ///     result.attach("input: invalid_data");
+    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
+    ///     .attach("while reading user_data.bz2");
     /// ```
     #[track_caller]
     fn attach<A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, SendSync>>
@@ -239,17 +257,21 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// an error actually occurs.
     ///
     /// See also [`local_attach_with`](ResultExt::local_attach_with) for a
-    /// non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// # Examples
     ///
     /// ```
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error>> =
-    ///     result.attach_with(|| format!("debug info: {}", "complex computation"));
+    /// fn get_debug_info() -> String {
+    ///     "complex computation result".to_string()
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
+    ///     .attach_with(|| format!("debug info: {}", get_debug_info()));
     /// ```
     #[track_caller]
     fn attach_with<A, F>(self, attachment: F) -> Result<V, Report<E::Context, Mutable, SendSync>>
@@ -266,8 +288,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// displayed.
     ///
     /// See also [`local_attach_custom`](ResultExt::local_attach_custom) for a
-    /// non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// [`AttachmentHandler`]: handlers::AttachmentHandler
     ///
@@ -275,18 +297,21 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
-    /// struct MyAttachment {
-    ///     // ...
+    /// struct RequestMetadata {
+    ///     request_id: u64,
+    ///     user_id: u64,
     /// }
-    /// # impl MyAttachment {
-    /// #     fn new() -> Self { MyAttachment {} }
-    /// # }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error>> =
-    ///     result.attach_custom::<handlers::Debug, _>(MyAttachment::new());
+    /// let metadata = RequestMetadata {
+    ///     request_id: 12345,
+    ///     user_id: 67890,
+    /// };
+    ///
+    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
+    ///     .attach_custom::<handlers::Debug, _>(metadata);
     /// ```
     #[track_caller]
     fn attach_custom<H, A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, SendSync>>
@@ -302,29 +327,31 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// with the custom handler capabilities of
     /// [`attach_custom`](ResultExt::attach_custom).
     ///
-    /// See also [`local_attach_custom_with`](ResultExt::local_attach_custom_with) for a non-thread-safe version that works with objects that are not
-    /// `Send` and `Sync`.
+    /// See also [`local_attach_custom_with`](ResultExt::local_attach_custom_with)
+    /// for a non-thread-safe version that works with types that are not
+    /// `Send + Sync`.
     ///
     /// # Examples
     ///
     /// ```
-    /// # fn expensive_computation() -> MyAttachment { MyAttachment {} }
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
-    /// struct MyAttachment {
-    ///     // ...
+    /// struct RequestMetadata {
+    ///     request_id: u64,
+    ///     timestamp: String,
     /// }
     ///
-    /// impl MyAttachment {
-    ///     pub fn new() -> Self {
-    ///         expensive_computation()
+    /// fn expensive_computation() -> RequestMetadata {
+    ///     RequestMetadata {
+    ///         request_id: 12345,
+    ///         timestamp: "12:34:56".to_string(),
     ///     }
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error>> =
-    ///     result.attach_custom_with::<handlers::Debug, _, _>(|| MyAttachment::new());
+    /// let result: Result<Vec<u8>, Report<io::Error>> = std::fs::read("user_data.bz2")
+    ///     .attach_custom_with::<handlers::Debug, _, _>(expensive_computation);
     /// ```
     #[track_caller]
     fn attach_custom_with<H, A, F>(
@@ -340,7 +367,11 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// Converts the error into a local (non-thread-safe) [`Report`].
     ///
     /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a [`Report`].
+    /// `Err`, converts the error into a [`Report`] that can contain types
+    /// that are not `Send + Sync`.
+    ///
+    /// This allows you to use rootcause with error types that contain
+    /// thread-local data like [`Rc`](std::rc::Rc) or other `!Send` types.
     ///
     /// See also [`into_report`](ResultExt::into_report) for a thread-safe
     /// version that returns a [`Report`] that can be sent across thread
@@ -349,14 +380,13 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// # fn some_function() -> Result<String, MyError> { Ok(String::new()) }
     /// use std::{fmt, rc::Rc};
-    ///
     /// use rootcause::prelude::*;
     ///
     /// // This error is neither Send nor Sync
     /// #[derive(Debug)]
     /// struct MyError(Rc<String>);
+    ///
     /// impl fmt::Display for MyError {
     ///     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     ///         write!(f, "{}", self.0)
@@ -365,9 +395,12 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// impl std::error::Error for MyError {}
     ///
-    /// let result: Result<String, MyError> = some_function();
-    /// let report_result: Result<String, Report<MyError, _, markers::Local>> =
-    ///     result.local_into_report();
+    /// fn some_function() -> Result<String, MyError> {
+    ///     Err(MyError(Rc::new("error".to_string())))
+    /// }
+    ///
+    /// let result: Result<String, Report<MyError, _, markers::Local>> =
+    ///     some_function().local_into_report();
     /// ```
     #[track_caller]
     fn local_into_report(self) -> Result<V, Report<E::Context, E::Ownership, Local>>
@@ -395,15 +428,16 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// # type NetworkError = std::io::Error;
-    /// # fn fetch_data(path: &str) -> Result<Vec<u8>, NetworkError> { Ok(Vec::new()) }
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, NetworkError> = fetch_data("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<Rc<&str>, _, markers::Local>> =
-    ///     result.local_context(Rc::from("This context is thread-local context"));
+    /// fn fetch_data(path: &str) -> Result<Vec<u8>, io::Error> {
+    ///     std::fs::read(path)
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, Report<Rc<&str>, _, markers::Local>> =
+    ///     fetch_data("user_data.bz2").local_context(Rc::from("Failed to fetch user data"));
     /// ```
     #[track_caller]
     fn local_context<C>(self, context: C) -> Result<V, Report<C, Mutable, Local>>
@@ -433,30 +467,32 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// # #[derive(Debug)]
-    /// # struct Expensive;
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
-    /// struct SomeObject(Rc<Expensive>);
+    /// struct ContextData {
+    ///     timestamp: Rc<String>,
+    ///     operation: String,
+    /// }
     ///
-    /// impl SomeObject {
-    ///     fn compute_or_get_cached() -> Self {
-    ///         // ...
-    /// #       Self(Rc::new(Expensive))
+    /// impl std::fmt::Display for ContextData {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "{}: {}", self.timestamp, self.operation)
     ///     }
     /// }
     ///
-    /// impl std::fmt::Display for SomeObject {
-    ///     // ...
-    /// #   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { todo!() }
+    /// fn expensive_computation() -> ContextData {
+    ///     // Expensive computation that builds context data
+    ///     ContextData {
+    ///         timestamp: Rc::new("12:34:56".to_string()),
+    ///         operation: "file_read".to_string(),
+    ///     }
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<SomeObject, _, markers::Local>> =
-    ///     result.local_context_with(|| SomeObject::compute_or_get_cached());
+    /// let result: Result<Vec<u8>, Report<ContextData, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2").local_context_with(expensive_computation);
     /// ```
     #[track_caller]
     fn local_context_with<C, F>(self, context: F) -> Result<V, Report<C, Mutable, Local>>
@@ -488,8 +524,8 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// enum ErrorContext {
@@ -497,9 +533,9 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///     IoError,
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<Rc<ErrorContext>, _, markers::Local>> =
-    ///     result.local_context_custom::<handlers::Debug, _>(Rc::new(ErrorContext::IoError));
+    /// let result: Result<Vec<u8>, Report<Rc<ErrorContext>, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2")
+    ///         .local_context_custom::<handlers::Debug, _>(Rc::new(ErrorContext::IoError));
     /// ```
     #[track_caller]
     fn local_context_custom<H, C>(self, context: C) -> Result<V, Report<C, Mutable, Local>>
@@ -530,25 +566,26 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// # fn expensive_computation() -> Rc<ErrorContext> { Rc::new(ErrorContext {}) }
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
-    ///     // ...
+    ///     timestamp: Rc<String>,
+    ///     operation: String,
     /// }
     ///
-    /// impl ErrorContext {
-    ///     pub fn new() -> Rc<Self> {
-    ///         expensive_computation()
-    ///     }
+    /// fn expensive_computation() -> Rc<ErrorContext> {
+    ///     Rc::new(ErrorContext {
+    ///         timestamp: Rc::new("12:34:56".to_string()),
+    ///         operation: "file_read".to_string(),
+    ///     })
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<Rc<ErrorContext>, _, markers::Local>> =
-    ///     result.local_context_custom_with::<handlers::Debug, _, _>(|| ErrorContext::new());
+    /// let result: Result<Vec<u8>, Report<Rc<ErrorContext>, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2")
+    ///         .local_context_custom_with::<handlers::Debug, _, _>(expensive_computation);
     /// ```
     #[track_caller]
     fn local_context_custom_with<H, C, F>(self, context: F) -> Result<V, Report<C, Mutable, Local>>
@@ -573,12 +610,14 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
-    ///     result.local_attach(Rc::new("input: invalid_data"));
+    /// // In this case it might make more sense to use `local_attach_with`, but
+    /// // you can assume that the attachment is pre-computed.
+    /// let attachment: Rc<&str> = Rc::from("input: invalid_data");
+    /// let result: Result<Vec<u8>, Report<io::Error, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2").local_attach(attachment);
     /// ```
     #[track_caller]
     fn local_attach<A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, Local>>
@@ -602,12 +641,16 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
-    ///     result.local_attach_with(|| Rc::new(format!("debug info: {}", "complex computation")));
+    /// fn get_debug_info() -> String {
+    ///     "complex computation result".to_string()
+    /// }
+    ///
+    /// let result: Result<Vec<u8>, Report<io::Error, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2")
+    ///         .local_attach_with(|| Rc::new(format!("debug info: {}", get_debug_info())));
     /// ```
     #[track_caller]
     fn local_attach_with<A, F>(
@@ -636,20 +679,24 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     ///
     /// ```
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
-    /// struct MyAttachment {
-    ///     // ...
+    /// struct RequestMetadata {
+    ///     request_id: Rc<u64>,
+    ///     user_id: u64,
     /// }
-    /// # impl MyAttachment {
-    /// #     fn new() -> Self { MyAttachment {} }
-    /// # }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
-    ///     result.local_attach_custom::<handlers::Debug, _>(Rc::new(MyAttachment::new()));
+    /// // In this case it might make more sense to use `local_attach_custom_with`, but
+    /// // you can assume that the attachment is pre-computed.
+    /// let metadata: Rc<RequestMetadata> = Rc::new(RequestMetadata {
+    ///     request_id: Rc::new(12345),
+    ///     user_id: 67890,
+    /// });
+    ///
+    /// let result: Result<Vec<u8>, Report<io::Error, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2").local_attach_custom::<handlers::Debug, _>(metadata);
     /// ```
     #[track_caller]
     fn local_attach_custom<H, A>(
@@ -676,25 +723,26 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// # fn expensive_computation() -> MyAttachment { MyAttachment {} }
     /// use std::rc::Rc;
-    ///
     /// use rootcause::prelude::*;
+    /// use std::io;
     ///
     /// #[derive(Debug)]
-    /// struct MyAttachment {
-    ///     // ...
+    /// struct RequestMetadata {
+    ///     request_id: Rc<u64>,
+    ///     timestamp: String,
     /// }
     ///
-    /// impl MyAttachment {
-    ///     pub fn new() -> Self {
-    ///         expensive_computation()
+    /// fn expensive_computation() -> RequestMetadata {
+    ///     RequestMetadata {
+    ///         request_id: Rc::new(12345),
+    ///         timestamp: "12:34:56".to_string(),
     ///     }
     /// }
     ///
-    /// let result: Result<Vec<u8>, std::io::Error> = std::fs::read("user_data.bz2");
-    /// let report_result: Result<Vec<u8>, Report<std::io::Error, _, markers::Local>> =
-    ///     result.local_attach_custom_with::<handlers::Debug, _, _>(|| Rc::new(MyAttachment::new()));
+    /// let result: Result<Vec<u8>, Report<io::Error, _, markers::Local>> =
+    ///     std::fs::read("user_data.bz2")
+    ///         .local_attach_custom_with::<handlers::Debug, _, _>(|| Rc::new(expensive_computation()));
     /// ```
     #[track_caller]
     fn local_attach_custom_with<H, A, F>(
