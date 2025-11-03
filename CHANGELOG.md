@@ -15,8 +15,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- More docs [#35](https://github.com/rootcause-rs/rootcause/pull/35), [#37](https://github.com/rootcause-rs/rootcause/pull/37), [#38](https://github.com/rootcause-rs/rootcause/pull/38)
+- More docs [#35](https://github.com/rootcause-rs/rootcause/pull/35), [#37](https://github.com/rootcause-rs/rootcause/pull/37), [#38](https://github.com/rootcause-rs/rootcause/pull/38), [#40](https://github.com/rootcause-rs/rootcause/pull/40)
 - The `report_attachment!()` macro [#35](https://github.com/rootcause-rs/rootcause/pull/35)
+- Add new examples [#40](https://github.com/rootcause-rs/rootcause/pull/40)
 
 ### Changed
 
