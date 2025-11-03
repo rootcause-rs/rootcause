@@ -18,11 +18,11 @@ Demonstrations of rootcause features and patterns.
 
 - **thiserror_interop.rs** - Using thiserror-generated errors as Report contexts, compatibility patterns
 - **custom_attachments.rs** - Creating custom attachment types for structured data that can be retrieved and inspected programmatically
-- **custom_handler.rs** - Implementing `AttachmentHandler` for specialized formatting (hexdump, tables, JSON)
+- **custom_handler.rs** - Custom handlers for per-attachment/per-context formatting (contrast with global formatting hooks)
 
 ## Hooks & Formatting
 
-- **formatting_hooks.rs** - Using `AttachmentFormattingOverride` to control placement: inline, appendix, or hidden
+- **formatting_hooks.rs** - Global formatting overrides: control attachment placement (appendix vs inline), priority ordering, and custom context formatting
 - **report_creation_hook.rs** - Automatically attaching context when errors are created with `ReportCreationHook`
 - **conditional_formatting.rs** - Environment-based formatting: hiding sensitive data, conditional metrics
 

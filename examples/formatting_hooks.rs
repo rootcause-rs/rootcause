@@ -1,93 +1,53 @@
-//! Demonstrates using formatting hooks to customize error output.
-//!
-//! This example shows:
-//! 1. Registering custom formatting hooks for attachment types
-//! 2. Using AttachmentFormattingPlacement to control where attachments appear
-//! 3. Setting priority for attachment ordering
-//! 4. Using InlineWithHeader for structured data
-//! 5. Hiding sensitive data conditionally
+// Formatting hooks for global formatting overrides
+//
+// Formatting hooks vs handlers: Both customize how types are displayed, but:
+// - Handlers (see custom_handler.rs): Applied per-attachment with .attach_custom() or per-context
+// - Hooks (this example): Registered once globally and apply to all instances of a type
+//
+// Use formatting hooks to customize how types are displayed across your entire application:
+// - AttachmentFormattingOverride: Control placement (Inline/Appendix/Hidden) and priority
+// - ContextFormattingOverride: Customize how error contexts are formatted
 
 use rootcause::{
+    ReportRef,
     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
-    hooks::formatting_overrides::attachment::{
-        AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
+    hooks::formatting_overrides::{
+        attachment::{AttachmentFormattingOverride, register_attachment_hook},
+        context::{ContextFormattingOverride, register_context_hook},
     },
+    markers::{Local, Uncloneable},
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
 
-// ============================================================================
-// Example 1: Custom formatting with InlineWithHeader
-// ============================================================================
+// Example 1: Attachment placement - control where diagnostic data appears
 
-/// API error information that we want to format nicely.
-#[derive(Debug)]
-struct ApiError {
-    code: u32,
-    message: String,
-    endpoint: String,
+// Large diagnostic data that would clutter the main error message
+struct DatabaseQuery {
+    sql: String,
+    params: Vec<String>,
+    execution_plan: String,
 }
 
-impl core::fmt::Display for ApiError {
+impl core::fmt::Display for DatabaseQuery {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "API Error {}: {}", self.code, self.message)
+        writeln!(f, "SQL: {}", self.sql)?;
+        writeln!(f, "Parameters: [{}]", self.params.join(", "))?;
+        writeln!(f, "\nExecution Plan:")?;
+        write!(f, "{}", self.execution_plan)
     }
 }
 
-/// Custom formatter that adds a header and high priority.
-struct ApiErrorFormatter;
-
-impl AttachmentFormattingOverride<ApiError> for ApiErrorFormatter {
-    fn display(
-        &self,
-        attachment: ReportAttachmentRef<'_, ApiError>,
-        _parent: Option<AttachmentParent<'_>>,
-        f: &mut core::fmt::Formatter<'_>,
-    ) -> core::fmt::Result {
-        let err = attachment.inner();
-        writeln!(f, "Code: {}", err.code)?;
-        writeln!(f, "Message: {}", err.message)?;
-        write!(f, "Endpoint: {}", err.endpoint)
-    }
-
-    fn preferred_formatting_style(
-        &self,
-        _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,
-        _report_formatting_function: FormattingFunction,
-    ) -> AttachmentFormattingStyle {
-        AttachmentFormattingStyle {
-            placement: AttachmentFormattingPlacement::InlineWithHeader {
-                header: "API Error Details",
-            },
-            function: FormattingFunction::Display,
-            priority: 100, // High priority - shows first
-        }
-    }
-}
-
-// ============================================================================
-// Example 2: Verbose data in appendix
-// ============================================================================
-
-/// Stack trace data that's too verbose to show inline.
-#[derive(Debug)]
-struct StackTrace {
-    frames: Vec<String>,
-}
-
-impl core::fmt::Display for StackTrace {
+impl core::fmt::Debug for DatabaseQuery {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        for (i, frame) in self.frames.iter().enumerate() {
-            writeln!(f, "  {}: {}", i, frame)?;
-        }
-        Ok(())
+        write!(f, "DatabaseQuery {{ sql: {:?}, ... }}", self.sql)
     }
 }
 
-/// Formatter that puts stack traces in an appendix.
-struct StackTraceFormatter;
+// Move verbose query diagnostics to appendix instead of cluttering inline
+struct DatabaseQueryFormatter;
 
-impl AttachmentFormattingOverride<StackTrace> for StackTraceFormatter {
+impl AttachmentFormattingOverride<DatabaseQuery> for DatabaseQueryFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,
@@ -95,63 +55,16 @@ impl AttachmentFormattingOverride<StackTrace> for StackTraceFormatter {
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
             placement: AttachmentFormattingPlacement::Appendix {
-                appendix_name: "Full Stack Trace",
+                appendix_name: "Database Query",
             },
-            function: FormattingFunction::Display,
-            priority: 0, // Low priority - goes to appendix anyway
-        }
-    }
-}
-
-// ============================================================================
-// Example 3: Hiding sensitive data
-// ============================================================================
-
-/// Sensitive credentials that should never appear in logs.
-#[derive(Debug)]
-struct Credentials {
-    username: String,
-    #[allow(dead_code)]
-    password: String,
-}
-
-impl core::fmt::Display for Credentials {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Username: {}, Password: ********", self.username)
-    }
-}
-
-/// Formatter that hides credentials completely.
-struct HideCredentialsFormatter;
-
-impl AttachmentFormattingOverride<Credentials> for HideCredentialsFormatter {
-    fn display(
-        &self,
-        _attachment: ReportAttachmentRef<'_, Credentials>,
-        _parent: Option<AttachmentParent<'_>>,
-        f: &mut core::fmt::Formatter<'_>,
-    ) -> core::fmt::Result {
-        write!(f, "[Credentials hidden for security]")
-    }
-
-    fn preferred_formatting_style(
-        &self,
-        _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,
-        _report_formatting_function: FormattingFunction,
-    ) -> AttachmentFormattingStyle {
-        AttachmentFormattingStyle {
-            placement: AttachmentFormattingPlacement::Hidden, // Don't show at all
             function: FormattingFunction::Display,
             priority: 0,
         }
     }
 }
 
-// ============================================================================
-// Example 4: Priority-based ordering
-// ============================================================================
+// Example 2: Attachment priority - control ordering
 
-/// Important action the user must take.
 struct ActionRequired(String);
 
 impl core::fmt::Display for ActionRequired {
@@ -166,7 +79,7 @@ impl core::fmt::Debug for ActionRequired {
     }
 }
 
-/// Formatter with very high priority to show this first.
+// High priority ensures important actions appear first
 struct ActionRequiredFormatter;
 
 impl AttachmentFormattingOverride<ActionRequired> for ActionRequiredFormatter {
@@ -178,85 +91,96 @@ impl AttachmentFormattingOverride<ActionRequired> for ActionRequiredFormatter {
         AttachmentFormattingStyle {
             placement: AttachmentFormattingPlacement::Inline,
             function: FormattingFunction::Display,
-            priority: 200, // Very high priority - always shows first
+            priority: 100, // High priority - shows before other attachments
         }
     }
 }
 
-// ============================================================================
-// Demo functions
-// ============================================================================
+// Example 3: Context formatting - customize error descriptions globally
 
-fn demo_api_error() -> Result<(), Report> {
-    let error = ApiError {
-        code: 503,
-        message: "Service Unavailable".to_string(),
-        endpoint: "/api/v1/users".to_string(),
-    };
-
-    Err(report!("Request failed").attach(error))
+#[derive(Debug)]
+struct ValidationError {
+    fields: Vec<(&'static str, &'static str)>,
 }
 
-fn demo_stack_trace() -> Result<(), Report> {
-    let trace = StackTrace {
-        frames: vec![
-            "process_request at src/api.rs:42".to_string(),
-            "handle_connection at src/server.rs:123".to_string(),
-            "main at src/main.rs:15".to_string(),
-        ],
-    };
-
-    Err(report!("Internal server error")
-        .attach("User-facing error message")
-        .attach(trace))
+impl core::fmt::Display for ValidationError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{} validation errors", self.fields.len())
+    }
 }
 
-fn demo_credentials() -> Result<(), Report> {
-    let creds = Credentials {
-        username: "admin".to_string(),
-        password: "super_secret_123".to_string(),
-    };
+impl std::error::Error for ValidationError {}
 
-    Err(report!("Authentication failed").attach(creds))
+// Custom formatting for validation errors across the app
+struct ValidationErrorFormatter;
+
+impl ContextFormattingOverride<ValidationError> for ValidationErrorFormatter {
+    fn display(
+        &self,
+        report: ReportRef<'_, ValidationError, Uncloneable, Local>,
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        let err = report.current_context();
+        writeln!(f, "Validation failed:")?;
+        for (field, reason) in &err.fields {
+            writeln!(f, "  • {}: {}", field, reason)?;
+        }
+        Ok(())
+    }
 }
 
-fn demo_priority() -> Result<(), Report> {
+// Example 1: Control attachment placement in output
+// Demonstrates placing verbose diagnostic data in the appendix section instead of inline
+fn demo_attachment_placement() -> Result<(), Report> {
+    let query = DatabaseQuery {
+        sql: "SELECT * FROM users WHERE status = ? AND created_at > ?".to_string(),
+        params: vec!["active".to_string(), "2024-01-01".to_string()],
+        execution_plan: "Sequential Scan on users\n  Filter: (status = 'active')\n  Rows: 1234"
+            .to_string(),
+    };
+
+    Err(report!("Database query failed")
+        .attach(query)
+        .attach("Connection timeout after 30s"))
+}
+
+fn demo_attachment_priority() -> Result<(), Report> {
     Err(report!("Configuration error")
-        .attach("Detailed diagnostic info here")
-        .attach(ActionRequired("Update your config.toml file".to_string()))
-        .attach("Additional context about the error"))
+        .attach("Debug info: config file not found")
+        .attach(ActionRequired(
+            "Create config.toml in project root".to_string(),
+        ))
+        .attach("Additional context here"))
+}
+
+fn demo_context_formatting() -> Result<(), Report> {
+    let validation = ValidationError {
+        fields: vec![("email", "invalid format"), ("age", "must be positive")],
+    };
+
+    Err(report!(validation).into_dyn_any())
 }
 
 fn main() {
-    // Register all our custom formatters
-    register_attachment_hook::<ApiError, _>(ApiErrorFormatter);
-    register_attachment_hook::<StackTrace, _>(StackTraceFormatter);
-    register_attachment_hook::<Credentials, _>(HideCredentialsFormatter);
+    // Register formatting hooks
+    register_attachment_hook::<DatabaseQuery, _>(DatabaseQueryFormatter);
     register_attachment_hook::<ActionRequired, _>(ActionRequiredFormatter);
+    register_context_hook::<ValidationError, _>(ValidationErrorFormatter);
 
-    println!("=== Example 1: InlineWithHeader for structured data ===\n");
-    match demo_api_error() {
+    println!("Example 1: Attachment placement (Appendix)\n");
+    match demo_attachment_placement() {
         Ok(()) => println!("Success"),
         Err(error) => eprintln!("{error}\n"),
     }
 
-    println!("=== Example 2: Appendix for verbose data ===\n");
-    println!("Note: Stack trace appears in appendix section\n");
-    match demo_stack_trace() {
+    println!("Example 2: Attachment priority\n");
+    match demo_attachment_priority() {
         Ok(()) => println!("Success"),
         Err(error) => eprintln!("{error}\n"),
     }
 
-    println!("=== Example 3: Hidden sensitive data ===\n");
-    println!("Note: Credentials are completely hidden\n");
-    match demo_credentials() {
-        Ok(()) => println!("Success"),
-        Err(error) => eprintln!("{error}\n"),
-    }
-
-    println!("=== Example 4: Priority-based ordering ===\n");
-    println!("Note: ACTION REQUIRED appears first due to high priority\n");
-    match demo_priority() {
+    println!("Example 3: Context formatting\n");
+    match demo_context_formatting() {
         Ok(()) => println!("Success"),
         Err(error) => eprintln!("{error}"),
     }
