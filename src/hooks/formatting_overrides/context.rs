@@ -264,7 +264,7 @@ where
     /// Formats a preformatted context using Display formatting.
     ///
     /// This method handles contexts that have been preformatted (typically done
-    /// using [`ReportRef::preformat`]performance or consistency reasons). The
+    /// using [`ReportRef::preformat`] for performance or consistency reasons). The
     /// default implementation delegates to the context's unhooked Display
     /// formatting.
     ///

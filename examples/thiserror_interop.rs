@@ -11,11 +11,10 @@ use thiserror::Error;
 mod example1 {
     use super::*;
 
+    /// Pattern matching: Use Report<E> to preserve type information for
+    /// conditional error handling based on the specific variant.
     #[derive(Error, Debug)]
-    #[expect(
-        dead_code,
-        reason = "example demonstrates pattern matching, not all variants are triggered"
-    )]
+    #[expect(dead_code, reason = "example code: not all variants are used")]
     pub enum ConfigError {
         #[error("Configuration file not found: {path}")]
         NotFound { path: String },
@@ -38,24 +37,23 @@ mod example1 {
         .attach("Config version: 2.0"))
     }
 
-    /// Pattern match on thiserror errors to handle specific cases.
+    /// Demonstrates pattern matching on the error variant to decide recovery strategy.
     pub fn load_config_with_fallback(path: &str) -> Result<String, Report> {
         let report = match load_config(path) {
             Ok(config) => return Ok(config),
             Err(report) => report,
         };
 
-        let should_fallback = matches!(
-            report.as_ref().current_context(),
-            ConfigError::NotFound { .. }
-        );
+        // Use matches!() to check for specific variant
+        let should_fallback = matches!(report.current_context(), ConfigError::NotFound { .. });
 
         if should_fallback {
             println!("  Trying fallback config...");
             return Ok(load_config("/etc/app/config.toml")?);
         }
 
-        let context_msg = match report.as_ref().current_context() {
+        // Use match to provide variant-specific context
+        let context_msg = match report.current_context() {
             ConfigError::MissingField { field } => format!("Cannot proceed without '{field}'"),
             ConfigError::InvalidFormat => "Config file is corrupted".to_string(),
             ConfigError::NotFound { .. } => unreachable!(),
@@ -86,10 +84,7 @@ mod example2 {
         Parse(#[from] ParseIntError),
     }
 
-    #[expect(
-        dead_code,
-        reason = "demonstrates thiserror nested error types, not all variants used"
-    )]
+    #[expect(dead_code, reason = "example code: not all variants are used")]
     #[derive(Error, Debug)]
     pub enum DatabaseError {
         #[error("Connection failed: {reason}")]
@@ -127,10 +122,7 @@ mod example3 {
     /// Compare to example2 - same logic, but tracks multiple locations
     /// in the error chain for better debugging.
     #[derive(Error, Debug)]
-    #[expect(
-        dead_code,
-        reason = "demonstrates flat error design, only Database variant is triggered"
-    )]
+    #[expect(dead_code, reason = "example code: not all variants are used")]
     pub enum AppError {
         #[error("Database operation failed")]
         Database,

@@ -9,43 +9,36 @@
 use rootcause::prelude::*;
 use std::fs;
 
-/// Attempts to read a configuration file (simple version).
-///
-/// Demonstrates direct coercion of `io::Error` to `Report` using just `?`.
-/// This works because `io::Error` implements `std::error::Error`, and there's a
-/// `From<C>` impl for any `C: Error` that converts to `Report<dyn Any>`.
+/// Simplest usage: Types implementing `Error` automatically convert to Report.
 fn read_config_file_simple(path: &str) -> Result<String, Report> {
-    // No .attach() or .context() needed - just let ? coerce io::Error to Report
+    // The ? operator automatically converts types that implement std::error::Error
     let data = fs::read_to_string(path)?;
     Ok(data)
 }
 
-/// Attempts to read a configuration file.
-///
-/// Demonstrates using `.attach()` from ResultExt to convert stdlib errors
-/// to Reports while adding contextual information.
+/// Adding information: Use .attach() to include debugging details.
 fn read_config_file(path: &str) -> Result<String, Report> {
-    // .attach() calls .into_report() internally, converting Result<T, E> to Result<T, Report<E>>
-    // The ? operator coerces Report<io::Error> to Report (dyn Any)
+    // .attach() adds information that will be shown in the error output
     let data = fs::read_to_string(path).attach(format!("Config path: {path}"))?;
     Ok(data)
 }
 
-/// Loads and validates user configuration.
+/// Building context: Use .context() to explain what you were trying to do.
 ///
-/// Demonstrates using `.context()` to add a parent error to the chain.
+/// Error chains let you show both the low-level cause (e.g., "file not found")
+/// and the high-level operation that failed (e.g., "loading user config").
 fn load_user_config() -> Result<String, Report> {
-    // .context() creates a parent error, .attach() adds info to it
+    // .context() adds a parent error that explains what this function was doing
     let config = read_config_file("/nonexistent/config.toml")
         .context("Failed to load user configuration")
         .attach("Expected format: TOML")?;
     Ok(config)
 }
 
-/// Application startup function.
+/// Error chains show the path through your code.
 ///
-/// This adds another layer of context, showing how errors propagate
-/// through the call stack with each function adding relevant information.
+/// Each function adds its own context, creating a trail from the top-level
+/// operation down to the root cause. This makes debugging much easier.
 fn startup() -> Result<(), Report> {
     let _config = load_user_config()
         .context("Application startup failed")
@@ -57,15 +50,17 @@ fn startup() -> Result<(), Report> {
 fn main() {
     println!("=== Basic Error Handling ===\n");
 
-    // Example 1: Direct coercion with ? (no attachments)
-    println!("Example 1: Direct coercion");
+    // Example 1: Just the error, no extra information
+    println!("Example 1: Simple error (just using ?)");
     if let Err(report) = read_config_file_simple("/nonexistent/config.toml") {
         println!("{report}");
     }
     println!();
 
-    // Example 2: Demonstrate error chain with attachments
-    println!("Example 2: Error chain with context");
+    // Example 2: Error chain showing the full context
+    // Notice how each function adds a layer, showing the path through your code
+    println!("Example 2: Error chain with context and attachments");
+    println!("(Shows: startup → load_user_config → read_config_file → io::Error)\n");
     if let Err(report) = startup() {
         println!("{report}");
     }
