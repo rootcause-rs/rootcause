@@ -1,34 +1,52 @@
-/// Macro to generate a report
+/// Creates a new error report.
 ///
-/// This macro can be invoked in two different ways, using a format string or
-/// using a context object.
+/// This macro provides a convenient way to create [`Report`](crate::Report)
+/// instances with automatic type inference for thread-safety markers and error
+/// handlers.
 ///
-/// ## Using a format string
+/// # Two Usage Modes
 ///
-/// When invoked with a literal as the first argument, this macro will interpret
-/// and evaluate the arguments in the same way as the [`format!()`] macro.
+/// ## Format String Mode
 ///
-/// The resulting string will become the context of the new report. The
-/// resulting report will have the type `Report<dyn Any, Mutable, SendSync>`.
+/// When the first argument is a string literal, the macro works like
+/// [`format!()`], creating a report with a formatted string as context:
 ///
-/// The inner context will typically be a `String`, but in cases where
-/// the format does not contain arguments, it is typically be optimized to
-/// a `&'static str` instead.
+/// ```rust
+/// use rootcause::prelude::*;
 ///
-/// [`format!()`]: std::format
+/// let report: Report = report!("File not found");
+/// let report: Report = report!("Failed to open {}", "config.toml");
+/// ```
 ///
-/// ## Using a context object
+/// The resulting report has type `Report<dyn Any, Mutable, SendSync>`. The
+/// context is typically a `String`, but when there are no format arguments, it
+/// may be optimized to a `&'static str`.
 ///
-/// This macro also accepts any other expression. When used like this, it is
-/// mostly equivalent to calling [`Report::new`], however it has some benefits:
+/// ## Context Object Mode
 ///
-/// - It automatically infers the correct thread marker based on the context
-///   object.
-/// - It automatically infers the correct handler based on the context object.
+/// When given any other expression, the macro creates a report from that value:
 ///
-/// [`Report::new`]: crate::Report::new
+/// ```rust
+/// use rootcause::prelude::*;
+/// # use std::io;
+///
+/// # fn get_io_error() -> io::Error {
+/// #     io::Error::new(io::ErrorKind::NotFound, "file not found")
+/// # }
+/// let error: io::Error = get_io_error();
+/// let report: Report<io::Error> = report!(error);
+/// ```
+///
+/// This mode automatically:
+/// - Infers the thread-safety marker based on whether the context type is `Send
+///   + Sync`
+/// - Selects the appropriate handler based on the context type
+///
+/// This is similar to calling [`Report::new`], but with better type inference.
 ///
 /// # Examples
+///
+/// ## Basic String Reports
 ///
 /// ```
 /// use std::{
@@ -38,12 +56,14 @@
 ///
 /// use rootcause::prelude::*;
 ///
+/// // Static string (no formatting)
 /// let report: Report<dyn Any, markers::Mutable, markers::SendSync> = report!("Something broke");
 /// assert_eq!(
 ///     report.current_context_type_id(),
 ///     TypeId::of::<&'static str>()
 /// );
 ///
+/// // Formatted string
 /// let report: Report<dyn Any, markers::Mutable, markers::SendSync> =
 ///     report!("Something broke hard: {}", "it was bad");
 /// assert_eq!(report.current_context_type_id(), TypeId::of::<String>());
@@ -51,6 +71,14 @@
 ///     report.current_context_handler_type_id(),
 ///     TypeId::of::<handlers::Display>()
 /// );
+/// ```
+///
+/// ## Error Type Reports
+///
+/// ```
+/// use std::{any::TypeId, io};
+///
+/// use rootcause::prelude::*;
 ///
 /// # fn something_that_fails() -> Result<(), std::io::Error> {
 /// #    std::fs::read("/nonexistant")?; Ok(())
@@ -61,6 +89,17 @@
 ///     report.current_context_handler_type_id(),
 ///     TypeId::of::<handlers::Error>()
 /// );
+/// ```
+///
+/// ## Local (Non-Send) Reports
+///
+/// When using non-thread-safe types like [`Rc`](std::rc::Rc), the macro
+/// automatically infers the [`Local`](crate::markers::Local) marker:
+///
+/// ```
+/// use std::{any::TypeId, rc::Rc};
+///
+/// use rootcause::prelude::*;
 ///
 /// # fn something_else_that_fails() -> Result<(), Rc<std::io::Error>> {
 /// #    std::fs::read("/nonexistant")?; Ok(())
@@ -73,6 +112,9 @@
 ///     TypeId::of::<handlers::Display>()
 /// );
 /// ```
+///
+/// [`format!()`]: std::format
+/// [`Report::new`]: crate::Report::new
 #[macro_export]
 macro_rules! report {
     ($msg:literal $(,)?) => {
@@ -98,24 +140,31 @@ macro_rules! report {
     };
 }
 
-/// Macro to generate a report attachment
+/// Creates a report attachment with contextual data.
 ///
-/// This macro can be invoked in the same ways as the [`report!`] macro, but it
-/// creates a [`ReportAttachment`] instead of a [`Report`].
+/// This macro creates a [`ReportAttachment`] that can be added to error reports
+/// to provide additional context. It accepts the same arguments as the
+/// [`report!`] macro but produces an attachment instead of a full report.
 ///
-/// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
-/// [`Report`]: crate::Report
+/// Attachments are useful for adding supplementary information to errors
+/// without changing the main error context. For example, you might attach
+/// configuration values, request parameters, or debugging information.
+///
+/// # Usage Modes
+///
+/// Like [`report!`], this macro supports both format string mode and context
+/// object mode. See the [`report!`] documentation for details on each mode.
 ///
 /// # Examples
 ///
+/// ## String Attachments
+///
 /// ```
-/// use std::{
-///     any::{Any, TypeId},
-///     rc::Rc,
-/// };
+/// use std::any::{Any, TypeId};
 ///
 /// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
 ///
+/// // Static string
 /// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
 ///     report_attachment!("Additional context");
 /// assert_eq!(attachment.inner_type_id(), TypeId::of::<&'static str>());
@@ -124,6 +173,7 @@ macro_rules! report {
 ///     TypeId::of::<handlers::Display>()
 /// );
 ///
+/// // Formatted string
 /// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
 ///     report_attachment!("Error occurred at line: {}", 42);
 /// assert_eq!(attachment.inner_type_id(), TypeId::of::<String>());
@@ -131,18 +181,29 @@ macro_rules! report {
 ///     attachment.inner_handler_type_id(),
 ///     TypeId::of::<handlers::Display>()
 /// );
+/// ```
 ///
-/// # #[derive(Debug)]
-/// # struct ErrorData { code: i32, message: String }
-/// # // We implement Error as well to make sure the macro also works in this case.
-/// # // The handlers::Error does not implemenet AttachmentHandler, so we
-/// # // want to verify that the macro uses the Display handler.
-/// # impl std::fmt::Display for ErrorData {
-/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-/// #         todo!()
-/// #     }
-/// # }
-/// # impl std::error::Error for ErrorData {}
+/// ## Structured Data Attachments
+///
+/// ```
+/// use std::any::TypeId;
+///
+/// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
+///
+/// #[derive(Debug)]
+/// struct ErrorData {
+///     code: i32,
+///     message: String,
+/// }
+///
+/// impl std::fmt::Display for ErrorData {
+///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         write!(f, "Error {}: {}", self.code, self.message)
+///     }
+/// }
+///
+/// impl std::error::Error for ErrorData {}
+///
 /// let error_data = ErrorData {
 ///     code: 404,
 ///     message: "Not found".to_string(),
@@ -152,14 +213,21 @@ macro_rules! report {
 ///     attachment.inner_handler_type_id(),
 ///     TypeId::of::<handlers::Display>()
 /// );
+/// ```
+///
+/// ## Local (Non-Send) Attachments
+///
+/// ```
+/// use std::rc::Rc;
+///
+/// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
 ///
 /// let local_data: Rc<String> = Rc::new("Local context".to_string());
 /// let attachment: ReportAttachment<Rc<String>, markers::Local> = report_attachment!(local_data);
-/// assert_eq!(
-///     attachment.inner_handler_type_id(),
-///     TypeId::of::<handlers::Display>()
-/// );
 /// ```
+///
+/// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
+/// [`Report`]: crate::Report
 #[macro_export]
 macro_rules! report_attachment {
     ($msg:literal $(,)?) => {
@@ -184,32 +252,58 @@ macro_rules! report_attachment {
     };
 }
 
-/// Return early with an error.
+/// Returns early from a function with an error report.
 ///
-/// This macro is similar to the [`bail!`] macro from the [`anyhow`] crate.
-/// It constructs a new report using the same arguments as the [`report!`]
-/// macro, and then returns early from the function with that report wrapped in
-/// an `Err`.
+/// This macro creates a new [`Report`] and immediately returns it wrapped in an
+/// `Err`. It's a convenience shorthand for `return Err(report!(...).into())`.
 ///
-/// This is equivalent to writing `return Err(report!(...).into());`
+/// The macro is similar to the [`bail!`] macro from the [`anyhow`] crate and
+/// accepts the same arguments as the [`report!`] macro.
 ///
-/// [`bail!`]: https://docs.rs/anyhow/latest/anyhow/macro.bail.html
-/// [`anyhow`]: https://docs.rs/anyhow/latest/anyhow/
+/// # When to Use
+///
+/// Use `bail!` when you want to:
+/// - Return an error immediately without additional processing
+/// - Keep error-handling code concise and readable
+/// - Avoid writing explicit `return Err(...)` statements
 ///
 /// # Examples
+///
+/// ## Basic Validation
 ///
 /// ```
 /// use rootcause::prelude::*;
 ///
-/// fn do_something(
-///     value: i32,
-/// ) -> Result<(), Report<dyn std::any::Any, markers::Mutable, markers::SendSync>> {
+/// fn validate_positive(value: i32) -> Result<(), Report> {
 ///     if value < 0 {
 ///         bail!("Value must be non-negative, got {}", value);
 ///     }
 ///     Ok(())
 /// }
+///
+/// assert!(validate_positive(-5).is_err());
+/// assert!(validate_positive(10).is_ok());
 /// ```
+///
+/// ## Multiple Validation Checks
+///
+/// ```
+/// use rootcause::prelude::*;
+///
+/// fn validate_age(age: i32) -> Result<(), Report> {
+///     if age < 0 {
+///         bail!("Age cannot be negative: {}", age);
+///     }
+///     if age > 150 {
+///         bail!("Age seems unrealistic: {}", age);
+///     }
+///     Ok(())
+/// }
+/// ```
+///
+/// [`bail!`]: https://docs.rs/anyhow/latest/anyhow/macro.bail.html
+/// [`anyhow`]: https://docs.rs/anyhow/latest/anyhow/
+/// [`Report`]: crate::Report
 #[macro_export]
 macro_rules! bail {
     ($($args:tt)*) => {

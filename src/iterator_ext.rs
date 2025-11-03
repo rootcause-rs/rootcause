@@ -3,47 +3,104 @@ use core::{iter::FusedIterator, mem};
 
 use crate::{IntoReport, markers, report_collection::ReportCollection};
 
-/// Extension trait for iterators over `Result`s to collect errors into a
-/// `ReportCollection`.
+/// Extension methods for iterators over `Result` types to collect errors.
+///
+/// This trait provides methods to collect successful values while accumulating
+/// all errors into a [`ReportCollection`], rather than stopping at the first
+/// error like [`Iterator::collect`] does.
+///
+/// # When to Use
+///
+/// Use these methods when you want to:
+/// - Process all items in an iterator, even if some fail
+/// - Collect all errors that occurred, not just the first one
+/// - Validate multiple items and report all validation failures at once
+///
+/// # Comparison to Standard Collect
+///
+/// The standard library's [`Iterator::collect`] stops at the first error, while
+/// these methods continue processing and collect all errors:
+///
+/// ```rust
+/// use rootcause::{prelude::*, report_collection::ReportCollection};
+///
+/// let inputs = vec!["1", "2", "invalid", "4", "bad"];
+///
+/// // Standard collect stops at first error
+/// let standard: Result<Vec<u8>, _> = inputs.iter().map(|s| s.parse::<u8>()).collect();
+/// assert!(standard.is_err()); // Stopped at "invalid", never saw "bad"
+///
+/// // collect_reports_vec processes ALL items and collects ALL errors
+/// let result: Result<Vec<u8>, ReportCollection<std::num::ParseIntError>> = inputs
+///     .into_iter()
+///     .map(|s| s.parse::<u8>())
+///     .collect_reports_vec();
+///
+/// assert!(result.is_err());
+/// let all_errors = result.unwrap_err();
+/// assert_eq!(all_errors.len(), 2); // Both "invalid" and "bad" collected
+/// ```
 pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
-    /// Collect all `Ok` values into a `Container`. If any `Err` values are
-    /// encountered, stop iteration and return a `ReportCollection`
-    /// containing all encountered errors.
+    /// Collects successful values into a container, or all errors into a
+    /// [`ReportCollection`].
     ///
-    /// This is similar to using [`Iterator::collect`] to collect a
-    /// `Result<Container, E>`, but instead of returning early in case of an
-    /// error, this will iterate through all the values and collect
-    /// all errors into a single [`ReportCollection`].
+    /// This method processes the entire iterator, collecting all `Ok` values
+    /// into the specified container type. If any `Err` values are
+    /// encountered, iteration continues to collect **all** errors before
+    /// returning them in a [`ReportCollection`].
+    ///
+    /// This is different from using [`Iterator::collect`] on `Result`s, which
+    /// stops at the first error.
+    ///
+    /// # Type Parameters
+    ///
+    /// - `Container`: The collection type for successful values (e.g., `Vec`,
+    ///   `HashSet`)
+    /// - `ThreadSafety`: The thread-safety marker for the error collection
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Container)`: If all items were successful
+    /// - `Err(ReportCollection)`: If any errors occurred, containing all of
+    ///   them
     ///
     /// # Examples
+    ///
+    /// ## Collecting into Different Container Types
+    ///
     /// ```
     /// use std::collections::BTreeSet;
     ///
     /// use rootcause::{prelude::*, report_collection::ReportCollection};
     ///
     /// let inputs = vec!["1", "2", "foo", "4", "bar"];
-    /// let results: Result<
-    ///     BTreeSet<u8>,
-    ///     ReportCollection<std::num::ParseIntError, markers::SendSync>,
-    /// > = inputs
+    /// let result: Result<BTreeSet<u8>, ReportCollection<std::num::ParseIntError>> = inputs
     ///     .into_iter()
     ///     .map(|s| s.parse::<u8>())
     ///     .collect_reports();
-    /// assert!(results.is_err());
-    /// let errors = results.unwrap_err();
-    /// assert_eq!(errors.len(), 2);
+    ///
+    /// // All errors were collected
+    /// assert!(result.is_err());
+    /// let errors = result.unwrap_err();
+    /// assert_eq!(errors.len(), 2); // "foo" and "bar" both failed
+    /// ```
+    ///
+    /// ## All Successful Items
+    ///
+    /// ```
+    /// use std::collections::BTreeSet;
+    ///
+    /// use rootcause::{prelude::*, report_collection::ReportCollection};
     ///
     /// let inputs = vec!["1", "2", "2"];
-    /// let results: Result<
-    ///     BTreeSet<u8>,
-    ///     ReportCollection<std::num::ParseIntError, markers::SendSync>,
-    /// > = inputs
+    /// let result: Result<BTreeSet<u8>, ReportCollection<std::num::ParseIntError>> = inputs
     ///     .into_iter()
     ///     .map(|s| s.parse::<u8>())
     ///     .collect_reports();
-    /// assert!(results.is_ok());
-    /// let errors = results.unwrap();
-    /// assert_eq!(errors, BTreeSet::from([1u8, 2]));
+    ///
+    /// assert!(result.is_ok());
+    /// let values = result.unwrap();
+    /// assert_eq!(values, BTreeSet::from([1u8, 2]));
     /// ```
     #[track_caller]
     fn collect_reports<Container, ThreadSafety>(
@@ -54,36 +111,42 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
         ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>;
 
-    /// Specialized version of [`IteratorExt::collect_reports`] that only works
-    /// for [`Vec`].
+    /// Collects successful values into a `Vec`, or all errors into a
+    /// [`ReportCollection`].
     ///
-    /// This might help with type inference in some cases. It might also
-    /// generate slightly simplier code, which might be useful if you call
-    /// this function from performance-critical code.
+    /// This is a specialized version of
+    /// [`collect_reports`](IteratorExt::collect_reports) that always
+    /// collects into a `Vec`. It may help with type inference and could
+    /// generate slightly more optimized code.
+    ///
+    /// # When to Use
+    ///
+    /// Use this method instead of
+    /// [`collect_reports`](IteratorExt::collect_reports) when:
+    /// - You're collecting into a `Vec` and want simpler type annotations
+    /// - You're in performance-critical code and want potential optimization
+    /// - Type inference is having trouble with the generic container parameter
+    ///
+    /// # Returns
+    ///
+    /// - `Ok(Vec<A>)`: If all items were successful
+    /// - `Err(ReportCollection)`: If any errors occurred, containing all of
+    ///   them
     ///
     /// # Examples
+    ///
     /// ```
     /// use rootcause::{prelude::*, report_collection::ReportCollection};
     ///
     /// let inputs = vec!["1", "2", "foo", "2", "bar"];
-    /// let results: Result<Vec<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> =
-    ///     inputs
-    ///         .into_iter()
-    ///         .map(|s| s.parse::<u8>())
-    ///         .collect_reports_vec();
-    /// assert!(results.is_err());
-    /// let errors = results.unwrap_err();
-    /// assert_eq!(errors.len(), 2);
+    /// let result: Result<Vec<u8>, ReportCollection<std::num::ParseIntError>> = inputs
+    ///     .into_iter()
+    ///     .map(|s| s.parse::<u8>())
+    ///     .collect_reports_vec();
     ///
-    /// let inputs = vec!["1", "2", "2"];
-    /// let results: Result<Vec<u8>, ReportCollection<std::num::ParseIntError, markers::SendSync>> =
-    ///     inputs
-    ///         .into_iter()
-    ///         .map(|s| s.parse::<u8>())
-    ///         .collect_reports_vec();
-    /// assert!(results.is_ok());
-    /// let errors = results.unwrap();
-    /// assert_eq!(errors, &[1, 2, 2]);
+    /// assert!(result.is_err());
+    /// let errors = result.unwrap_err();
+    /// assert_eq!(errors.len(), 2); // Both "foo" and "bar" failed
     /// ```
     #[track_caller]
     fn collect_reports_vec<ThreadSafety>(

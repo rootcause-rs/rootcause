@@ -2,36 +2,236 @@
 //! [`core::error::Error`], [`core::fmt::Display`] and [`core::fmt::Debug`] when
 //! creating an attachment or report.
 
-/// Handler used to implement or override the behavior of
-/// [`core::error::Error`], [`core::fmt::Display`] and [`core::fmt::Debug`] when
-/// creating a report.
+//! Handlers that define formatting and error-chaining behavior for reports and
+//! attachments.
+//!
+//! This module provides the core traits and types for implementing custom
+//! handlers that control how context objects and attachments are formatted and
+//! displayed in error reports.
+
+/// Trait for implementing custom formatting and error-chaining behavior for
+/// report contexts.
+///
+/// This trait defines how a context type should be formatted when displayed or
+/// debugged as part of an error report, and how to navigate to its error source
+/// (if any).
+///
+/// # When to Implement
+///
+/// You typically don't need to implement this trait directly. The rootcause
+/// library provides built-in handlers (`Error`, `Display`, `Debug`, `Any`) that
+/// cover most use cases.
+///
+/// Implement this trait when you need custom formatting behavior that the
+/// built-in handlers don't provide, such as:
+/// - Custom source chain navigation for types that don't implement
+///   `std::error::Error`
+/// - Special display formatting that differs from the type's `Display`
+///   implementation
+/// - Dynamic formatting based on the context value
+///
+/// # Required Methods
+///
+/// - [`source`](ContextHandler::source): Returns the underlying error source,
+///   if any
+/// - [`display`](ContextHandler::display): Formats the context for display
+///   output
+/// - [`debug`](ContextHandler::debug): Formats the context for debug output
+///
+/// # Optional Methods
+///
+/// - [`preferred_formatting_style`](ContextHandler::preferred_formatting_style):
+///   Specifies whether to use display or debug formatting when embedded in a report.
+///   The default implementation always prefers display formatting.
+///
+/// # Examples
+///
+/// ```rust
+/// use std::error::Error;
+///
+/// use rootcause_internals::handlers::{
+///     ContextFormattingStyle, ContextHandler, FormattingFunction,
+/// };
+///
+/// // Custom context type
+/// struct CustomError {
+///     message: String,
+///     code: i32,
+/// }
+///
+/// // Custom handler with special formatting
+/// struct CustomHandler;
+///
+/// impl ContextHandler<CustomError> for CustomHandler {
+///     fn source(_context: &CustomError) -> Option<&(dyn Error + 'static)> {
+///         None
+///     }
+///
+///     fn display(context: &CustomError, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         write!(f, "Error {}: {}", context.code, context.message)
+///     }
+///
+///     fn debug(context: &CustomError, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         write!(
+///             f,
+///             "CustomError {{ code: {}, message: {:?} }}",
+///             context.code, context.message
+///         )
+///     }
+/// }
+/// ```
 pub trait ContextHandler<C>: 'static {
-    /// The function used when calling [`RawReportRef::context_source`]
+    /// Returns the underlying error source for this context, if any.
     ///
-    /// [`RawReportRef::context_source`]: crate::report::RawReportRef::context_source
+    /// This method enables error chain traversal, allowing you to navigate from
+    /// a context to its underlying cause. It's used when displaying the full
+    /// error chain in a report.
+    ///
+    /// # Returns
+    ///
+    /// - `Some(&dyn Error)` if this context has an underlying error source
+    /// - `None` if this context is a leaf in the error chain
+    ///
+    /// # Examples
+    ///
+    /// For types implementing `std::error::Error`, delegate to their `source`
+    /// method:
+    ///
+    /// ```rust
+    /// use std::error::Error;
+    ///
+    /// use rootcause_internals::handlers::ContextHandler;
+    ///
+    /// struct ErrorHandler;
+    ///
+    /// impl<C: Error> ContextHandler<C> for ErrorHandler {
+    ///     fn source(context: &C) -> Option<&(dyn Error + 'static)> {
+    ///         context.source()
+    ///     }
+    /// #   fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// #       write!(f, "{}", context)
+    /// #   }
+    /// #   fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// #       write!(f, "{:?}", context)
+    /// #   }
+    /// }
+    /// ```
     fn source(value: &C) -> Option<&(dyn core::error::Error + 'static)>;
 
-    /// The function used when calling [`RawReportRef::context_display`]
+    /// Formats the context using display-style formatting.
     ///
-    /// [`RawReportRef::context_display`]: crate::report::RawReportRef::context_display
+    /// This method is called when the context needs to be displayed as part of
+    /// an error report. It should produce human-readable output suitable for
+    /// end users.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rootcause_internals::handlers::ContextHandler;
+    ///
+    /// struct DisplayHandler;
+    ///
+    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for DisplayHandler {
+    ///     fn source(_context: &C) -> Option<&(dyn std::error::Error + 'static)> {
+    ///         None
+    ///     }
+    ///
+    ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Display::fmt(context, f)
+    ///     }
+    /// #   fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// #       std::fmt::Debug::fmt(context, f)
+    /// #   }
+    /// }
+    /// ```
     fn display(value: &C, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// The function used when calling [`RawReportRef::context_debug`]
+    /// Formats the context using debug-style formatting.
     ///
-    /// [`RawReportRef::context_debug`]: crate::report::RawReportRef::context_debug
+    /// This method is called when the context needs to be debug-formatted. It
+    /// should produce detailed output suitable for developers, potentially
+    /// including internal state and implementation details.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rootcause_internals::handlers::ContextHandler;
+    ///
+    /// struct DebugHandler;
+    ///
+    /// impl<C: std::fmt::Debug> ContextHandler<C> for DebugHandler {
+    ///     fn source(_context: &C) -> Option<&(dyn std::error::Error + 'static)> {
+    ///         None
+    ///     }
+    ///
+    ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "Context of type `{}`", core::any::type_name::<C>())
+    ///     }
+    ///
+    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Debug::fmt(context, f)
+    ///     }
+    /// }
+    /// ```
     fn debug(value: &C, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// The formatting style preferred by the context when formatted as part of
-    /// a report.
+    /// Specifies the preferred formatting style when this context is embedded
+    /// in a report.
+    ///
+    /// This method allows the handler to choose between display and debug
+    /// formatting based on how the report itself is being formatted. The
+    /// default implementation always returns
+    /// [`FormattingFunction::Display`], meaning the context will use
+    /// its [`display`](ContextHandler::display) method even when the report is
+    /// being debug-formatted.
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this context
-    ///   will be embedded is being formatted using [`Display`] formatting or
-    ///   [`Debug`]
+    /// - `value`: The context value
+    /// - `report_formatting_function`: How the report itself is being formatted
+    ///   ([`Display`](core::fmt::Display) or [`Debug`](core::fmt::Debug))
     ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
+    /// # Default Behavior
+    ///
+    /// The default implementation ignores the report's formatting style and
+    /// always uses display formatting. This is the behavior of all built-in
+    /// handlers.
+    ///
+    /// # Examples
+    ///
+    /// Custom handler that mirrors the report's formatting:
+    ///
+    /// ```rust
+    /// use rootcause_internals::handlers::{
+    ///     ContextFormattingStyle, ContextHandler, FormattingFunction,
+    /// };
+    ///
+    /// struct MirrorHandler;
+    ///
+    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for MirrorHandler {
+    ///     fn source(_context: &C) -> Option<&(dyn std::error::Error + 'static)> {
+    ///         None
+    ///     }
+    ///
+    ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Display::fmt(context, f)
+    ///     }
+    ///
+    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Debug::fmt(context, f)
+    ///     }
+    ///
+    ///     fn preferred_formatting_style(
+    ///         _value: &C,
+    ///         report_formatting_function: FormattingFunction,
+    ///     ) -> ContextFormattingStyle {
+    ///         // Use the same formatting as the report
+    ///         ContextFormattingStyle {
+    ///             function: report_formatting_function,
+    ///         }
+    ///     }
+    /// }
+    /// ```
     fn preferred_formatting_style(
         value: &C,
         report_formatting_function: FormattingFunction,
@@ -41,35 +241,165 @@ pub trait ContextHandler<C>: 'static {
     }
 }
 
-/// Handler used to implement or override the behavior of [`core::fmt::Display`]
-/// and [`core::fmt::Debug`] when creating an attachment.
+/// Trait for implementing custom formatting behavior for report attachments.
+///
+/// This trait defines how an attachment type should be formatted when displayed
+/// or debugged as part of an error report. Unlike [`ContextHandler`], this
+/// trait also allows specifying placement preferences (inline vs appendix).
+///
+/// # When to Implement
+///
+/// You typically don't need to implement this trait directly. The rootcause
+/// library provides built-in handlers that cover most use cases. Implement this
+/// trait when you need:
+/// - Custom formatting for attachment types
+/// - Special placement logic (e.g., large data in appendices)
+/// - Dynamic formatting based on attachment content
+///
+/// # Required Methods
+///
+/// - [`display`](AttachmentHandler::display): Formats the attachment for
+///   display output
+/// - [`debug`](AttachmentHandler::debug): Formats the attachment for debug
+///   output
+///
+/// # Optional Methods
+///
+/// - [`preferred_formatting_style`](AttachmentHandler::preferred_formatting_style):
+///   Specifies formatting preferences including placement (inline/appendix) and
+///   whether to use display or debug formatting. The default implementation prefers
+///   inline display formatting.
+///
+/// # Examples
+///
+/// ```rust
+/// use rootcause_internals::handlers::{
+///     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
+///     FormattingFunction,
+/// };
+///
+/// // Attachment type with potentially large data
+/// struct LargeData {
+///     records: Vec<String>,
+/// }
+///
+/// // Handler that moves large attachments to appendix
+/// struct LargeDataHandler;
+///
+/// impl AttachmentHandler<LargeData> for LargeDataHandler {
+///     fn display(attachment: &LargeData, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         write!(f, "{} records", attachment.records.len())
+///     }
+///
+///     fn debug(attachment: &LargeData, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+///         write!(f, "LargeData {{ {} records }}", attachment.records.len())
+///     }
+///
+///     fn preferred_formatting_style(
+///         attachment: &LargeData,
+///         _report_formatting: FormattingFunction,
+///     ) -> AttachmentFormattingStyle {
+///         if attachment.records.len() > 10 {
+///             // Large data goes to appendix
+///             AttachmentFormattingStyle {
+///                 placement: AttachmentFormattingPlacement::Appendix {
+///                     appendix_name: "Large Data Records",
+///                 },
+///                 function: FormattingFunction::Display,
+///                 priority: 0,
+///             }
+///         } else {
+///             // Small data shows inline
+///             AttachmentFormattingStyle::default()
+///         }
+///     }
+/// }
+/// ```
 pub trait AttachmentHandler<A>: 'static {
-    /// The function used when calling [`RawAttachmentRef::attachment_display`]
+    /// Formats the attachment using display-style formatting.
     ///
-    /// [`RawAttachmentRef::attachment_display`]: crate::attachment::RawAttachmentRef::attachment_display
+    /// This method is called when the attachment needs to be displayed as part
+    /// of an error report. It should produce human-readable output suitable
+    /// for end users.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// use rootcause_internals::handlers::AttachmentHandler;
+    ///
+    /// struct ConfigData {
+    ///     key: String,
+    ///     value: String,
+    /// }
+    ///
+    /// struct ConfigHandler;
+    ///
+    /// impl AttachmentHandler<ConfigData> for ConfigHandler {
+    ///     fn display(attachment: &ConfigData, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "{} = {}", attachment.key, attachment.value)
+    ///     }
+    /// #   fn debug(attachment: &ConfigData, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// #       write!(f, "ConfigData {{ key: {:?}, value: {:?} }}", attachment.key, attachment.value)
+    /// #   }
+    /// }
+    /// ```
     fn display(value: &A, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// The function used when calling [`RawAttachmentRef::attachment_debug`]
+    /// Formats the attachment using debug-style formatting.
     ///
-    /// [`RawAttachmentRef::attachment_debug`]: crate::attachment::RawAttachmentRef::attachment_debug
+    /// This method is called when the attachment needs to be debug-formatted.
+    /// It should produce detailed output suitable for developers.
     fn debug(value: &A, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result;
 
-    /// The function used when calling
-    /// [`RawAttachmentRef::preferred_formatting_style`]
+    /// Specifies the preferred formatting style and placement for this
+    /// attachment.
     ///
-    /// The formatting style preferred by the attachment when formatted as part
-    /// of a report.
+    /// This method allows the handler to control:
+    /// - **Placement**: Whether the attachment appears inline, in an appendix,
+    ///   or is hidden
+    /// - **Formatting**: Whether to use display or debug formatting
+    /// - **Priority**: The order in which attachments are displayed (higher =
+    ///   earlier)
     ///
-    /// # Arguments
+    /// The default implementation returns inline display formatting with
+    /// priority 0.
     ///
-    /// - `report_formatting_function`: Whether the report in which this
-    ///   attachment will be embedded is being formatted using [`Display`]
-    ///   formatting or [`Debug`]
+    /// # Examples
     ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
+    /// Attachment that hides sensitive data:
     ///
-    /// [`RawAttachmentRef::preferred_formatting_style`]: crate::attachment::RawAttachmentRef::preferred_formatting_style
+    /// ```rust
+    /// use rootcause_internals::handlers::{
+    ///     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
+    ///     FormattingFunction,
+    /// };
+    ///
+    /// struct ApiKey(String);
+    ///
+    /// struct SecureHandler;
+    ///
+    /// impl AttachmentHandler<ApiKey> for SecureHandler {
+    ///     fn display(_attachment: &ApiKey, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "[REDACTED]")
+    ///     }
+    ///
+    ///     fn debug(_attachment: &ApiKey, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "ApiKey([REDACTED])")
+    ///     }
+    ///
+    ///     fn preferred_formatting_style(
+    ///         _attachment: &ApiKey,
+    ///         _report_formatting: FormattingFunction,
+    ///     ) -> AttachmentFormattingStyle {
+    ///         // Hide this attachment completely in production
+    ///         AttachmentFormattingStyle {
+    ///             placement: AttachmentFormattingPlacement::Hidden,
+    ///             function: FormattingFunction::Display,
+    ///             priority: 0,
+    ///         }
+    ///     }
+    /// }
+    /// ```
     fn preferred_formatting_style(
         value: &A,
         report_formatting_function: FormattingFunction,
@@ -79,22 +409,83 @@ pub trait AttachmentHandler<A>: 'static {
     }
 }
 
-/// Struct for contexts to specify how they prefer to be
-/// formatted when they are formatted as part of a report.
+/// Formatting preferences for a context when displayed in a report.
 ///
-/// Whether this is respected or not, and what constitutes an "appendix" is
-/// up to the code that does the formatting for reports.
+/// This struct allows a [`ContextHandler`] to specify how it prefers to be
+/// formatted when its context is displayed as part of an error report. The
+/// formatting system may or may not respect these preferences depending on the
+/// formatter implementation.
+///
+/// # Fields
+///
+/// - `function`: Whether to use [`Display`](core::fmt::Display) or
+///   [`Debug`](core::fmt::Debug) formatting
+///
+/// # Default
+///
+/// The default is to use [`FormattingFunction::Display`].
+///
+/// # Examples
+///
+/// ```rust
+/// use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
+///
+/// // Prefer display formatting (the default)
+/// let style = ContextFormattingStyle::default();
+/// assert_eq!(style.function, FormattingFunction::Display);
+///
+/// // Explicitly request debug formatting
+/// let debug_style = ContextFormattingStyle {
+///     function: FormattingFunction::Debug,
+/// };
+/// ```
 #[derive(Copy, Clone, Debug, Default)]
 pub struct ContextFormattingStyle {
     /// The preferred formatting function to use
     pub function: FormattingFunction,
 }
 
-/// Struct for attachments to specify how and where the attachment prefers to be
-/// formatted when they are formatted as part of a report.
+/// Formatting preferences for an attachment when displayed in a report.
 ///
-/// Whether this is respected or not, and what constitutes an "appendix" is
-/// up to the code that does the formatting for reports.
+/// This struct allows an [`AttachmentHandler`] to specify how and where it
+/// prefers to be displayed when included in an error report. The formatting
+/// system may or may not respect these preferences depending on the formatter
+/// implementation.
+///
+/// # Fields
+///
+/// - `placement`: Where the attachment should appear (inline, appendix, hidden,
+///   etc.)
+/// - `function`: Whether to use [`Display`](core::fmt::Display) or
+///   [`Debug`](core::fmt::Debug) formatting
+/// - `priority`: Display order preference (higher values appear earlier)
+///
+/// # Default
+///
+/// The default is inline display formatting with priority 0.
+///
+/// # Examples
+///
+/// ```rust
+/// use rootcause_internals::handlers::{
+///     AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
+/// };
+///
+/// // Default: inline display formatting
+/// let style = AttachmentFormattingStyle::default();
+/// assert_eq!(style.placement, AttachmentFormattingPlacement::Inline);
+/// assert_eq!(style.function, FormattingFunction::Display);
+/// assert_eq!(style.priority, 0);
+///
+/// // High-priority attachment in appendix
+/// let appendix_style = AttachmentFormattingStyle {
+///     placement: AttachmentFormattingPlacement::Appendix {
+///         appendix_name: "Stack Trace",
+///     },
+///     function: FormattingFunction::Debug,
+///     priority: 10,
+/// };
+/// ```
 #[derive(Copy, Clone, Debug, Default)]
 pub struct AttachmentFormattingStyle {
     /// The preferred attachment placement
@@ -106,47 +497,115 @@ pub struct AttachmentFormattingStyle {
     pub priority: i32,
 }
 
-/// Enum for deciding which function to prefer when a context/attachment
-/// is formatted as part of a report.
+/// Specifies whether to use display or debug formatting for a context or
+/// attachment.
 ///
-/// Whether this is respected or not is up to the code that does the formatting
-/// for reports.
+/// This enum is used by handlers to indicate their formatting preference when
+/// a context or attachment is displayed as part of an error report. The actual
+/// formatting system may or may not respect this preference.
+///
+/// # Variants
+///
+/// - **`Display`** (default): Use the `display` method
+/// - **`Debug`**: Use the `debug` method
+///
+/// # Examples
+///
+/// ```rust
+/// use rootcause_internals::handlers::FormattingFunction;
+///
+/// let display_formatting = FormattingFunction::Display;
+/// let debug_formatting = FormattingFunction::Debug;
+///
+/// // Display is the default
+/// assert_eq!(FormattingFunction::default(), FormattingFunction::Display);
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum FormattingFunction {
-    /// The context prefers to be rendered inline using the
-    /// [`ContextHandler::display`]/[`AttachmentHandler::display`] methods.
+    /// Prefer display formatting via the `display` method.
     #[default]
     Display,
-    /// The context prefers to be rendered inline using the
-    /// [`ContextHandler::debug`]/[`AttachmentHandler::debug`] methods
+    /// Prefer debug formatting via the `debug` method.
     Debug,
 }
 
-/// Enum for attachments to specify the placement they prefer to be
-/// formatted when they are formatted as part of a report.
+/// Specifies where an attachment should be placed when displayed in a report.
 ///
-/// Whether this is respected or not, and what constitutes an "appendix" is
-/// up to the code that does the formatting for reports.
+/// This enum allows attachments to indicate their preferred placement in error
+/// reports. Different placements are suitable for different types of content:
+///
+/// - **Inline**: Short, contextual information that flows with the error
+///   message
+/// - **InlineWithHeader**: Multi-line content that needs a header for clarity
+/// - **Appendix**: Large or detailed content better suited to a separate
+///   section
+/// - **Opaque**: Content that shouldn't be shown but should be counted
+/// - **Hidden**: Content that shouldn't appear at all
+///
+/// The actual formatting system may or may not respect these preferences
+/// depending on the implementation.
+///
+/// # Examples
+///
+/// ```rust
+/// use rootcause_internals::handlers::AttachmentFormattingPlacement;
+///
+/// // Default is inline
+/// let inline = AttachmentFormattingPlacement::default();
+/// assert_eq!(inline, AttachmentFormattingPlacement::Inline);
+///
+/// // Attachment with header
+/// let with_header = AttachmentFormattingPlacement::InlineWithHeader {
+///     header: "Request Details",
+/// };
+///
+/// // Large content in appendix
+/// let appendix = AttachmentFormattingPlacement::Appendix {
+///     appendix_name: "Full Stack Trace",
+/// };
+///
+/// // Sensitive data that should be hidden
+/// let hidden = AttachmentFormattingPlacement::Hidden;
+/// ```
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum AttachmentFormattingPlacement {
-    /// The attachment prefers to be rendered inline
+    /// Display the attachment inline with the error message.
+    ///
+    /// Suitable for short, contextual information that naturally flows with the
+    /// error text. This is the default placement.
     #[default]
     Inline,
-    /// The attachment prefers to be rendered inline under a sub-header. This
-    /// can be useful for attachments rendering as multiple lines
+
+    /// Display the attachment inline but preceded by a header.
+    ///
+    /// Useful for multi-line content that benefits from a descriptive header,
+    /// such as configuration snippets or multi-field data structures.
     InlineWithHeader {
-        /// The header used to render the attachment below
+        /// The header text to display above the attachment
         header: &'static str,
     },
-    /// The attachment prefers to be rendered as an appendix
+
+    /// Display the attachment in a separate appendix section.
+    ///
+    /// Suitable for large or detailed content that would disrupt the flow of
+    /// the main error message, such as full stack traces, large data dumps,
+    /// or detailed diagnostic information.
     Appendix {
-        /// In case the report formatter uses named appendices, then this
-        /// is the name preferred for this attachment
+        /// The name of the appendix section for this attachment
         appendix_name: &'static str,
     },
-    /// The attachment prefers not to be rendered, but would like to show up in
-    /// an "$N additional opaque attachments" message
+
+    /// Don't display the attachment, but count it in a summary.
+    ///
+    /// The attachment won't be shown directly, but may appear in a message like
+    /// "3 additional opaque attachments". Useful for numerous low-priority
+    /// attachments that would clutter the output.
     Opaque,
-    /// The attachment prefers not to be rendered at all
+
+    /// Don't display the attachment at all.
+    ///
+    /// The attachment is completely hidden and won't appear in any form. Useful
+    /// for sensitive data that should be excluded from error reports, or for
+    /// attachments meant only for programmatic access.
     Hidden,
 }

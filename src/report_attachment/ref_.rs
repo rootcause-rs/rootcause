@@ -180,7 +180,7 @@ where
     /// readability, as it more clearly communicates intent.
     ///
     /// This method does not actually modify the attachment in any way. It only
-    /// has the effect of "forgetting" that that the inner attachment
+    /// has the effect of "forgetting" that the inner attachment
     /// actually has the type `A`.
     ///
     /// To get back the attachment with a concrete `A` you can use the method

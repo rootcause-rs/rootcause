@@ -1,4 +1,4 @@
-#![cfg_attr(not(feature = "std"), no_std)]
+#![cfg_attr(not(any(doc, feature = "std")), no_std)]
 #![forbid(
     missing_docs,
     clippy::alloc_instead_of_core,
@@ -25,7 +25,12 @@
 //! This crate provides a structured way to represent and work with errors and
 //! their context. The main goal is to enable you to build rich, structured
 //! error reports that automatically capture not just what went wrong, but also
-//! the context and supporting data at each step.
+//! the context and supporting data at each step in the error's propagation.
+//!
+//! Unlike simple string-based error messages, rootcause allows you to attach
+//! typed data to errors, build error chains, and inspect error contents
+//! programmatically. This makes debugging easier while still providing
+//! beautiful, human-readable error messages.
 //!
 //! ## Project goals
 //!
@@ -53,7 +58,7 @@
 //! error reports, where each node in the tree represents a step in the error's
 //! history.
 //!
-//! You can think of a Report as roughly implementing this data structure:
+//! You can think of a [`Report`] as roughly implementing this data structure:
 //!
 //! ```rust
 //! # use std::any::Any;
@@ -71,10 +76,10 @@
 //! ```
 //!
 //! In practice, the actual implementation differs from this somewhat. There are
-//! multiple reasons for this, including performance, ergonomics and being able
+//! multiple reasons for this, including performance, ergonomics, and being able
 //! to support the features we want.
 //!
-//! However this simpler implementation does illustrate the core concepts and
+//! However, this simpler implementation does illustrate the core concepts and
 //! the ownership model well.
 //!
 //! If you want the full details, take a look at the [`rootcause-internals`]
@@ -105,29 +110,33 @@
 //! Mutable, SendSync>`.
 //!
 //! #### Tables of Report Variants
+//!
 //! ##### Context Variants
+//!
 //! | Variant                       | Context of root node | Context of internal nodes |
-//! |------------------- -----------|----------------------|---------------------------|
+//! |-------------------------------|----------------------|---------------------------|
 //! | `Report<SomeContextType,*,*>` | `SomeContextType`    | Can be anything           |
 //! | `Report<dyn Any,*,*>`         | Can be anything      | Can be anything           |
 //!
-//! Note that `dyn Any` though only be thought of as a marker. No actual trait
-//! object is stored anywhere. Converting from a `Report<SomeContextType>` to
+//! Note that `dyn Any` should only be thought of as a marker. No actual trait
+//! object is stored anywhere. Converting from a `Report<SomeContextType>` to a
 //! `Report<dyn Any>` is a zero-cost operation.
 //!
 //! ##### Ownership and Cloning Variants
-//! | Variant                | `Clone` | Mutation supported | Intuition                                                                 |
-//! |------------------------|---------|--------------------|---------------------------------------------------------------------------|
-//! | `Report<*,Mutable,*>`  | ❌      | 🟡 - Root only     | Root node is allocated using [`ArcUnique`], internal nodes using [`Arc`]. |
-//! | `Report<*,Clonable,*>` | ✅      | ❌                 | All nodes are allocated using [`Arc`].                                    |
 //!
-//! [`ArcUnique`]: https://docs.rs/triomphe/latest/triomphe/struct.UniqueArc.html
+//! | Variant                 | `Clone` | Mutation supported | Intuition                                                                 |
+//! |-------------------------|---------|--------------------|-----------------------------------------------------------------------------------------------------------------|
+//! | `Report<*,Mutable,*>`   | ❌      | 🟡 - Root only     | Root node is allocated using [`UniqueArc`], internal nodes using [`Arc`]. |
+//! | `Report<*,Cloneable,*>` | ✅      | ❌                 | All nodes are allocated using [`Arc`].                                    |
+//!
+//! [`UniqueArc`]: https://docs.rs/triomphe/latest/triomphe/struct.UniqueArc.html
 //! [`Arc`]: https://docs.rs/triomphe/latest/triomphe/struct.Arc.html
 //!
-//! The `Mutable` exist to allow mutating the root node (e.g. adding
-//! attachments).
+//! The `Mutable` variant exists to allow mutating the root node (for example,
+//! adding attachments).
 //!
 //! ##### Thread-Safety Variants
+//!
 //! | Variant                | `Send+Sync` | Permits insertion of `!Send` and `!Sync` objects | Intuition                                                                                |
 //! |------------------------|-------------|--------------------------------------------------|------------------------------------------------------------------------------------------|
 //! | `Report<*,*,SendSync>` | ✅          | ❌                                               | The objects inside the report are `Send+Sync`, so the report itself is also `Send+Sync`. |
@@ -135,11 +144,12 @@
 //!
 //! ## Converting Between Report Variants
 //!
-//! The lists have been ordered so that it is always possible to convert to an
-//! element further down the list using the [`From`] trait. This also means you
-//! can use `?` when converting downwards. There are also more specific methods
-//! (implemented using [`From`]), to help with type inference and to more
-//! clearly communicate intent:
+//! The variant lists above have been ordered so that it is always possible to
+//! convert to an element further down the list using the [`From`] trait. This
+//! also means you can use `?` when converting downwards. There are also more
+//! specific methods (implemented using [`From`]) to help with type inference
+//! and to more clearly communicate intent:
+//!
 //! - [`Report::into_dyn_any`] converts from `Report<C, *, *>` to `Report<dyn
 //!   Any, *, *>`.
 //! - [`Report::into_cloneable`] converts from `Report<*, Mutable, *>` to
@@ -154,7 +164,7 @@
 //!   - You can check if the type of the root node matches a specific type by
 //!     using [`Report::downcast_report`]. This will return either the requested
 //!     report type or the original report depending on whether the types match.
-//! - From `Report<*, Clonable, *>` to `Report<*, Mutable, *>`:
+//! - From `Report<*, Cloneable, *>` to `Report<*, Mutable, *>`:
 //!   - You can check if the root node only has a single owner using
 //!     [`Report::try_into_mutable`]. This will check the number of references
 //!     to the root node and return either the requested report variant or the
@@ -164,10 +174,10 @@
 //!     allocating a new root node is to call [`Report::context`].
 //! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable,
 //!   SendSync>`:
-//!   - You can preformat the entire the report using [`Report::preformat`].
-//!     This creates an entirely new report that has the same structure and will
-//!     look the same as the current one if printed, but all contexts and
-//!     attachments will be replaced with a [`PreformattedContext`] version.
+//!   - You can preformat the entire report using [`Report::preformat`]. This
+//!     creates an entirely new report that has the same structure and will look
+//!     the same as the current one if printed, but all contexts and attachments
+//!     will be replaced with a [`PreformattedContext`] version.
 //!
 //! # Acknowledgements
 //!

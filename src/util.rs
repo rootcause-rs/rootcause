@@ -1,5 +1,11 @@
+//! Internal utility functions.
+
 use core::fmt;
 
+/// Creates a type that implements both `Display` and `Debug` by delegating
+/// to provided functions.
+///
+/// Used internally to return formatted representations from methods.
 pub(crate) fn format_helper<State, DisplayFn, DebugFn>(
     state: State,
     display_fn: DisplayFn,
@@ -17,6 +23,7 @@ where
     }
 }
 
+/// Helper type created by [`format_helper`].
 struct FormatHelper<State, DisplayFn, DebugFn> {
     state: State,
     display_fn: DisplayFn,

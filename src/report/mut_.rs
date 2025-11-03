@@ -20,15 +20,44 @@ use crate::{
 
 /// A mutable reference to a [`Report`].
 ///
-/// This type provides mutable access to a [`Report`], allowing modification of
-/// children and attachments while maintaining safe borrowing semantics.
+/// [`ReportMut`] provides mutable access to a report's children and attachments
+/// while maintaining safe borrowing semantics. Unlike owned reports, mutable
+/// references cannot be consumed for chaining operations like
+/// [`Report::context`] or [`Report::attach`].
 ///
-/// Note that unlike owned reports, mutable references cannot be consumed for
-/// chaining operations like [`Report::context`] or [`Report::attach`].
+/// # Key Characteristics
 ///
-/// [`Report`]: crate::Report
-/// [`Report::context`]: crate::Report::context
-/// [`Report::attach`]: crate::Report::attach
+/// - **Not `Copy` or `Clone`**: Ensures exclusive mutable access
+/// - **Lifetime-bound**: Tied to the lifetime of the underlying report
+/// - **Two type parameters**: Has context type `C` and thread safety marker `T`
+///   (no ownership marker since mutable references are always uniquely owned)
+///
+/// # Thread Safety
+///
+/// Unlike [`Report`] and [`ReportRef`], you cannot change the thread safety
+/// marker on [`ReportMut`]:
+///
+/// - You cannot convert [`SendSync`] → [`Local`] because that would allow
+///   adding non-thread-safe data to a report that should remain thread-safe
+/// - You cannot convert [`Local`] → [`SendSync`] because that would allow
+///   cloning a child report with thread-local data and sending it across
+///   threads
+///
+/// # Common Usage
+///
+/// ```
+/// use rootcause::{ReportMut, prelude::*};
+///
+/// let mut report: Report = report!("error message");
+///
+/// // Get mutable access to modify children or attachments
+/// let mut report_mut: ReportMut<'_> = report.as_mut();
+/// report_mut
+///     .children_mut()
+///     .push(report!("child error").into_cloneable());
+///
+/// println!("{}", report);
+/// ```
 #[repr(transparent)]
 pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
 where
@@ -54,7 +83,7 @@ where
     /// - The context embedded in the RawReport must match the `C` of the output
     ///   type, or the `C` of the output type must be `dyn Any`
     /// - The thread safety marker must match the contents of the report. More
-    ///   specifically if the marker is `SendSync`, then all contexts and
+    ///   specifically if the marker is [`SendSync`], then all contexts and
     ///   attachments must be `Send+Sync`
     #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawReportMut<'a>) -> Self {
@@ -233,7 +262,7 @@ where
     /// readability, as it more clearly communicates intent.
     ///
     /// This method does not actually modify the report in any way. It only has
-    /// the effect of "forgetting" that that the context actually has the
+    /// the effect of "forgetting" that the context actually has the
     /// type `C`.
     ///
     /// To get back the report with a concrete `C` you can use the method
@@ -294,7 +323,7 @@ where
     /// # let mut report = report!(MyError);
     /// let mut report_mut: ReportMut<'_, MyError> = report.as_mut();
     /// {
-    ///     // Create a new mutable report with a shorter
+    ///     // Create a new mutable reference with a shorter lifetime
     ///     let mut borrowed_report_mut: ReportMut<'_, MyError> = report_mut.reborrow();
     /// }
     /// // After dropping the inner reference report, we can still use the outer one
@@ -430,7 +459,7 @@ where
     /// # let mut report = report!(non_send_sync_error);
     /// let report_mut: ReportMut<'_, NonSendSyncError, markers::Local> = report.as_mut();
     /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> =
-    ///     report.preformat();
+    ///     report_mut.preformat();
     /// assert_eq!(format!("{report}"), format!("{preformatted}"));
     /// ```
     #[track_caller]
@@ -777,7 +806,7 @@ mod from_impls {
                     fn from(report: ReportMut<'a, $context1, $thread_safety>) -> Self {
                         // SAFETY:
                         // - The context is valid, because it either doesn't change or goes from a known `C` to `dyn Any`.
-                        // - The thread marker is valid, because it either does not change or it goes from `SendSync` to `Local`.
+                        // - The thread marker is valid, because it does not change.
                         unsafe { ReportMut::from_raw(report.into_raw()) }
                     }
                 }

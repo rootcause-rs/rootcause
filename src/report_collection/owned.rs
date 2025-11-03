@@ -24,7 +24,7 @@ use crate::{
 /// - It has convenience methods to convert between different context and thread
 ///   safety markers such as [`into_dyn_any`](Self::into_dyn_any) and
 ///   [`into_local`](Self::into_local).
-/// - It also possible to convert between different context and thread safety
+/// - It is also possible to convert between different context and thread safety
 ///   markers using the [`From`] and [`Into`] traits.
 #[repr(transparent)]
 pub struct ReportCollection<Context = dyn Any, ThreadSafety = SendSync>
@@ -49,8 +49,7 @@ where
     ///   specifically if the marker is `SendSync`, then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the `RawReport`s are
-    ///   actually of type `C` when `C` if is is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
@@ -69,8 +68,7 @@ where
     ///   specifically if the marker is [`SendSync`], then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
-    ///   actually of type `C` when `C` if is is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
         unsafe { &*(raw as *const Vec<RawReport> as *const Self) }
@@ -85,8 +83,7 @@ where
     ///   specifically if the marker is [`SendSync`], then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
-    ///   actually of type `C` when `C` if is is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
         unsafe { &mut *(raw as *mut Vec<RawReport> as *mut Self) }
@@ -295,7 +292,7 @@ where
         unsafe { ReportCollection::from_raw_ref(&self.raw) }
     }
 
-    /// Converts the collection to use `Local` thread safety semantics.
+    /// Converts the collection to use [`Local`] thread safety semantics.
     ///
     /// This changes the thread safety marker from any type to [`Local`], which
     /// means the resulting collection will not implement [`Send`] or
@@ -324,7 +321,7 @@ where
         unsafe { ReportCollection::from_raw(self.into_raw()) }
     }
 
-    /// Returns a reference to the collection with `Local` thread safety
+    /// Returns a reference to the collection with [`Local`] thread safety
     /// semantics.
     #[must_use]
     pub fn as_local(&self) -> &ReportCollection<C, Local> {
@@ -407,7 +404,7 @@ impl<C> ReportCollection<C, SendSync>
 where
     C: markers::ObjectMarkerFor<SendSync> + ?Sized,
 {
-    /// Creates a new, empty `ReportCollection` with `SendSync` thread safety.
+    /// Creates a new, empty `ReportCollection` with [`SendSync`] thread safety.
     ///
     /// This is equivalent to calling [`new()`](Self::new) but makes the thread
     /// safety marker explicit. The resulting collection can be safely sent
@@ -431,7 +428,7 @@ impl<C> ReportCollection<C, Local>
 where
     C: markers::ObjectMarker + ?Sized,
 {
-    /// Creates a new, empty `ReportCollection` with `Local` thread safety.
+    /// Creates a new, empty `ReportCollection` with [`Local`] thread safety.
     ///
     /// This creates a collection that is not [`Send`] or [`Sync`], meaning it
     /// cannot be transferred between threads or shared across threads. This
