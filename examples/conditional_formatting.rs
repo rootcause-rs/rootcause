@@ -5,7 +5,10 @@
 // - Show/hide verbose info based on feature flags or debug settings
 // - Customize visibility based on user permissions or logging levels
 //
-// Pattern: Check runtime state in AttachmentFormattingOverride to control placement/visibility
+// Pattern: Check runtime state in AttachmentFormattingOverride to control
+// placement/visibility
+
+use std::env;
 
 use rootcause::{
     hooks::formatting_overrides::attachment::{
@@ -14,7 +17,6 @@ use rootcause::{
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
-use std::env;
 
 // Example 1: Hide sensitive data in production
 
@@ -52,7 +54,8 @@ impl AttachmentFormattingOverride<ApiCredentials> for CredentialsFormatter {
         };
 
         if is_production() {
-            // Hide when condition is true (production, feature disabled, insufficient permissions, etc.)
+            // Hide when condition is true (production, feature disabled, insufficient
+            // permissions, etc.)
             AttachmentFormattingStyle {
                 placement: AttachmentFormattingPlacement::Hidden,
                 function: FormattingFunction::Display,

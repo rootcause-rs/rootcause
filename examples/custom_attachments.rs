@@ -1,7 +1,8 @@
 // Custom attachment types for structured error context
 //
-// Custom types give you structured data you can retrieve and use programmatically,
-// not just display. Implement Display + Debug to attach any type.
+// Custom types give you structured data you can retrieve and use
+// programmatically, not just display. Implement Display + Debug to attach any
+// type.
 
 use rootcause::prelude::*;
 

@@ -4,8 +4,9 @@
 //! and why rootcause's `.context()` provides better error chains than
 //! thiserror's `#[from]`/`#[source]` nesting.
 
-use rootcause::prelude::*;
 use std::{io, num::ParseIntError};
+
+use rootcause::prelude::*;
 use thiserror::Error;
 
 mod example1 {
@@ -37,7 +38,8 @@ mod example1 {
         .attach("Config version: 2.0"))
     }
 
-    /// Demonstrates pattern matching on the error variant to decide recovery strategy.
+    /// Demonstrates pattern matching on the error variant to decide recovery
+    /// strategy.
     pub fn load_config_with_fallback(path: &str) -> Result<String, Report> {
         let report = match load_config(path) {
             Ok(config) => return Ok(config),

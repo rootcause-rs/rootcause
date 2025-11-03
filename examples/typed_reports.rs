@@ -31,7 +31,8 @@ impl core::fmt::Display for DatabaseError {
 
 impl core::error::Error for DatabaseError {}
 
-/// Returns typed report: Report<DatabaseError> preserves type for pattern matching.
+/// Returns typed report: Report<DatabaseError> preserves type for pattern
+/// matching.
 fn query_user(user_id: u32) -> Result<String, Report<DatabaseError>> {
     // Simulate different error conditions based on user_id
     let error = match user_id {
@@ -48,8 +49,9 @@ fn query_user(user_id: u32) -> Result<String, Report<DatabaseError>> {
 
 /// Pattern matching on typed reports enables intelligent error handling.
 ///
-/// This retry logic only retries transient errors (ConnectionLost, QueryTimeout)
-/// and immediately fails on permanent errors (ConstraintViolation, NotFound).
+/// This retry logic only retries transient errors (ConnectionLost,
+/// QueryTimeout) and immediately fails on permanent errors
+/// (ConstraintViolation, NotFound).
 fn query_user_with_retry(user_id: u32) -> Result<String, Report> {
     const MAX_RETRIES: usize = 3;
 

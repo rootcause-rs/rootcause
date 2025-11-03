@@ -3,8 +3,9 @@
 // IteratorExt::collect_reports() gathers all errors from batch operations
 // instead of stopping at the first failure.
 
-use rootcause::{prelude::*, report_collection::ReportCollection};
 use std::io;
+
+use rootcause::{prelude::*, report_collection::ReportCollection};
 
 // Simulates processing that might fail
 fn process_file(filename: &str) -> Result<String, Report<io::Error>> {

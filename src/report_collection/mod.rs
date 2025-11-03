@@ -32,14 +32,11 @@
 //! ## Wrapping a collection with context
 //!
 //! ```
-//! use rootcause::{report, report_collection::ReportCollection, Report};
+//! use rootcause::{Report, report, report_collection::ReportCollection};
 //!
-//! let collection: ReportCollection = [
-//!     report!("Service A failed"),
-//!     report!("Service B failed"),
-//! ]
-//! .into_iter()
-//! .collect();
+//! let collection: ReportCollection = [report!("Service A failed"), report!("Service B failed")]
+//!     .into_iter()
+//!     .collect();
 //!
 //! let report: Report<&str> = collection.context("Multiple services unavailable");
 //! println!("{}", report);

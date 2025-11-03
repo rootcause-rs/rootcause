@@ -52,8 +52,7 @@ where
     ///   specifically if the marker is [`SendSync`], then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
-    ///   actually of type `C` when `C` is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     pub(crate) unsafe fn from_raw(raw: &'a [RawReport]) -> Self {
         Self {
             iter: raw.iter(),
@@ -150,8 +149,7 @@ where
     ///   specifically if the marker is [`SendSync`], then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
-    ///   actually of type `C` when `C` is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
             iter: raw.into_iter(),

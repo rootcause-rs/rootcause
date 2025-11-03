@@ -6,8 +6,9 @@
 //! 3. Attaching extra information with `.attach()`
 //! 4. Building error chains through function calls
 
-use rootcause::prelude::*;
 use std::fs;
+
+use rootcause::prelude::*;
 
 /// Simplest usage: Types implementing `Error` automatically convert to Report.
 fn read_config_file_simple(path: &str) -> Result<String, Report> {

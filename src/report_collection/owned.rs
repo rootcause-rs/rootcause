@@ -49,8 +49,7 @@ where
     ///   specifically if the marker is `SendSync`, then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the `RawReport`s are
-    ///   actually of type `C` when `C` is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
         Self {
@@ -69,8 +68,7 @@ where
     ///   specifically if the marker is [`SendSync`], then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
-    ///   actually of type `C` when `C` is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
         unsafe { &*(raw as *const Vec<RawReport> as *const Self) }
@@ -85,8 +83,7 @@ where
     ///   specifically if the marker is [`SendSync`], then all the data
     ///   (recursively) contained by the reports must be `Send+Sync`.
     /// - The caller must ensure that the contexts of the [`RawReport`]s are
-    ///   actually of type `C` when `C` is a type different from `dyn
-    ///   Any`.
+    ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
         unsafe { &mut *(raw as *mut Vec<RawReport> as *mut Self) }

@@ -1,11 +1,15 @@
 // Formatting hooks for global formatting overrides
 //
 // Formatting hooks vs handlers: Both customize how types are displayed, but:
-// - Handlers (see custom_handler.rs): Applied per-attachment with .attach_custom() or per-context
-// - Hooks (this example): Registered once globally and apply to all instances of a type
+// - Handlers (see custom_handler.rs): Applied per-attachment with
+//   .attach_custom() or per-context
+// - Hooks (this example): Registered once globally and apply to all instances
+//   of a type
 //
-// Use formatting hooks to customize how types are displayed across your entire application:
-// - AttachmentFormattingOverride: Control placement (Inline/Appendix/Hidden) and priority
+// Use formatting hooks to customize how types are displayed across your entire
+// application:
+// - AttachmentFormattingOverride: Control placement (Inline/Appendix/Hidden)
+//   and priority
 // - ContextFormattingOverride: Customize how error contexts are formatted
 
 use rootcause::{
@@ -130,7 +134,8 @@ impl ContextFormattingOverride<ValidationError> for ValidationErrorFormatter {
 }
 
 // Example 1: Control attachment placement in output
-// Demonstrates placing verbose diagnostic data in the appendix section instead of inline
+// Demonstrates placing verbose diagnostic data in the appendix section instead
+// of inline
 fn demo_attachment_placement() -> Result<(), Report> {
     let query = DatabaseQuery {
         sql: "SELECT * FROM users WHERE status = ? AND created_at > ?".to_string(),

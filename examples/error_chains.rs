@@ -5,8 +5,9 @@
 //! - `.attach_with()` for lazy evaluation (only computed on error)
 //! - Building multi-level context with `.attach()` and `.context()`
 
-use rootcause::prelude::*;
 use std::{fs, io};
+
+use rootcause::prelude::*;
 
 /// Reads a file and parses its contents as a number.
 ///

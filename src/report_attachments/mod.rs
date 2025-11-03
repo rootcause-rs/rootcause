@@ -17,10 +17,7 @@
 //! # Examples
 //!
 //! ```
-//! use rootcause::{
-//!     report_attachment::ReportAttachment,
-//!     report_attachments::ReportAttachments,
-//! };
+//! use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
 //!
 //! let mut attachments = ReportAttachments::new_sendsync();
 //! attachments.push(ReportAttachment::new("debug info").into_dyn_any());

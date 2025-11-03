@@ -7,8 +7,9 @@
 //!
 //! This lets you freely mix error types and let `?` handle conversions.
 
-use rootcause::prelude::*;
 use std::fs;
+
+use rootcause::prelude::*;
 
 #[derive(Debug, Clone)]
 enum ParseError {

@@ -1,18 +1,21 @@
 // Custom handlers for attachments and contexts
 //
 // Handlers vs formatting hooks (see formatting_hooks.rs):
-// - Handlers (this example): Applied per-attachment/context with .attach_custom() or when creating the report
-// - Formatting hooks: Registered once globally and apply to all instances of a type
+// - Handlers (this example): Applied per-attachment/context with
+//   .attach_custom() or when creating the report
+// - Formatting hooks: Registered once globally and apply to all instances of a
+//   type
 //
 // Use custom handlers to control formatting for:
 // - Attachments: diagnostic data (logs, metrics, binary dumps)
 // - Contexts: structured error descriptions (validation errors, API errors)
 
+use std::io;
+
 use rootcause::{
     handlers::{AttachmentHandler, ContextHandler},
     prelude::*,
 };
-use std::io;
 
 // Example 1: Custom attachment handler for diagnostic data
 
