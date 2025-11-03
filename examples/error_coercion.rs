@@ -83,7 +83,7 @@ fn coercion_chain(path: &str) -> Result<String, Report> {
 
     // Report<String> → Report<dyn Any>
     if number > 100 {
-        return Err(report!("Value too large: {number}").attach("Maximum allowed value: 100"))?;
+        Err(report!("Value too large: {number}").attach("Maximum allowed value: 100"))?;
     }
 
     Ok(format!("Processed value: {number}"))
