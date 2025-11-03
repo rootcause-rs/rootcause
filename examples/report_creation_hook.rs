@@ -1,10 +1,12 @@
-//! Demonstrates using report creation hooks to automatically add context.
-//!
-//! This example shows:
-//! 1. Registering ReportCreationHook for automatic context
-//! 2. Using AttachmentCollectorHook for specific data
-//! 3. Using closures for simple attachment collection
-//! 4. Real-world patterns (request ID, timestamps, environment)
+// Report creation hooks - automatically attach context when errors are created
+//
+// Report creation hooks vs formatting hooks:
+// - Creation hooks (this example): Automatically attach data when reports are created
+// - Formatting hooks (see formatting_hooks.rs): Control how attachments/contexts are displayed
+//
+// Two types of creation hooks:
+// - AttachmentCollectorHook: Simple - always collects and attaches data
+// - ReportCreationHook: Advanced - conditional logic based on report state
 
 use rootcause::{
     ReportMut,
@@ -17,28 +19,12 @@ use rootcause::{
 };
 use std::sync::atomic::{AtomicU64, Ordering};
 
-// ============================================================================
-// Example 1: Simple attachment collector with closure
-// ============================================================================
+// Example 1: AttachmentCollectorHook - automatic request tracking
 
-fn setup_timestamp_collector() {
-    // Register a closure that adds a timestamp to every error
-    register_attachment_collector_hook(|| {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .unwrap()
-            .as_secs()
-    });
-}
-
-// ============================================================================
-// Example 2: Attachment collector for request tracking
-// ============================================================================
-
-/// Global request ID counter for demonstration.
+/// Global request ID counter for demonstration
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
 
-/// Request ID that we want to automatically attach to errors.
+/// Request ID that we want to automatically attach to all errors
 #[derive(Debug)]
 struct RequestId(u64);
 
@@ -48,7 +34,8 @@ impl core::fmt::Display for RequestId {
     }
 }
 
-/// Collector that automatically gets the current request ID.
+/// Collector that automatically gets the current request ID
+/// This is called for EVERY report created - use for lightweight data
 struct RequestIdCollector;
 
 impl AttachmentCollectorHook<RequestId> for RequestIdCollector {
@@ -60,149 +47,148 @@ impl AttachmentCollectorHook<RequestId> for RequestIdCollector {
     }
 }
 
-// ============================================================================
-// Example 3: Custom report creation hook for environment info
-// ============================================================================
+// Example 2: ReportCreationHook - conditional attachment based on error type
 
-/// Environment information we want on every error.
-#[derive(Debug)]
-struct EnvironmentInfo {
-    mode: &'static str,
-    version: &'static str,
-}
+/// Hint about whether an operation can be retried
+struct RetryHint(&'static str);
 
-impl core::fmt::Display for EnvironmentInfo {
+impl core::fmt::Display for RetryHint {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(f, "Environment: {} (v{})", self.mode, self.version)
+        write!(f, "💡 {}", self.0)
     }
 }
 
-/// Hook that adds environment info to all reports.
-struct EnvironmentHook;
+impl core::fmt::Debug for RetryHint {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(self, f)
+    }
+}
 
-impl ReportCreationHook for EnvironmentHook {
+/// Hook that inspects the error type and adds retry hints for transient errors
+/// Use ReportCreationHook when you need to inspect the report to decide what to attach
+struct RetryHintHook;
+
+impl ReportCreationHook for RetryHintHook {
     fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
-        // Only add attachment to leaf reports (reports without children)
-        if report.children().is_empty() {
-            let env = EnvironmentInfo {
-                mode: "development",
-                version: "0.1.0",
+        // Inspect the error to see if it's a transient network error
+        if let Some(io_error) = report.downcast_current_context::<std::io::Error>() {
+            let hint = match io_error.kind() {
+                std::io::ErrorKind::ConnectionRefused
+                | std::io::ErrorKind::TimedOut
+                | std::io::ErrorKind::ConnectionReset => {
+                    Some(RetryHint("This is a transient error - retry may succeed"))
+                }
+                std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied => {
+                    Some(RetryHint("This error is permanent - retrying won't help"))
+                }
+                _ => None,
             };
-            report
-                .attachments_mut()
-                .push(report_attachment!(env).into());
+
+            if let Some(hint) = hint {
+                report
+                    .attachments_mut()
+                    .push(report_attachment!(hint).into());
+            }
         }
     }
 
     fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
-        // Only add attachment to leaf reports (reports without children)
-        if report.children().is_empty() {
-            let env = EnvironmentInfo {
-                mode: "development",
-                version: "0.1.0",
+        // Same logic for SendSync errors
+        if let Some(io_error) = report.downcast_current_context::<std::io::Error>() {
+            let hint = match io_error.kind() {
+                std::io::ErrorKind::ConnectionRefused
+                | std::io::ErrorKind::TimedOut
+                | std::io::ErrorKind::ConnectionReset => {
+                    Some(RetryHint("This is a transient error - retry may succeed"))
+                }
+                std::io::ErrorKind::NotFound | std::io::ErrorKind::PermissionDenied => {
+                    Some(RetryHint("This error is permanent - retrying won't help"))
+                }
+                _ => None,
             };
-            report
-                .attachments_mut()
-                .push(report_attachment!(env).into());
+
+            if let Some(hint) = hint {
+                report
+                    .attachments_mut()
+                    .push(report_attachment!(hint).into());
+            }
         }
     }
 }
 
-// ============================================================================
-// Example 4: Conditional attachment based on report type
-// ============================================================================
+fn simulate_api_request(request_id: u64) -> Result<String, Report> {
+    // Set current request ID for tracking
+    REQUEST_COUNTER.store(request_id, Ordering::Relaxed);
 
-/// Hook that adds debug info only for certain error types.
-struct DebugInfoHook;
-
-impl ReportCreationHook for DebugInfoHook {
-    fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
-        // Only add to leaf reports (reports without children)
-        if report.children().is_empty() {
-            report
-                .attachments_mut()
-                .push(report_attachment!("Debug: Local report created").into());
-        }
-    }
-
-    fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
-        // Only add to leaf reports (reports without children)
-        if report.children().is_empty() {
-            report
-                .attachments_mut()
-                .push(report_attachment!("Debug: SendSync report created").into());
-        }
-    }
-}
-
-// ============================================================================
-// Demo functions
-// ============================================================================
-
-fn simulate_api_request(endpoint: &str) -> Result<String, Report> {
-    // Set current request ID
-    REQUEST_COUNTER.fetch_add(1, Ordering::Relaxed);
-
-    // Simulate an error
+    // Simulate an error - notice we don't manually attach the request ID
     Err(report!(std::io::Error::new(
         std::io::ErrorKind::ConnectionRefused,
-        format!("Failed to connect to {endpoint}"),
+        "Failed to connect to API",
     ))
     .into_dyn_any())
 }
 
-fn process_data() -> Result<(), Report> {
-    Err(report!("Data processing failed")
-        .attach("Processing step: validation")
+fn file_operation(exists: bool) -> Result<(), Report> {
+    // Simulate different error types
+    if exists {
+        Err(report!(std::io::Error::new(
+            std::io::ErrorKind::PermissionDenied,
+            "Access denied to file",
+        ))
         .into_dyn_any())
-}
-
-fn nested_operation() -> Result<(), Report> {
-    process_data()
-        .context("Nested operation failed")
-        .map_err(|e| e.into_dyn_any())
+    } else {
+        Err(report!(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            "File not found",
+        ))
+        .into_dyn_any())
+    }
 }
 
 fn main() {
-    println!("=== Setting up hooks ===\n");
+    println!("Example 1: AttachmentCollectorHook - automatic request tracking\n");
 
-    // Register all hooks
-    setup_timestamp_collector();
+    // Register the request ID collector
     register_attachment_collector_hook(RequestIdCollector);
-    register_report_creation_hook(EnvironmentHook);
-    register_report_creation_hook(DebugInfoHook);
 
-    println!("Registered hooks:");
-    println!("  - Timestamp collector (closure)");
-    println!("  - Request ID collector");
-    println!("  - Environment info hook");
-    println!("  - Debug info hook\n");
-
-    println!("=== Example 1: API request with auto-attached context ===\n");
-    match simulate_api_request("/api/users") {
+    println!("Making first API request...");
+    match simulate_api_request(1001) {
         Ok(_) => println!("Success"),
         Err(error) => {
             eprintln!("{error}\n");
-            println!("Notice: Timestamp, Request ID, Environment, and Debug info were");
-            println!("automatically attached by the hooks!\n");
+            println!("Notice: Request ID was automatically attached!\n");
         }
     }
 
-    println!("=== Example 2: Another request with different ID ===\n");
-    match simulate_api_request("/api/posts") {
+    println!("Making second API request...");
+    match simulate_api_request(1002) {
         Ok(_) => println!("Success"),
         Err(error) => {
             eprintln!("{error}\n");
-            println!("Notice: Request ID incremented automatically\n");
+            println!("Notice: Different request ID, automatically tracked\n");
         }
     }
 
-    println!("=== Example 3: Nested operation with multiple reports ===\n");
-    match nested_operation() {
+    println!("\nExample 2: ReportCreationHook - conditional retry hints\n");
+
+    // Register retry hint hook
+    register_report_creation_hook(RetryHintHook);
+
+    println!("Attempting transient network error...");
+    match simulate_api_request(1003) {
+        Ok(_) => println!("Success"),
+        Err(error) => {
+            eprintln!("{error}\n");
+            println!("Notice: Retry hint was added based on error type (ConnectionRefused)\n");
+        }
+    }
+
+    println!("Attempting permanent file error...");
+    match file_operation(false) {
         Ok(()) => println!("Success"),
         Err(error) => {
             eprintln!("{error}\n");
-            println!("Notice: Each report in the chain has hook-added context");
+            println!("Notice: Different retry hint for permanent error (NotFound)");
         }
     }
 }

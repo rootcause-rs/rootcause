@@ -1,28 +1,24 @@
-//! Demonstrates conditional formatting based on environment.
-//!
-//! This example shows:
-//! 1. Hiding sensitive data in production
-//! 2. Adding extra debug info in development
-//! 3. Using environment variables to control formatting
-//! 4. Conditional attachment collection hooks
+// Conditional formatting based on runtime context
+//
+// Use conditional formatting to adapt error output based on runtime conditions:
+// - Hide sensitive data based on environment (production vs development)
+// - Show/hide verbose info based on feature flags or debug settings
+// - Customize visibility based on user permissions or logging levels
+//
+// Pattern: Check runtime state in AttachmentFormattingOverride to control placement/visibility
 
 use rootcause::{
-    hooks::{
-        formatting_overrides::attachment::{
-            AttachmentFormattingOverride, register_attachment_hook,
-        },
-        report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
+    hooks::formatting_overrides::attachment::{
+        AttachmentFormattingOverride, register_attachment_hook,
     },
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
 use std::env;
 
-// ============================================================================
-// Example 1: Conditional sensitive data hiding
-// ============================================================================
+// Example 1: Hide sensitive data in production
 
-/// API credentials that should be hidden in production.
+/// API credentials that should never be exposed in production logs
 #[derive(Debug)]
 struct ApiCredentials {
     api_key: String,
@@ -31,39 +27,21 @@ struct ApiCredentials {
 
 impl core::fmt::Display for ApiCredentials {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        if is_production() {
-            write!(f, "[API credentials hidden in production]")
-        } else {
-            write!(
-                f,
-                "API Key: {}..., Secret: {}...",
-                &self.api_key[..8],
-                &self.secret[..8]
-            )
-        }
+        // Show partial data in development for debugging
+        write!(
+            f,
+            "API Key: {}..., Secret: {}...",
+            &self.api_key[..8],
+            &self.secret[..8]
+        )
     }
 }
 
-/// Formatting hook that hides credentials completely in production.
+/// Formatter that conditionally hides credentials based on environment
+/// The same pattern works for feature flags, user permissions, etc.
 struct CredentialsFormatter;
 
 impl AttachmentFormattingOverride<ApiCredentials> for CredentialsFormatter {
-    fn display(
-        &self,
-        attachment: ReportAttachmentRef<'_, ApiCredentials>,
-        _parent: Option<rootcause::hooks::formatting_overrides::attachment::AttachmentParent<'_>>,
-        f: &mut core::fmt::Formatter<'_>,
-    ) -> core::fmt::Result {
-        if is_production() {
-            write!(f, "[REDACTED: API credentials not shown in production]")
-        } else {
-            let creds = attachment.inner();
-            writeln!(f, "API Credentials (dev mode):")?;
-            writeln!(f, "  API Key: {}", creds.api_key)?;
-            write!(f, "  Secret: {}", creds.secret)
-        }
-    }
-
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
@@ -74,113 +52,77 @@ impl AttachmentFormattingOverride<ApiCredentials> for CredentialsFormatter {
         };
 
         if is_production() {
-            // Hide in production
+            // Hide when condition is true (production, feature disabled, insufficient permissions, etc.)
             AttachmentFormattingStyle {
                 placement: AttachmentFormattingPlacement::Hidden,
                 function: FormattingFunction::Display,
                 priority: 0,
             }
         } else {
-            // Show with header in development
+            // Show when condition is false
             AttachmentFormattingStyle {
-                placement: AttachmentFormattingPlacement::InlineWithHeader {
-                    header: "Debug: API Credentials",
-                },
+                placement: AttachmentFormattingPlacement::Inline,
                 function: FormattingFunction::Display,
-                priority: 50,
+                priority: 0,
             }
         }
     }
 }
 
-// ============================================================================
-// Example 2: Conditional debug info collection
-// ============================================================================
+// Example 2: Show verbose debug info only in development
 
-/// Debug information only collected in development.
+/// Detailed debugging information that's too verbose for production
 #[derive(Debug)]
-struct DebugMetrics {
+struct DebugSnapshot {
     memory_mb: usize,
-    uptime_secs: u64,
     thread_count: usize,
+    active_connections: usize,
+    last_gc_ms: u64,
 }
 
-impl core::fmt::Display for DebugMetrics {
+impl core::fmt::Display for DebugSnapshot {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "Debug Metrics:")?;
+        writeln!(f, "Debug Snapshot:")?;
         writeln!(f, "  Memory: {} MB", self.memory_mb)?;
-        writeln!(f, "  Uptime: {} seconds", self.uptime_secs)?;
-        write!(f, "  Threads: {}", self.thread_count)
+        writeln!(f, "  Threads: {}", self.thread_count)?;
+        writeln!(f, "  Connections: {}", self.active_connections)?;
+        write!(f, "  Last GC: {} ms", self.last_gc_ms)
     }
 }
 
-/// Collector that only gathers metrics in development.
-struct ConditionalMetricsCollector;
+/// Formatter that conditionally hides verbose info based on environment
+/// Could also check debug flags, log levels, feature toggles, etc.
+struct DebugSnapshotFormatter;
 
-impl AttachmentCollectorHook<String> for ConditionalMetricsCollector {
-    type Handler = handlers::Display;
+impl AttachmentFormattingOverride<DebugSnapshot> for DebugSnapshotFormatter {
+    fn preferred_formatting_style(
+        &self,
+        _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
+        _report_formatting_function: rootcause::handlers::FormattingFunction,
+    ) -> rootcause::handlers::AttachmentFormattingStyle {
+        use rootcause::handlers::{
+            AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
+        };
 
-    fn collect(&self) -> String {
         if is_production() {
-            // Don't collect in production - return empty string
-            String::new()
+            // Hide when runtime condition is true
+            AttachmentFormattingStyle {
+                placement: AttachmentFormattingPlacement::Hidden,
+                function: FormattingFunction::Display,
+                priority: 0,
+            }
         } else {
-            // Collect debug metrics in development
-            let metrics = DebugMetrics {
-                memory_mb: 256, // Simulated
-                uptime_secs: 3600,
-                thread_count: 4,
-            };
-            format!("{}", metrics)
+            // Show in appendix when runtime condition is false
+            AttachmentFormattingStyle {
+                placement: AttachmentFormattingPlacement::Appendix {
+                    appendix_name: "Debug Info",
+                },
+                function: FormattingFunction::Display,
+                priority: 0,
+            }
         }
     }
 }
-
-// ============================================================================
-// Example 3: Environment-specific context
-// ============================================================================
-
-/// Context information that varies by environment.
-#[derive(Debug)]
-struct EnvironmentContext {
-    mode: String,
-    log_level: String,
-    features_enabled: Vec<&'static str>,
-}
-
-impl core::fmt::Display for EnvironmentContext {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        writeln!(f, "Environment: {}", self.mode)?;
-        writeln!(f, "Log Level: {}", self.log_level)?;
-        write!(f, "Features: {}", self.features_enabled.join(", "))
-    }
-}
-
-struct EnvironmentContextCollector;
-
-impl AttachmentCollectorHook<EnvironmentContext> for EnvironmentContextCollector {
-    type Handler = handlers::Display;
-
-    fn collect(&self) -> EnvironmentContext {
-        EnvironmentContext {
-            mode: get_environment_name(),
-            log_level: if is_production() {
-                "WARN".to_string()
-            } else {
-                "DEBUG".to_string()
-            },
-            features_enabled: if is_production() {
-                vec!["production-features"]
-            } else {
-                vec!["dev-features", "debug-mode", "verbose-logging"]
-            },
-        }
-    }
-}
-
-// ============================================================================
-// Helper functions
-// ============================================================================
 
 fn is_production() -> bool {
     env::var("APP_ENV")
@@ -191,10 +133,6 @@ fn is_production() -> bool {
 fn get_environment_name() -> String {
     env::var("APP_ENV").unwrap_or_else(|_| "development".to_string())
 }
-
-// ============================================================================
-// Demo functions
-// ============================================================================
 
 fn authenticate_api() -> Result<(), Report> {
     let creds = ApiCredentials {
@@ -211,8 +149,16 @@ fn authenticate_api() -> Result<(), Report> {
 }
 
 fn process_request() -> Result<(), Report> {
+    let snapshot = DebugSnapshot {
+        memory_mb: 256,
+        thread_count: 8,
+        active_connections: 42,
+        last_gc_ms: 15,
+    };
+
     Err(report!("Request processing failed")
         .attach("Processing step: validation")
+        .attach(snapshot)
         .into_dyn_any())
 }
 
@@ -221,35 +167,36 @@ fn main() {
 
     let env = get_environment_name();
     println!("Running in: {} mode", env);
-    println!("(Set APP_ENV=production to see production behavior)\n");
+    println!("(Set APP_ENV=production to see different behavior)\n");
 
-    // Register conditional hooks
+    // Register conditional formatting hooks
     register_attachment_hook::<ApiCredentials, _>(CredentialsFormatter);
-    register_attachment_collector_hook(ConditionalMetricsCollector);
-    register_attachment_collector_hook(EnvironmentContextCollector);
+    register_attachment_hook::<DebugSnapshot, _>(DebugSnapshotFormatter);
 
-    println!("=== Example 1: Sensitive data handling ===\n");
+    println!("Example 1: Conditionally hide sensitive data\n");
     match authenticate_api() {
         Ok(()) => println!("Success"),
         Err(error) => {
             eprintln!("{error}\n");
             if is_production() {
-                println!("Notice: Credentials were hidden in production mode\n");
+                println!("Notice: Credentials were hidden based on environment check");
+                println!("(Same pattern works for feature flags, permissions, etc.)\n");
             } else {
-                println!("Notice: Credentials shown in development mode\n");
+                println!("Notice: Credentials shown - condition evaluated to false\n");
             }
         }
     }
 
-    println!("=== Example 2: Automatic context collection ===\n");
+    println!("Example 2: Conditionally hide verbose info\n");
     match process_request() {
         Ok(()) => println!("Success"),
         Err(error) => {
             eprintln!("{error}\n");
             if is_production() {
-                println!("Notice: Debug metrics not collected in production");
+                println!("Notice: Debug info hidden based on runtime check");
+                println!("(Could also check debug flags, log levels, etc.)");
             } else {
-                println!("Notice: Debug metrics and environment info automatically attached");
+                println!("Notice: Debug info shown - use appendix to avoid clutter");
             }
         }
     }
