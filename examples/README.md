@@ -17,7 +17,7 @@ Demonstrations of rootcause features and patterns.
 ## Custom Types & Handlers
 
 - **thiserror_interop.rs** - Using thiserror-generated errors as Report contexts, compatibility patterns
-- **custom_attachments.rs** - Creating custom attachment types with `Display` and `Debug` implementations
+- **custom_attachments.rs** - Creating custom attachment types for structured data that can be retrieved and inspected programmatically
 - **custom_handler.rs** - Implementing `AttachmentHandler` for specialized formatting (hexdump, tables, JSON)
 
 ## Hooks & Formatting

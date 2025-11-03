@@ -1,9 +1,10 @@
+// Retry logic with error collection: why each attempt failed
+//
+// ReportCollection gathers multiple errors so you can see the full history
+// of retry attempts instead of just the last failure.
+
 use rootcause::{prelude::*, report_collection::ReportCollection};
 
-/// Example HTTP error type to demonstrate error reporting.
-///
-/// In a real application, this might come from an HTTP client library,
-/// but we define it here to make the example self-contained.
 #[derive(Copy, Clone, Debug)]
 struct HttpError {
     code: usize,
@@ -16,10 +17,7 @@ impl core::fmt::Display for HttpError {
     }
 }
 
-/// Simulates fetching a document from the network.
-///
-/// This always fails with a random HTTP error to demonstrate error handling.
-/// In a real application, this would make an actual HTTP request.
+// Simulates network fetch (always fails for demonstration)
 fn fetch_document(_url: &str) -> Result<Vec<u8>, Report> {
     const ERRORS: [HttpError; 3] = [
         HttpError {
@@ -36,54 +34,35 @@ fn fetch_document(_url: &str) -> Result<Vec<u8>, Report> {
         },
     ];
 
-    // Cycle through errors deterministically for reproducible output
+    // Cycle through errors deterministically
     use std::sync::atomic::{AtomicUsize, Ordering};
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     let index = COUNTER.fetch_add(1, Ordering::Relaxed) % ERRORS.len();
 
-    // ? coerces Report<HttpError> to Report<dyn Any>
-    Err(report!(ERRORS[index]))?
+    Err(report!(ERRORS[index]))? // HttpError → Report<HttpError> → Report<dyn Any>
 }
 
-/// Attempts to fetch a document with retry logic.
-///
-/// This demonstrates a key rootcause feature: collecting multiple errors
-/// using [`ReportCollection`] to show the full history of retry attempts.
-///
-/// The function:
-/// 1. Tries to fetch the document multiple times
-/// 2. Attaches attempt number to each error
-/// 3. Collects all failures in a ReportCollection
-/// 4. Returns a parent error with all attempts as children
+// Retry logic that preserves all failure information
 fn fetch_document_with_retry(url: &str, retry_count: usize) -> Result<Vec<u8>, Report> {
-    // ReportCollection accumulates multiple errors
-    let mut errors = ReportCollection::new();
+    let mut errors = ReportCollection::new(); // Accumulate all failures
 
     for attempt in 1..=retry_count {
-        // Try to fetch the document, attaching the attempt number
         match fetch_document(url).attach_with(|| format!("Attempt #{attempt}")) {
             Ok(data) => return Ok(data),
             Err(error) => {
-                // Convert to cloneable so we can store it in the collection
-                errors.push(error.into_cloneable());
+                errors.push(error.into_cloneable()); // Store this attempt's failure
             }
         }
     }
 
-    // Return the collection as an error with context
+    // Return all failures as children of a parent error
     Err(errors.context(format!("Unable to fetch document {url}")))?
 }
 
 fn main() {
-    // This intentionally panics to show the formatted error output.
-    // The panic message demonstrates:
-    // - The parent error message
-    // - Each retry attempt as a child error
-    // - Attachment showing which attempt failed
-    // - The original HTTP error for each attempt
-    // - Source code locations where errors were created
-    //
-    // This output is included in the README to show users what
-    // rootcause error reports look like.
+    // Shows error with full retry history:
+    // - Parent: "Unable to fetch document"
+    // - Child 1: "Attempt #1" → HTTP 500
+    // - Child 2: "Attempt #2" → HTTP 404
     fetch_document_with_retry("http://example.com", 2).unwrap();
 }
