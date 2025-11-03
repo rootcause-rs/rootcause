@@ -1,11 +1,9 @@
-//! Demonstrates various patterns for building error chains and working with
-//! standard library errors.
+//! Demonstrates various patterns for building error chains.
 //!
-//! This example shows:
-//! 1. Converting stdlib errors with `.into_report()`
-//! 2. Dynamic attachments with `.attach_with()`
-//! 3. Chaining multiple operations
-//! 4. Adding structured context information
+//! Key concepts:
+//! - Chaining operations with different error types
+//! - `.attach_with()` for lazy evaluation (only computed on error)
+//! - Building multi-level context with `.attach()` and `.context()`
 
 use rootcause::prelude::*;
 use std::{fs, io};
@@ -16,15 +14,12 @@ use std::{fs, io};
 /// can fail with different error types.
 fn parse_config_value(path: &str) -> Result<i32, Report> {
     // First operation: read the file (can fail with io::Error)
-    let contents = fs::read_to_string(path)
-        .into_report()
-        .attach(format!("Reading config file: {path}"))?;
+    let contents = fs::read_to_string(path).attach(format!("Reading config file: {path}"))?;
 
     // Second operation: parse as number (can fail with ParseIntError)
     let value: i32 = contents
         .trim()
         .parse()
-        .into_report()
         .context("Failed to parse configuration value")
         .attach_with(|| format!("File contents: {:?}", contents.trim()))?;
 
@@ -60,14 +55,12 @@ fn validate_item(item: &str) -> Result<(), Report> {
 /// Shows how to add multiple pieces of context at different levels.
 fn open_and_read(path: &str) -> Result<String, Report> {
     Ok(fs::File::open(path)
-        .into_report()
         .attach("Operation: Opening file")
         .attach_with(|| format!("Path: {path}"))
         .and_then(|mut file| {
             let mut contents = String::new();
             use io::Read;
             file.read_to_string(&mut contents)
-                .into_report()
                 .attach("Operation: Reading file contents")
                 .map(|_| contents)
         })

@@ -19,7 +19,7 @@ fn read_config_file_simple(path: &str) -> Result<String, Report> {
 /// Adding information: Use .attach() to include debugging details.
 fn read_config_file(path: &str) -> Result<String, Report> {
     // .attach() adds information that will be shown in the error output
-    let data = fs::read_to_string(path).attach(format!("Config path: {path}"))?;
+    let data = fs::read_to_string(path).attach_with(|| format!("Config path: {path}"))?;
     Ok(data)
 }
 

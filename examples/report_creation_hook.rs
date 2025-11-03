@@ -82,23 +82,29 @@ struct EnvironmentHook;
 
 impl ReportCreationHook for EnvironmentHook {
     fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
-        let env = EnvironmentInfo {
-            mode: "development",
-            version: "0.1.0",
-        };
-        report
-            .attachments_mut()
-            .push(report_attachment!(env).into());
+        // Only add attachment to leaf reports (reports without children)
+        if report.children().is_empty() {
+            let env = EnvironmentInfo {
+                mode: "development",
+                version: "0.1.0",
+            };
+            report
+                .attachments_mut()
+                .push(report_attachment!(env).into());
+        }
     }
 
     fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
-        let env = EnvironmentInfo {
-            mode: "development",
-            version: "0.1.0",
-        };
-        report
-            .attachments_mut()
-            .push(report_attachment!(env).into());
+        // Only add attachment to leaf reports (reports without children)
+        if report.children().is_empty() {
+            let env = EnvironmentInfo {
+                mode: "development",
+                version: "0.1.0",
+            };
+            report
+                .attachments_mut()
+                .push(report_attachment!(env).into());
+        }
     }
 }
 
@@ -111,17 +117,21 @@ struct DebugInfoHook;
 
 impl ReportCreationHook for DebugInfoHook {
     fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
-        // Add debug-only information for local reports
-        report
-            .attachments_mut()
-            .push(report_attachment!("Debug: Local report created").into());
+        // Only add to leaf reports (reports without children)
+        if report.children().is_empty() {
+            report
+                .attachments_mut()
+                .push(report_attachment!("Debug: Local report created").into());
+        }
     }
 
     fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
-        // Add different info for send+sync reports
-        report
-            .attachments_mut()
-            .push(report_attachment!("Debug: SendSync report created").into());
+        // Only add to leaf reports (reports without children)
+        if report.children().is_empty() {
+            report
+                .attachments_mut()
+                .push(report_attachment!("Debug: SendSync report created").into());
+        }
     }
 }
 
