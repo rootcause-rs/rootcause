@@ -13,7 +13,7 @@
 //!
 //! # Creating Attachments
 //!
-//! Attachments can be created from using [`ReportAttachment::new`] method or
+//! Attachments can be created using the [`ReportAttachment::new`] method or
 //! the [`report_attachment!`] macro:
 //!
 //! ```

@@ -109,6 +109,7 @@ fn check_invariants(&self) -> bool { /* ... */ }
 - **Use intra-doc links for modules**: [`crate::handlers`]
 - **Use full paths for external crates**: [`std::error::Error`]
 - **Especially important for internal references**: Always use [`ReportRef`], [`ReportMut`], [`Cloneable`], etc. rather than plain backticks
+- **Exception for well-known standard library types**: Don't use intra-doc links for `dyn Any`, `String`, `Vec`, or other ubiquitous standard library types that serve as markers or are universally understood. Plain backticks are sufficient (e.g., `dyn Any` for type erasure).
 - **Rationale**: Intra-doc links enable IDE navigation and rustdoc verification of link validity
 
 ## Example Standards

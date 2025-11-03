@@ -11,14 +11,15 @@ use crate::{
 
 /// A collection of report attachments.
 ///
-/// A collection of reports.
+/// This type provides storage and management for multiple attachments that can
+/// be added to a report.
 ///
 /// You can think of a [`ReportAttachments<T>`] as a wrapper around a
 /// `Vec<ReportAttachment<dyn Any, T>>`, however, it has a slightly
 /// different API:
 /// - It has convenience methods to convert between different thread safety
 ///   markers such as [`into_local`](Self::into_local).
-/// - It also possible to convert between different context and thread safety
+/// - It is also possible to convert between different context and thread safety
 ///   markers using the [`From`] and [`Into`] traits.
 #[repr(transparent)]
 pub struct ReportAttachments<ThreadSafety = SendSync>

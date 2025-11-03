@@ -18,14 +18,14 @@ use crate::{
 /// An attachment to be attached to a [`Report`](crate::Report).
 ///
 /// Attachments can hold any type of data, and can be formatted using custom
-/// handlers. The attachment can be marked as either `SendSync` or `Local`,
+/// handlers. The attachment can be marked as either [`SendSync`] or [`Local`],
 /// indicating whether it is safe to send the attachment across threads or not.
 ///
 /// # Type Parameters
 /// - `Attachment`: The type of the attachment. This can either be a concrete
 ///   type, or `dyn Any`.
 /// - `ThreadSafety`: The thread safety marker for the attachment. This can
-///   either be `SendSync` or `Local`.
+///   either be [`SendSync`] or [`Local`].
 #[repr(transparent)]
 pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
 where
@@ -137,8 +137,8 @@ where
     /// readability, as it more clearly communicates intent.
     ///
     /// This method does not actually modify the attachment in any way. It only
-    /// has the effect of "forgetting" that that the inner attachment
-    /// actually has the type `A`.
+    /// has the effect of "forgetting" that the inner attachment actually has
+    /// the type `A`.
     ///
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachment::downcast_attachment`].
@@ -260,7 +260,7 @@ where
             .preferred_formatting_style(report_formatting_function)
     }
 
-    /// Returns an reference to the attachment.
+    /// Returns a reference to the attachment.
     #[must_use]
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
@@ -277,7 +277,7 @@ where
     /// explicit [`SendSync`] thread safety. Use this method when you're
     /// having trouble with type inference for the thread safety parameter.
     ///
-    /// The context will use the [`handlers::Display`] handler to format the
+    /// The attachment will use the [`handlers::Display`] handler to format the
     /// attachment.
     #[must_use]
     pub fn new_sendsync(attachment: A) -> Self
@@ -314,7 +314,7 @@ where
     /// explicit [`Local`] thread safety. Use this method when you're having
     /// trouble with type inference for the thread safety parameter.
     ///
-    /// The context will use the [`handlers::Display`] handler to format the
+    /// The attachment will use the [`handlers::Display`] handler to format the
     /// attachment.
     #[must_use]
     pub fn new_local(attachment: A) -> Self
@@ -345,7 +345,7 @@ where
 {
     /// Attempts to downcast the inner attachment to a specific type.
     ///
-    /// Returns `Some(&A)` if the current context is of type `A`, otherwise
+    /// Returns `Some(&A)` if the inner attachment is of type `A`, otherwise
     /// returns `None`.
     #[must_use]
     pub fn downcast_inner<A>(&self) -> Option<&A>
@@ -355,7 +355,7 @@ where
         self.as_raw_ref().attachment_downcast()
     }
 
-    /// Downcasts the current context to a specific type without checking.
+    /// Downcasts the inner attachment to a specific type without checking.
     ///
     /// # Safety
     ///
