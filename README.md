@@ -14,7 +14,7 @@ A flexible, ergonomic, and inspectable error reporting library for Rust.
 
 rootcause helps you build rich, structured error reports that capture not just what went wrong, but the full context and history.
 
-Here's a simple example showing how errors build up context as they propagate through your call stack:
+Here's a simple example (from [`examples/basic.rs`](examples/basic.rs)) showing how errors build up context as they propagate through your call stack:
 
 ```rust
 use rootcause::prelude::*;
@@ -66,25 +66,29 @@ When `startup()` fails, you get a chain showing the full story:
 
 Each layer adds context and debugging information, building a trail from the high-level operation down to the root cause.
 
+## Core Concepts
+
+At a high level, rootcause helps you build a tree of error reports. Each node in the tree represents a step in the error's history - you start with a root error, then add context and attachments as it propagates up through your code.
+
+Most error reports are linear chains (just like anyhow), but the tree structure lets you collect multiple related errors when needed.
+
 ## Project Goals
 
 - **Ergonomic**: The `?` operator should work with most error types, even ones not designed for this library
-- **Fast happy path**: `Report` has a pointer-sized representation, keeping `Result<T, Report>` small and fast
-- **Typable**: Users should be able to (optionally) specify the type of the context in the root node
+- **Multi-failure tracking**: When operations fail multiple times (retry attempts, batch processing, parallel execution), all failures should be captured and preserved in a single report
 - **Inspectable**: The objects in a Report should not be glorified strings. Inspecting and interacting with them should be easy
-- **Cloneable**: It should be possible to clone a `Report` when you need to
-- **Mergeable**: It should be possible to merge multiple `Report`s into a single one
-- **Customizable**: It should be possible to customize what data gets collected, or how reports are formatted
-- **Rich**: Reports should automatically capture information (like backtraces) that might be useful in debugging
+- **Optionally typed**: Users should be able to (optionally) specify the type of the context in the root node
 - **Beautiful**: The default formatting should look pleasant—and if it doesn't match your style, the hook system lets you customize it
+- **Cloneable**: It should be possible to clone a `Report` when you need to
+- **Self-documenting**: Reports should automatically capture information (like backtraces and locations) that might be useful in debugging
+- **Customizable**: It should be possible to customize what data gets collected, or how reports are formatted
+- **Lightweight**: `Report` has a pointer-sized representation, keeping `Result<T, Report>` small and fast
 
 ## Why rootcause?
 
-The Project Goals above—Inspectable, Mergeable, Beautiful, Rich—manifest in these capabilities:
-
 ### Collecting Multiple Errors
 
-When operations fail multiple times (retries, batch processing, parallel tasks), rootcause lets you gather all the failures into a single tree structure with readable output:
+When operations fail multiple times (retries, batch processing, parallel tasks), rootcause lets you gather all the failures into a single tree structure with readable output (from [`examples/retry_with_collection.rs`](examples/retry_with_collection.rs)):
 
 ```rust
 use rootcause::{prelude::*, report_collection::ReportCollection};
@@ -95,6 +99,7 @@ fn fetch_document_with_retry(url: &str, retry_count: usize) -> Result<Vec<u8>, R
     for attempt in 1..=retry_count {
         match fetch_document(url).attach_with(|| format!("Attempt #{attempt}")) {
             Ok(data) => return Ok(data),
+            // Make error cloneable so we can store it (see "Supporting..." section below)
             Err(error) => errors.push(error.into_cloneable()),
         }
     }
@@ -120,21 +125,60 @@ The output from the above function will be a tree with data associated to each n
 
 For more tree examples, see [`retry_with_collection.rs`](examples/retry_with_collection.rs) and [`batch_processing.rs`](examples/batch_processing.rs).
 
-### Cloneable and Thread-Local Errors
+### Inspecting Error Trees
 
-Sometimes you need errors that break the usual `Send + Sync` assumptions:
-
-- **Cloneable errors** for retry logic, caching, or storing errors in data structures
-- **Thread-local errors** for `Rc`, `Cell`, or other `!Send` data
+Errors aren't just formatted strings—they're structured objects you can traverse and analyze programmatically. This enables analytics, custom error handling, and automated debugging (from [`examples/inspecting_errors.rs`](examples/inspecting_errors.rs)):
 
 ```rust
 use rootcause::prelude::*;
 
-// Clone errors for retry tracking
-let error = report!(MyError).into_cloneable();
-errors.push(error.clone());
+// Analyze retry failures to extract structured data
+fn analyze_retry_failures(report: &Report) -> Vec<(u32, u16)> {
+    let mut attempts = Vec::new();
 
-// Include thread-local data
+    // Traverse all nodes in the error tree
+    for node in report.iter_reports() {
+        // Try to downcast the context to NetworkError
+        if let Some(network_err) = node.downcast_current_context::<NetworkError>() {
+            // Search through attachments for RetryMetadata
+            for attachment in node.attachments().iter() {
+                if let Some(retry_meta) = attachment.downcast_inner::<RetryMetadata>() {
+                    attempts.push((retry_meta.attempt, network_err.status_code));
+                }
+            }
+        }
+    }
+
+    attempts
+}
+```
+
+This lets you extract retry statistics, categorize errors, or build custom monitoring—not just display them. See [`inspecting_errors.rs`](examples/inspecting_errors.rs) for complete examples.
+
+### Supporting Advanced Use Cases
+
+When you need to use the same error in multiple places—like sending to a logging backend and displaying to a user, potentially on different threads—you can make errors cloneable:
+
+```rust
+use rootcause::prelude::*;
+
+// Make the error cloneable so we can use it multiple times
+let error = fetch_data().unwrap_err().into_cloneable();
+
+// Send to background logging service
+let log_error = error.clone();
+tokio::spawn(async move {
+    log_to_backend(log_error).await;
+});
+
+// Also display to user
+display_error(error);
+```
+
+For the niche case where you're working with `!Send` errors from other libraries or need to attach thread-local data:
+
+```rust
+// Include thread-local data in error reports
 let report: Report<_, _, Local> = report!(MyError)
     .attach(Rc::new(expensive_data));
 ```
@@ -143,7 +187,7 @@ Most code uses the defaults, but these type parameters are available when you ne
 
 ### Type-Safe Error Handling
 
-Libraries often need to preserve specific error types so callers can handle errors programmatically. Use `Report<YourError>` to enable pattern matching without runtime type checks:
+Libraries often need to preserve specific error types so callers can handle errors programmatically. Use `Report<YourError>` to enable pattern matching without runtime type checks (simplified from [`examples/typed_reports.rs`](examples/typed_reports.rs)):
 
 ```rust
 use rootcause::prelude::*;
@@ -175,12 +219,6 @@ fn process_with_retry(id: u32) -> Result<Data, Report> {
 ```
 
 See [`typed_reports.rs`](examples/typed_reports.rs) for a complete example with retry logic.
-
-## Core Concepts
-
-At a high level, rootcause helps you build a tree of error reports. Each node in the tree represents a step in the error's history - you start with a root error, then add context and attachments as it propagates up through your code.
-
-Most error reports are linear chains (just like anyhow), but the tree structure lets you collect multiple related errors when needed—see the retry example in ["Why rootcause?"](#why-rootcause) above.
 
 ## Quick Start
 
@@ -240,6 +278,7 @@ Once you're comfortable with the basics, rootcause offers powerful features for 
 
 - [`retry_with_collection.rs`](examples/retry_with_collection.rs) - Collecting multiple retry attempts
 - [`batch_processing.rs`](examples/batch_processing.rs) - Gathering errors from parallel operations
+- [`inspecting_errors.rs`](examples/inspecting_errors.rs) - Programmatic tree traversal and data extraction for analytics
 - [`custom_handler.rs`](examples/custom_handler.rs) - Customizing error formatting and data collection
 - [`formatting_hooks.rs`](examples/formatting_hooks.rs) - Advanced formatting customization
 

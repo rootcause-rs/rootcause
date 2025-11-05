@@ -17,6 +17,10 @@ Demonstrations of rootcause features and patterns.
 - [`retry_with_collection.rs`](retry_with_collection.rs) - Accumulate multiple errors with `ReportCollection`, retry patterns
 - [`batch_processing.rs`](batch_processing.rs) - Batch processing with `IteratorExt::collect_reports()`, partial success
 
+## Inspection & Analysis
+
+- [`inspecting_errors.rs`](inspecting_errors.rs) - Programmatic tree traversal and data extraction: `.iter_reports()`, `.downcast_current_context()`, analytics patterns
+
 ## Custom Types & Handlers
 
 - [`thiserror_interop.rs`](thiserror_interop.rs) - Using thiserror errors as contexts, compatibility patterns

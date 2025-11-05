@@ -49,31 +49,14 @@
 //! [`basic.rs`](https://github.com/rootcause-rs/rootcause/blob/main/examples/basic.rs)
 //! for a hands-on introduction.
 //!
-//! ## Project goals
-//!
-//! - **Ergonomic**: The `?` operator should work with most error types, even
-//!   ones not designed for this library.
-//! - **Fast happy path**: `Report` has a pointer-sized representation, keeping
-//!   `Result<T, Report>` small and fast.
-//! - **Typable**: Users should be able to (optionally) specify the type of the
-//!   context in the root node.
-//! - **Inspectable**: The objects in a Report should not be glorified strings.
-//!   Inspecting and interacting with them should be easy.
-//! - **Cloneable**: It should be possible to clone a `Report` when you need to.
-//! - **Mergeable**: It should be possible to merge multiple `Report`s into a
-//!   single one.
-//! - **Customizable**: It should be possible to customize what data gets
-//!   collected, or how reports are formatted.
-//! - **Rich**: Reports should automatically capture information (like
-//!   backtraces) that might be useful in debugging.
-//! - **Beautiful**: The default formatting should look pleasant—and if it
-//!   doesn't match your style, the hook system lets you customize it.
-//!
 //! ## Core Concepts
 //!
-//! At a high level, you can think of the library as a way to build a tree of
-//! error reports, where each node in the tree represents a step in the error's
-//! history.
+//! At a high level, rootcause helps you build a tree of error reports. Each node
+//! in the tree represents a step in the error's history - you start with a root
+//! error, then add context and attachments as it propagates up through your code.
+//!
+//! Most error reports are linear chains (just like anyhow), but the tree structure
+//! lets you collect multiple related errors when needed.
 //!
 //! Each report has:
 //! - A **context** (the error itself)
@@ -83,6 +66,27 @@
 //! For implementation details, see the [`rootcause-internals`] crate.
 //!
 //! [`rootcause-internals`]: rootcause_internals
+//!
+//! ## Project Goals
+//!
+//! - **Ergonomic**: The `?` operator should work with most error types, even
+//!   ones not designed for this library.
+//! - **Multi-failure tracking**: When operations fail multiple times (retry
+//!   attempts, batch processing, parallel execution), all failures should be
+//!   captured and preserved in a single report.
+//! - **Inspectable**: The objects in a Report should not be glorified strings.
+//!   Inspecting and interacting with them should be easy.
+//! - **Optionally typed**: Users should be able to (optionally) specify the type
+//!   of the context in the root node.
+//! - **Beautiful**: The default formatting should look pleasant—and if it
+//!   doesn't match your style, the hook system lets you customize it.
+//! - **Cloneable**: It should be possible to clone a `Report` when you need to.
+//! - **Self-documenting**: Reports should automatically capture information (like
+//!   backtraces and locations) that might be useful in debugging.
+//! - **Customizable**: It should be possible to customize what data gets
+//!   collected, or how reports are formatted.
+//! - **Lightweight**: `Report` has a pointer-sized representation, keeping
+//!   `Result<T, Report>` small and fast.
 //!
 //! ## Report Type Parameters
 //!
