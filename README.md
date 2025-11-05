@@ -80,12 +80,24 @@ rootcause = "0.6.0"
 
 ### Basic Usage
 
+The simplest way to use rootcause:
+
+```rust
+use rootcause::prelude::*;
+
+fn might_fail() -> Result<(), Report> {
+    Err(report!("something went wrong"))
+}
+```
+
+Adding context as errors propagate:
+
 ```rust
 use rootcause::prelude::*;
 
 fn might_fail() -> Result<(), Report> {
     std::fs::read("/tmp/nonexistent")
-        .attach("additional context")?;
+        .context("Failed to read config file")?;
     Ok(())
 }
 
@@ -94,6 +106,13 @@ fn main() {
         println!("{report}");
     }
 }
+```
+
+## Next Steps
+
+- **New to rootcause?** See [`examples/basic.rs`](examples/basic.rs) for a hands-on introduction
+- **More examples:** Browse the [`examples/`](examples/) directory for common patterns
+- **Full API documentation:** [docs.rs/rootcause](https://docs.rs/rootcause)
 ```
 
 ### With Custom Context Types
@@ -127,7 +146,35 @@ fn main() {
 }
 ```
 
-## Report Variants
+## Features
+
+- **`std`** (default): Enable standard library support
+- **`backtrace`**: Automatic backtrace capture on error creation
+
+## Comparison with Other Libraries
+
+### vs. `anyhow`
+
+- ✅ More structured and inspectable errors
+- ✅ Better support for custom context types
+- ✅ Richer attachment system
+- ❌ Slightly more complex API
+
+### vs. `error-stack`
+
+- ✅ More flexible ownership models
+- ✅ Better ergonomics with the `?` operator
+- ✅ More customizable formatting
+- ❌ Different API surface
+
+### vs. `thiserror`
+
+- ✅ Runtime error composition vs. compile-time
+- ✅ Automatic context capture
+- ✅ Rich attachment system
+- ❌ More overhead for simple cases
+
+## Advanced: Report Variants
 
 The `Report` type is generic over three parameters to support different use cases:
 
@@ -156,7 +203,7 @@ The `Report` type is generic over three parameters to support different use case
 | `Report<*, *, SendSync>` (default) | ✅            | ❌                           | All objects must be `Send + Sync` |
 | `Report<*, *, Local>`              | ❌            | ✅                           | Allows non-thread-safe objects    |
 
-## Converting Between Variants
+### Converting Between Variants
 
 You can convert between report variants using the `From` trait or specific methods:
 
@@ -172,34 +219,6 @@ let cloneable: Report<dyn Any, Cloneable> = general.into_cloneable();
 let specific: Result<Report<MyError>, _> = general.downcast_report();
 let mutable: Result<Report<dyn Any, Mutable>, _> = cloneable.try_into_mutable();
 ```
-
-## Features
-
-- **`std`** (default): Enable standard library support
-- **`backtrace`**: Automatic backtrace capture on error creation
-
-## Comparison with Other Libraries
-
-### vs. `anyhow`
-
-- ✅ More structured and inspectable errors
-- ✅ Better support for custom context types
-- ✅ Richer attachment system
-- ❌ Slightly more complex API
-
-### vs. `error-stack`
-
-- ✅ More flexible ownership models
-- ✅ Better ergonomics with the `?` operator
-- ✅ More customizable formatting
-- ❌ Different API surface
-
-### vs. `thiserror`
-
-- ✅ Runtime error composition vs. compile-time
-- ✅ Automatic context capture
-- ✅ Rich attachment system
-- ❌ More overhead for simple cases
 
 ## Architecture
 
