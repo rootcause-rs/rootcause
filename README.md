@@ -66,46 +66,6 @@ When `startup()` fails, you get a chain showing the full story:
 
 Each layer adds context and debugging information, building a trail from the high-level operation down to the root cause.
 
-### Why rootcause instead of anyhow?
-
-**Programmatic error inspection.** Unlike anyhow's linear error chains, rootcause exposes the full error tree structure for navigation and inspection:
-
-```rust
-use rootcause::prelude::*;
-
-#[derive(Debug)]
-enum ValidationError {
-    Timeout,
-    InvalidData,
-}
-
-fn process_batch(items: &[Item]) -> Result<(), Report> {
-    match validate_and_save(items) {
-        Ok(()) => Ok(()),
-        Err(report) => {
-            // Navigate the error tree to make intelligent decisions
-            for attachment in report.attachments() {
-                if let Some(err) = attachment.downcast_ref::<ValidationError>() {
-                    match err {
-                        ValidationError::Timeout => {
-                            // Retry timeouts
-                            return retry_with_backoff(items);
-                        }
-                        ValidationError::InvalidData => {
-                            // Don't retry bad data
-                            return Err(report);
-                        }
-                    }
-                }
-            }
-            Err(report)
-        }
-    }
-}
-```
-
-This tree navigation enables retry logic, recovery strategies, and error aggregation patterns that are impossible with anyhow's opaque error chains.
-
 ## Project Goals
 
 - **Ergonomic**: The `?` operator should work with most error types, even ones not designed for this library
@@ -118,19 +78,109 @@ This tree navigation enables retry logic, recovery strategies, and error aggrega
 - **Rich**: Reports should automatically capture information (like backtraces) that might be useful in debugging
 - **Beautiful**: The default formatting should look pleasant—and if it doesn't match your style, the hook system lets you customize it
 
+## Why rootcause?
+
+The Project Goals above—Inspectable, Mergeable, Beautiful, Rich—manifest in these capabilities:
+
+### Collecting Multiple Errors
+
+When operations fail multiple times (retries, batch processing, parallel tasks), rootcause lets you gather all the failures into a single tree structure with readable output:
+
+```rust
+use rootcause::{prelude::*, report_collection::ReportCollection};
+
+fn fetch_document_with_retry(url: &str, retry_count: usize) -> Result<Vec<u8>, Report> {
+    let mut errors = ReportCollection::new();
+
+    for attempt in 1..=retry_count {
+        match fetch_document(url).attach_with(|| format!("Attempt #{attempt}")) {
+            Ok(data) => return Ok(data),
+            Err(error) => errors.push(error.into_cloneable()),
+        }
+    }
+
+    Err(errors.context(format!("Unable to fetch document {url}")))?
+}
+```
+
+The output from the above function will be a tree with data associated to each node:
+
+```
+ ● Unable to fetch document http://example.com
+ ├ examples/retry_with_collection.rs:59:16
+ │
+ ├─ ● HTTP error: 500 Internal server error
+ │  ├ examples/retry_with_collection.rs:42:9
+ │  ╰ Attempt #1
+ │
+ ╰─ ● HTTP error: 404 Not found
+    ├ examples/retry_with_collection.rs:42:9
+    ╰ Attempt #2
+```
+
+For more tree examples, see [`retry_with_collection.rs`](examples/retry_with_collection.rs) and [`batch_processing.rs`](examples/batch_processing.rs).
+
+### Cloneable and Thread-Local Errors
+
+Sometimes you need errors that break the usual `Send + Sync` assumptions:
+
+- **Cloneable errors** for retry logic, caching, or storing errors in data structures
+- **Thread-local errors** for `Rc`, `Cell`, or other `!Send` data
+
+```rust
+use rootcause::prelude::*;
+
+// Clone errors for retry tracking
+let error = report!(MyError).into_cloneable();
+errors.push(error.clone());
+
+// Include thread-local data
+let report: Report<_, _, Local> = report!(MyError)
+    .attach(Rc::new(expensive_data));
+```
+
+Most code uses the defaults, but these type parameters are available when you need them. See [Report Type Parameters](https://docs.rs/rootcause/latest/rootcause/#report-type-parameters) for details.
+
+### Type-Safe Error Handling
+
+Libraries often need to preserve specific error types so callers can handle errors programmatically. Use `Report<YourError>` to enable pattern matching without runtime type checks:
+
+```rust
+use rootcause::prelude::*;
+
+// Library function returns typed error
+fn query_database(id: u32) -> Result<Data, Report<DatabaseError>> {
+    // ... can fail with specific error types
+}
+
+// Caller can pattern match to handle errors intelligently
+fn process_with_retry(id: u32) -> Result<Data, Report> {
+    match query_database(id) {
+        Ok(data) => Ok(data),
+        Err(report) => {
+            // Pattern match on the typed context
+            match report.current_context() {
+                DatabaseError::ConnectionLost | DatabaseError::QueryTimeout => {
+                    // Retry transient errors
+                    query_database(id).map_err(|e| e.into_dyn_any())
+                }
+                DatabaseError::ConstraintViolation { .. } => {
+                    // Don't retry permanent errors
+                    Err(report.into_dyn_any())
+                }
+            }
+        }
+    }
+}
+```
+
+See [`typed_reports.rs`](examples/typed_reports.rs) for a complete example with retry logic.
+
 ## Core Concepts
 
 At a high level, rootcause helps you build a tree of error reports. Each node in the tree represents a step in the error's history - you start with a root error, then add context and attachments as it propagates up through your code.
 
-Think of it like this: when a file read fails deep in your code, you can wrap it with context like "failed to load config", then wrap that with "app initialization failed". The result is a tree showing the full story of what went wrong.
-
-**Why a tree?** Most of the time your error reports will be linear chains (just like anyhow), but the tree structure becomes useful when you need to:
-
-- Collect multiple errors (e.g., validation errors from different fields) - see [Collecting Multiple Errors](#collecting-multiple-errors)
-- Show retry attempts with different failures
-- Represent parallel operations that each failed in different ways
-
-If you're coming from anyhow and only need linear error chains, that's totally fine - rootcause handles that case efficiently.
+Most error reports are linear chains (just like anyhow), but the tree structure lets you collect multiple related errors when needed—see the retry example in ["Why rootcause?"](#why-rootcause) above.
 
 ## Quick Start
 
@@ -170,172 +220,28 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 
 ## Coming from other libraries?
 
-### From `anyhow`
+| Feature                    | anyhow              | error-stack                 | rootcause                    |
+| -------------------------- | ------------------- | --------------------------- | ---------------------------- |
+| **Error structure**        | Linear chain        | Opaque attachment model     | Explicit tree                |
+| **Type safety**            | No                  | Required                    | Optional                     |
+| **Adding context**         | `.context()`        | `.change_context()`         | `.context()`                 |
+| **Structured attachments** | No                  | Yes (`.attach_printable()`) | Yes (`.attach()`)            |
+| **Tree navigation**        | Linear (`.chain()`) | Limited iterators           | Full tree access             |
+| **Cloneable errors**       | No                  | No                          | Yes (`Report<_, Cloneable>`) |
+| **Thread-local errors**    | No                  | No                          | Yes (`Report<_, _, Local>`)  |
+| **Location tracking**      | Single backtrace    | Per-attachment              | Per-attachment               |
+| **Customization hooks**    | No                  | Formatting only             | Creation + formatting        |
 
-**Most of the API will feel familiar** - `.context()` works the same way and `?` just works.
-
-**The key differences:**
-
-1. **Structured attachments**: In anyhow, `.context()` adds another layer to the error chain. rootcause has both `.context()` (adds a new layer) AND `.attach()` (adds metadata to the _current_ layer). This lets you add debugging information without creating new tree levels.
-
-2. **Full tree navigation**: anyhow's `.chain()` gives you a linear iterator over contexts. rootcause exposes the complete tree - you can iterate over children, inspect attachments at each level, and navigate the full structure programmatically.
-
-3. **Cloneable errors**: anyhow errors cannot be cloned. rootcause supports `Report<dyn Any, Cloneable>` when you need to clone errors (e.g., for retry logic or caching).
-
-4. **Thread-local errors**: anyhow requires all errors to be `Send + Sync`. rootcause supports `Report<dyn Any, Mutable, Local>` for thread-local data like `Rc` or `Cell`.
-
-5. **Automatic location tracking**: By default, rootcause captures file locations (and optionally backtraces) every time `.context()` or `.attach()` is called, showing you exactly where each layer was added. anyhow only captures a single backtrace at error creation.
-
-6. **Customization hooks**: Beyond location tracking, rootcause provides hooks to customize report creation (what data to capture) and formatting (how to display). anyhow's behavior is fixed.
-
-7. **Optional type safety**: Use `Report<YourErrorType>` when you want compile-time guarantees about the root error type.
-
-**When to switch:**
-
-- ✅ You need `.attach()` to add metadata without creating new context layers
-- ✅ You need to navigate complex error trees (not just linear chains)
-- ✅ You need cloneable errors or thread-local error data
-- ✅ You need to customize backtrace capture or error formatting
-- ✅ You want optional type safety on error contexts
-- ⏸️ Stick with anyhow if linear error chains meet your needs
-
-**Migration cost:** Medium - `.context()` works the same, but tree navigation, attachments, and hooks are new concepts.
-
-### From `error-stack`
-
-rootcause takes inspiration from error-stack's typed error approach, with some key differences:
-
-**Similarities:**
-
-- Both support structured attachments via `.attach()`
-- Both allow type-safe error contexts
-- Both provide customization hooks
-
-**Differences:**
-
-1. **Optional typing**: `Report` (without type parameter) gives you anyhow-like ergonomics when you don't need type safety. error-stack requires every Report to have a specific context type.
-
-2. **Explicit tree model**: rootcause is very clear about the underlying data structure - it's a tree where each node has context, attachments, and children. You can navigate this structure directly. error-stack's internal model is more opaque, exposing only high-level iteration methods.
-
-3. **Hook flexibility**: rootcause's hook system is more flexible and fully documented, with clear explanations of when hooks fire and what data they receive. error-stack has hooks but they're less documented and more constrained.
-
-4. **Additional type parameters**: Beyond context type, rootcause adds ownership (`Mutable`/`Cloneable`) and thread-safety (`SendSync`/`Local`) parameters for fine-grained control.
-
-**When to switch:**
-
-- ✅ You want the option to use untyped errors (like anyhow) when appropriate
-- ✅ You need direct access to the error tree structure
-- ✅ You need more flexible customization hooks
-- ⏸️ Stick with error-stack if you prefer its more abstract API
-
-**API naming differences:** `.context()` vs `.change_context()`, `.attach()` vs `.attach_printable()`, etc.
-
-## Using Type Parameters
-
-### Custom Context Types
-
-If you want compile-time guarantees about the error type at the root of your Report, you can use a type parameter:
-
-```rust
-use rootcause::prelude::*;
-
-#[derive(Debug)]
-struct MyError {
-    code: u32,
-    message: String,
-}
-
-fn typed_error() -> Result<(), Report<MyError>> {
-    let error = MyError {
-        code: 404,
-        message: "Resource not found".to_string(),
-    };
-
-    Err(report!(error))
-}
-
-fn main() {
-    if let Err(report) = typed_error() {
-        println!("{report}");
-    }
-}
-```
-
-Note: You might also want to implement `std::fmt::Display`, as otherwise the report will print:
-
-```
-● Context of type `example::MyError`
-╰ src/main.rs:19:9
-```
-
-### Other Variants
-
-_Most users can use just `Report` with the defaults. This section explains additional type parameters if you need cloning, thread-local errors, or other specialized behavior - come back to this when you encounter those needs._
-
-The `Report` type is generic over three parameters: `Report<Context, Ownership, ThreadSafety>`.
-
-**For type safety**, use `Report<YourErrorType>` instead of plain `Report`. This guarantees the root error is your specific type (shown above).
-
-**For cloning**, use `Report<dyn Any, Cloneable>`. The default `Report` can't be cloned because it allows efficient mutation of the root node. (Note: `dyn Any` is the default context type - you can use any context type with `Cloneable`.)
-
-**For thread-local data**, use `Report<dyn Any, Mutable, Local>` to store `!Send` or `!Sync` objects like `Rc` or `Cell`. The default `Report` requires all errors to be `Send + Sync`.
-
-You can convert between variants:
-
-```rust
-use rootcause::prelude::*;
-
-// Make a Report cloneable
-let report: Report = report!("error");
-let cloneable: Report<dyn Any, Cloneable> = report.into_cloneable();
-
-// Downcast to a specific type
-let typed: Result<Report<MyError>, _> = cloneable.downcast_report();
-```
-
-See the [full API documentation](https://docs.rs/rootcause) for all variants and conversions.
+See the retry example in ["Why rootcause?"](#why-rootcause) for how the tree structure enables collecting multiple related errors with `ReportCollection`.
 
 ## Advanced Features
 
-Once you're comfortable with the basics, rootcause offers powerful features for complex scenarios.
+Once you're comfortable with the basics, rootcause offers powerful features for complex scenarios. See the [examples directory](examples/) for patterns including:
 
-### Collecting Multiple Errors
-
-Remember the [tree structure](#core-concepts)? This is where it shines. Use `ReportCollection` to gather multiple failures and show them all as branches:
-
-```rust
-use rootcause::{prelude::*, report_collection::ReportCollection};
-
-fn fetch_document_with_retry(url: &str, retry_count: usize) -> Result<Vec<u8>, Report> {
-    let mut errors = ReportCollection::new();
-
-    for attempt in 1..=retry_count {
-        match fetch_document(url).attach_with(|| format!("Attempt #{attempt}")) {
-            Ok(data) => return Ok(data),
-            Err(error) => errors.push(error.into_cloneable()),
-        }
-    }
-
-    Err(errors.context(format!("Unable to fetch document {url}")))?
-}
-```
-
-This creates a tree structure with all retry attempts:
-
-```
- ● Unable to fetch document http://example.com
- ├ examples/retry_with_collection.rs:59:16
- │
- ├─ ● HTTP error: 500 Internal server error
- │  ├ examples/retry_with_collection.rs:42:9
- │  ╰ Attempt #1
- │
- ╰─ ● HTTP error: 404 Not found
-    ├ examples/retry_with_collection.rs:42:9
-    ╰ Attempt #2
-```
-
-See [`retry_with_collection.rs`](examples/retry_with_collection.rs) and [`batch_processing.rs`](examples/batch_processing.rs) for more examples of collecting multiple errors.
+- [`retry_with_collection.rs`](examples/retry_with_collection.rs) - Collecting multiple retry attempts
+- [`batch_processing.rs`](examples/batch_processing.rs) - Gathering errors from parallel operations
+- [`custom_handler.rs`](examples/custom_handler.rs) - Customizing error formatting and data collection
+- [`formatting_hooks.rs`](examples/formatting_hooks.rs) - Advanced formatting customization
 
 ## Architecture
 
@@ -351,8 +257,6 @@ This separation ensures that most unsafe operations are contained in a single, a
 **Current status:** Pre-1.0 (v0.6.0)
 
 rootcause follows semantic versioning. As a 0.x library, breaking changes may occur in minor version bumps (0.x → 0.x+1). We're actively refining the API based on real-world usage and focused on reaching 1.0.
-
-**Post-1.0:** API stability with only breaking changes in major versions.
 
 **When to adopt:**
 
