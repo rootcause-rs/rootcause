@@ -93,6 +93,9 @@ fn validate_port(port: u16) -> Result<(), Report> {
             expected: "1-65535".to_string(),
             actual: "0".to_string(),
         })
+        // .into() converts Report<ConfigError> to Report<dyn Any>
+        // This lets the function return the general Report type
+        // (See typed_reports.rs to learn more about typed vs dynamic reports)
         .into());
     }
     Ok(())

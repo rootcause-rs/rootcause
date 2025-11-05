@@ -12,6 +12,10 @@
 //! - `Report<dyn Any>` type-erases for flexibility with multiple error types
 //! - Libraries often use `Report<C>`, applications use `Report<dyn Any>`
 //! - The `?` operator automatically converts between them
+//! - Use `.current_context()` to access the typed error for pattern matching
+//!
+//! **Note:** This example focuses on the context type parameter. For other
+//! type parameters (Cloneable, Local), see the API docs.
 //!
 //! **What's next?**
 //! - Confused about type conversions? → `error_coercion.rs` explains how `?`
@@ -72,13 +76,14 @@ fn query_user_with_retry(user_id: u32) -> Result<String, Report> {
         match query_user(user_id) {
             Ok(user) => return Ok(user),
             Err(report) => {
-                // Pattern match on specific error type to decide retry strategy
+                // .current_context() gives us access to the typed error (DatabaseError)
+                // so we can pattern match on it to make intelligent decisions
                 let should_retry = match report.current_context() {
                     DatabaseError::ConnectionLost | DatabaseError::QueryTimeout => true,
                     DatabaseError::ConstraintViolation { .. } | DatabaseError::NotFound => false,
                 };
 
-                if !(should_retry || attempt < MAX_RETRIES) {
+                if !(should_retry && attempt < MAX_RETRIES) {
                     return Err(report
                         .context(format!("Failed to query user after {attempt} attempts"))
                         .into_dyn_any());

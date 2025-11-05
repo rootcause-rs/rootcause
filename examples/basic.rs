@@ -54,12 +54,21 @@ fn load_config(path: &str) -> Result<String, Report> {
 // Sometimes you need more than just error messages - you need data. Use
 // `.attach()` to include debugging information that appears in the error
 // output.
+//
+// DECISION RULE: When to use which?
+// • .context() - Describes WHAT operation failed ("Failed to load config")
+//              - Creates a NEW LEVEL in the error chain (preceded by ●)
+// • .attach()  - Provides specific DATA about the failure (path, format, etc.)
+//              - Adds metadata to the CURRENT LEVEL (shown below the ● line)
+//
+// In the output below, notice how contexts create new ● entries while
+// attachments appear underneath the most recent context.
 
 /// Loads config and attaches debugging information.
 fn load_config_with_debug_info(path: &str) -> Result<String, Report> {
     let content = load_config(path)
-        .attach(format!("Config path: {path}"))
-        .attach("Expected format: TOML")?;
+        .attach(format!("Config path: {path}")) // Data: which file
+        .attach("Expected format: TOML")?; // Data: expected format
     Ok(content)
 }
 
@@ -100,6 +109,13 @@ fn main() {
          • More debugging: Environment information\n\
          \n\
          Each function added its piece to tell the complete story of what went wrong.\n\
+         \n\
+         FORMATTING STRUCTURE:\n\
+         • Lines with ● are CONTEXTS (added with .context()) - they describe operations\n\
+         • Lines without ● are ATTACHMENTS (added with .attach()) - they provide data\n\
+         • Attachments appear grouped under their context in the output\n\
+         \n\
+         This is why we use .context() for \"what failed\" and .attach() for \"debug info\"!\n\
          \n\
          What's next?\n\
          • Need to create your own errors? → custom_errors.rs\n\
