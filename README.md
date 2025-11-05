@@ -52,16 +52,16 @@ When `startup()` fails, you get a chain showing the full story:
 
 ```
  ● Application startup failed
- ├ examples/basic.rs:69:10
+ ├ examples/basic.rs:76:10
  ├ Environment: production
  │
  ● Failed to load application configuration
- ├ examples/basic.rs:41:35
+ ├ examples/basic.rs:47:35
  ├ Config path: /nonexistent/config.toml
  ├ Expected format: TOML
  │
  ● No such file or directory (os error 2)
- ╰ examples/basic.rs:28:19
+ ╰ examples/basic.rs:34:19
 ```
 
 Each layer adds context and debugging information, building a trail from the high-level operation down to the root cause.

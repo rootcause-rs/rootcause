@@ -101,13 +101,6 @@ fn validate_port(port: u16) -> Result<(), Report> {
 /// Another custom error for business logic validation.
 #[derive(Debug)]
 enum ValidationError {
-    EmptyField {
-        field_name: String,
-    },
-    InvalidFormat {
-        field_name: String,
-        format: String,
-    },
     OutOfRange {
         field_name: String,
         min: i32,
@@ -119,16 +112,6 @@ enum ValidationError {
 impl std::fmt::Display for ValidationError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ValidationError::EmptyField { field_name } => {
-                write!(f, "Field '{}' cannot be empty", field_name)
-            }
-            ValidationError::InvalidFormat { field_name, format } => {
-                write!(
-                    f,
-                    "Field '{}' has invalid format (expected: {})",
-                    field_name, format
-                )
-            }
             ValidationError::OutOfRange {
                 field_name,
                 min,
@@ -189,76 +172,68 @@ fn process_order(user_email: &str, quantity: i32, config_port: u16) -> Result<()
     Ok(())
 }
 
-// ============================================================================
-// DECISION GUIDE: When to Use What
-// ============================================================================
-
-/// Quick validation in a function? Use report!("message")
-fn example_quick_validation(name: &str) -> Result<(), Report> {
-    if name.is_empty() {
-        return Err(report!("Name cannot be empty"));
-    }
-    Ok(())
-}
-
-/// Need structured error data? Define a custom type and use report!(MyError {
-/// ... })
-fn example_structured_error(value: i32) -> Result<(), Report> {
-    if value < 0 {
-        return Err(report!(ValidationError::OutOfRange {
-            field_name: "value".to_string(),
-            min: 0,
-            max: i32::MAX,
-            actual: value,
-        })
-        .into());
-    }
-    Ok(())
-}
-
-/// Wrapping external errors? Use .context() (from basic.rs)
-fn example_external_error(path: &str) -> Result<String, Report> {
-    let content = std::fs::read_to_string(path).context("Failed to read file")?;
-    Ok(content)
-}
-
 fn main() {
-    println!("=== Example 1: Simple report!() Messages ===\n");
+    println!("=== Creating Custom Errors Tutorial ===\n");
+    println!("This example shows three ways to create errors:\n");
+
+    println!("=== Part 1: report!() with String Messages ===\n");
+    println!("Use case: Quick validation where you don't need structured error data\n");
+
     if let Err(report) = validate_user("invalid-email", 25) {
         eprintln!("{report}\n");
     }
 
     println!("{}\n", "=".repeat(70));
-    println!("=== Example 2: report!() with Attachments ===\n");
+    println!("=== Part 1b: report!() with .attach() ===\n");
+    println!("Use case: Quick validation + debugging information\n");
+
     if let Err(report) = validate_age(-5) {
         eprintln!("{report}\n");
     }
 
     println!("{}\n", "=".repeat(70));
-    println!("=== Example 3: Custom Error Types ===\n");
+    println!("=== Part 2: Custom Error Types (Struct) ===\n");
+    println!("Use case: Domain-specific errors with structure and Display impl\n");
+
     if let Err(report) = validate_port(0) {
         eprintln!("{report}\n");
     }
 
     println!("{}\n", "=".repeat(70));
-    println!("=== Example 4: Structured Custom Errors ===\n");
+    println!("=== Part 2b: Custom Error Types (Enum) ===\n");
+    println!("Use case: Multiple error variants with structured data\n");
+
     if let Err(report) = validate_quantity(150) {
         eprintln!("{report}\n");
     }
 
     println!("{}\n", "=".repeat(70));
-    println!("=== Example 5: Mixing All Approaches ===\n");
+    println!("=== Part 3: Mixing All Approaches ===\n");
+    println!("Use case: Real-world code combining different error strategies\n");
+
     if let Err(report) = process_order("user@example.com", 150, 8080) {
         eprintln!("{report}\n");
     }
 
     println!("{}\n", "=".repeat(70));
     println!(
-        "Decision guide:\n\
-         • Quick validation? Use report!(\"message\")\n\
-         • Structured data? Define custom type + report!(MyError {{ ... }})\n\
-         • External errors? Use .context() (see basic.rs)\n\
+        "DECISION GUIDE - Which approach should you use?\n\
          \n\
-         All approaches compose with .attach() and .context()!\n"
+         ✓ report!(\"message\") when:\n\
+           • Quick validation in small functions\n\
+           • Error message is simple and self-explanatory\n\
+           • You don't need to programmatically inspect error details\n\
+         \n\
+         ✓ Custom error type when:\n\
+           • You have domain-specific error categories\n\
+           • You need structured data (fields, variants)\n\
+           • Callers might pattern match on error details\n\
+           • You want to implement custom Display/Debug\n\
+         \n\
+         ✓ External errors (from basic.rs):\n\
+           • Wrapping std errors or library errors\n\
+           • Use .context() and .attach() to add meaning\n\
+         \n\
+         All three approaches compose! Mix and match as needed.\n"
     );
 }

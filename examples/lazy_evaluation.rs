@@ -105,28 +105,9 @@ fn parse_config_value(path: &str) -> Result<i32, Report> {
     Ok(value)
 }
 
-// ============================================================================
-// CONCEPT 4: When NOT to Use Lazy Evaluation
-// ============================================================================
-// Don't use _with() for simple strings that are cheap to create.
-
-/// Example showing when NOT to use lazy evaluation.
-fn simple_operation(value: i32) -> Result<(), Report> {
-    if value < 0 {
-        // ❌ Don't do this - the string is simple and cheap
-        // return Err(report!("Value must be positive")).context_with(|| "Invalid
-        // value");
-
-        // ✅ Do this instead - just use .context()
-        return Err(report!("Value must be positive"))
-            .context("Invalid value")
-            .map_err(|e| e.into());
-    }
-    Ok(())
-}
-
 fn main() {
     println!("=== Lazy Evaluation Tutorial ===\n");
+    println!("When to use _with() variants vs regular methods:\n");
 
     println!("=== Example 1: .attach_with() - Capturing Loop Variables ===\n");
     let items = vec!["valid", "", "also valid", "x".repeat(150).leak()];
@@ -150,6 +131,28 @@ fn main() {
     }
 
     println!("{}\n", "=".repeat(70));
+    println!(
+        "When NOT to use lazy evaluation:\n\
+         \n\
+         ❌ DON'T do this for simple strings:\n\
+         \n\
+            Err(report!(\"Invalid value\"))\n\
+                .context_with(|| \"Value must be positive\")  // Unnecessary closure!\n\
+         \n\
+         ✅ DO this instead:\n\
+         \n\
+            Err(report!(\"Invalid value\"))\n\
+                .context(\"Value must be positive\")          // Simple and clear\n\
+         \n\
+         The _with() variants are for EXPENSIVE operations like:\n\
+         • Formatting large data structures (Vec, HashMap, etc.)\n\
+         • Calling functions that do work (database queries, file I/O)\n\
+         • Capturing many variables from the surrounding scope\n\
+         \n\
+         For simple string literals or cheap format!() calls, use the regular methods.\n\
+         \n{}\n",
+        "=".repeat(70)
+    );
     println!(
         "Key takeaways:\n\
          \n\
