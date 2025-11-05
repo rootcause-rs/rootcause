@@ -7,7 +7,8 @@ Demonstrations of rootcause features and patterns.
 **New to rootcause?** Start with [`basic.rs`](basic.rs).
 
 - [`basic.rs`](basic.rs) - Core concepts: `?` operator, `.context()`, `.attach()`, building error chains
-- [`error_chains.rs`](error_chains.rs) - Advanced patterns: `.attach_with()` for lazy evaluation, multi-level context
+- [`custom_errors.rs`](custom_errors.rs) - Creating errors with `report!()`: string messages, custom types, mixing approaches
+- [`lazy_evaluation.rs`](lazy_evaluation.rs) - Lazy evaluation: `.attach_with()` and `.context_with()` for expensive computations
 - [`typed_reports.rs`](typed_reports.rs) - Type-safe errors with `Report<C>`, pattern matching for error recovery
 - [`error_coercion.rs`](error_coercion.rs) - Understanding automatic type conversions between error types
 

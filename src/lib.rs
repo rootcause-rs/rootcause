@@ -38,8 +38,7 @@
 //! use rootcause::prelude::*;
 //!
 //! fn read_config(path: &str) -> Result<String, Report> {
-//!     std::fs::read_to_string(path)
-//!         .context("Failed to read configuration file")?;
+//!     std::fs::read_to_string(path).context("Failed to read configuration file")?;
 //!     Ok(String::new())
 //! }
 //! ```
@@ -119,13 +118,17 @@
 //! }
 //! ```
 //!
-//! **Need cloning or thread-local data?** The sections below explain the other type parameters. Come back to these when you need them - they solve specific problems you'll recognize when you encounter them.
+//! **Need cloning or thread-local data?** The sections below explain the other
+//! type parameters. Come back to these when you need them - they solve specific
+//! problems you'll recognize when you encounter them.
 //!
 //! ---
 //!
 //! ## Report Variant Reference
 //!
-//! *This section covers the full type parameter system. Most users won't need these variants immediately - but if you do need cloning, thread-local errors, or want to understand what's possible, read on.*
+//! *This section covers the full type parameter system. Most users won't need
+//! these variants immediately - but if you do need cloning, thread-local
+//! errors, or want to understand what's possible, read on.*
 //!
 //! The `Report` type has three type parameters: `Report<Context, Ownership,
 //! ThreadSafety>`. This section explains all the options and when you'd use
@@ -141,7 +144,7 @@
 //! ```rust
 //! # use rootcause::prelude::*;
 //! #[derive(Debug)]
-//! struct ConfigError { /* ... */ }
+//! struct ConfigError {/* ... */}
 //! # impl std::fmt::Display for ConfigError {
 //! #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { Ok(()) }
 //! # }
@@ -171,14 +174,16 @@
 //!
 //! **[`Mutable`]** (default) — Unique ownership
 //!
-//! You can add attachments and context, but can't clone the report. Start here,
-//! then convert to [`Cloneable`] if needed.
+//! You can add attachments and context to the root, but can't clone the whole
+//! report. Note: child reports are still cloneable internally (they use `Arc`),
+//! but the top-level `Report` doesn't implement `Clone`. Start here, then
+//! convert to [`Cloneable`] if you need to clone the entire tree.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
 //! let mut report: Report<String, markers::Mutable> = report!("error".to_string());
-//! let report = report.attach("debug info");  // ✅ Can mutate
-//! // let cloned = report.clone();            // ❌ Can't clone
+//! let report = report.attach("debug info"); // ✅ Can mutate root
+//! // let cloned = report.clone();            // ❌ Can't clone whole report
 //! ```
 //!
 //! **[`Cloneable`]** — Shared ownership
@@ -190,8 +195,8 @@
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let cloneable = report.into_cloneable();
-//! let copy1 = cloneable.clone();  // ✅ Can clone
-//! let copy2 = cloneable.clone();  // ✅ Cheap (Arc clone)
+//! let copy1 = cloneable.clone(); // ✅ Can clone
+//! let copy2 = cloneable.clone(); // ✅ Cheap (Arc clone)
 //! // let modified = copy1.attach("info"); // ❌ Can't mutate
 //! ```
 //!
@@ -205,11 +210,10 @@
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
-//! let report: Report<String, markers::Mutable, markers::SendSync> =
-//!     report!("error".to_string());
+//! let report: Report<String, markers::Mutable, markers::SendSync> = report!("error".to_string());
 //!
 //! std::thread::spawn(move || {
-//!     println!("{}", report);  // ✅ Can send to other threads
+//!     println!("{}", report); // ✅ Can send to other threads
 //! });
 //! ```
 //!

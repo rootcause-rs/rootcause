@@ -64,5 +64,7 @@ fn main() {
     // - Parent: "Unable to fetch document"
     // - Child 1: "Attempt #1" → HTTP 500
     // - Child 2: "Attempt #2" → HTTP 404
-    fetch_document_with_retry("http://example.com", 2).unwrap();
+    if let Err(report) = fetch_document_with_retry("http://example.com", 2) {
+        eprintln!("{report}");
+    }
 }

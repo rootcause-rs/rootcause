@@ -1,4 +1,10 @@
-//! Demonstrates automatic error coercion with the `?` operator.
+//! How the `?` operator automatically converts between error types.
+//!
+//! **Run this example:** `cargo run --example error_coercion`
+//!
+//! This example explains the "magic" behind how `?` lets you freely mix error
+//! types. Read this if you're curious about the mechanics, but you don't need
+//! to understand this to use rootcause effectively.
 //!
 //! Key insight: The `?` operator automatically converts between error types:
 //! - `C` → `Report<C>`

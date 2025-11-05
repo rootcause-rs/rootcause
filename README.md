@@ -12,26 +12,59 @@ A flexible, ergonomic, and inspectable error reporting library for Rust.
 
 ## Overview
 
-This crate provides a structured way to represent and work with errors and their context. The main goal is to enable you to build rich, structured error reports that automatically capture not just what went wrong, but also the context and supporting data at each step.
+rootcause helps you build rich, structured error reports that capture not just what went wrong, but the full context and history.
 
-It allows printing pretty, tree-structured reports like this one:
+Here's a simple example showing how errors build up context as they propagate through your call stack:
+
+```rust
+use rootcause::prelude::*;
+
+fn read_file(path: &str) -> Result<String, Report> {
+    // The ? operator automatically converts io::Error to Report
+    let content = std::fs::read_to_string(path)?;
+    Ok(content)
+}
+
+fn load_config(path: &str) -> Result<String, Report> {
+    // Add context to explain what this file is for
+    let content = read_file(path)
+        .context("Failed to load application configuration")?;
+    Ok(content)
+}
+
+fn load_config_with_debug_info(path: &str) -> Result<String, Report> {
+    // Attach debugging information
+    let content = load_config(path)
+        .attach(format!("Config path: {path}"))
+        .attach("Expected format: TOML")?;
+    Ok(content)
+}
+
+fn startup(config_path: &str, environment: &str) -> Result<(), Report> {
+    let _config = load_config_with_debug_info(config_path)
+        .context("Application startup failed")
+        .attach(format!("Environment: {environment}"))?;
+    Ok(())
+}
+```
+
+When `startup()` fails, you get a chain showing the full story:
 
 ```
-thread 'main' panicked at examples/readme-example.rs:51:56:
-called `Result::unwrap()` on an `Err` value:
- ● Unable to fetch document http://example.com
- ├ examples/readme-example.rs:45:21
+ ● Application startup failed
+ ├ examples/basic.rs:69:10
+ ├ Environment: production
  │
- ├─ ● HTTP error: 400 Bad Request: Could not parse JSON payload
- │  ├ examples/readme-example.rs:32:9
- │  ╰ Attempt #1
+ ● Failed to load application configuration
+ ├ examples/basic.rs:41:35
+ ├ Config path: /nonexistent/config.toml
+ ├ Expected format: TOML
  │
- ╰─ ● HTTP error: 500 Internal server error
-    ├ examples/readme-example.rs:32:9
-    ╰ Attempt #2
-
-note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+ ● No such file or directory (os error 2)
+ ╰ examples/basic.rs:28:19
 ```
+
+Each layer adds context and debugging information, building a trail from the high-level operation down to the root cause.
 
 ## Project Goals
 
@@ -47,27 +80,17 @@ note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
 
 ## Core Concepts
 
-At a high level, you can think of the library as a way to build a tree of error reports, where each node in the tree represents a step in the error's history.
+At a high level, rootcause helps you build a tree of error reports. Each node in the tree represents a step in the error's history - you start with a root error, then add context and attachments as it propagates up through your code.
 
-You can think of a Report as roughly implementing this data structure:
+Think of it like this: when a file read fails deep in your code, you can wrap it with context like "failed to load config", then wrap that with "app initialization failed". The result is a tree showing the full story of what went wrong.
 
-```rust
-struct Report<C: ?Sized> {
-    root: triomphe::Arc<Node<C>>,
-}
+**Why a tree?** Most of the time your error reports will be linear chains (just like anyhow), but the tree structure becomes useful when you need to:
 
-struct Node<C: ?Sized> {
-    attachments: Vec<Attachment>,
-    children: Vec<Report<dyn Any>>,
-    context: C,
-}
+- Collect multiple errors (e.g., validation errors from different fields) - see [Collecting Multiple Errors](#collecting-multiple-errors)
+- Show retry attempts with different failures
+- Represent parallel operations that each failed in different ways
 
-struct Attachment(Box<dyn Any>);
-```
-
-The actual implementation follows the same basic structure, but has a few more complications.
-There are multiple reasons for this, including performance, ergonomics and being able to support
-the features we want.
+If you're coming from anyhow and only need linear error chains, that's totally fine - rootcause handles that case efficiently.
 
 ## Quick Start
 
@@ -78,52 +101,61 @@ Add this to your `Cargo.toml`:
 rootcause = "0.6.0"
 ```
 
-### Basic Usage
-
-The simplest way to use rootcause:
+Use `Report` as your error type:
 
 ```rust
 use rootcause::prelude::*;
 
-fn might_fail() -> Result<(), Report> {
-    Err(report!("something went wrong"))
-}
-```
-
-Adding context as errors propagate:
-
-```rust
-use rootcause::prelude::*;
-
-fn might_fail() -> Result<(), Report> {
-    std::fs::read("/tmp/nonexistent")
-        .context("Failed to read config file")?;
+fn your_function() -> Result<(), Report> {
+    // Your existing code with ? already works
+    std::fs::read_to_string("/path/to/file")?;
     Ok(())
 }
-
-fn main() {
-    if let Err(report) = might_fail() {
-        println!("{report}");
-    }
-}
 ```
+
+That's it! The `?` operator automatically converts any error type to `Report`.
+
+**Ready to learn more?** See [`examples/basic.rs`](examples/basic.rs) for a hands-on tutorial covering `.context()`, `.attach()`, and composing error chains.
 
 ## Next Steps
 
 - **New to rootcause?** See [`examples/basic.rs`](examples/basic.rs) for a hands-on introduction
 - **More examples:** Browse the [`examples/`](examples/) directory for common patterns
 - **Full API documentation:** [docs.rs/rootcause](https://docs.rs/rootcause)
-```
 
-### With Custom Context Types
+## Features
+
+- **`std`** (default): Enable standard library support
+- **`backtrace`**: Automatic backtrace capture on error creation
+
+## Coming from other libraries?
+
+**From `anyhow`**: You already know most of what you need! `Report` works similarly to `anyhow::Error`. The core workflow is familiar - `.context()` works the same way, and `?` just works. The main additions are:
+
+- Explicit attachments (`.attach()`) for structured data beyond strings
+- Access to the error tree structure (iterate over causes, inspect attachments)
+- Optional type safety with `Report<YourError>` when you need it
+
+Note: While the core API is similar, some less common methods have different names.
+
+**From `error-stack`**: rootcause takes inspiration from error-stack's typed error approach, with some key differences:
+
+- **Optional typing**: `Report` (without type parameter) gives you anyhow-like ergonomics when you don't need type safety. error-stack requires every Report to have a specific context type.
+- **Explicit tree structure**: rootcause is very clear about the underlying data model - it's a tree where each node has context, attachments, and children. error-stack's "frames" model is more abstract.
+- **Additional type parameters**: Beyond context type, rootcause adds ownership (`Mutable`/`Cloneable`) and thread-safety (`SendSync`/`Local`) parameters. error-stack uses `Report<C>` and `Report<[C]>` to distinguish single vs multiple contexts.
+- **API naming**: `.context()` vs `.change_context()`, `.attach()` vs `.attach_printable()`, etc.
+
+If you like error-stack's philosophy but want the option to use untyped errors when appropriate, rootcause might be a good fit.
+
+## Using Type Parameters
+
+### Custom Context Types
+
+If you want compile-time guarantees about the error type at the root of your Report, you can use a type parameter:
 
 ```rust
 use rootcause::prelude::*;
 
-// You might also want to implement `std::fmt::Display`,
-// as otherwise this example will print out:
-//   ● Context of type `example::MyError`
-//   ╰ src/main.rs:19:9
 #[derive(Debug)]
 struct MyError {
     code: u32,
@@ -146,79 +178,81 @@ fn main() {
 }
 ```
 
-## Features
+Note: You might also want to implement `std::fmt::Display`, as otherwise the report will print:
 
-- **`std`** (default): Enable standard library support
-- **`backtrace`**: Automatic backtrace capture on error creation
+```
+● Context of type `example::MyError`
+╰ src/main.rs:19:9
+```
 
-## Comparison with Other Libraries
+### Other Variants
 
-### vs. `anyhow`
+_Most users can use just `Report` with the defaults. This section explains additional type parameters if you need cloning, thread-local errors, or other specialized behavior - come back to this when you encounter those needs._
 
-- ✅ More structured and inspectable errors
-- ✅ Better support for custom context types
-- ✅ Richer attachment system
-- ❌ Slightly more complex API
+The `Report` type is generic over three parameters: `Report<Context, Ownership, ThreadSafety>`.
 
-### vs. `error-stack`
+**For type safety**, use `Report<YourErrorType>` instead of plain `Report`. This guarantees the root error is your specific type (shown above).
 
-- ✅ More flexible ownership models
-- ✅ Better ergonomics with the `?` operator
-- ✅ More customizable formatting
-- ❌ Different API surface
+**For cloning**, use `Report<dyn Any, Cloneable>`. The default `Report` can't be cloned because it allows efficient mutation of the root node. (Note: `dyn Any` is the default context type - you can use any context type with `Cloneable`.)
 
-### vs. `thiserror`
+**For thread-local data**, use `Report<dyn Any, Mutable, Local>` to store `!Send` or `!Sync` objects like `Rc` or `Cell`. The default `Report` requires all errors to be `Send + Sync`.
 
-- ✅ Runtime error composition vs. compile-time
-- ✅ Automatic context capture
-- ✅ Rich attachment system
-- ❌ More overhead for simple cases
-
-## Advanced: Report Variants
-
-The `Report` type is generic over three parameters to support different use cases:
-
-1. **Context Type**: The type of the context in the root node (default: `dyn Any`)
-2. **Ownership**: The ownership and cloning behavior (default: `Mutable`)
-3. **Thread Safety**: Whether the report is `Send + Sync` (default: `SendSync`)
-
-### Context Variants
-
-| Variant                     | Root Context      | Internal Contexts | Use Case                 |
-| --------------------------- | ----------------- | ----------------- | ------------------------ |
-| `Report<SomeContextType>`   | `SomeContextType` | Can be anything   | Similar to `error-stack` |
-| `Report<dyn Any>` (default) | Can be anything   | Can be anything   | Similar to `anyhow`      |
-
-### Ownership Variants
-
-| Variant                        | `Clone` | Mutation  | Description                                           |
-| ------------------------------ | ------- | --------- | ----------------------------------------------------- |
-| `Report<*, Mutable>` (default) | ❌      | Root only | Root allocated with `UniqueArc`, internals with `Arc` |
-| `Report<*, Cloneable>`         | ✅      | ❌        | All nodes allocated with `Arc`                        |
-
-### Thread Safety Variants
-
-| Variant                            | `Send + Sync` | Allows `!Send/!Sync` objects | Description                       |
-| ---------------------------------- | ------------- | ---------------------------- | --------------------------------- |
-| `Report<*, *, SendSync>` (default) | ✅            | ❌                           | All objects must be `Send + Sync` |
-| `Report<*, *, Local>`              | ❌            | ✅                           | Allows non-thread-safe objects    |
-
-### Converting Between Variants
-
-You can convert between report variants using the `From` trait or specific methods:
+You can convert between variants:
 
 ```rust
 use rootcause::prelude::*;
 
-// Convert to more general variants (always possible)
-let report: Report<MyError> = report!(MyError { /* ... */ });
-let general: Report = report.into_dyn_any();
-let cloneable: Report<dyn Any, Cloneable> = general.into_cloneable();
+// Make a Report cloneable
+let report: Report = report!("error");
+let cloneable: Report<dyn Any, Cloneable> = report.into_cloneable();
 
-// Convert to more specific variants (conditional)
-let specific: Result<Report<MyError>, _> = general.downcast_report();
-let mutable: Result<Report<dyn Any, Mutable>, _> = cloneable.try_into_mutable();
+// Downcast to a specific type
+let typed: Result<Report<MyError>, _> = cloneable.downcast_report();
 ```
+
+See the [full API documentation](https://docs.rs/rootcause) for all variants and conversions.
+
+## Advanced Features
+
+Once you're comfortable with the basics, rootcause offers powerful features for complex scenarios.
+
+### Collecting Multiple Errors
+
+Remember the [tree structure](#core-concepts)? This is where it shines. Use `ReportCollection` to gather multiple failures and show them all as branches:
+
+```rust
+use rootcause::{prelude::*, report_collection::ReportCollection};
+
+fn fetch_document_with_retry(url: &str, retry_count: usize) -> Result<Vec<u8>, Report> {
+    let mut errors = ReportCollection::new();
+
+    for attempt in 1..=retry_count {
+        match fetch_document(url).attach_with(|| format!("Attempt #{attempt}")) {
+            Ok(data) => return Ok(data),
+            Err(error) => errors.push(error.into_cloneable()),
+        }
+    }
+
+    Err(errors.context(format!("Unable to fetch document {url}")))?
+}
+```
+
+This creates a tree structure with all retry attempts:
+
+```
+ ● Unable to fetch document http://example.com
+ ├ examples/retry_with_collection.rs:59:16
+ │
+ ├─ ● HTTP error: 500 Internal server error
+ │  ├ examples/retry_with_collection.rs:42:9
+ │  ╰ Attempt #1
+ │
+ ╰─ ● HTTP error: 404 Not found
+    ├ examples/retry_with_collection.rs:42:9
+    ╰ Attempt #2
+```
+
+See [`retry_with_collection.rs`](examples/retry_with_collection.rs) and [`batch_processing.rs`](examples/batch_processing.rs) for more examples of collecting multiple errors.
 
 ## Architecture
 

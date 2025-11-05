@@ -1,10 +1,22 @@
-//! Demonstrates the difference between `Report<C>` and `Report<dyn Any>`.
+//! Type-safe error handling with `Report<C>`.
+//!
+//! **Run this example:** `cargo run --example typed_reports`
+//!
+//! By default, rootcause uses `Report<dyn Any>` which can hold any error type.
+//! This is perfect for applications. But libraries often want to preserve
+//! specific error types so callers can pattern match and handle errors
+//! programmatically.
 //!
 //! Key concepts:
 //! - `Report<C>` preserves type information for pattern matching
 //! - `Report<dyn Any>` type-erases for flexibility with multiple error types
 //! - Libraries often use `Report<C>`, applications use `Report<dyn Any>`
 //! - The `?` operator automatically converts between them
+//!
+//! **What's next?**
+//! - Confused about type conversions? → `error_coercion.rs` explains how `?`
+//!   works
+//! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;
 
