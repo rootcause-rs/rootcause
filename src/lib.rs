@@ -53,8 +53,8 @@
 //!
 //! - **Ergonomic**: The `?` operator should work with most error types, even
 //!   ones not designed for this library.
-//! - **Fast happy path**: A `Result<(), Report>` should never be larger than a
-//!   `usize`.
+//! - **Fast happy path**: `Report` has a pointer-sized representation, keeping
+//!   `Result<T, Report>` small and fast.
 //! - **Typable**: Users should be able to (optionally) specify the type of the
 //!   context in the root node.
 //! - **Inspectable**: The objects in a Report should not be glorified strings.
@@ -66,8 +66,8 @@
 //!   collected, or how reports are formatted.
 //! - **Rich**: Reports should automatically capture information (like
 //!   backtraces) that might be useful in debugging.
-//! - **Beautiful**: The default formatting of a Report should look pleasant (at
-//!   least to the authors).
+//! - **Beautiful**: The default formatting should look pleasant—and if it
+//!   doesn't match your style, the hook system lets you customize it.
 //!
 //! ## Core Concepts
 //!

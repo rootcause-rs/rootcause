@@ -66,17 +66,57 @@ When `startup()` fails, you get a chain showing the full story:
 
 Each layer adds context and debugging information, building a trail from the high-level operation down to the root cause.
 
+### Why rootcause instead of anyhow?
+
+**Programmatic error inspection.** Unlike anyhow's linear error chains, rootcause exposes the full error tree structure for navigation and inspection:
+
+```rust
+use rootcause::prelude::*;
+
+#[derive(Debug)]
+enum ValidationError {
+    Timeout,
+    InvalidData,
+}
+
+fn process_batch(items: &[Item]) -> Result<(), Report> {
+    match validate_and_save(items) {
+        Ok(()) => Ok(()),
+        Err(report) => {
+            // Navigate the error tree to make intelligent decisions
+            for attachment in report.attachments() {
+                if let Some(err) = attachment.downcast_ref::<ValidationError>() {
+                    match err {
+                        ValidationError::Timeout => {
+                            // Retry timeouts
+                            return retry_with_backoff(items);
+                        }
+                        ValidationError::InvalidData => {
+                            // Don't retry bad data
+                            return Err(report);
+                        }
+                    }
+                }
+            }
+            Err(report)
+        }
+    }
+}
+```
+
+This tree navigation enables retry logic, recovery strategies, and error aggregation patterns that are impossible with anyhow's opaque error chains.
+
 ## Project Goals
 
 - **Ergonomic**: The `?` operator should work with most error types, even ones not designed for this library
-- **Fast happy path**: A `Result<(), Report>` should never be larger than a `usize`
+- **Fast happy path**: `Report` has a pointer-sized representation, keeping `Result<T, Report>` small and fast
 - **Typable**: Users should be able to (optionally) specify the type of the context in the root node
 - **Inspectable**: The objects in a Report should not be glorified strings. Inspecting and interacting with them should be easy
 - **Cloneable**: It should be possible to clone a `Report` when you need to
 - **Mergeable**: It should be possible to merge multiple `Report`s into a single one
 - **Customizable**: It should be possible to customize what data gets collected, or how reports are formatted
 - **Rich**: Reports should automatically capture information (like backtraces) that might be useful in debugging
-- **Beautiful**: The default formatting of a Report should look pleasant
+- **Beautiful**: The default formatting should look pleasant—and if it doesn't match your style, the hook system lets you customize it
 
 ## Core Concepts
 
@@ -130,22 +170,65 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 
 ## Coming from other libraries?
 
-**From `anyhow`**: You already know most of what you need! `Report` works similarly to `anyhow::Error`. The core workflow is familiar - `.context()` works the same way, and `?` just works. The main additions are:
+### From `anyhow`
 
-- Explicit attachments (`.attach()`) for structured data beyond strings
-- Access to the error tree structure (iterate over causes, inspect attachments)
-- Optional type safety with `Report<YourError>` when you need it
+**Most of the API will feel familiar** - `.context()` works the same way and `?` just works.
 
-Note: While the core API is similar, some less common methods have different names.
+**The key differences:**
 
-**From `error-stack`**: rootcause takes inspiration from error-stack's typed error approach, with some key differences:
+1. **Structured attachments**: In anyhow, `.context()` adds another layer to the error chain. rootcause has both `.context()` (adds a new layer) AND `.attach()` (adds metadata to the _current_ layer). This lets you add debugging information without creating new tree levels.
 
-- **Optional typing**: `Report` (without type parameter) gives you anyhow-like ergonomics when you don't need type safety. error-stack requires every Report to have a specific context type.
-- **Explicit tree structure**: rootcause is very clear about the underlying data model - it's a tree where each node has context, attachments, and children. error-stack's "frames" model is more abstract.
-- **Additional type parameters**: Beyond context type, rootcause adds ownership (`Mutable`/`Cloneable`) and thread-safety (`SendSync`/`Local`) parameters. error-stack uses `Report<C>` and `Report<[C]>` to distinguish single vs multiple contexts.
-- **API naming**: `.context()` vs `.change_context()`, `.attach()` vs `.attach_printable()`, etc.
+2. **Full tree navigation**: anyhow's `.chain()` gives you a linear iterator over contexts. rootcause exposes the complete tree - you can iterate over children, inspect attachments at each level, and navigate the full structure programmatically.
 
-If you like error-stack's philosophy but want the option to use untyped errors when appropriate, rootcause might be a good fit.
+3. **Cloneable errors**: anyhow errors cannot be cloned. rootcause supports `Report<dyn Any, Cloneable>` when you need to clone errors (e.g., for retry logic or caching).
+
+4. **Thread-local errors**: anyhow requires all errors to be `Send + Sync`. rootcause supports `Report<dyn Any, Mutable, Local>` for thread-local data like `Rc` or `Cell`.
+
+5. **Automatic location tracking**: By default, rootcause captures file locations (and optionally backtraces) every time `.context()` or `.attach()` is called, showing you exactly where each layer was added. anyhow only captures a single backtrace at error creation.
+
+6. **Customization hooks**: Beyond location tracking, rootcause provides hooks to customize report creation (what data to capture) and formatting (how to display). anyhow's behavior is fixed.
+
+7. **Optional type safety**: Use `Report<YourErrorType>` when you want compile-time guarantees about the root error type.
+
+**When to switch:**
+
+- ✅ You need `.attach()` to add metadata without creating new context layers
+- ✅ You need to navigate complex error trees (not just linear chains)
+- ✅ You need cloneable errors or thread-local error data
+- ✅ You need to customize backtrace capture or error formatting
+- ✅ You want optional type safety on error contexts
+- ⏸️ Stick with anyhow if linear error chains meet your needs
+
+**Migration cost:** Medium - `.context()` works the same, but tree navigation, attachments, and hooks are new concepts.
+
+### From `error-stack`
+
+rootcause takes inspiration from error-stack's typed error approach, with some key differences:
+
+**Similarities:**
+
+- Both support structured attachments via `.attach()`
+- Both allow type-safe error contexts
+- Both provide customization hooks
+
+**Differences:**
+
+1. **Optional typing**: `Report` (without type parameter) gives you anyhow-like ergonomics when you don't need type safety. error-stack requires every Report to have a specific context type.
+
+2. **Explicit tree model**: rootcause is very clear about the underlying data structure - it's a tree where each node has context, attachments, and children. You can navigate this structure directly. error-stack's internal model is more opaque, exposing only high-level iteration methods.
+
+3. **Hook flexibility**: rootcause's hook system is more flexible and fully documented, with clear explanations of when hooks fire and what data they receive. error-stack has hooks but they're less documented and more constrained.
+
+4. **Additional type parameters**: Beyond context type, rootcause adds ownership (`Mutable`/`Cloneable`) and thread-safety (`SendSync`/`Local`) parameters for fine-grained control.
+
+**When to switch:**
+
+- ✅ You want the option to use untyped errors (like anyhow) when appropriate
+- ✅ You need direct access to the error tree structure
+- ✅ You need more flexible customization hooks
+- ⏸️ Stick with error-stack if you prefer its more abstract API
+
+**API naming differences:** `.context()` vs `.change_context()`, `.attach()` vs `.attach_printable()`, etc.
 
 ## Using Type Parameters
 
@@ -258,8 +341,25 @@ See [`retry_with_collection.rs`](examples/retry_with_collection.rs) and [`batch_
 
 The library consists of two main crates:
 
-- **`rootcause`**: The main user-facing API
-- **`rootcause-internals`**: Low-level implementation details and most of the unsafe code
+- **`rootcause`**: The main user-facing API. Contains safe abstractions and some unsafe code for type parameter handling.
+- **`rootcause-internals`**: Low-level implementation details. Contains the majority of unsafe code, isolated from user-facing APIs.
+
+This separation ensures that most unsafe operations are contained in a single, auditable crate. The public API in `rootcause` uses these primitives to provide safe, ergonomic error handling.
+
+## Stability and Roadmap
+
+**Current status:** Pre-1.0 (v0.6.0)
+
+rootcause follows semantic versioning. As a 0.x library, breaking changes may occur in minor version bumps (0.x → 0.x+1). We're actively refining the API based on real-world usage and focused on reaching 1.0.
+
+**Post-1.0:** API stability with only breaking changes in major versions.
+
+**When to adopt:**
+
+- ✅ **Now**: If you value the inspection capabilities and can tolerate occasional breaking changes during 0.x
+- ⏳ **Wait for 1.0**: If you need long-term API stability guarantees
+
+We're committed to reaching 1.0, but we want to get the API right first.
 
 ## Minimum Supported Rust Version (MSRV)
 
