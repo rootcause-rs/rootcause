@@ -128,7 +128,7 @@
 //!
 //! ---
 //!
-//! ## Report Variant Reference
+//! ## Type Parameters
 //!
 //! *This section covers the full type parameter system. Most users won't need
 //! these variants immediately - but if you do need cloning, thread-local
@@ -138,12 +138,29 @@
 //! ThreadSafety>`. This section explains all the options and when you'd use
 //! them.
 //!
-//! ### Context Type: What Errors Can You Store?
+//! ### Context Type: Typed vs Dynamic Errors
+//!
+//! **Use `Report<dyn Any>`** (or just `Report`) when errors just need to propagate.
+//! **Use `Report<YourErrorType>`** when callers need to pattern match on specific error variants.
+//!
+//! **`Report<dyn Any>`** (or just `Report`) — Flexible, like [`anyhow`]
+//!
+//! Can hold any error type at the root. The `?` operator automatically converts
+//! any error into a `Report`. Note: `dyn Any` is just a marker - no actual trait
+//! object is stored. Converting between typed and dynamic reports is zero-cost.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! // Can return any error type
+//! fn might_fail() -> Result<(), Report> {
+//!     # Ok(())
+//! }
+//! ```
 //!
 //! **`Report<YourErrorType>`** — Type-safe, like [`error-stack`]
 //!
 //! The root error must be `YourErrorType`, but child errors can be anything.
-//! Good for libraries that want to guarantee a specific error type.
+//! Callers can use `.current_context()` to pattern match on the typed error.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
@@ -160,21 +177,14 @@
 //! }
 //! ```
 //!
-//! **`Report<dyn Any>`** (or just `Report`) — Flexible, like [`anyhow`]
+//! See [`examples/typed_reports.rs`] for a complete example with retry logic.
 //!
-//! Can hold any error type at the root. Good for applications where you just
-//! want errors to work. Note: `dyn Any` is just a marker - no actual trait
-//! object is stored. Converting between typed and dynamic reports is zero-cost.
+//! [`examples/typed_reports.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/typed_reports.rs
 //!
-//! ```rust
-//! # use rootcause::prelude::*;
-//! // Can return any error type
-//! fn might_fail() -> Result<(), Report> {
-//!     # Ok(())
-//! }
-//! ```
+//! ### Ownership: Mutable vs Cloneable
 //!
-//! ### Ownership: Can You Clone or Mutate?
+//! **Use the default ([`Mutable`])** when errors just propagate with `?`.
+//! **Use `.into_cloneable()`** when you need to store errors in collections or use them multiple times.
 //!
 //! **[`Mutable`]** (default) — Unique ownership
 //!
@@ -204,13 +214,19 @@
 //! // let modified = copy1.attach("info"); // ❌ Can't mutate
 //! ```
 //!
-//! ### Thread Safety: Can You Send It Between Threads?
+//! See [`examples/retry_with_collection.rs`] for collection usage.
+//!
+//! [`examples/retry_with_collection.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/retry_with_collection.rs
+//!
+//! ### Thread Safety: SendSync vs Local
+//!
+//! **Use the default ([`SendSync`])** unless you get compiler errors about `Send` or `Sync`.
+//! **Use [`Local`]** only when attaching `!Send` types like `Rc` or `Cell`.
 //!
 //! **[`SendSync`]** (default) — Thread-safe
 //!
-//! The report and all its contents are `Send + Sync`. Use this unless you need
-//! thread-local data. Most types (String, Vec, primitives) are already `Send +
-//! Sync`.
+//! The report and all its contents are `Send + Sync`. Most types (String, Vec,
+//! primitives) are already `Send + Sync`, so this just works.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
