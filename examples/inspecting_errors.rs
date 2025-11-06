@@ -95,7 +95,7 @@ fn simulate_network_request(attempt: u32) -> Result<String, Report<NetworkError>
             delay_ms,
             status_code,
         })
-        .attach(format!("URL: https://api.example.com/data")))
+        .attach("URL: https://api.example.com/data"))
 }
 
 fn complex_operation_with_retries() -> Result<String, Report> {

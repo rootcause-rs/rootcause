@@ -134,16 +134,17 @@ impl std::fmt::Display for ValidationError {
 impl std::error::Error for ValidationError {}
 
 fn validate_quantity(quantity: i32) -> Result<(), Report> {
-    if quantity < 1 || quantity > 100 {
-        return Err(report!(ValidationError::OutOfRange {
+    if (1..=100).contains(&quantity) {
+        Ok(())
+    } else {
+        Err(report!(ValidationError::OutOfRange {
             field_name: "quantity".to_string(),
             min: 1,
             max: 100,
             actual: quantity,
         })
-        .into());
+        .into())
     }
-    Ok(())
 }
 
 // ============================================================================
