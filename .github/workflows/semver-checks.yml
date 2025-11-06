@@ -1,20 +1,13 @@
 name: Semver Checks
 
 on:
-  pull_request:
-    paths:
-      - '**/*.rs'
-      - 'Cargo.toml'
-      - 'rootcause-internals/Cargo.toml'
-      - '.github/workflows/semver-checks.yml'
   push:
-    branches:
-      - main
-    paths:
-      - '**/*.rs'
-      - 'Cargo.toml'
-      - 'rootcause-internals/Cargo.toml'
-      - '.github/workflows/semver-checks.yml'
+    branches: ["main"]
+  merge_group:
+  pull_request:
+  schedule:
+    - cron: "32 4 * * 5"
+  workflow_dispatch:
 
 jobs:
   semver-checks:
