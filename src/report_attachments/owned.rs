@@ -59,7 +59,9 @@ where
     /// attachments must be `Send+Sync`
     #[must_use]
     pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
-        unsafe { &*(raw as *const Vec<RawAttachment> as *const Self) }
+        let raw_ptr = raw as *const Vec<RawAttachment>;
+        let raw_ptr = raw_ptr.cast::<Self>();
+        unsafe { &*raw_ptr }
     }
 
     /// Creates a mutable reference to [`ReportAttachments`] from a mutable
@@ -72,7 +74,9 @@ where
     /// attachments must be `Send+Sync`
     #[must_use]
     pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
-        unsafe { &mut *(raw as *mut Vec<RawAttachment> as *mut Self) }
+        let raw_ptr = raw as *mut Vec<RawAttachment>;
+        let raw_ptr = raw_ptr.cast::<Self>();
+        unsafe { &mut *raw_ptr }
     }
 
     #[must_use]
