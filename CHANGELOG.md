@@ -22,6 +22,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Do more re-organization while it's free to do so [#37](https://github.com/rootcause-rs/rootcause/pull/37)
+- More docs, examples, README [#41](https://github.com/rootcause-rs/rootcause/pull/41)
 
 ## [0.5.0] - 2025-10-27
 
