@@ -38,7 +38,7 @@ use crate::{
 /// contexts, allowing access to the vtable and other fields even when the
 /// concrete context type `C` is unknown.
 #[repr(C)]
-pub(super) struct ReportData<C: 'static> {
+pub(crate) struct ReportData<C: 'static> {
     /// Reference to the vtable of this report
     vtable: &'static ReportVtable,
     /// The children of this report

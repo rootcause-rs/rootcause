@@ -16,8 +16,8 @@
 //! [`AttachmentData<A>`]: data::AttachmentData
 //! [`AttachmentVtable`]: vtable::AttachmentVtable
 
-mod data;
-mod raw;
-mod vtable;
+pub(crate) mod data;
+pub(crate) mod raw;
+pub(crate) mod vtable;
 
 pub use self::raw::{RawAttachment, RawAttachmentRef};

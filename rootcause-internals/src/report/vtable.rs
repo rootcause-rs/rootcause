@@ -31,7 +31,7 @@ use crate::{
 ///
 /// Contains function pointers for performing operations on reports without
 /// knowing their concrete type at compile time.
-pub(super) struct ReportVtable {
+pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].
     type_id: fn() -> TypeId,
@@ -357,8 +357,8 @@ unsafe fn debug<C: 'static, H: ContextHandler<C>>(
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `A` matches the actual attachment type
-/// stored in the [`AttachmentData`].
+/// The caller must ensure that the type `C` matches the actual context type
+/// stored in the [`ReportData`].
 unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'_>,
     report_formatting_function: FormattingFunction,

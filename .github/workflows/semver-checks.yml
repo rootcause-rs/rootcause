@@ -25,4 +25,3 @@ jobs:
 
       - name: Run cargo-semver-checks
         uses: obi1kenobi/cargo-semver-checks-action@v2
-        continue-on-error: true

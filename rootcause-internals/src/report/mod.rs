@@ -22,8 +22,8 @@
 //! [`ReportData<C>`]: data::ReportData
 //! [`ReportVtable`]: vtable::ReportVtable
 
-mod data;
-mod raw;
-mod vtable;
+pub(crate) mod data;
+pub(crate) mod raw;
+pub(crate) mod vtable;
 
 pub use raw::{RawReport, RawReportMut, RawReportRef};

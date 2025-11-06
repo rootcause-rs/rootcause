@@ -30,7 +30,7 @@ use crate::{
 /// contexts, allowing access to the vtable field even when the concrete
 /// attachment type `A` is unknown.
 #[repr(C)]
-pub(super) struct AttachmentData<A: 'static> {
+pub(crate) struct AttachmentData<A: 'static> {
     /// The Vtable of this attachment
     vtable: &'static AttachmentVtable,
     /// The actual attachment data

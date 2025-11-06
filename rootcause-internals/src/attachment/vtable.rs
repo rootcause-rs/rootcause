@@ -29,7 +29,7 @@ use crate::{
 ///
 /// Contains function pointers for performing operations on attachments without
 /// knowing their concrete type at compile time.
-pub(super) struct AttachmentVtable {
+pub(crate) struct AttachmentVtable {
     /// Gets the [`TypeId`] of the attachment type that was used to create this
     /// [`AttachmentVtable`].
     type_id: fn() -> TypeId,
