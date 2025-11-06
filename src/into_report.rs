@@ -24,10 +24,9 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// # Thread Safety
 ///
 /// The type parameter `T` specifies the desired thread-safety marker:
-/// - [`markers::SendSync`](crate::markers::SendSync): Report can be sent
-///   between threads
-/// - [`markers::Local`](crate::markers::Local): Report is restricted to the
-///   current thread
+/// - [`markers::SendSync`]: Report can be sent
+///   across threads
+/// - [`markers::Local`]: Report is restricted to the
 ///
 /// When converting from `SendSync` to `Local`, the conversion always succeeds.
 /// Converting from `Local` to `SendSync` is only available if the context type
