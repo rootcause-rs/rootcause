@@ -1,0 +1,22 @@
+name: Semver Checks
+
+on:
+  push:
+    branches: ["main"]
+  merge_group:
+  pull_request:
+  schedule:
+    - cron: "32 4 * * 5"
+  workflow_dispatch:
+
+jobs:
+  semver-checks:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Run cargo-semver-checks
+        uses: obi1kenobi/cargo-semver-checks-action@v2
+        with:
+          package: rootcause, rootcause-internals

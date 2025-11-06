@@ -1,68 +1,126 @@
 //! Basic introduction to rootcause error handling.
 //!
-//! This example demonstrates the fundamental concepts:
-//! 1. Creating errors with `report!()`
-//! 2. Adding context with `.context()`
-//! 3. Attaching extra information with `.attach()`
-//! 4. Building error chains through function calls
+//! **Run this example:** `cargo run --example basic`
+//!
+//! This example demonstrates the core error handling workflow through a
+//! realistic application startup scenario. Each function builds on the previous
+//! one, showing how errors naturally accumulate context as they propagate up
+//! the call stack.
+//!
+//! The concepts demonstrated:
+//! 1. The `?` operator - works automatically with any error type
+//! 2. `.context()` - add meaning to explain what failed
+//! 3. `.attach()` - include debugging information
+//! 4. Composition - everything chains together naturally
+//!
+//! **What's next?** You've learned the basics. Now choose your path:
+//! - Need to create your own errors? → `custom_errors.rs`
+//! - Want to understand the type system? → `typed_reports.rs`
+//! - Ready to see all the examples? → See `examples/README.md`
 
 use std::fs;
 
 use rootcause::prelude::*;
 
-/// Simplest usage: Types implementing `Error` automatically convert to Report.
-fn read_config_file_simple(path: &str) -> Result<String, Report> {
-    // The ? operator automatically converts types that implement std::error::Error
-    let data = fs::read_to_string(path)?;
-    Ok(data)
+// ============================================================================
+// CONCEPT 1: The `?` Operator Just Works
+// ============================================================================
+// You don't need to change existing error-handling code. The `?` operator
+// automatically converts any error type to Report.
+
+/// Reads a file. This is where the actual I/O error will occur.
+fn read_file(path: &str) -> Result<String, Report> {
+    // The `?` operator automatically converts io::Error → Report
+    let content = fs::read_to_string(path)?;
+    Ok(content)
 }
 
-/// Adding information: Use .attach() to include debugging details.
-fn read_config_file(path: &str) -> Result<String, Report> {
-    // .attach() adds information that will be shown in the error output
-    let data = fs::read_to_string(path).attach_with(|| format!("Config path: {path}"))?;
-    Ok(data)
+// ============================================================================
+// CONCEPT 2: Adding Context with `.context()`
+// ============================================================================
+// Raw errors like "No such file or directory" don't explain WHY you needed that
+// file. Use `.context()` to add meaning and build a story.
+
+/// Reads the config file and explains what it's for.
+fn load_config(path: &str) -> Result<String, Report> {
+    // Add context to explain what this file is and why it matters
+    let content = read_file(path).context("Failed to load application configuration")?;
+    Ok(content)
 }
 
-/// Building context: Use .context() to explain what you were trying to do.
-///
-/// Error chains let you show both the low-level cause (e.g., "file not found")
-/// and the high-level operation that failed (e.g., "loading user config").
-fn load_user_config() -> Result<String, Report> {
-    // .context() adds a parent error that explains what this function was doing
-    let config = read_config_file("/nonexistent/config.toml")
-        .context("Failed to load user configuration")
-        .attach("Expected format: TOML")?;
-    Ok(config)
+// ============================================================================
+// CONCEPT 3: Attaching Debug Information with `.attach()`
+// ============================================================================
+// Sometimes you need more than just error messages - you need data. Use
+// `.attach()` to include debugging information that appears in the error
+// output.
+//
+// DECISION RULE: When to use which?
+// • .context() - Describes WHAT operation failed ("Failed to load config")
+//              - Creates a NEW LEVEL in the error chain (preceded by ●)
+// • .attach()  - Provides specific DATA about the failure (path, format, etc.)
+//              - Adds metadata to the CURRENT LEVEL (shown below the ● line)
+//
+// In the output below, notice how contexts create new ● entries while
+// attachments appear underneath the most recent context.
+
+/// Loads config and attaches debugging information.
+fn load_config_with_debug_info(path: &str) -> Result<String, Report> {
+    let content = load_config(path)
+        .attach(format!("Config path: {path}")) // Data: which file
+        .attach("Expected format: TOML")?; // Data: expected format
+    Ok(content)
 }
 
-/// Error chains show the path through your code.
-///
-/// Each function adds its own context, creating a trail from the top-level
-/// operation down to the root cause. This makes debugging much easier.
-fn startup() -> Result<(), Report> {
-    let _config = load_user_config()
+// ============================================================================
+// CONCEPT 4: Putting It All Together
+// ============================================================================
+// This shows how everything composes naturally. Each layer adds context and
+// attachments, building a complete picture of what went wrong.
+
+/// The top-level startup function that orchestrates the whole process.
+fn startup(config_path: &str, environment: &str) -> Result<(), Report> {
+    // Load the configuration with full context and debugging info
+    let _config = load_config_with_debug_info(config_path)
         .context("Application startup failed")
-        .attach("Startup phase: Configuration loading")?;
+        .attach(format!("Environment: {environment}"))?;
 
+    // In a real app, you'd parse the config and initialize services
     Ok(())
 }
 
 fn main() {
-    println!("=== Basic Error Handling ===\n");
+    println!("=== rootcause Basic Tutorial ===\n");
 
-    // Example 1: Just the error, no extra information
-    println!("Example 1: Simple error (just using ?)");
-    if let Err(report) = read_config_file_simple("/nonexistent/config.toml") {
+    // Try to start the app with a nonexistent config file
+    println!("Attempting to start application...\n");
+    if let Err(report) = startup("/nonexistent/config.toml", "production") {
         println!("{report}");
     }
-    println!();
 
-    // Example 2: Error chain showing the full context
-    // Notice how each function adds a layer, showing the path through your code
-    println!("Example 2: Error chain with context and attachments");
-    println!("(Shows: startup → load_user_config → read_config_file → io::Error)\n");
-    if let Err(report) = startup() {
-        println!("{report}");
-    }
+    println!(
+        "\n{}\n\
+         Notice how the error chain builds from bottom to top:\n\
+         \n\
+         • Root cause: \"No such file or directory\" (the original I/O error)\n\
+         • Low-level context: \"Failed to load application configuration\"\n\
+         • Debugging data: Config path and expected format (attached with .attach())\n\
+         • High-level context: \"Application startup failed\"\n\
+         • More debugging: Environment information\n\
+         \n\
+         Each function added its piece to tell the complete story of what went wrong.\n\
+         \n\
+         FORMATTING STRUCTURE:\n\
+         • Lines with ● are CONTEXTS (added with .context()) - they describe operations\n\
+         • Lines without ● are ATTACHMENTS (added with .attach()) - they provide data\n\
+         • Attachments appear grouped under their context in the output\n\
+         \n\
+         This is why we use .context() for \"what failed\" and .attach() for \"debug info\"!\n\
+         \n\
+         What's next?\n\
+         • Need to create your own errors? → custom_errors.rs\n\
+         • Want to understand the type system? → typed_reports.rs\n\
+         • See all examples? → examples/README.md\n",
+        "=".repeat(70)
+    );
 }

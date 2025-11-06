@@ -1,10 +1,43 @@
-//! Demonstrates the difference between `Report<C>` and `Report<dyn Any>`.
+//! Type-safe error handling with `Report<C>`.
 //!
-//! Key concepts:
+//! **Run this example:** `cargo run --example typed_reports`
+//!
+//! By default, rootcause uses `Report<dyn Any>` which can hold any error type.
+//! This is perfect when you just need errors to propagate. But sometimes you
+//! want callers to be able to pattern match and handle specific errors
+//! programmatically - that's when you use `Report<YourError>`.
+//!
+//! ## When to Use Typed Errors
+//!
+//! **Use `Report` (dynamic) when:**
+//! - You just need errors to propagate with context
+//! - Callers don't need to make decisions based on error variants
+//! - Like anyhow - simple and flexible
+//!
+//! **Use `Report<YourError>` (typed) when:**
+//! - Callers need to pattern match on specific errors
+//! - You want exhaustiveness checking on error handling
+//! - You want both type safety AND rich context (better than plain thiserror)
+//!
+//! **Example:** This example shows a database function that returns
+//! `Report<DatabaseError>` so callers can retry transient errors (ConnectionLost,
+//! QueryTimeout) but not permanent ones (ConstraintViolation, NotFound). The
+//! retry logic below demonstrates pattern matching on typed errors.
+//!
+//! ## Key Concepts
+//!
 //! - `Report<C>` preserves type information for pattern matching
 //! - `Report<dyn Any>` type-erases for flexibility with multiple error types
-//! - Libraries often use `Report<C>`, applications use `Report<dyn Any>`
 //! - The `?` operator automatically converts between them
+//! - Use `.current_context()` to access the typed error for pattern matching
+//!
+//! **Note:** This example focuses on the context type parameter. For other
+//! type parameters (Cloneable, Local), see the API docs.
+//!
+//! **What's next?**
+//! - Confused about type conversions? → `error_coercion.rs` explains how `?`
+//!   works
+//! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;
 
@@ -60,13 +93,16 @@ fn query_user_with_retry(user_id: u32) -> Result<String, Report> {
         match query_user(user_id) {
             Ok(user) => return Ok(user),
             Err(report) => {
-                // Pattern match on specific error type to decide retry strategy
+                // .current_context() gives us access to the typed error (DatabaseError)
+                // so we can pattern match on it to make intelligent decisions
                 let should_retry = match report.current_context() {
                     DatabaseError::ConnectionLost | DatabaseError::QueryTimeout => true,
                     DatabaseError::ConstraintViolation { .. } | DatabaseError::NotFound => false,
                 };
 
-                if !(should_retry || attempt < MAX_RETRIES) {
+                if !(should_retry && attempt < MAX_RETRIES) {
+                    // Convert to dynamic report since application code doesn't need
+                    // to pattern match anymore - the retry logic already handled it
                     return Err(report
                         .context(format!("Failed to query user after {attempt} attempts"))
                         .into_dyn_any());

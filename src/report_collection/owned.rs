@@ -71,7 +71,9 @@ where
     ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
-        unsafe { &*(raw as *const Vec<RawReport> as *const Self) }
+        let raw_ptr = raw as *const Vec<RawReport>;
+        let raw_ptr = raw_ptr.cast::<Self>();
+        unsafe { &*raw_ptr }
     }
 
     /// Creates a mutable reference to [`ReportCollection`] from mutable
@@ -86,7 +88,10 @@ where
     ///   actually of type `C` when `C` is a type different from `dyn Any`.
     #[must_use]
     pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
-        unsafe { &mut *(raw as *mut Vec<RawReport> as *mut Self) }
+        let raw_ptr = raw as *mut Vec<RawReport>;
+        let raw_ptr = raw_ptr.cast::<Self>();
+
+        unsafe { &mut *raw_ptr }
     }
 
     #[must_use]

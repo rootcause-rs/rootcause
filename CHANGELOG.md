@@ -5,7 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.7.0-pre] - Unreleased
+
+### Added
+
+- More docs, examples, README [#40](https://github.com/rootcause-rs/rootcause/pull/40)
+- More docs, examples, README [#41](https://github.com/rootcause-rs/rootcause/pull/41)
 
 ## [0.6.0] - 2025-10-29
 
@@ -82,7 +87,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.6.0...HEAD
+[0.7.0-pre]: https://github.com/rootcause-rs/rootcause/compare/v0.6.0...HEAD
 [0.6.0]: https://github.com/rootcause-rs/rootcause/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/rootcause-rs/rootcause/compare/v0.4.3...v0.5.0
 [0.4.3]: https://github.com/rootcause-rs/rootcause/compare/v0.4.2...v0.4.3

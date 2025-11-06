@@ -1,9 +1,25 @@
-//! This module encapsulates the fields of the [`RawAttachment`] and
-//! [`RawAttachmentRef`]. Since this is the only place they are visible, this
-//! means that the `ptr` field of both types is always guaranteed to come from
-//! [`Box<AttachmentData<A>>`]. This follows from the fact that there are no
-//! places where the `ptr` field is altered after creation (besides invalidating
-//! it after it should no longer be used).
+//! Type-erased attachment pointer types.
+//!
+//! This module encapsulates the `ptr` field of [`RawAttachment`] and
+//! [`RawAttachmentRef`], ensuring it is only visible within this module. This
+//! visibility restriction guarantees the safety invariant: **the pointer always
+//! comes from `Box<AttachmentData<A>>`**.
+//!
+//! # Safety Invariant
+//!
+//! Since the `ptr` field can only be set via [`RawAttachment::new`] (which
+//! creates it from `Box::into_raw`), and cannot be modified afterward (no `pub`
+//! or `pub(crate)` fields), the pointer provenance remains valid throughout the
+//! value's lifetime.
+//!
+//! The [`RawAttachment::drop`] implementation relies on this invariant to safely
+//! reconstruct the `Box` and deallocate the memory.
+//!
+//! # Type Erasure
+//!
+//! The concrete type parameter `A` is erased by casting to `AttachmentData<Erased>`.
+//! The vtable stored within the `AttachmentData` provides the runtime type
+//! information needed to safely downcast and format attachments.
 
 use alloc::boxed::Box;
 use core::{any::TypeId, ptr::NonNull};
@@ -113,9 +129,12 @@ impl<'a> RawAttachmentRef<'a> {
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<A>());
 
         let this = self.ptr.cast::<AttachmentData<A::Target>>();
-        // SAFETY: Our caller guarantees that we point to an AttachmentData<A>, so it is
-        // safe to turn the NonNull pointer into a reference with the same
-        // lifetime
+        // SAFETY: Our caller guarantees that we point to an AttachmentData<A>.
+        // Converting NonNull to a reference is safe because:
+        // - The pointer is valid and aligned (from Box allocation in RawAttachment::new)
+        // - The data is initialized (Box allocation initializes)
+        // - The lifetime 'a is tied to the RawAttachmentRef<'a>, preventing use-after-free
+        // - Shared access through RawAttachmentRef prevents aliasing violations
         unsafe { this.as_ref() }
     }
 

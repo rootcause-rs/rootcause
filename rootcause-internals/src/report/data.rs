@@ -1,9 +1,23 @@
-//! This module encapsulates the fields of the [`ReportData`]. Since this is the
-//! only place they are visible, this means that the type of the
-//! [`ReportVtable`] is guaranteed to always be in sync with the type of the
-//! actual context. This follows from the fact that they are in sync
-//! when created and that the API offers no way to change the [`ReportVtable`]
-//! or context type after creation.
+//! `ReportData<C>` wrapper and field access.
+//!
+//! This module encapsulates the fields of [`ReportData`], ensuring they are
+//! only visible within this module. This visibility restriction guarantees the
+//! safety invariant: **the vtable type must always match the actual context
+//! type**.
+//!
+//! # Safety Invariant
+//!
+//! Since `ReportData` can only be constructed via [`ReportData::new`] (which
+//! creates matching vtable and context), and fields cannot be modified after
+//! construction (no `pub` or `pub(crate)` fields), the types remain in sync
+//! throughout the value's lifetime.
+//!
+//! # `#[repr(C)]` Layout
+//!
+//! The `#[repr(C)]` attribute enables safe field projection even when the type
+//! parameter `C` is erased. This allows accessing the vtable, children, and
+//! attachments fields from a pointer to `ReportData<Erased>` without constructing
+//! an invalid reference to the full struct.
 
 use alloc::vec::Vec;
 use core::ptr::NonNull;
@@ -24,7 +38,7 @@ use crate::{
 /// contexts, allowing access to the vtable and other fields even when the
 /// concrete context type `C` is unknown.
 #[repr(C)]
-pub(super) struct ReportData<C: 'static> {
+pub(crate) struct ReportData<C: 'static> {
     /// Reference to the vtable of this report
     vtable: &'static ReportVtable,
     /// The children of this report
@@ -82,15 +96,10 @@ impl RawReport {
                 (data.context, data.children, data.attachments)
             }
             Err(_) => {
-                if cfg!(debug_assertions) {
-                    unreachable!("Caller did not fulfill the guarantee that pointer is unique")
-                } else {
-                    // SAFETY: This unsafe block *will* cause Undefined Behavior. However our caller
-                    // guarantees that the pointer must be unique. This match
-                    // statement can only be reached when our caller has broken
-                    // that requirement, so it is valid to cause Undefined Behavior in this case.
-                    unsafe { core::hint::unreachable_unchecked() }
-                }
+                // We could definitely get away with using unreachable_unchecked here in release
+                // builds, but since we don't expect anybody to use into_parts in performance-critical
+                // paths, it's probably better to just have a normal panic even in release builds.
+                unreachable!("Caller did not fulfill the guarantee that pointer is unique")
             }
         }
     }
@@ -112,8 +121,11 @@ impl<'a> RawReportRef<'a> {
         // since we don't have the right type.
         let vtable_ptr: *const &'static ReportVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: Deferencing the pointer and getting out the `&'static ReportVtable`
-        // is valid for the same reasons
+        // SAFETY: The vtable_ptr is derived from a valid Arc pointer and points
+        // to an initialized `&'static ReportVtable` field. Dereferencing is safe
+        // because:
+        // - The pointer is valid and properly aligned
+        // - The vtable field is initialized in ReportData::new and never modified
         unsafe { *vtable_ptr }
     }
 
@@ -132,8 +144,8 @@ impl<'a> RawReportRef<'a> {
         let children_ptr: *const Vec<RawReport> = unsafe { &raw const (*ptr).children };
 
         // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
-        // because the existence of the `RawReportMut<'a>` already implied that
-        // we had readable access to the report for the 'a lifetime.
+        // because the existence of the `RawReportRef<'a>` already implies that
+        // we have readable access to the report for the 'a lifetime.
         unsafe { &*children_ptr }
     }
 
@@ -152,8 +164,8 @@ impl<'a> RawReportRef<'a> {
         let attachments_ptr: *const Vec<RawAttachment> = unsafe { &raw const (*ptr).attachments };
 
         // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
-        // because the existence of the `RawReportMut<'a>` already implied that
-        // we had readable access to the report for the 'a lifetime.
+        // because the existence of the `RawReportRef<'a>` already implies that
+        // we have readable access to the report for the 'a lifetime.
         unsafe { &*attachments_ptr }
     }
 

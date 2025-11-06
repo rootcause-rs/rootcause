@@ -99,6 +99,9 @@ where
     /// - The thread safety marker must match the contents of the report. More
     ///   specifically if the marker is [`SendSync`], then all contexts and
     ///   attachments must be `Send+Sync`
+    ///
+    /// [`RawReport`]: rootcause_internals::RawReport
+    /// [`ReportMut`]: crate::ReportMut
     #[must_use]
     pub(crate) unsafe fn from_raw(raw: RawReportRef<'a>) -> Self {
         Self {

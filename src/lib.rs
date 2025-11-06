@@ -7,6 +7,8 @@
     clippy::missing_safety_doc,
 //     clippy::undocumented_unsafe_blocks,
     clippy::multiple_unsafe_ops_per_block,
+    clippy::as_ptr_cast_mut,
+    clippy::ptr_as_ptr,
     rustdoc::invalid_rust_codeblocks,
     rustdoc::broken_intra_doc_links,
     missing_copy_implementations,
@@ -32,115 +34,224 @@
 //! programmatically. This makes debugging easier while still providing
 //! beautiful, human-readable error messages.
 //!
-//! ## Project goals
+//! ## Quick Example
 //!
-//! - **Ergonomic**: The `?` operator should work with most error types, even
-//!   ones not designed for this library.
-//! - **Fast happy path**: A `Result<(), Report>` should never be larger than a
-//!   `usize`.
-//! - **Typable**: Users should be able to (optionally) specify the type of the
-//!   context in the root node.
-//! - **Inspectable**: The objects in a Report should not be glorified strings.
-//!   Inspecting and interacting with them should be easy.
-//! - **Cloneable**: It should be possible to clone a `Report` when you need to.
-//! - **Mergeable**: It should be possible to merge multiple `Report`s into a
-//!   single one.
-//! - **Customizable**: It should be possible to customize what data gets
-//!   collected, or how reports are formatted.
-//! - **Rich**: Reports should automatically capture information (like
-//!   backtraces) that might be useful in debugging.
-//! - **Beautiful**: The default formatting of a Report should look pleasant (at
-//!   least to the authors).
+//! ```rust
+//! use rootcause::prelude::*;
+//!
+//! fn read_config(path: &str) -> Result<String, Report> {
+//!     std::fs::read_to_string(path).context("Failed to read configuration file")?;
+//!     Ok(String::new())
+//! }
+//! ```
+//!
+//! For more examples, see the
+//! [examples directory](https://github.com/rootcause-rs/rootcause/tree/main/examples)
+//! in the repository. Start with
+//! [`basic.rs`](https://github.com/rootcause-rs/rootcause/blob/main/examples/basic.rs)
+//! for a hands-on introduction.
 //!
 //! ## Core Concepts
 //!
-//! At a high level, you can think of the library as a way to build a tree of
-//! error reports, where each node in the tree represents a step in the error's
-//! history.
+//! At a high level, rootcause helps you build a tree of error reports. Each node
+//! in the tree represents a step in the error's history - you start with a root
+//! error, then add context and attachments as it propagates up through your code.
 //!
-//! You can think of a [`Report`] as roughly implementing this data structure:
+//! Most error reports are linear chains (just like anyhow), but the tree structure
+//! lets you collect multiple related errors when needed.
 //!
-//! ```rust
-//! # use std::any::Any;
-//! struct Report<C: ?Sized> {
-//!     root: triomphe::Arc<Node<C>>,
-//! }
+//! Each report has:
+//! - A **context** (the error itself)
+//! - Optional **attachments** (debugging data)
+//! - Optional **children** (one or more errors that caused this error)
 //!
-//! struct Node<C: ?Sized> {
-//!     attachments: Vec<Attachment>,
-//!     children: Vec<Report<dyn Any>>,
-//!     context: C,
-//! }
-//!
-//! struct Attachment(Box<dyn Any>);
-//! ```
-//!
-//! In practice, the actual implementation differs from this somewhat. There are
-//! multiple reasons for this, including performance, ergonomics, and being able
-//! to support the features we want.
-//!
-//! However, this simpler implementation does illustrate the core concepts and
-//! the ownership model well.
-//!
-//! If you want the full details, take a look at the [`rootcause-internals`]
-//! crate.
+//! For implementation details, see the [`rootcause-internals`] crate.
 //!
 //! [`rootcause-internals`]: rootcause_internals
 //!
-//! ## Generics and Report Variants
+//! ## Project Goals
 //!
-//! To support the different, incompatible use-cases, the `Report` type is
-//! generic over three parameters:
+//! - **Ergonomic**: The `?` operator should work with most error types, even
+//!   ones not designed for this library.
+//! - **Multi-failure tracking**: When operations fail multiple times (retry
+//!   attempts, batch processing, parallel execution), all failures should be
+//!   captured and preserved in a single report.
+//! - **Inspectable**: The objects in a Report should not be glorified strings.
+//!   Inspecting and interacting with them should be easy.
+//! - **Optionally typed**: Users should be able to (optionally) specify the type
+//!   of the context in the root node.
+//! - **Beautiful**: The default formatting should look pleasant—and if it
+//!   doesn't match your style, the hook system lets you customize it.
+//! - **Cloneable**: It should be possible to clone a `Report` when you need to.
+//! - **Self-documenting**: Reports should automatically capture information (like
+//!   backtraces and locations) that might be useful in debugging.
+//! - **Customizable**: It should be possible to customize what data gets
+//!   collected, or how reports are formatted.
+//! - **Lightweight**: `Report` has a pointer-sized representation, keeping
+//!   `Result<T, Report>` small and fast.
 //!
-//! 1. The type of the context in the root node. The default is `dyn Any`, which
-//!    means that the root node can have any type of context.
-//! 2. The ownership and cloning behavior of the report. The default is
-//!    [`Mutable`], which means that the root node of the report is mutable, but
-//!    cannot be cloned.
-//! 3. The thread-safety of the objects inside the report. The default is
-//!    [`SendSync`], which means that the report implements `Send+Sync`, but
-//!    also requires all objects inside it to be `Send+Sync`.
+//! ## Report Type Parameters
 //!
-//! If you want an experience similar to [`anyhow`], you can ignore all the type
-//! parameters. You should simply use `Report`, which is the same as `Report<dyn
-//! Any, Mutable, SendSync>`.
+//! The `Report` type is generic over three parameters, but for most users the
+//! defaults work fine.
 //!
-//! If you want an experience similar to [`error-stack`], you should use
-//! `Report<SomeContextType>`, which is the same as `Report<SomeContextType,
-//! Mutable, SendSync>`.
+//! **Most common usage:**
 //!
-//! #### Tables of Report Variants
+//! ```rust
+//! # use rootcause::prelude::*;
+//! // Just use Report - works like anyhow::Error
+//! fn might_fail() -> Result<(), Report> {
+//!     # Ok(())
+//! }
+//! ```
 //!
-//! ##### Context Variants
+//! **For type safety:**
 //!
-//! | Variant                       | Context of root node | Context of internal nodes |
-//! |-------------------------------|----------------------|---------------------------|
-//! | `Report<SomeContextType,*,*>` | `SomeContextType`    | Can be anything           |
-//! | `Report<dyn Any,*,*>`         | Can be anything      | Can be anything           |
+//! ```rust
+//! # use rootcause::prelude::*;
+//! #[derive(Debug)]
+//! struct MyError;
+//! # impl std::fmt::Display for MyError {
+//! #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//! #         write!(f, "MyError")
+//! #     }
+//! # }
+//! # impl std::error::Error for MyError {}
 //!
-//! Note that `dyn Any` should only be thought of as a marker. No actual trait
-//! object is stored anywhere. Converting from a `Report<SomeContextType>` to a
-//! `Report<dyn Any>` is a zero-cost operation.
+//! // Use Report<YourError> - works like error-stack
+//! fn typed_error() -> Result<(), Report<MyError>> {
+//!     # Ok(())
+//! }
+//! ```
 //!
-//! ##### Ownership and Cloning Variants
+//! **Need cloning or thread-local data?** The sections below explain the other
+//! type parameters. Come back to these when you need them - they solve specific
+//! problems you'll recognize when you encounter them.
 //!
-//! | Variant                 | `Clone` | Mutation supported | Intuition                                                                 |
-//! |-------------------------|---------|--------------------|-----------------------------------------------------------------------------------------------------------------|
-//! | `Report<*,Mutable,*>`   | ❌      | 🟡 - Root only     | Root node is allocated using [`UniqueArc`], internal nodes using [`Arc`]. |
-//! | `Report<*,Cloneable,*>` | ✅      | ❌                 | All nodes are allocated using [`Arc`].                                    |
+//! ---
 //!
-//! [`UniqueArc`]: https://docs.rs/triomphe/latest/triomphe/struct.UniqueArc.html
-//! [`Arc`]: https://docs.rs/triomphe/latest/triomphe/struct.Arc.html
+//! ## Type Parameters
 //!
-//! The `Mutable` variant exists to allow mutating the root node (for example,
-//! adding attachments).
+//! *This section covers the full type parameter system. Most users won't need
+//! these variants immediately - but if you do need cloning, thread-local
+//! errors, or want to understand what's possible, read on.*
 //!
-//! ##### Thread-Safety Variants
+//! The `Report` type has three type parameters: `Report<Context, Ownership,
+//! ThreadSafety>`. This section explains all the options and when you'd use
+//! them.
 //!
-//! | Variant                | `Send+Sync` | Permits insertion of `!Send` and `!Sync` objects | Intuition                                                                                |
-//! |------------------------|-------------|--------------------------------------------------|------------------------------------------------------------------------------------------|
-//! | `Report<*,*,SendSync>` | ✅          | ❌                                               | The objects inside the report are `Send+Sync`, so the report itself is also `Send+Sync`. |
-//! | `Report<*,*,Local>`    | ❌          | ✅                                               | Since objects inside the report might not be `Send+Sync`, the report is `!Send+!Sync`.   |
+//! ### Context Type: Typed vs Dynamic Errors
+//!
+//! **Use `Report<dyn Any>`** (or just `Report`) when errors just need to propagate.
+//! **Use `Report<YourErrorType>`** when callers need to pattern match on specific error variants.
+//!
+//! **`Report<dyn Any>`** (or just `Report`) — Flexible, like [`anyhow`]
+//!
+//! Can hold any error type at the root. The `?` operator automatically converts
+//! any error into a `Report`. Note: `dyn Any` is just a marker - no actual trait
+//! object is stored. Converting between typed and dynamic reports is zero-cost.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! // Can return any error type
+//! fn might_fail() -> Result<(), Report> {
+//!     # Ok(())
+//! }
+//! ```
+//!
+//! **`Report<YourErrorType>`** — Type-safe, like [`error-stack`]
+//!
+//! The root error must be `YourErrorType`, but child errors can be anything.
+//! Callers can use `.current_context()` to pattern match on the typed error.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! #[derive(Debug)]
+//! struct ConfigError {/* ... */}
+//! # impl std::fmt::Display for ConfigError {
+//! #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { Ok(()) }
+//! # }
+//! # impl std::error::Error for ConfigError {}
+//!
+//! // This function MUST return ConfigError at the root
+//! fn load_config() -> Result<(), Report<ConfigError>> {
+//!     # Ok(())
+//! }
+//! ```
+//!
+//! See [`examples/typed_reports.rs`] for a complete example with retry logic.
+//!
+//! [`examples/typed_reports.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/typed_reports.rs
+//!
+//! ### Ownership: Mutable vs Cloneable
+//!
+//! **Use the default ([`Mutable`])** when errors just propagate with `?`.
+//! **Use `.into_cloneable()`** when you need to store errors in collections or use them multiple times.
+//!
+//! **[`Mutable`]** (default) — Unique ownership
+//!
+//! You can add attachments and context to the root, but can't clone the whole
+//! report. Note: child reports are still cloneable internally (they use `Arc`),
+//! but the top-level `Report` doesn't implement `Clone`. Start here, then
+//! convert to [`Cloneable`] if you need to clone the entire tree.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! let mut report: Report<String, markers::Mutable> = report!("error".to_string());
+//! let report = report.attach("debug info"); // ✅ Can mutate root
+//! // let cloned = report.clone();            // ❌ Can't clone whole report
+//! ```
+//!
+//! **[`Cloneable`]** — Shared ownership
+//!
+//! The report can be cloned cheaply (via `Arc`), but can't be mutated. Use when
+//! you need to pass the same error to multiple places.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! let report: Report<String, markers::Mutable> = report!("error".to_string());
+//! let cloneable = report.into_cloneable();
+//! let copy1 = cloneable.clone(); // ✅ Can clone
+//! let copy2 = cloneable.clone(); // ✅ Cheap (Arc clone)
+//! // let modified = copy1.attach("info"); // ❌ Can't mutate
+//! ```
+//!
+//! See [`examples/retry_with_collection.rs`] for collection usage.
+//!
+//! [`examples/retry_with_collection.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/retry_with_collection.rs
+//!
+//! ### Thread Safety: SendSync vs Local
+//!
+//! **Use the default ([`SendSync`])** unless you get compiler errors about `Send` or `Sync`.
+//! **Use [`Local`]** only when attaching `!Send` types like `Rc` or `Cell`.
+//!
+//! **[`SendSync`]** (default) — Thread-safe
+//!
+//! The report and all its contents are `Send + Sync`. Most types (String, Vec,
+//! primitives) are already `Send + Sync`, so this just works.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! let report: Report<String, markers::Mutable, markers::SendSync> = report!("error".to_string());
+//!
+//! std::thread::spawn(move || {
+//!     println!("{}", report); // ✅ Can send to other threads
+//! });
+//! ```
+//!
+//! **[`Local`]** — Not thread-safe
+//!
+//! Use when your error contains thread-local data like `Rc`, raw pointers, or
+//! other `!Send` types.
+//!
+//! ```rust
+//! # use rootcause::prelude::*;
+//! use std::rc::Rc;
+//!
+//! let data = Rc::new("thread-local".to_string());
+//! let report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(data);
+//! // std::thread::spawn(move || { ... }); // ❌ Can't send to other threads
+//! ```
 //!
 //! ## Converting Between Report Variants
 //!
@@ -187,10 +298,14 @@
 //!
 //! [`PreformattedContext`]: crate::preformatted::PreformattedContext
 //! [`Mutable`]: crate::markers::Mutable
+//! [`Cloneable`]: crate::markers::Cloneable
 //! [`SendSync`]: crate::markers::SendSync
+//! [`Local`]: crate::markers::Local
 //! [`anyhow`]: https://docs.rs/anyhow
+//! [`anyhow::Error`]: https://docs.rs/anyhow/latest/anyhow/struct.Error.html
 //! [`thiserror`]: https://docs.rs/thiserror
 //! [`error-stack`]: https://docs.rs/error-stack
+//! [`error-stack::Report`]: https://docs.rs/error-stack/latest/error_stack/struct.Report.html
 
 extern crate alloc;
 

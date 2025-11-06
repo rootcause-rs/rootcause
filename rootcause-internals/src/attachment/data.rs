@@ -1,9 +1,23 @@
-//! This module encapsulates the fields of the [`AttachmentData`]. Since this is
-//! the only place they are visible, this means that the type of the
-//! [`AttachmentVtable`] is guaranteed to always be in sync with the type of the
-//! actual attachment. This follows from the fact that they are in sync
-//! when created and that the API offers no way to change the
-//! [`AttachmentVtable`] or attachment type after creation.
+//! `AttachmentData<A>` wrapper and field access.
+//!
+//! This module encapsulates the fields of [`AttachmentData`], ensuring they are
+//! only visible within this module. This visibility restriction guarantees the
+//! safety invariant: **the vtable type must always match the actual attachment
+//! type**.
+//!
+//! # Safety Invariant
+//!
+//! Since `AttachmentData` can only be constructed via [`AttachmentData::new`]
+//! (which creates matching vtable and attachment), and fields cannot be modified
+//! after construction (no `pub` or `pub(crate)` fields), the types remain in
+//! sync throughout the value's lifetime.
+//!
+//! # `#[repr(C)]` Layout
+//!
+//! The `#[repr(C)]` attribute enables safe field projection even when the type
+//! parameter `A` is erased. This allows accessing the vtable field from a
+//! pointer to `AttachmentData<Erased>` without constructing an invalid reference
+//! to the full struct.
 
 use crate::{
     attachment::{raw::RawAttachmentRef, vtable::AttachmentVtable},
@@ -16,7 +30,7 @@ use crate::{
 /// contexts, allowing access to the vtable field even when the concrete
 /// attachment type `A` is unknown.
 #[repr(C)]
-pub(super) struct AttachmentData<A: 'static> {
+pub(crate) struct AttachmentData<A: 'static> {
     /// The Vtable of this attachment
     vtable: &'static AttachmentVtable,
     /// The actual attachment data
@@ -54,8 +68,11 @@ impl<'a> RawAttachmentRef<'a> {
         // since we don't have the right type.
         let vtable_ptr: *const &'static AttachmentVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: Deferencing the pointer and getting out the `&'static
-        // AttachmentVtable` is valid for the same reasons
+        // SAFETY: The vtable_ptr is derived from a valid Box pointer and points
+        // to an initialized `&'static AttachmentVtable` field. Dereferencing is safe
+        // because:
+        // - The pointer is valid and properly aligned
+        // - The vtable field is initialized in AttachmentData::new and never modified
         unsafe { *vtable_ptr }
     }
 
