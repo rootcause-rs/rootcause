@@ -1,9 +1,23 @@
-//! This module encapsulates the fields of the [`AttachmentData`]. Since this is
-//! the only place they are visible, this means that the type of the
-//! [`AttachmentVtable`] is guaranteed to always be in sync with the type of the
-//! actual attachment. This follows from the fact that they are in sync
-//! when created and that the API offers no way to change the
-//! [`AttachmentVtable`] or attachment type after creation.
+//! `AttachmentData<A>` wrapper and field access.
+//!
+//! This module encapsulates the fields of [`AttachmentData`], ensuring they are
+//! only visible within this module. This visibility restriction guarantees the
+//! safety invariant: **the vtable type must always match the actual attachment
+//! type**.
+//!
+//! # Safety Invariant
+//!
+//! Since `AttachmentData` can only be constructed via [`AttachmentData::new`]
+//! (which creates matching vtable and attachment), and fields cannot be modified
+//! after construction (no `pub` or `pub(crate)` fields), the types remain in
+//! sync throughout the value's lifetime.
+//!
+//! # `#[repr(C)]` Layout
+//!
+//! The `#[repr(C)]` attribute enables safe field projection even when the type
+//! parameter `A` is erased. This allows accessing the vtable field from a
+//! pointer to `AttachmentData<Erased>` without constructing an invalid reference
+//! to the full struct.
 
 use crate::{
     attachment::{raw::RawAttachmentRef, vtable::AttachmentVtable},

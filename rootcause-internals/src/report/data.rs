@@ -1,9 +1,23 @@
-//! This module encapsulates the fields of the [`ReportData`]. Since this is the
-//! only place they are visible, this means that the type of the
-//! [`ReportVtable`] is guaranteed to always be in sync with the type of the
-//! actual context. This follows from the fact that they are in sync
-//! when created and that the API offers no way to change the [`ReportVtable`]
-//! or context type after creation.
+//! `ReportData<C>` wrapper and field access.
+//!
+//! This module encapsulates the fields of [`ReportData`], ensuring they are
+//! only visible within this module. This visibility restriction guarantees the
+//! safety invariant: **the vtable type must always match the actual context
+//! type**.
+//!
+//! # Safety Invariant
+//!
+//! Since `ReportData` can only be constructed via [`ReportData::new`] (which
+//! creates matching vtable and context), and fields cannot be modified after
+//! construction (no `pub` or `pub(crate)` fields), the types remain in sync
+//! throughout the value's lifetime.
+//!
+//! # `#[repr(C)]` Layout
+//!
+//! The `#[repr(C)]` attribute enables safe field projection even when the type
+//! parameter `C` is erased. This allows accessing the vtable, children, and
+//! attachments fields from a pointer to `ReportData<Erased>` without constructing
+//! an invalid reference to the full struct.
 
 use alloc::vec::Vec;
 use core::ptr::NonNull;
@@ -82,15 +96,10 @@ impl RawReport {
                 (data.context, data.children, data.attachments)
             }
             Err(_) => {
-                if cfg!(debug_assertions) {
-                    unreachable!("Caller did not fulfill the guarantee that pointer is unique")
-                } else {
-                    // SAFETY: This unsafe block *will* cause Undefined Behavior. However our caller
-                    // guarantees that the pointer must be unique. This match
-                    // statement can only be reached when our caller has broken
-                    // that requirement, so it is valid to cause Undefined Behavior in this case.
-                    unsafe { core::hint::unreachable_unchecked() }
-                }
+                // We could definitely get away with using unreachable_unchecked here in release
+                // builds, but since we don't expect anybody to use into_parts in performance-critical
+                // paths, it's probably better to just have a normal panic even in release builds.
+                unreachable!("Caller did not fulfill the guarantee that pointer is unique")
             }
         }
     }

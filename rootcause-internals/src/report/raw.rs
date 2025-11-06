@@ -1,9 +1,33 @@
-//! This module encapsulates the fields of the [`RawReport`], [`RawReportRef`],
-//! and [`RawReportMut`]. Since this is the only place they are visible, this
-//! means that the `ptr` field of all three types is always guaranteed to come
-//! from a [`triomphe::Arc<ReportData<C>>`]. This follows from the fact that
-//! there are no places where the `ptr` field is altered after creation (besides
-//! invalidating it after it should no longer be used).
+//! Type-erased report pointer types.
+//!
+//! This module encapsulates the `ptr` field of [`RawReport`], [`RawReportRef`],
+//! and [`RawReportMut`], ensuring it is only visible within this module. This
+//! visibility restriction guarantees the safety invariant: **the pointer always
+//! comes from `Arc<ReportData<C>>`**.
+//!
+//! # Safety Invariant
+//!
+//! Since the `ptr` field can only be set via [`RawReport::new`] or
+//! [`RawReport::from_arc`] (which create it from `Arc::into_raw`), and cannot be
+//! modified afterward (no `pub` or `pub(crate)` fields), the pointer provenance
+//! remains valid throughout the value's lifetime.
+//!
+//! The [`RawReport::drop`] implementation and reference counting operations rely
+//! on this invariant to safely reconstruct the `Arc` and manage memory.
+//!
+//! # Type Erasure
+//!
+//! The concrete type parameter `C` is erased by casting to `ReportData<Erased>`.
+//! The vtable stored within the `ReportData` provides the runtime type
+//! information needed to safely downcast and format reports.
+//!
+//! # Allocation Strategy
+//!
+//! Unlike attachments (which use `Box`), reports use `triomphe::Arc` for storage.
+//! This enables:
+//! - Cheap cloning through reference counting
+//! - Shared ownership across multiple report references
+//! - Thread-safe sharing when the context type is `Send + Sync`
 
 use alloc::vec::Vec;
 use core::{any::TypeId, ptr::NonNull};

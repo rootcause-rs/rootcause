@@ -5,9 +5,16 @@
 //! have been erased. The vtable stores function pointers that dispatch to the
 //! correct typed implementations.
 //!
-//! This module encapsulates the fields of the [`ReportVtable`] so that they
-//! cannot be accessed directly without going through the proper methods which
-//! specifies which safety invariants are required to call them safely.
+//! This module encapsulates the fields of [`ReportVtable`] so they cannot be
+//! accessed directly. This visibility restriction guarantees the safety
+//! invariant: **the vtable's type parameters must match the actual report
+//! context type and handler stored in the `ReportData`**.
+//!
+//! # Safety Invariant
+//!
+//! This invariant is maintained because vtables are created as `&'static`
+//! references via [`ReportVtable::new`], which pairs the function pointers
+//! with specific types `C` and `H` at compile time.
 
 use core::{any::TypeId, ptr::NonNull};
 
