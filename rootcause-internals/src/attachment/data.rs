@@ -68,8 +68,11 @@ impl<'a> RawAttachmentRef<'a> {
         // since we don't have the right type.
         let vtable_ptr: *const &'static AttachmentVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: Deferencing the pointer and getting out the `&'static
-        // AttachmentVtable` is valid for the same reasons
+        // SAFETY: The vtable_ptr is derived from a valid Box pointer and points
+        // to an initialized `&'static AttachmentVtable` field. Dereferencing is safe
+        // because:
+        // - The pointer is valid and properly aligned
+        // - The vtable field is initialized in AttachmentData::new and never modified
         unsafe { *vtable_ptr }
     }
 

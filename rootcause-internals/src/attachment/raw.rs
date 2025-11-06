@@ -129,9 +129,12 @@ impl<'a> RawAttachmentRef<'a> {
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<A>());
 
         let this = self.ptr.cast::<AttachmentData<A::Target>>();
-        // SAFETY: Our caller guarantees that we point to an AttachmentData<A>, so it is
-        // safe to turn the NonNull pointer into a reference with the same
-        // lifetime
+        // SAFETY: Our caller guarantees that we point to an AttachmentData<A>.
+        // Converting NonNull to a reference is safe because:
+        // - The pointer is valid and aligned (from Box allocation in RawAttachment::new)
+        // - The data is initialized (Box allocation initializes)
+        // - The lifetime 'a is tied to the RawAttachmentRef<'a>, preventing use-after-free
+        // - Shared access through RawAttachmentRef prevents aliasing violations
         unsafe { this.as_ref() }
     }
 

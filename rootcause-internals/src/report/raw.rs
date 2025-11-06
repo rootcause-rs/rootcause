@@ -169,8 +169,11 @@ impl<'a> RawReportRef<'a> {
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<C>());
 
         let this = self.ptr.cast::<ReportData<C::Target>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe
-        // to turn the NonNull pointer into a reference with the same lifetime
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is safe because:
+        // - The pointer originated from Arc::into_raw in RawReport construction
+        // - The Arc provides valid pointer provenance and prevents premature deallocation
+        // - Shared access through RawReportRef prevents aliasing violations
+        // - The lifetime 'a is tied to RawReportRef<'a>, preventing use-after-free
         unsafe { this.as_ref() }
     }
 
@@ -323,8 +326,11 @@ impl<'a> RawReportMut<'a> {
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
 
         let mut this = self.ptr.cast::<ReportData<C::Target>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>, so it is safe
-        // to turn the NonNull pointer into a reference with the same lifetime
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is safe because:
+        // - The pointer originated from Arc::into_raw in RawReport construction
+        // - The Arc provides valid pointer provenance and prevents premature deallocation
+        // - Exclusive access through RawReportMut prevents aliasing violations
+        // - The lifetime 'a is tied to RawReportMut<'a>, preventing use-after-free
         unsafe { this.as_mut() }
     }
 

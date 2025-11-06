@@ -151,7 +151,7 @@ impl ReportVtable {
     #[inline]
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
-        // `strong_count::<C>` below. That function has three requirements, all
+        // `strong_count::<C>` below. That function has two requirements, both
         // of which are guaranteed by our caller:
         // - The pointer must come from `triomphe::Arc::into_raw`
         // - The context type `C` must match the stored type
@@ -363,21 +363,22 @@ unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'_>,
     report_formatting_function: FormattingFunction,
 ) -> ContextFormattingStyle {
-    // SAFETY: Our caller guarantees that the type `C` matches the actual attachment
-    // type stored in the `AttachmentData`.
+    // SAFETY: Our caller guarantees that the type `C` matches the actual context
+    // type stored in the `ReportData`.
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
     H::preferred_formatting_style(context, report_formatting_function)
 }
 
-/// Gets the preferred formatting style using the
-/// [`H::preferred_formatting_style`] function.
-///
-/// [`H::preferred_formatting_style`]: ContextHandler::preferred_formatting_style
+/// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to by
+/// this pointer.
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `A` matches the actual attachment type
-/// stored in the [`AttachmentData`].
+/// The caller must ensure that:
+/// - The pointer comes from an [`triomphe::Arc<ReportData<C>>`], which was turned
+///   into a pointer using [`triomphe::Arc::into_raw`].
+/// - The context type `C` matches the actual context type stored in the
+///   [`ReportData`].
 unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 

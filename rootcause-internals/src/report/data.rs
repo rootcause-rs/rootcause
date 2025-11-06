@@ -121,8 +121,11 @@ impl<'a> RawReportRef<'a> {
         // since we don't have the right type.
         let vtable_ptr: *const &'static ReportVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: Deferencing the pointer and getting out the `&'static ReportVtable`
-        // is valid for the same reasons
+        // SAFETY: The vtable_ptr is derived from a valid Arc pointer and points
+        // to an initialized `&'static ReportVtable` field. Dereferencing is safe
+        // because:
+        // - The pointer is valid and properly aligned
+        // - The vtable field is initialized in ReportData::new and never modified
         unsafe { *vtable_ptr }
     }
 
@@ -141,8 +144,8 @@ impl<'a> RawReportRef<'a> {
         let children_ptr: *const Vec<RawReport> = unsafe { &raw const (*ptr).children };
 
         // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
-        // because the existence of the `RawReportMut<'a>` already implied that
-        // we had readable access to the report for the 'a lifetime.
+        // because the existence of the `RawReportRef<'a>` already implies that
+        // we have readable access to the report for the 'a lifetime.
         unsafe { &*children_ptr }
     }
 
@@ -161,8 +164,8 @@ impl<'a> RawReportRef<'a> {
         let attachments_ptr: *const Vec<RawAttachment> = unsafe { &raw const (*ptr).attachments };
 
         // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
-        // because the existence of the `RawReportMut<'a>` already implied that
-        // we had readable access to the report for the 'a lifetime.
+        // because the existence of the `RawReportRef<'a>` already implies that
+        // we have readable access to the report for the 'a lifetime.
         unsafe { &*attachments_ptr }
     }
 
