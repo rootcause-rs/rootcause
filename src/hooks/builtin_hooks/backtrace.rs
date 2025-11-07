@@ -237,7 +237,7 @@ impl ReportCreationHook for BacktraceCollector {
         mut report: crate::ReportMut<'_, dyn core::any::Any, crate::markers::Local>,
     ) {
         let do_capture =
-            self.capture_backtrace_for_reports_with_children || !report.children().is_empty();
+            self.capture_backtrace_for_reports_with_children || report.children().is_empty();
         if do_capture && let Some(backtrace) = Backtrace::capture(&self.filter) {
             let attachment = if self.show_full_path {
                 ReportAttachment::new_custom::<BacktraceHandler<true>>(backtrace)
@@ -253,7 +253,7 @@ impl ReportCreationHook for BacktraceCollector {
         mut report: crate::ReportMut<'_, dyn core::any::Any, crate::markers::SendSync>,
     ) {
         let do_capture =
-            self.capture_backtrace_for_reports_with_children || !report.children().is_empty();
+            self.capture_backtrace_for_reports_with_children || report.children().is_empty();
         if do_capture && let Some(backtrace) = Backtrace::capture(&self.filter) {
             let attachment = if self.show_full_path {
                 ReportAttachment::new_custom::<BacktraceHandler<true>>(backtrace)
