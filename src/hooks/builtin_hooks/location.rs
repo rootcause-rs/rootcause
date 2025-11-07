@@ -19,8 +19,6 @@ pub struct Location {
     pub file: &'static str,
     /// The line number where the report was created.
     pub line: u32,
-    /// The column number where the report was created.
-    pub column: u32,
 }
 
 /// Handler for formatting [`Location`] attachments.
@@ -34,7 +32,7 @@ pub struct Location {
 pub struct LocationHandler;
 impl AttachmentHandler<Location> for LocationHandler {
     fn display(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(formatter, "{}:{}:{}", value.file, value.line, value.column)
+        write!(formatter, "{}:{}", value.file, value.line)
     }
 
     fn debug(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
@@ -80,7 +78,6 @@ impl AttachmentCollectorHook<Location> for LocationCollector {
         Location {
             file: location.file(),
             line: location.line(),
-            column: location.column(),
         }
     }
 }

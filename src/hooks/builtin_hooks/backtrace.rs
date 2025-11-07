@@ -63,9 +63,7 @@ pub struct FramePath {
     /// The crate name if detected from the path.
     pub crate_name: Option<Cow<'static, str>>,
     /// Common path prefix information for shortening display.
-    pub prefix: Option<FramePrefix>,
-    /// The remaining path suffix after removing the prefix.
-    pub suffix: String,
+    pub split_path: Option<FramePrefix>,
 }
 
 /// A common prefix for a frame path.
@@ -74,7 +72,9 @@ pub struct FramePrefix {
     /// The kind of prefix used to identify this prefix (e.g., "RUST_SRC").
     pub prefix_kind: &'static str,
     /// The full prefix path value.
-    pub refix: String,
+    pub prefix: String,
+    /// The full suffix path value.
+    pub suffix: String,
 }
 
 /// Handler for formatting [`Backtrace`] attachments.
@@ -104,9 +104,12 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                     if let Some(path) = &frame.frame_path {
                         if SHOW_FULL_PATH {
                             write!(f, "{}", path.raw_path.display())?;
+                        } else if let Some(split_path) = &path.split_path {
+                            write!(f, "[..]/{}", split_path.suffix)?;
                         } else {
-                            write!(f, "{}", path.suffix)?;
+                            write!(f, "{}", path.raw_path.display())?;
                         }
+
                         if let Some(lineno) = frame.lineno {
                             write!(f, ":{lineno}")?;
                         }
@@ -408,12 +411,12 @@ impl FramePath {
 
             Self {
                 raw_path,
-                prefix: Some(FramePrefix {
+                split_path: Some(FramePrefix {
                     prefix_kind: "RUST_SRC",
-                    refix: prefix.to_string(),
+                    prefix: prefix.to_string(),
+                    suffix: suffix.to_string(),
                 }),
                 crate_name: Some(crate_capture.as_str().to_string().into()),
-                suffix: suffix.to_string(),
             }
         } else if let Some(captures) = registry_regex.captures(&path_str) {
             let raw_path = path.into_path_buf();
@@ -424,11 +427,11 @@ impl FramePath {
             Self {
                 raw_path,
                 crate_name: Some(crate_capture.as_str().to_string().into()),
-                prefix: Some(FramePrefix {
+                split_path: Some(FramePrefix {
                     prefix_kind: "CARGO",
-                    refix: prefix.to_string(),
+                    prefix: prefix.to_string(),
+                    suffix: suffix.to_string(),
                 }),
-                suffix: suffix.to_string(),
             }
         } else if path_str.starts_with(CARGO_MANIFEST_DIR)
             && path_str[CARGO_MANIFEST_DIR.len()..].starts_with('/')
@@ -437,20 +440,19 @@ impl FramePath {
             let suffix = &path_str[CARGO_MANIFEST_DIR.len() + 1..];
             Self {
                 raw_path,
-                prefix: Some(FramePrefix {
+                split_path: Some(FramePrefix {
                     prefix_kind: "ROOTCAUSE",
-                    refix: CARGO_MANIFEST_DIR.to_string(),
+                    prefix: CARGO_MANIFEST_DIR.to_string(),
+                    suffix: suffix.to_string(),
                 }),
                 crate_name: Some(Cow::Borrowed("rootcause")),
-                suffix: suffix.to_string(),
             }
         } else {
             let raw_path = path.into_path_buf();
             Self {
                 raw_path,
                 crate_name: None,
-                prefix: None,
-                suffix: path_str.to_string(),
+                split_path: None,
             }
         }
     }
