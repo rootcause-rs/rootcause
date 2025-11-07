@@ -10,7 +10,7 @@ repository = "https://github.com/rootcause-rs/rootcause"
 members = ["rootcause-internals"]
 
 [features]
-default = ["backtrace"]
+default = []
 std = ["indexmap/std", "triomphe/std"]
 backtrace = ["dep:backtrace", "dep:regex", "std"]
 
