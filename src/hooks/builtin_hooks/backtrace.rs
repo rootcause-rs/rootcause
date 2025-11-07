@@ -5,7 +5,7 @@
 //! see the call stack that led to an error.
 
 use alloc::borrow::Cow;
-use core::fmt;
+use core::{fmt, panic::Location};
 use std::{path::PathBuf, sync::OnceLock};
 
 use backtrace::BytesOrWideString;
@@ -226,7 +226,7 @@ impl Default for BacktraceFilter {
             skipped_initial_crates: &["backtrace", "rootcause", "core", "std", "alloc"],
             skipped_middle_crates: &["tokio"],
             skipped_final_crates: &["std", "core", "alloc", "tokio"],
-            max_entry_count: 10,
+            max_entry_count: 20,
         }
     }
 }
@@ -265,7 +265,39 @@ impl ReportCreationHook for BacktraceCollector {
     }
 }
 
-static CARGO_MANIFEST_DIR: &str = env!("CARGO_MANIFEST_DIR");
+const fn get_rootcause_matcher() -> Option<(&'static str, usize)> {
+    let location = Location::caller();
+    let file = location.file();
+
+    let Some(prefix_len) = file
+        .len()
+        .checked_sub("/src/hooks/builtin_hooks/backtrace.rs".len())
+    else {
+        return None;
+    };
+
+    let (prefix, suffix) = file.split_at(prefix_len);
+    if std::path::MAIN_SEPARATOR == '/' {
+        assert!(suffix.eq_ignore_ascii_case("/src/hooks/builtin_hooks/backtrace.rs"));
+    } else {
+        assert!(suffix.eq_ignore_ascii_case(r#"/src\hooks\builtin_hooks\backtrace.rs"#));
+    }
+
+    let (matcher_prefix, _) = file.split_at(prefix_len + 4);
+
+    let mut splitter_prefix = prefix;
+    while !splitter_prefix.is_empty() {
+        let (new_prfix, last_char) = splitter_prefix.split_at(splitter_prefix.len() - 1);
+        splitter_prefix = new_prfix;
+        if last_char.eq_ignore_ascii_case(std::path::MAIN_SEPARATOR_STR) {
+            break;
+        }
+    }
+
+    Some((matcher_prefix, splitter_prefix.len()))
+}
+
+const ROOTCAUSE_MATCHER: Option<(&str, usize)> = get_rootcause_matcher();
 
 impl Backtrace {
     /// Captures the current stack backtrace, applying optional filtering.
@@ -433,16 +465,20 @@ impl FramePath {
                     suffix: suffix.to_string(),
                 }),
             }
-        } else if path_str.starts_with(CARGO_MANIFEST_DIR)
-            && path_str[CARGO_MANIFEST_DIR.len()..].starts_with('/')
+        } else if let Some((rootcause_matcher_prefix, rootcause_splitter_prefix_len)) =
+            ROOTCAUSE_MATCHER
+            && path_str.starts_with(rootcause_matcher_prefix)
         {
             let raw_path = path.into_path_buf();
-            let suffix = &path_str[CARGO_MANIFEST_DIR.len() + 1..];
+            let (prefix, suffix) = (
+                &path_str[..rootcause_splitter_prefix_len],
+                &path_str[rootcause_splitter_prefix_len + 1..],
+            );
             Self {
                 raw_path,
                 split_path: Some(FramePrefix {
                     prefix_kind: "ROOTCAUSE",
-                    prefix: CARGO_MANIFEST_DIR.to_string(),
+                    prefix: prefix.to_string(),
                     suffix: suffix.to_string(),
                 }),
                 crate_name: Some(Cow::Borrowed("rootcause")),
