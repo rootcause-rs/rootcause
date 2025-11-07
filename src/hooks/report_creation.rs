@@ -293,7 +293,7 @@ fn default_hooks() -> HookSet {
     )];
 
     #[cfg(feature = "backtrace")]
-    hooks.push(creation_hook_to_untyped(BacktraceCollector::new()));
+    hooks.push(creation_hook_to_untyped(BacktraceCollector::new_from_env()));
 
     hooks
 }

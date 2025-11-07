@@ -4,8 +4,9 @@
 //! backtraces to reports when they are created. This is useful for debugging to
 //! see the call stack that led to an error.
 
+use alloc::borrow::Cow;
 use core::fmt;
-use std::{borrow::Cow, path::PathBuf, sync::OnceLock};
+use std::{path::PathBuf, sync::OnceLock};
 
 use backtrace::BytesOrWideString;
 use rootcause_internals::handlers::{
@@ -192,7 +193,7 @@ impl BacktraceCollector {
     /// `full`, the collector will filter out frames from common crates and
     /// capture backtraces for all reports. Otherwise, no filtering is applied
     /// and backtraces are only captured for reports without children.
-    pub fn new() -> Self {
+    pub fn new_from_env() -> Self {
         let rust_backtrace_full =
             std::env::var_os("RUST_BACKTRACE").is_some_and(|var| var == "full");
         let leafs_only = std::env::var_os("ROOTCAUSE_BACKTRACE").is_some_and(|var| var == "leafs");
@@ -232,15 +233,15 @@ impl ReportCreationHook for BacktraceCollector {
         &self,
         mut report: crate::ReportMut<'_, dyn core::any::Any, crate::markers::Local>,
     ) {
-        if self.capture_backtrace_for_reports_with_children || !report.children().is_empty() {
-            if let Some(backtrace) = Backtrace::capture(&self.filter) {
-                let attachment = if self.show_full_path {
-                    ReportAttachment::new_custom::<BacktraceHandler<true>>(backtrace)
-                } else {
-                    ReportAttachment::new_custom::<BacktraceHandler<false>>(backtrace)
-                };
-                report.attachments_mut().push(attachment.into_dyn_any());
-            }
+        let do_capture =
+            self.capture_backtrace_for_reports_with_children || !report.children().is_empty();
+        if do_capture && let Some(backtrace) = Backtrace::capture(&self.filter) {
+            let attachment = if self.show_full_path {
+                ReportAttachment::new_custom::<BacktraceHandler<true>>(backtrace)
+            } else {
+                ReportAttachment::new_custom::<BacktraceHandler<false>>(backtrace)
+            };
+            report.attachments_mut().push(attachment.into_dyn_any());
         }
     }
 
@@ -248,20 +249,20 @@ impl ReportCreationHook for BacktraceCollector {
         &self,
         mut report: crate::ReportMut<'_, dyn core::any::Any, crate::markers::SendSync>,
     ) {
-        if self.capture_backtrace_for_reports_with_children || !report.children().is_empty() {
-            if let Some(backtrace) = Backtrace::capture(&self.filter) {
-                let attachment = if self.show_full_path {
-                    ReportAttachment::new_custom::<BacktraceHandler<true>>(backtrace)
-                } else {
-                    ReportAttachment::new_custom::<BacktraceHandler<false>>(backtrace)
-                };
-                report.attachments_mut().push(attachment.into_dyn_any());
-            }
+        let do_capture =
+            self.capture_backtrace_for_reports_with_children || !report.children().is_empty();
+        if do_capture && let Some(backtrace) = Backtrace::capture(&self.filter) {
+            let attachment = if self.show_full_path {
+                ReportAttachment::new_custom::<BacktraceHandler<true>>(backtrace)
+            } else {
+                ReportAttachment::new_custom::<BacktraceHandler<false>>(backtrace)
+            };
+            report.attachments_mut().push(attachment.into_dyn_any());
         }
     }
 }
 
-static CARGO_MANIFEST_DIR: &'static str = env!("CARGO_MANIFEST_DIR");
+static CARGO_MANIFEST_DIR: &str = env!("CARGO_MANIFEST_DIR");
 
 impl Backtrace {
     /// Captures the current stack backtrace, applying optional filtering.
@@ -438,7 +439,7 @@ impl FramePath {
                 raw_path,
                 prefix: Some(FramePrefix {
                     prefix_kind: "ROOTCAUSE",
-                    refix: format!("{CARGO_MANIFEST_DIR}"),
+                    refix: CARGO_MANIFEST_DIR.to_string(),
                 }),
                 crate_name: Some(Cow::Borrowed("rootcause")),
                 suffix: suffix.to_string(),
