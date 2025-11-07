@@ -677,7 +677,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             FormattingFunction::Debug => write!(tmp_value_buffer, "{value:?}")?,
         }
 
-        let mut value_lines = tmp_value_buffer.lines().peekable();
+        let mut value_lines = tmp_value_buffer.trim_end().lines().peekable();
         while let Some(value_line) = value_lines.next() {
             let is_last = value_lines.peek().is_none();
             let line_formatting = match (is_first, is_last) {

@@ -106,7 +106,7 @@ use core::{
 use rootcause_internals::handlers::AttachmentHandler;
 
 #[cfg(feature = "backtrace")]
-use crate::hooks::builtin_hooks::backtrace::{BacktraceCollector, BacktraceHandler};
+use crate::hooks::builtin_hooks::backtrace::BacktraceCollector;
 use crate::{
     ReportMut, handlers,
     hooks::{
@@ -293,9 +293,7 @@ fn default_hooks() -> HookSet {
     )];
 
     #[cfg(feature = "backtrace")]
-    hooks.push(attachment_hook_to_untyped::<_, BacktraceHandler, _>(
-        BacktraceCollector::default(),
-    ));
+    hooks.push(creation_hook_to_untyped(BacktraceCollector::new()));
 
     hooks
 }
@@ -573,9 +571,10 @@ where
 {
     if core::any::TypeId::of::<T1>() == core::any::TypeId::of::<T2>() {
         let report: ReportMut<'a, dyn Any, T1> = report.reborrow();
+        let report_raw = report.into_raw();
         // SAFETY: The type IDs match, so the transmute does not change the actual
         // type.
-        let report: ReportMut<'a, dyn Any, T2> = unsafe { core::mem::transmute(report) };
+        let report: ReportMut<'a, dyn Any, T2> = unsafe { ReportMut::from_raw(report_raw) };
         Some(report)
     } else {
         None
@@ -583,8 +582,7 @@ where
 }
 
 #[track_caller]
-#[inline(never)]
-pub(crate) fn __run_creation_hooks<T>(mut report: ReportMut<'_, dyn Any, T>)
+pub(crate) fn run_creation_hooks<T>(mut report: ReportMut<'_, dyn Any, T>)
 where
     T: markers::ThreadSafetyMarker,
 {
