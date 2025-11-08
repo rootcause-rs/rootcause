@@ -234,9 +234,11 @@
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable, markers::SendSync> = report!("error".to_string());
 //!
+//! # let thread_join_handle =
 //! std::thread::spawn(move || {
 //!     println!("{}", report); // ✅ Can send to other threads
 //! });
+//! # thread_join_handle.join();
 //! ```
 //!
 //! **[`Local`]** — Not thread-safe
