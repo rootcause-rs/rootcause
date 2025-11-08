@@ -8,23 +8,23 @@
 //! # Safety Invariant
 //!
 //! Since the `ptr` field can only be set via [`RawReport::new`] or
-//! [`RawReport::from_arc`] (which create it from `Arc::into_raw`), and cannot be
-//! modified afterward (no `pub` or `pub(crate)` fields), the pointer provenance
-//! remains valid throughout the value's lifetime.
+//! [`RawReport::from_arc`] (which create it from `Arc::into_raw`), and cannot
+//! be modified afterward (no `pub` or `pub(crate)` fields), the pointer
+//! provenance remains valid throughout the value's lifetime.
 //!
-//! The [`RawReport::drop`] implementation and reference counting operations rely
-//! on this invariant to safely reconstruct the `Arc` and manage memory.
+//! The [`RawReport::drop`] implementation and reference counting operations
+//! rely on this invariant to safely reconstruct the `Arc` and manage memory.
 //!
 //! # Type Erasure
 //!
-//! The concrete type parameter `C` is erased by casting to `ReportData<Erased>`.
-//! The vtable stored within the `ReportData` provides the runtime type
-//! information needed to safely downcast and format reports.
+//! The concrete type parameter `C` is erased by casting to
+//! `ReportData<Erased>`. The vtable stored within the `ReportData` provides the
+//! runtime type information needed to safely downcast and format reports.
 //!
 //! # Allocation Strategy
 //!
-//! Unlike attachments (which use `Box`), reports use `triomphe::Arc` for storage.
-//! This enables:
+//! Unlike attachments (which use `Box`), reports use `triomphe::Arc` for
+//! storage. This enables:
 //! - Cheap cloning through reference counting
 //! - Shared ownership across multiple report references
 //! - Thread-safe sharing when the context type is `Send + Sync`
@@ -169,9 +169,11 @@ impl<'a> RawReportRef<'a> {
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<C>());
 
         let this = self.ptr.cast::<ReportData<C::Target>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is safe because:
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
+        // safe because:
         // - The pointer originated from Arc::into_raw in RawReport construction
-        // - The Arc provides valid pointer provenance and prevents premature deallocation
+        // - The Arc provides valid pointer provenance and prevents premature
+        //   deallocation
         // - Shared access through RawReportRef prevents aliasing violations
         // - The lifetime 'a is tied to RawReportRef<'a>, preventing use-after-free
         unsafe { this.as_ref() }
@@ -326,9 +328,11 @@ impl<'a> RawReportMut<'a> {
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
 
         let mut this = self.ptr.cast::<ReportData<C::Target>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is safe because:
+        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
+        // safe because:
         // - The pointer originated from Arc::into_raw in RawReport construction
-        // - The Arc provides valid pointer provenance and prevents premature deallocation
+        // - The Arc provides valid pointer provenance and prevents premature
+        //   deallocation
         // - Exclusive access through RawReportMut prevents aliasing violations
         // - The lifetime 'a is tied to RawReportMut<'a>, preventing use-after-free
         unsafe { this.as_mut() }

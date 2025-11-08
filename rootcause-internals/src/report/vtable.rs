@@ -375,8 +375,8 @@ unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
 /// # Safety
 ///
 /// The caller must ensure that:
-/// - The pointer comes from an [`triomphe::Arc<ReportData<C>>`], which was turned
-///   into a pointer using [`triomphe::Arc::into_raw`].
+/// - The pointer comes from an [`triomphe::Arc<ReportData<C>>`], which was
+///   turned into a pointer using [`triomphe::Arc::into_raw`].
 /// - The context type `C` matches the actual context type stored in the
 ///   [`ReportData`].
 unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
