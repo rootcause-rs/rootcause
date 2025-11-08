@@ -8,8 +8,8 @@
 //!
 //! - [`data`]: Contains [`AttachmentData<A>`], the `#[repr(C)]` wrapper that
 //!   pairs an attachment value with its vtable
-//! - [`raw`]: Contains [`RawAttachment`] and [`RawAttachmentRef`], the type-erased
-//!   pointer types that users of this module interact with
+//! - [`raw`]: Contains [`RawAttachment`] and [`RawAttachmentRef`], the
+//!   type-erased pointer types that users of this module interact with
 //! - [`vtable`]: Contains [`AttachmentVtable`], the function pointer table for
 //!   type-erased operations
 //!

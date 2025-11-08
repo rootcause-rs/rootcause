@@ -53,12 +53,13 @@
 //!
 //! ## Core Concepts
 //!
-//! At a high level, rootcause helps you build a tree of error reports. Each node
-//! in the tree represents a step in the error's history - you start with a root
-//! error, then add context and attachments as it propagates up through your code.
+//! At a high level, rootcause helps you build a tree of error reports. Each
+//! node in the tree represents a step in the error's history - you start with a
+//! root error, then add context and attachments as it propagates up through
+//! your code.
 //!
-//! Most error reports are linear chains (just like anyhow), but the tree structure
-//! lets you collect multiple related errors when needed.
+//! Most error reports are linear chains (just like anyhow), but the tree
+//! structure lets you collect multiple related errors when needed.
 //!
 //! Each report has:
 //! - A **context** (the error itself)
@@ -78,13 +79,13 @@
 //!   captured and preserved in a single report.
 //! - **Inspectable**: The objects in a Report should not be glorified strings.
 //!   Inspecting and interacting with them should be easy.
-//! - **Optionally typed**: Users should be able to (optionally) specify the type
-//!   of the context in the root node.
+//! - **Optionally typed**: Users should be able to (optionally) specify the
+//!   type of the context in the root node.
 //! - **Beautiful**: The default formatting should look pleasant—and if it
 //!   doesn't match your style, the hook system lets you customize it.
 //! - **Cloneable**: It should be possible to clone a `Report` when you need to.
-//! - **Self-documenting**: Reports should automatically capture information (like
-//!   backtraces and locations) that might be useful in debugging.
+//! - **Self-documenting**: Reports should automatically capture information
+//!   (like backtraces and locations) that might be useful in debugging.
 //! - **Customizable**: It should be possible to customize what data gets
 //!   collected, or how reports are formatted.
 //! - **Lightweight**: `Report` has a pointer-sized representation, keeping
@@ -142,14 +143,16 @@
 //!
 //! ### Context Type: Typed vs Dynamic Errors
 //!
-//! **Use `Report<dyn Any>`** (or just `Report`) when errors just need to propagate.
-//! **Use `Report<YourErrorType>`** when callers need to pattern match on specific error variants.
+//! **Use `Report<dyn Any>`** (or just `Report`) when errors just need to
+//! propagate. **Use `Report<YourErrorType>`** when callers need to pattern
+//! match on specific error variants.
 //!
 //! **`Report<dyn Any>`** (or just `Report`) — Flexible, like [`anyhow`]
 //!
 //! Can hold any error type at the root. The `?` operator automatically converts
-//! any error into a `Report`. Note: `dyn Any` is just a marker - no actual trait
-//! object is stored. Converting between typed and dynamic reports is zero-cost.
+//! any error into a `Report`. Note: `dyn Any` is just a marker - no actual
+//! trait object is stored. Converting between typed and dynamic reports is
+//! zero-cost.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
@@ -186,7 +189,8 @@
 //! ### Ownership: Mutable vs Cloneable
 //!
 //! **Use the default ([`Mutable`])** when errors just propagate with `?`.
-//! **Use `.into_cloneable()`** when you need to store errors in collections or use them multiple times.
+//! **Use `.into_cloneable()`** when you need to store errors in collections or
+//! use them multiple times.
 //!
 //! **[`Mutable`]** (default) — Unique ownership
 //!
@@ -222,8 +226,9 @@
 //!
 //! ### Thread Safety: SendSync vs Local
 //!
-//! **Use the default ([`SendSync`])** unless you get compiler errors about `Send` or `Sync`.
-//! **Use [`Local`]** only when attaching `!Send` types like `Rc` or `Cell`.
+//! **Use the default ([`SendSync`])** unless you get compiler errors about
+//! `Send` or `Sync`. **Use [`Local`]** only when attaching `!Send` types like
+//! `Rc` or `Cell`.
 //!
 //! **[`SendSync`]** (default) — Thread-safe
 //!

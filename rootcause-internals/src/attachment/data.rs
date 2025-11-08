@@ -8,16 +8,16 @@
 //! # Safety Invariant
 //!
 //! Since `AttachmentData` can only be constructed via [`AttachmentData::new`]
-//! (which creates matching vtable and attachment), and fields cannot be modified
-//! after construction (no `pub` or `pub(crate)` fields), the types remain in
-//! sync throughout the value's lifetime.
+//! (which creates matching vtable and attachment), and fields cannot be
+//! modified after construction (no `pub` or `pub(crate)` fields), the types
+//! remain in sync throughout the value's lifetime.
 //!
 //! # `#[repr(C)]` Layout
 //!
 //! The `#[repr(C)]` attribute enables safe field projection even when the type
 //! parameter `A` is erased. This allows accessing the vtable field from a
-//! pointer to `AttachmentData<Erased>` without constructing an invalid reference
-//! to the full struct.
+//! pointer to `AttachmentData<Erased>` without constructing an invalid
+//! reference to the full struct.
 
 use crate::{
     attachment::{raw::RawAttachmentRef, vtable::AttachmentVtable},

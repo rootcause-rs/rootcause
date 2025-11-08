@@ -6,8 +6,8 @@
 //!
 //! # Structure
 //!
-//! - [`data`]: Contains [`ReportData<C>`], the `#[repr(C)]` wrapper that
-//!   pairs a context value with its vtable, children, and attachments
+//! - [`data`]: Contains [`ReportData<C>`], the `#[repr(C)]` wrapper that pairs
+//!   a context value with its vtable, children, and attachments
 //! - [`raw`]: Contains [`RawReport`], [`RawReportRef`], and [`RawReportMut`] -
 //!   the type-erased pointer types that users of this module interact with
 //! - [`vtable`]: Contains [`ReportVtable`], the function pointer table for

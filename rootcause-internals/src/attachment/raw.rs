@@ -12,14 +12,15 @@
 //! or `pub(crate)` fields), the pointer provenance remains valid throughout the
 //! value's lifetime.
 //!
-//! The [`RawAttachment::drop`] implementation relies on this invariant to safely
-//! reconstruct the `Box` and deallocate the memory.
+//! The [`RawAttachment::drop`] implementation relies on this invariant to
+//! safely reconstruct the `Box` and deallocate the memory.
 //!
 //! # Type Erasure
 //!
-//! The concrete type parameter `A` is erased by casting to `AttachmentData<Erased>`.
-//! The vtable stored within the `AttachmentData` provides the runtime type
-//! information needed to safely downcast and format attachments.
+//! The concrete type parameter `A` is erased by casting to
+//! `AttachmentData<Erased>`. The vtable stored within the `AttachmentData`
+//! provides the runtime type information needed to safely downcast and format
+//! attachments.
 
 use alloc::boxed::Box;
 use core::{any::TypeId, ptr::NonNull};
@@ -131,9 +132,11 @@ impl<'a> RawAttachmentRef<'a> {
         let this = self.ptr.cast::<AttachmentData<A::Target>>();
         // SAFETY: Our caller guarantees that we point to an AttachmentData<A>.
         // Converting NonNull to a reference is safe because:
-        // - The pointer is valid and aligned (from Box allocation in RawAttachment::new)
+        // - The pointer is valid and aligned (from Box allocation in
+        //   RawAttachment::new)
         // - The data is initialized (Box allocation initializes)
-        // - The lifetime 'a is tied to the RawAttachmentRef<'a>, preventing use-after-free
+        // - The lifetime 'a is tied to the RawAttachmentRef<'a>, preventing
+        //   use-after-free
         // - Shared access through RawAttachmentRef prevents aliasing violations
         unsafe { this.as_ref() }
     }

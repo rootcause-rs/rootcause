@@ -20,9 +20,10 @@
 //! - You want both type safety AND rich context (better than plain thiserror)
 //!
 //! **Example:** This example shows a database function that returns
-//! `Report<DatabaseError>` so callers can retry transient errors (ConnectionLost,
-//! QueryTimeout) but not permanent ones (ConstraintViolation, NotFound). The
-//! retry logic below demonstrates pattern matching on typed errors.
+//! `Report<DatabaseError>` so callers can retry transient errors
+//! (ConnectionLost, QueryTimeout) but not permanent ones (ConstraintViolation,
+//! NotFound). The retry logic below demonstrates pattern matching on typed
+//! errors.
 //!
 //! ## Key Concepts
 //!

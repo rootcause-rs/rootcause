@@ -9,7 +9,8 @@
 //!
 //! Key concepts:
 //! - `.iter_reports()` - Traverse all nodes in the error tree
-//! - `.downcast_current_context::<T>()` - Check and extract typed context at each node
+//! - `.downcast_current_context::<T>()` - Check and extract typed context at
+//!   each node
 //! - `.attachments().iter()` - Access attachments at each node
 //! - `.downcast_inner::<T>()` - Extract typed attachment data
 //!
@@ -20,8 +21,7 @@
 //! - Want to collect multiple errors? → `retry_with_collection.rs`
 //! - See all examples? → `examples/README.md`
 
-use std::error::Error;
-use std::fmt;
+use std::{error::Error, fmt};
 
 use rootcause::prelude::*;
 

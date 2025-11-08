@@ -2,9 +2,9 @@
 
 /// Helper trait to force explicit turbofish syntax on pointer casts.
 ///
-/// This trait prevents accidental type inference on calls like `ptr.cast::<U>()`,
-/// ensuring callers explicitly specify the target type. This helps catch bugs
-/// where the wrong type might be silently inferred.
+/// This trait prevents accidental type inference on calls like
+/// `ptr.cast::<U>()`, ensuring callers explicitly specify the target type. This
+/// helps catch bugs where the wrong type might be silently inferred.
 ///
 /// The trait's associated type `Target` is always equal to `Self`, but the
 /// compiler cannot infer it automatically, requiring explicit specification.

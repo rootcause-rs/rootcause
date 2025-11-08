@@ -24,8 +24,9 @@
 //! operations that power the [`rootcause`] error reporting library. It provides
 //! the foundation for zero-cost type erasure through vtable-based dispatch.
 //!
-//! **This crate is an implementation detail.** No semantic versioning guarantees
-//! are provided. Users should depend on the [`rootcause`] crate, not this one.
+//! **This crate is an implementation detail.** No semantic versioning
+//! guarantees are provided. Users should depend on the [`rootcause`] crate, not
+//! this one.
 //!
 //! # Architecture
 //!
@@ -35,7 +36,8 @@
 //! - **[`attachment`]**: Type-erased attachment storage
 //!   - [`RawAttachment`]: Owned attachment with [`Box`]-based allocation
 //!   - [`RawAttachmentRef`]: Borrowed reference to an attachment
-//!   - [`AttachmentData`]: `#[repr(C)]` wrapper enabling field access on erased types
+//!   - [`AttachmentData`]: `#[repr(C)]` wrapper enabling field access on erased
+//!     types
 //!   - [`AttachmentVtable`]: Function pointers for type-erased dispatch
 //!
 //! - **[`report`]**: Type-erased report storage (similar structure)

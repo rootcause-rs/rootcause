@@ -16,8 +16,8 @@
 //!
 //! The `#[repr(C)]` attribute enables safe field projection even when the type
 //! parameter `C` is erased. This allows accessing the vtable, children, and
-//! attachments fields from a pointer to `ReportData<Erased>` without constructing
-//! an invalid reference to the full struct.
+//! attachments fields from a pointer to `ReportData<Erased>` without
+//! constructing an invalid reference to the full struct.
 
 use alloc::vec::Vec;
 use core::ptr::NonNull;
@@ -97,8 +97,9 @@ impl RawReport {
             }
             Err(_) => {
                 // We could definitely get away with using unreachable_unchecked here in release
-                // builds, but since we don't expect anybody to use into_parts in performance-critical
-                // paths, it's probably better to just have a normal panic even in release builds.
+                // builds, but since we don't expect anybody to use into_parts in
+                // performance-critical paths, it's probably better to just have
+                // a normal panic even in release builds.
                 unreachable!("Caller did not fulfill the guarantee that pointer is unique")
             }
         }
