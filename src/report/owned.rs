@@ -172,7 +172,7 @@ where
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        crate::hooks::report_creation::__run_creation_hooks(report.as_mut().into_dyn_any());
+        crate::hooks::report_creation::run_creation_hooks(report.as_mut().into_dyn_any());
         report
     }
 
