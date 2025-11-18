@@ -58,8 +58,8 @@ impl RawAttachment {
         H: AttachmentHandler<A>,
     {
         let ptr = Box::new(AttachmentData::new::<H>(attachment));
-        let ptr: *const AttachmentData<A> = Box::into_raw(ptr);
-        let ptr: *mut AttachmentData<Erased> = ptr as _;
+        let ptr: *mut AttachmentData<A> = Box::into_raw(ptr);
+        let ptr: *mut AttachmentData<Erased> = ptr.cast::<AttachmentData<Erased>>();
 
         // SAFETY: `Box::into_raw` returns a non-null pointer
         let ptr: NonNull<AttachmentData<Erased>> = unsafe { NonNull::new_unchecked(ptr) };
@@ -82,17 +82,12 @@ impl core::ops::Drop for RawAttachment {
     fn drop(&mut self) {
         let vtable = self.as_ref().vtable();
 
-        // SAFETY: The vtable drop method has three safety requirements:
-        // - The pointer must come from `Box<AttachmentData<A>>` via `Box::into_raw`
-        // - The `A` type in `AttachmentData<A>` must match the vtable's `A` type
-        // - The pointer must not be used after this call
-        //
-        // These are satisfied because:
-        // - The only way to construct or alter a `RawAttachment` is through the
-        //   `RawAttachment::new` method
-        // - The only way to construct or alter an `AttachmentData` is through the
-        //   `AttachmentData::new` method
-        // - This is guaranteed by the fact that we are in the `drop()` function
+        // SAFETY:
+        // 1. The pointer comes from `Box::into_raw` (guaranteed by
+        //    `RawAttachment::new`)
+        // 2. The `A` type matches (vtable and data created together in
+        //    `AttachmentData::new`)
+        // 3. The pointer is not used after this call (we're in the drop function)
         unsafe {
             vtable.drop(self.ptr);
         }
@@ -122,8 +117,10 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `A` matches the actual attachment
-    /// type stored in the [`AttachmentData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` matches the actual attachment type stored in the
+    ///    [`AttachmentData`].
     #[inline]
     pub(super) unsafe fn cast_inner<A: CastTo>(self) -> &'a AttachmentData<A::Target> {
         // Debug assertion to catch type mismatches in case of bugs
@@ -159,30 +156,15 @@ impl<'a> RawAttachmentRef<'a> {
         self.vtable().handler_type_id()
     }
 
-    /// Checks if the type of the attachment matches the specified type and
-    /// returns a reference to it if it does.
-    #[inline]
-    pub fn attachment_downcast<A: 'static>(self) -> Option<&'a A> {
-        if self.attachment_type_id() == core::any::TypeId::of::<A>() {
-            // SAFETY: We must ensure that the `A` in the AttachmentData matches the `A` we
-            // are using as an argument. However, we have just checked that the
-            // types match, so that is fine.
-            unsafe { Some(self.attachment_downcast_unchecked::<A>()) }
-        } else {
-            None
-        }
-    }
-
     /// Formats the attachment by using the [`AttachmentHandler::display`]
     /// method specified by the handler used to create the
     /// [`AttachmentData`].
     #[inline]
     pub fn attachment_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
-        // of the `AttachmentVtable`. However, the only way to construct an
-        // `AttachmentData` is through the `AttachmentData::new` method,
-        // which ensures this fact.
+        // SAFETY:
+        // 1. The `A` type matches because vtable and data are created together in
+        //    `AttachmentData::new`.
         unsafe { vtable.display(self, formatter) }
     }
 
@@ -191,10 +173,9 @@ impl<'a> RawAttachmentRef<'a> {
     #[inline]
     pub fn attachment_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
-        // of the `AttachmentVtable`. However, the only way to construct an
-        // `AttachmentData` is through the `AttachmentData::new` method,
-        // which ensures this fact.
+        // SAFETY:
+        // 1. The `A` type matches because vtable and data are created together in
+        //    `AttachmentData::new`.
         unsafe { vtable.debug(self, formatter) }
     }
 
@@ -215,10 +196,9 @@ impl<'a> RawAttachmentRef<'a> {
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         let vtable = self.vtable();
-        // SAFETY: We must ensure that the `A` of the `AttachmentData` matches the `A`
-        // of the `AttachmentVtable`. However, the only way to construct an
-        // `AttachmentData` is through the `AttachmentData::new` method,
-        // which ensures this fact.
+        // SAFETY:
+        // 1. The `A` type matches because vtable and data are created together in
+        //    `AttachmentData::new`.
         unsafe { vtable.preferred_formatting_style(self, report_formatting_function) }
     }
 }
@@ -322,14 +302,6 @@ mod tests {
 
         // The vtables should be different
         assert!(!core::ptr::eq(int_ref.vtable(), string_ref.vtable()));
-
-        // Cross-type downcasting should fail safely
-        assert!(int_ref.attachment_downcast::<String>().is_none());
-        assert!(string_ref.attachment_downcast::<i32>().is_none());
-
-        // Correct downcasting should work
-        assert_eq!(int_ref.attachment_downcast::<i32>().unwrap(), &42);
-        assert_eq!(string_ref.attachment_downcast::<String>().unwrap(), "test");
     }
 
     #[test]

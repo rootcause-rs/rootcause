@@ -75,6 +75,8 @@
 
 use core::any::Any;
 
+use crate::{ReportMut, ReportRef};
+
 /// Marker type for owned reports with unique ownership.
 ///
 /// This marker is used exclusively with [`Report<C, Mutable,
@@ -487,9 +489,33 @@ impl ReportOwnershipMarker for Cloneable {
 /// # Implementation
 ///
 /// This trait is sealed and cannot be implemented outside of this crate.
-pub trait ReportRefOwnershipMarker: sealed_report_ref_ownership_marker::Sealed {}
-impl ReportRefOwnershipMarker for Cloneable {}
-impl ReportRefOwnershipMarker for Uncloneable {}
+pub trait ReportRefOwnershipMarker: Sized + sealed_report_ref_ownership_marker::Sealed {
+    /// Converts a [`ReportRef`] with [`Cloneable`] ownership to this ownership
+    /// type.
+    ///
+    /// This method mostly exists as a convenience to facilitate conversions
+    /// in generic contexts.
+    ///
+    /// In non-generic code, you can use [`From`]/[`Into`] directly.
+    #[doc(hidden)]
+    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
+        report: ReportRef<'a, dyn Any, Cloneable, T>,
+    ) -> ReportRef<'a, dyn Any, Self, T>;
+}
+impl ReportRefOwnershipMarker for Cloneable {
+    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
+        report: ReportRef<'a, dyn Any, Cloneable, T>,
+    ) -> ReportRef<'a, dyn Any, Self, T> {
+        report
+    }
+}
+impl ReportRefOwnershipMarker for Uncloneable {
+    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
+        report: ReportRef<'a, dyn Any, Cloneable, T>,
+    ) -> ReportRef<'a, dyn Any, Self, T> {
+        report.into_uncloneable()
+    }
+}
 
 /// Marker trait for thread-safety semantics of reports.
 ///
@@ -508,9 +534,24 @@ impl ReportRefOwnershipMarker for Uncloneable {}
 /// # Implementation
 ///
 /// This trait is sealed and cannot be implemented outside of this crate.
-pub trait ThreadSafetyMarker: sealed_send_sync_marker::Sealed {}
-impl ThreadSafetyMarker for SendSync {}
-impl ThreadSafetyMarker for Local {}
+pub trait ThreadSafetyMarker: Sized + sealed_send_sync_marker::Sealed {
+    /// Runs report creation hooks specific to this thread-safety marker.
+    #[doc(hidden)]
+    #[track_caller]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Self>);
+}
+impl ThreadSafetyMarker for SendSync {
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Self>) {
+        crate::hooks::report_creation::run_creation_hooks_sendsync(report);
+    }
+}
+impl ThreadSafetyMarker for Local {
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Self>) {
+        crate::hooks::report_creation::run_creation_hooks_local(report);
+    }
+}
 
 /// Marker trait combining object and thread-safety requirements.
 ///

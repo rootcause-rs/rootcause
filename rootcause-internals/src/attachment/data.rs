@@ -81,12 +81,14 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `A` matches the actual attachment
-    /// type stored in the [`AttachmentData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` matches the actual attachment type stored in the
+    ///    [`AttachmentData`].
     #[inline]
     pub unsafe fn attachment_downcast_unchecked<A: 'static>(self) -> &'a A {
-        // SAFETY: The inner function requires that `A` matches the type stored, but
-        // that is guaranteed by our caller.
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let this = unsafe { self.cast_inner::<A>() };
         &this.attachment
     }

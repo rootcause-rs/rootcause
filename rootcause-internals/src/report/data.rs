@@ -40,6 +40,12 @@ use crate::{
 #[repr(C)]
 pub(crate) struct ReportData<C: 'static> {
     /// Reference to the vtable of this report
+    ///
+    /// # Safety invariant
+    ///
+    /// We guarantee that the `ReportVtable` always pointers to a vtable
+    /// created for the actual context type `C` stored below. This is
+    /// true even when accessed via type-erased pointers.
     vtable: &'static ReportVtable,
     /// The children of this report
     children: Vec<RawReport>,
@@ -73,22 +79,22 @@ impl<C: 'static> ReportData<C> {
 impl RawReport {
     /// # Safety
     ///
-    /// - The caller must ensure that the type `C` matches the actual context
-    ///   type stored in the [`ReportData`].
-    /// - The caller must ensure that this is the only existing reference
-    ///   pointing to the inner [`ReportData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The type `C` matches the actual context type stored in the
+    ///    [`ReportData`]
+    /// 2. This is the only existing reference pointing to the inner
+    ///    [`ReportData`]
     pub unsafe fn into_parts<C: 'static>(self) -> (C, Vec<RawReport>, Vec<RawAttachment>) {
         let ptr: NonNull<ReportData<Erased>> = self.into_non_null();
         let ptr: NonNull<ReportData<C>> = ptr.cast::<ReportData<C>>();
         let ptr: *const ReportData<C> = ptr.as_ptr();
 
-        // SAFETY: The requirements to this
-        // - The given pointer must be a valid pointer to `T` that came from
-        //   [`Arc::into_raw`].
-        // - After `from_raw`, the pointer must not be accessed.
-        //
-        // Both of these are guaranteed by our caller
-        let arc: triomphe::Arc<ReportData<C>> = unsafe { triomphe::Arc::from_raw(ptr) };
+        // SAFETY:
+        // 1. The pointer is valid and came from `Arc::into_raw` (guaranteed by
+        //    RawReport construction)
+        // 2. After `from_raw` the `ptr` is not accessed.
+        let arc = unsafe { triomphe::Arc::<ReportData<C>>::from_raw(ptr) };
 
         match triomphe::Arc::try_unique(arc) {
             Ok(unique) => {
@@ -175,12 +181,14 @@ impl<'a> RawReportRef<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `C` matches the actual context type
-    /// stored in the [`ReportData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The type `C` matches the actual context type stored in the
+    ///    [`ReportData`]
     #[inline]
     pub unsafe fn context_downcast_unchecked<C: 'static>(self) -> &'a C {
-        // SAFETY: The inner function requires that `C` matches the type stored, but
-        // that is guaranteed by our caller.
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let this = unsafe { self.cast_inner::<C>() };
         &this.context
     }
@@ -188,8 +196,16 @@ impl<'a> RawReportRef<'a> {
 
 impl<'a> RawReportMut<'a> {
     /// Gets a mutable reference to the child reports.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. In case there are other references to the same report and they make
+    ///    assumptions about the report children being `Send+Sync`, then those
+    ///    assumptions must be upheld when modifying the children.
     #[inline]
-    pub fn into_children_mut(self) -> &'a mut Vec<RawReport> {
+    pub unsafe fn into_children_mut(self) -> &'a mut Vec<RawReport> {
         let ptr = self.into_mut_ptr();
 
         // SAFETY: We don't know the actual inner context type, but we do know
@@ -209,8 +225,16 @@ impl<'a> RawReportMut<'a> {
     }
 
     /// Gets a mutable reference to the attachments.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. In case there are other references to the same report and they make
+    ///    assumptions about the report children being `Send+Sync`, then those
+    ///    assumptions must be upheld when modifying the children.
     #[inline]
-    pub fn into_attachments_mut(self) -> &'a mut Vec<RawAttachment> {
+    pub unsafe fn into_attachments_mut(self) -> &'a mut Vec<RawAttachment> {
         let ptr = self.into_mut_ptr();
 
         // SAFETY: We don't know the actual inner context type, but we do know
@@ -234,12 +258,14 @@ impl<'a> RawReportMut<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `C` matches the actual context type
-    /// stored in the [`ReportData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The type `C` matches the actual context type stored in the
+    ///    [`ReportData`]
     #[inline]
     pub unsafe fn into_context_downcast_unchecked<C: 'static>(self) -> &'a mut C {
-        // SAFETY: The inner function requires that `C` matches the type stored, but
-        // that is guaranteed by our caller.
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let this = unsafe { self.cast_inner::<C>() };
         &mut this.context
     }

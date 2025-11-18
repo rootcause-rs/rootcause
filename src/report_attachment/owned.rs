@@ -1,10 +1,7 @@
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-};
+use core::any::{Any, TypeId};
 
 use rootcause_internals::{
-    RawAttachment, RawAttachmentRef,
+    RawAttachment,
     handlers::{AttachmentFormattingStyle, FormattingFunction},
 };
 
@@ -15,65 +12,103 @@ use crate::{
     util::format_helper,
 };
 
-/// An attachment to be attached to a [`Report`](crate::Report).
-///
-/// Attachments can hold any type of data, and can be formatted using custom
-/// handlers. The attachment can be marked as either [`SendSync`] or [`Local`],
-/// indicating whether it is safe to send the attachment across threads or not.
-///
-/// # Type Parameters
-/// - `Attachment`: The type of the attachment. This can either be a concrete
-///   type, or `dyn Any`.
-/// - `ThreadSafety`: The thread safety marker for the attachment. This can
-///   either be [`SendSync`] or [`Local`].
-#[repr(transparent)]
-pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
-where
-    Attachment: markers::ObjectMarker + ?Sized,
-    ThreadSafety: markers::ThreadSafetyMarker,
-{
-    raw: RawAttachment,
-    _attachment: PhantomData<Attachment>,
-    _thread_safety: PhantomData<ThreadSafety>,
+/// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
+/// an unsafe field and remove this module.
+mod limit_field_access {
+    use core::{any::Any, marker::PhantomData};
+
+    use rootcause_internals::{RawAttachment, RawAttachmentRef};
+
+    use crate::markers::{self, SendSync};
+
+    /// An attachment to be attached to a [`Report`](crate::Report).
+    ///
+    /// Attachments can hold any type of data, and can be formatted using custom
+    /// handlers. The attachment can be marked as either [`SendSync`] or
+    /// [`Local`], indicating whether it is safe to send the attachment
+    /// across threads or not.
+    ///
+    /// # Type Parameters
+    /// - `Attachment`: The type of the attachment. This can either be a
+    ///   concrete type, or `dyn Any`.
+    /// - `ThreadSafety`: The thread safety marker for the attachment. This can
+    ///   either be [`SendSync`] or [`Local`].
+    #[repr(transparent)]
+    pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
+    where
+        Attachment: markers::ObjectMarker + ?Sized,
+        ThreadSafety: markers::ThreadSafetyMarker,
+    {
+        /// # Safety
+        ///
+        /// The following safety invariants must be upheld as long as this
+        /// struct exists:
+        ///
+        /// 1. If `A` is a concrete type: The attachment embedded in the
+        ///    [`RawAttachment`] must be of type `A`.
+        /// 2. If `T = SendSync`: The attachment embedded in the
+        ///    [`RawAttachment`] must be `Send + Sync`.
+        raw: RawAttachment,
+        _attachment: PhantomData<Attachment>,
+        _thread_safety: PhantomData<ThreadSafety>,
+    }
+
+    impl<A, T> ReportAttachment<A, T>
+    where
+        A: markers::ObjectMarker + ?Sized,
+        T: markers::ThreadSafetyMarker,
+    {
+        /// Creates a new Attachment from a raw attachment
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `A` is a concrete type: The attachment embedded in the
+        ///    [`RawAttachment`] must be of type `A`.
+        /// 2. If `T = SendSync`: The attachment embedded in the
+        ///    [`RawAttachment`] must be `Send + Sync`.
+        #[must_use]
+        pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by caller
+            // 2. Guaranteed by caller
+            ReportAttachment {
+                raw,
+                _attachment: PhantomData,
+                _thread_safety: PhantomData,
+            }
+        }
+
+        /// Consumes the [`ReportAttachment`] and returns the inner
+        /// [`RawAttachment`].
+        #[must_use]
+        pub(crate) fn into_raw(self) -> RawAttachment {
+            // SAFETY: We are destroying `self`, so we no longer
+            // need to uphold any safety invariants.
+            self.raw
+        }
+
+        /// Creates a lifetime-bound [`RawAttachmentRef`] from the inner
+        /// [`RawAttachment`].
+        #[must_use]
+        pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. No mutation is possible through the `RawAttachmentRef`
+            // 2. No mutation is possible through the `RawAttachmentRef`
+            let raw = &self.raw;
+
+            raw.as_ref()
+        }
+    }
 }
+pub use limit_field_access::ReportAttachment;
 
 impl<A, T> ReportAttachment<A, T>
 where
     A: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new Attachment from a raw attachment
-    ///
-    /// # Safety
-    ///
-    /// - The attachment embedded in the [`RawAttachment`] must either be the
-    ///   type `A`, or `A` must be the type `dyn Any`.
-    /// - The thread safety marker must match the contents of the attachment.
-    ///   More specifically if the marker is [`SendSync`], then the inner
-    ///   attachment must be `Send+Sync`
-    #[must_use]
-    pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
-        ReportAttachment {
-            raw,
-            _attachment: PhantomData,
-            _thread_safety: PhantomData,
-        }
-    }
-
-    /// Consumes the [`ReportAttachment`] and returns the inner
-    /// [`RawAttachment`].
-    #[must_use]
-    pub(crate) fn into_raw(self) -> RawAttachment {
-        self.raw
-    }
-
-    /// Creates a lifetime-bound [`RawAttachmentRef`] from the inner
-    /// [`RawAttachment`].
-    #[must_use]
-    pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
-        self.raw.as_ref()
-    }
-
     /// Allocates a new [`ReportAttachment`] with the given attachment as the
     /// data.
     ///
@@ -144,7 +179,9 @@ where
     /// [`ReportAttachment::downcast_attachment`].
     #[must_use]
     pub fn into_dyn_any(self) -> ReportAttachment<dyn Any, T> {
-        unsafe { ReportAttachment::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+
+        unsafe { ReportAttachment::from_raw(raw) }
     }
 
     /// Changes the thread safety mode of the [`ReportAttachment`] to [`Local`].
@@ -161,7 +198,9 @@ where
     /// [`ReportAttachment`] might actually be [`Send`] and [`Sync`].
     #[must_use]
     pub fn into_local(self) -> ReportAttachment<A, Local> {
-        unsafe { ReportAttachment::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+
+        unsafe { ReportAttachment::from_raw(raw) }
     }
 
     /// Returns a reference to the inner attachment.
@@ -263,7 +302,9 @@ where
     /// Returns a reference to the attachment.
     #[must_use]
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
-        unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 }
 
@@ -352,15 +393,17 @@ where
     where
         A: ObjectMarker,
     {
-        self.as_raw_ref().attachment_downcast()
+        self.as_ref().downcast_inner()
     }
 
     /// Downcasts the inner attachment to a specific type without checking.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the inner attachment is actually of type
-    /// `A`. This can be verified by calling [`inner_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A` (can be verified by
+    ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
     #[must_use]
@@ -368,7 +411,9 @@ where
     where
         A: ObjectMarker,
     {
-        unsafe { self.as_ref().downcast_inner_unchecked() }
+        let raw = self.as_raw_ref();
+
+        unsafe { raw.attachment_downcast_unchecked() }
     }
 
     /// Attempts to downcast the [`ReportAttachment`] to a specific attachment
@@ -378,10 +423,9 @@ where
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
     where
-        A: markers::ObjectMarker + ?Sized,
+        A: markers::ObjectMarker,
     {
-        if TypeId::of::<A>() == TypeId::of::<dyn Any>() || TypeId::of::<A>() == self.inner_type_id()
-        {
+        if TypeId::of::<A>() == self.inner_type_id() {
             Ok(unsafe { self.downcast_unchecked() })
         } else {
             Err(self)
@@ -393,16 +437,20 @@ where
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the inner attachment is actually of type
-    /// `A`. This can be verified by calling [`inner_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A` (can be verified by
+    ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
     #[must_use]
     pub unsafe fn downcast_unchecked<A>(self) -> ReportAttachment<A, T>
     where
-        A: markers::ObjectMarker + ?Sized,
+        A: markers::ObjectMarker,
     {
-        unsafe { ReportAttachment::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+
+        unsafe { ReportAttachment::from_raw(raw) }
     }
 }
 
@@ -426,19 +474,26 @@ where
     }
 }
 
+// SAFETY: The `SendSync` marker indicates that all objects in the report are
+// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
+// attachment itself.
 unsafe impl<A> Send for ReportAttachment<A, SendSync> where A: markers::ObjectMarker + ?Sized {}
+// SAFETY: The `SendSync` marker indicates that all objects in the report are
+// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
+// attachment itself.
 unsafe impl<A> Sync for ReportAttachment<A, SendSync> where A: markers::ObjectMarker + ?Sized {}
 
 mod from_impls {
     use super::*;
 
-    macro_rules! unsafe_attachment_to_attachment {
+    macro_rules! from_impls {
         ($(
             <
                 $($param:ident),*
             >:
             $context1:ty => $context2:ty,
-            $thread_safety1:ty => $thread_safety2:ty
+            $thread_safety1:ty => $thread_safety2:ty,
+            [$($op:ident),*]
         ),* $(,)?) => {
             $(
                 impl<$($param),*> From<ReportAttachment<$context1, $thread_safety1>> for ReportAttachment<$context2, $thread_safety2>
@@ -447,22 +502,22 @@ mod from_impls {
                     )*
                 {
                     fn from(attachment: ReportAttachment<$context1, $thread_safety1>) -> Self {
-                        // SAFETY:
-                        // - The attachment type is valid, because it either doesn't change or goes from a known `A` to `dyn Any`.
-                        // - The thread marker is valid, because it either does not change or it goes from `SendSync` to `Local`.
-                        unsafe { ReportAttachment::from_raw(attachment.into_raw()) }
+                        attachment
+                            $(
+                                .$op()
+                            )*
                     }
                 }
             )*
         };
 }
 
-    unsafe_attachment_to_attachment!(
-        <C>: C => C, SendSync => Local,
-        <C>: C => dyn Any, SendSync => SendSync,
-        <C>: C => dyn Any, SendSync => Local,
-        <C>: C => dyn Any, Local => Local,
-        <>:  dyn Any => dyn Any, SendSync => Local,
+    from_impls!(
+        <C>: C => C, SendSync => Local, [into_local],
+        <C>: C => dyn Any, SendSync => SendSync, [into_dyn_any],
+        <C>: C => dyn Any, SendSync => Local, [into_dyn_any, into_local],
+        <C>: C => dyn Any, Local => Local, [into_dyn_any],
+        <>:  dyn Any => dyn Any, SendSync => Local, [into_local],
     );
 }
 

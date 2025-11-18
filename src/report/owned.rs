@@ -1,10 +1,7 @@
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-};
+use core::any::{Any, TypeId};
 
 use rootcause_internals::{
-    RawReport, RawReportRef,
+    RawReport,
     handlers::{ContextFormattingStyle, FormattingFunction},
 };
 
@@ -16,71 +13,252 @@ use crate::{
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
-    util::format_helper,
 };
 
-/// An error report that contains a context, child reports, and attachments.
-///
-/// [`Report`] is the main type for creating and working with error reports in
-/// this library. It can contain a root context (typically an error), zero or
-/// more child reports, and zero or more attachments.
-///
-/// # Type Parameters
-///
-/// [`Report`] has three type parameters that control its behavior:
-///
-/// - **Context (`C`)**: The type of the root error or context (defaults to `dyn
-///   Any`)
-/// - **Ownership (`O`)**: Controls whether the report can be cloned
-///   - [`Mutable`]: Unique ownership, can modify but cannot clone (default)
-///   - [`Cloneable`]: Shared ownership via [`Arc`], can clone but cannot modify
-///     root
-/// - **Thread Safety (`T`)**: Controls whether the report can be sent across
-///   threads
-///   - [`SendSync`]: Can be sent across threads (default, requires all data is
-///     [`Send`]+[`Sync`])
-///   - [`Local`]: Cannot be sent across threads (allows non-thread-safe data)
-///
-/// # Common Usage
-///
-/// The easiest way to create a [`Report`] is with the [`report!()`] macro:
-///
-/// ```
-/// # use rootcause::prelude::*;
-/// let report: Report = report!("file missing");
-/// println!("{report}");
-/// ```
-///
-/// You can add context and attachments using method chaining:
-///
-/// ```
-/// # use rootcause::prelude::*;
-/// let report = report!("database query failed")
-///     .context("failed to fetch user data")
-///     .attach("user_id: 12345");
-/// println!("{report}");
-/// ```
-///
-/// [`Arc`]: triomphe::Arc
-/// [`report!()`]: crate::report!
-#[repr(transparent)]
-pub struct Report<Context = dyn Any, Ownership = Mutable, ThreadSafety = SendSync>
-where
-    Context: markers::ObjectMarker + ?Sized,
-    Ownership: markers::ReportOwnershipMarker,
-    ThreadSafety: markers::ThreadSafetyMarker,
-{
-    raw: RawReport,
-    _context: PhantomData<Context>,
-    _ownership: PhantomData<Ownership>,
-    _thread_safety: PhantomData<ThreadSafety>,
+/// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
+/// an unsafe field and remove this module.
+mod limit_field_access {
+    use core::{any::Any, marker::PhantomData};
+
+    use rootcause_internals::{RawReport, RawReportMut, RawReportRef};
+
+    use crate::markers::{self, Mutable, SendSync};
+
+    /// An error report that contains a context, child reports, and attachments.
+    ///
+    /// [`Report`] is the main type for creating and working with error reports
+    /// in this library. It can contain a root context (typically an error),
+    /// zero or more child reports, and zero or more attachments.
+    ///
+    /// # Type Parameters
+    ///
+    /// [`Report`] has three type parameters that control its behavior:
+    ///
+    /// - **Context (`C`)**: The type of the root error or context (defaults to
+    ///   `dyn Any`)
+    /// - **Ownership (`O`)**: Controls whether the report can be cloned
+    ///   - [`Mutable`]: Unique ownership, can modify but cannot clone (default)
+    ///   - [`Cloneable`]: Shared ownership via [`Arc`], can clone but cannot
+    ///     modify root
+    /// - **Thread Safety (`T`)**: Controls whether the report can be sent
+    ///   across threads
+    ///   - [`SendSync`]: Can be sent across threads (default, requires all data
+    ///     is [`Send`]+[`Sync`])
+    ///   - [`Local`]: Cannot be sent across threads (allows non-thread-safe
+    ///     data)
+    ///
+    /// # Common Usage
+    ///
+    /// The easiest way to create a [`Report`] is with the [`report!()`] macro:
+    ///
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let report: Report = report!("file missing");
+    /// println!("{report}");
+    /// ```
+    ///
+    /// You can add context and attachments using method chaining:
+    ///
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let report = report!("database query failed")
+    ///     .context("failed to fetch user data")
+    ///     .attach("user_id: 12345");
+    /// println!("{report}");
+    /// ```
+    ///
+    /// [`Arc`]: triomphe::Arc
+    /// [`report!()`]: crate::report!
+    #[repr(transparent)]
+    pub struct Report<Context = dyn Any, Ownership = Mutable, ThreadSafety = SendSync>
+    where
+        Context: markers::ObjectMarker + ?Sized,
+        Ownership: markers::ReportOwnershipMarker,
+        ThreadSafety: markers::ThreadSafetyMarker,
+    {
+        /// # Safety
+        ///
+        /// The following safety invariants must be upheld as long as this
+        /// struct exists:
+        ///
+        /// 1. If `C` is a concrete type: The context embedded in the report
+        ///    must be of type `C`
+        /// 2. If `O = Mutable`: This is the unique owner of the report. More
+        ///    specifically this means that the strong count of the underlying
+        ///    `triomphe::Arc` is exactly 1.
+        /// 3. If `O = Cloneable`: All other references to this report are
+        ///    compatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 4. There are no references to any of the sub-reports of this report that
+        ///    are incompatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 5. If `T = SendSync`: All contexts and attachments in the report
+        ///    and all sub-reports must be `Send+Sync`
+        /// 6. If `T = Local`: No other references to this report are allowed to
+        ///    have `T = SendSync`
+        raw: RawReport,
+        _context: PhantomData<Context>,
+        _ownership: PhantomData<Ownership>,
+        _thread_safety: PhantomData<ThreadSafety>,
+    }
+
+    impl<C, O, T> Report<C, O, T>
+    where
+        C: markers::ObjectMarker + ?Sized,
+        O: markers::ReportOwnershipMarker,
+        T: markers::ThreadSafetyMarker,
+    {
+        /// Creates a new [`Report`] from a [`RawReport`]
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `C` is a concrete type: The context embedded in the report
+        ///    must be of type `C`
+        /// 2. If `O = Mutable`: This is the unique owner of the report. More
+        ///    specifically this means that the strong count of the underlying
+        ///    `triomphe::Arc` is exactly 1.
+        /// 3. If `O = Cloneable`: All other references to this report are
+        ///    compatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 4. There are no references to any of the sub-reports of this report that
+        ///    are incompatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 5. If `T = SendSync`: All contexts and attachments in the report
+        ///    and all sub-reports must be `Send+Sync`
+        /// 6. If `T = Local`: No other references to this report are allowed to
+        ///    have `T = SendSync`
+        #[must_use]
+        pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
+            // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
+            // 6. Guaranteed by the caller
+            Self {
+                raw,
+                _context: PhantomData,
+                _ownership: PhantomData,
+                _thread_safety: PhantomData,
+            }
+        }
+
+        /// Consumes the [`Report`] and returns the inner [`RawReport`].
+        #[must_use]
+        pub(crate) fn into_raw(self) -> RawReport {
+            // SAFETY: We are destroying `self`, so we no longer
+            // need to uphold any safety invariants.
+            self.raw
+        }
+
+        /// Creates a lifetime-bound [`RawReportRef`] from the inner
+        /// [`RawReport`].
+        #[must_use]
+        pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Trivially upheld, as no mutation occurs
+            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            //    that method has a `safety` requirement that the caller must ensure that no
+            //    owners exist which are incompatible with shared ownership. Since `self` is
+            //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
+            // 3. Trivially upheld, as no mutation occurs
+            // 4. Upheld, as this does not create any such references.
+            // 5. Trivially upheld, as no mutation occurs
+            // 6. Upheld, as this does not create any such references.
+            let raw = &self.raw;
+
+            raw.as_ref()
+        }
+    }
+
+    impl<C, T> Report<C, markers::Mutable, T>
+    where
+        C: markers::ObjectMarker + ?Sized,
+        T: markers::ThreadSafetyMarker,
+    {
+        /// Creates a lifetime-bound [`RawReportMut`] from the inner
+        /// [`RawReport`].
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`, no objects are added to the report through
+        ///    this that are not `Send+Sync`
+        #[must_use]
+        pub(crate) unsafe fn as_raw_mut(&mut self) -> RawReportMut<'_> {
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. While mutation of the context is possible through this reference, it is
+            //    not possible to change the type of the context. Therefore this invariant
+            //    is upheld.
+            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            //    that method has a `safety` requirement that the caller must ensure that no
+            //    owners exist which are incompatible with shared ownership. Since `self` is
+            //    the unique owner, this cannot happen.
+            // 3. `O = Mutable`, so this is trivially upheld.
+            // 4. Upheld, as this does not create any such references.
+            // 5. The caller guarantees that the current report is not modified in an
+            //    incompatible way and it is not possible to mutate the sub-reports.
+            // 6. Upheld, as this does not create any such references.
+            let raw = &mut self.raw;
+
+            // SAFETY:
+            // 1. This method is in an impl for `Report<C, Mutable, T>`, which
+            //    means that we can invoke our own safety invariant to show that this is
+            //    indeed the unique owner of the report.
+            unsafe { raw.as_mut() }
+        }
+    }
 }
+
+pub use limit_field_access::Report;
 
 impl<C, T> Report<C, Mutable, T>
 where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
+    /// Returns a mutable reference to the report.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{ReportMut, prelude::*};
+    /// let mut report: Report = report!("error message");
+    /// let report_mut: ReportMut<'_> = report.as_mut();
+    /// ```
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
+        // SAFETY: The safety requirements for ReportMut::from_raw are:
+        // - No additional owners of this report are allowed to get created through this
+        //   [`RawReportMut`]. Specifically this means that if the returned
+        //   [`RawReportMut`] gets turned into a [`RawReportRef`], then no calls to
+        //   [`RawReportRef::clone_arc`] are allowed.
+        // - If `T = SendSync`, then no objects gets added to this report through this
+        //   that are not `Send+Sync`.
+        //
+        // Both of these requirements are satisfied because the `ReportMut` also
+        // guarantees these exact same properties.
+        let raw = unsafe { self.as_raw_mut() };
+
+        // SAFETY: The safety requirements for ReportMut::from_raw are:
+        // - The context embedded in the RawReport must match the `C` of the output
+        //   type, or the `C` of the output type must be `dyn Any`
+        // - The thread safety marker must match the contents of the report. More
+        //   specifically if the marker is [`SendSync`], then all contexts and
+        //   attachments must be `Send+Sync`
+        //
+        // These requirements are satisfied because:
+        // - The `Self` type which is where the `raw` argument comes from is a
+        //   `Report<C, Mutable, T>`. This means that either `C = dyn Any` and we are
+        //   fine, or the `C` matches the context in the `RawReport`.
+        // - The `Self` type has the thread safety marker `T`, so if `T = SendSync`,
+        //   then the entire report (including context and attachments) are `Send+Sync`.
+        unsafe { ReportMut::from_raw(raw) }
+    }
+
     /// Creates a new [`Report`] with the given context.
     ///
     /// This method is generic over the thread safety marker `T`. The context
@@ -172,7 +350,7 @@ where
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        crate::hooks::report_creation::__run_creation_hooks(report.as_mut().into_dyn_any());
+        T::run_creation_hooks(report.as_mut().into_dyn_any());
         report
     }
 
@@ -202,125 +380,30 @@ where
         C: markers::ObjectMarkerFor<T> + Sized,
         H: ContextHandler<C>,
     {
-        // SAFETY:
-        // - The context matches the `C` in the output, because we just created the raw
-        //   report
-        // - The entire report has only a single reference, because we just created it
-        // - The entire report only contains `Send+Sync` data, as the bounds on this
-        //   method requires `C: Send+Sync` and our attachments have been marked as
-        //   `SendSync` as well
-        unsafe {
-            Report::from_raw(RawReport::new::<C, H>(
-                context,
-                children.into_raw(),
-                attachments.into_raw(),
-            ))
-        }
-    }
-
-    /// Decomposes the [`Report`] into its constituent parts.
-    ///
-    /// Returns a tuple containing the children collection, attachments
-    /// collection, and context in that order. This is the inverse operation
-    /// of [`Report::from_parts`] and [`Report::from_parts_unhooked`].
-    ///
-    /// This method can be useful when you need to:
-    /// - Extract and modify individual components of a report
-    /// - Rebuild a report with different components
-    /// - Transfer components between different reports
-    /// - Perform custom processing on specific parts
-    ///
-    /// Note that to exactly reconstruct the original report, you will also need
-    /// to use the same handler as was used for the original report.
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments};
-    /// // Create a report with some children and attachments
-    /// let mut report: Report<String> = Report::from_parts::<handlers::Display>(
-    ///     "main error".to_string(),
-    ///     ReportCollection::new(),
-    ///     ReportAttachments::new(),
-    /// );
-    ///
-    /// // Add some content
-    /// let child_report = report!("child error").into_dyn_any().into_cloneable();
-    /// report.children_mut().push(child_report);
-    /// report.attachments_mut().push("debug info".into());
-    ///
-    /// // Decompose into parts
-    /// let (context, children, attachments) = report.into_parts();
-    ///
-    /// assert_eq!(context, "main error");
-    /// assert_eq!(children.len(), 1);
-    /// assert!(attachments.len() >= 1); // "debug info" + potential automatic attachments
-    ///
-    /// // Can rebuild with the same or different parts
-    /// let rebuilt: Report<String> = Report::from_parts::<handlers::Display>(
-    ///     context,
-    ///     children,
-    ///     attachments,
-    /// );
-    /// ```
-    #[must_use]
-    pub fn into_parts(self) -> (C, ReportCollection<dyn Any, T>, ReportAttachments<T>)
-    where
-        C: Sized,
-    {
-        let (context, children, attachments) = unsafe { self.raw.into_parts() };
-        let children = unsafe { ReportCollection::from_raw(children) };
-        let attachments = unsafe { ReportAttachments::from_raw(attachments) };
-        (context, children, attachments)
-    }
-
-    /// Extracts and returns the context value from the [`Report`].
-    ///
-    /// This is a convenience method that consumes the [`Report`] and returns
-    /// only the context, discarding the children and attachments. It's
-    /// equivalent to calling `report.into_parts().0`.
-    ///
-    /// This method can be useful when:
-    /// - You only need the underlying error or context value
-    /// - Converting from a [`Report`] back to the original error type
-    /// - Extracting context for logging or forwarding to other systems
-    /// - Implementing error conversion traits
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// #[derive(Debug, PartialEq, Clone)]
-    /// struct MyError {
-    ///     message: String,
-    ///     code: u32,
-    /// }
-    ///
-    /// impl std::fmt::Display for MyError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         write!(f, "Error {}: {}", self.code, self.message)
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for MyError {}
-    ///
-    /// // Create a report with a custom error context
-    /// let original_error = MyError {
-    ///     message: "database connection failed".to_string(),
-    ///     code: 500,
-    /// };
-    /// let report: Report<MyError> = report!(original_error.clone());
-    ///
-    /// // Extract just the context, discarding report structure
-    /// let extracted_error = report.into_current_context();
-    /// assert_eq!(extracted_error, original_error);
-    /// assert_eq!(extracted_error.code, 500);
-    /// assert_eq!(extracted_error.message, "database connection failed");
-    /// ```
-    #[must_use]
-    pub fn into_current_context(self) -> C
-    where
-        C: Sized,
-    {
-        self.into_parts().0
+        let raw = RawReport::new::<C, H>(context, children.into_raw(), attachments.into_raw());
+        // SAFETY: The safety requirements for Report::from_raw are:
+        // - The context embedded in the [`RawReport`] must either be the type `C`, or
+        //   `C` must be the type `dyn Any`
+        // - The ownership marker must match the actual ownership status of the report.
+        //   More specifically, if the ownership mode is [`Mutable`], then this
+        //   [`RawReport`] is the unique owner of report, however references to
+        //   sub-reports are allowed.
+        // - The thread safety marker must match the contents of the report. More
+        //   specifically if the marker is [`SendSync`], then all contexts and
+        //   attachments must be [`Send`]+[`Sync`]
+        //
+        // The first requirement is satisfied, because we just created the raw report
+        // with context type `C`.
+        // The second requirement is satisfied, because we just created the raw report
+        // as the unique owner.
+        // The third requirement is satisfied is trivial if `T=Local`. When `T=SendSync`
+        // then:
+        // - `C: ObjectMarkerFor<SendSync>`, which implies that `C: Send + Sync`
+        // - `children: ReportCollection<dyn Any, SendSync>`, which implies that all
+        //   child reports are `Send + Sync`
+        // - `attachments: ReportAttachments<SendSync>`, which implies that all
+        //   attachments are `Send + Sync`
+        unsafe { Report::from_raw(raw) }
     }
 
     /// Adds a new attachment to the [`Report`].
@@ -372,23 +455,6 @@ where
         self
     }
 
-    /// Returns a mutable reference to the current context.
-    ///
-    /// # Examples
-    /// ```
-    /// use rootcause::prelude::*;
-    /// let mut report: Report<String> = report!(String::from("An error occurred"));
-    /// let context: &mut String = report.current_context_mut();
-    /// context.push_str(" and that's bad");
-    /// ```
-    #[must_use]
-    pub fn current_context_mut(&mut self) -> &mut C
-    where
-        C: Sized,
-    {
-        self.as_mut().into_current_context_mut()
-    }
-
     /// Returns a mutable reference to the child reports.
     ///
     /// # Examples
@@ -414,36 +480,155 @@ where
     pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
         self.as_mut().into_attachments_mut()
     }
+}
 
-    /// Returns a mutable reference to the report.
+impl<C, T> Report<C, Mutable, T>
+where
+    C: markers::ObjectMarker,
+    T: markers::ThreadSafetyMarker,
+{
+    /// Decomposes the [`Report`] into its constituent parts.
+    ///
+    /// Returns a tuple containing the children collection, attachments
+    /// collection, and context in that order. This is the inverse operation
+    /// of [`Report::from_parts`] and [`Report::from_parts_unhooked`].
+    ///
+    /// This method can be useful when you need to:
+    /// - Extract and modify individual components of a report
+    /// - Rebuild a report with different components
+    /// - Transfer components between different reports
+    /// - Perform custom processing on specific parts
+    ///
+    /// Note that to exactly reconstruct the original report, you will also need
+    /// to use the same handler as was used for the original report.
     ///
     /// # Examples
     /// ```
-    /// use rootcause::{ReportMut, prelude::*};
-    /// let mut report: Report = report!("error message");
-    /// let report_mut: ReportMut<'_> = report.as_mut();
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments};
+    /// // Create a report with some children and attachments
+    /// let mut report: Report<String> = Report::from_parts::<handlers::Display>(
+    ///     "main error".to_string(),
+    ///     ReportCollection::new(),
+    ///     ReportAttachments::new(),
+    /// );
+    ///
+    /// // Add some content
+    /// let child_report = report!("child error").into_dyn_any().into_cloneable();
+    /// report.children_mut().push(child_report);
+    /// report.attachments_mut().push("debug info".into());
+    ///
+    /// // Decompose into parts
+    /// let (context, children, attachments) = report.into_parts();
+    ///
+    /// assert_eq!(context, "main error");
+    /// assert_eq!(children.len(), 1);
+    /// assert!(attachments.len() >= 1); // "debug info" + potential automatic attachments
+    ///
+    /// // Can rebuild with the same or different parts
+    /// let rebuilt: Report<String> = Report::from_parts::<handlers::Display>(
+    ///     context,
+    ///     children,
+    ///     attachments,
+    /// );
     /// ```
     #[must_use]
-    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY: The function requires that we ensure that there are no other
-        // references to the inner [`ReportData`]. This is guaranteed because we have
-        // a mutable reference to `self`, and `self` is a `Mutable` report.
-        let raw = unsafe { self.raw.as_mut() };
+    pub fn into_parts(self) -> (C, ReportCollection<dyn Any, T>, ReportAttachments<T>) {
+        let raw = self.into_raw();
 
-        // SAFETY: There are two requirements:
-        // - The context embedded in the RawReport must match the `C` of the output
-        //   type, or the `C` of the output type must be `dyn Any`
-        // - The thread safety marker must match the contents of the report. More
-        //   specifically if the marker is `SendSync`, then all contexts and attachments
-        //   must be `Send+Sync`
+        // SAFETY: The safety requirements for RawReport::into_parts are:
+        // - The caller must ensure that the type `C` matches the actual context type
+        //   stored in the [`ReportData`].
+        // - The caller must ensure that this is the only existing reference pointing to
+        //   the inner [`ReportData`].
         //
-        // These requirements are satisfied because:
-        // - The `Self` type which is where the `raw` argument comes from is a
-        //   `Report<C, Mutable, T>`. This means that either `C = dyn Any` and we are
-        //   fine, or the `C` matches the context in the `RawReport`.
-        // - The `Self` type has the thread safety marker `T`, so if `T = SendSync`,
-        //   then the entire report (including context and attachments) are `Send+Sync`.
-        unsafe { ReportMut::from_raw(raw) }
+        // The first requirement is satisfied, because the `C` is a concrete type,
+        // so our invariant guarantees that the context embedded in the [`RawReport`] is
+        // of type `C`. The second requirement is satisfied, because the
+        // ownership marker is `Mutable`, so we are the unique owner of the
+        // report.
+        let (context, children, attachments) = unsafe { raw.into_parts() };
+        // SAFETY: The safety requirements for ReportCollection::from_raw are:
+        // - The caller must ensure that the contexts of the `RawReport`s are actually
+        //   of type `C` when `C` is a type different from `dyn Any`.
+        // - The thread safety marker must match the contents of the reports. More
+        //   specifically if the marker is `SendSync`, then all the data (recursively)
+        //   contained by the reports must be `Send+Sync`.
+        //
+        // The first requirement is satisfied, because the `C` is `dyn Any`, so
+        // there are no restrictions on the context types of the child reports.
+        // The second requirement is satisfied, because the `T` marker of the
+        // parent report is `T`, so all child reports must also be `T`.
+        let children = unsafe { ReportCollection::<dyn Any, T>::from_raw(children) };
+        // SAFETY: The safety requirements for ReportAttachments::from_raw are:
+        // The thread safety marker must match the contents of the attachments.
+        // More specifically if the marker is `SendSync`, then all the inner
+        // attachments must be `Send+Sync`
+        //
+        // The requirement is satisfied, because the `T` marker of the
+        // parent report is `T`, so all attachments must also be `T`.
+        let attachments = unsafe { ReportAttachments::<T>::from_raw(attachments) };
+        (context, children, attachments)
+    }
+
+    /// Extracts and returns the context value from the [`Report`].
+    ///
+    /// This is a convenience method that consumes the [`Report`] and returns
+    /// only the context, discarding the children and attachments. It's
+    /// equivalent to calling `report.into_parts().0`.
+    ///
+    /// This method can be useful when:
+    /// - You only need the underlying error or context value
+    /// - Converting from a [`Report`] back to the original error type
+    /// - Extracting context for logging or forwarding to other systems
+    /// - Implementing error conversion traits
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// #[derive(Debug, PartialEq, Clone)]
+    /// struct MyError {
+    ///     message: String,
+    ///     code: u32,
+    /// }
+    ///
+    /// impl std::fmt::Display for MyError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "Error {}: {}", self.code, self.message)
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for MyError {}
+    ///
+    /// // Create a report with a custom error context
+    /// let original_error = MyError {
+    ///     message: "database connection failed".to_string(),
+    ///     code: 500,
+    /// };
+    /// let report: Report<MyError> = report!(original_error.clone());
+    ///
+    /// // Extract just the context, discarding report structure
+    /// let extracted_error = report.into_current_context();
+    /// assert_eq!(extracted_error, original_error);
+    /// assert_eq!(extracted_error.code, 500);
+    /// assert_eq!(extracted_error.message, "database connection failed");
+    /// ```
+    #[must_use]
+    pub fn into_current_context(self) -> C {
+        self.into_parts().0
+    }
+
+    /// Returns a mutable reference to the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::prelude::*;
+    /// let mut report: Report<String> = report!(String::from("An error occurred"));
+    /// let context: &mut String = report.current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    #[must_use]
+    pub fn current_context_mut(&mut self) -> &mut C {
+        self.as_mut().into_current_context_mut()
     }
 }
 
@@ -453,61 +638,6 @@ where
     O: markers::ReportOwnershipMarker,
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new [`Report`] from a [`RawReport`]
-    ///
-    /// # Safety
-    ///
-    /// To call this method you must ensure the following:
-    ///
-    /// - The context embedded in the [`RawReport`] must either be the type `C`,
-    ///   or `C` must be the type `dyn Any`
-    /// - The ownership marker must match the actual ownership status of the
-    ///   report. More specifically, if the ownership mode is [`Mutable`], then
-    ///   no other references my exist to the report itself, but references to
-    ///   sub-reports are allowed.
-    /// - The thread safety marker must match the contents of the report. More
-    ///   specifically if the marker is [`SendSync`], then all contexts and
-    ///   attachments must be [`Send`]+[`Sync`]
-    #[must_use]
-    pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
-        Self {
-            raw,
-            _context: PhantomData,
-            _ownership: PhantomData,
-            _thread_safety: PhantomData,
-        }
-    }
-
-    /// Consumes the [`Report`] and returns the inner [`RawReport`].
-    #[must_use]
-    pub(crate) fn into_raw(self) -> RawReport {
-        self.raw
-    }
-
-    /// Creates a lifetime-bound [`RawReportRef`] from the inner [`RawReport`].
-    #[must_use]
-    pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
-        self.raw.as_ref()
-    }
-
-    /// Returns a reference to the current context.
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// # struct MyError;
-    /// # let my_error = MyError;
-    /// let report: Report<MyError> = report!(my_error);
-    /// let context: &MyError = report.current_context();
-    /// ```
-    #[must_use]
-    pub fn current_context(&self) -> &C
-    where
-        C: Sized,
-    {
-        self.as_ref().current_context()
-    }
-
     /// Creates a new [`Report`] with the given context and sets the current
     /// report as a child of the new report.
     ///
@@ -623,7 +753,8 @@ where
     /// ```
     #[must_use]
     pub fn into_dyn_any(self) -> Report<dyn Any, O, T> {
-        unsafe { Report::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+        unsafe { Report::from_raw(raw) }
     }
 
     /// Changes the ownership of the [`Report`] to [`Cloneable`].
@@ -659,7 +790,8 @@ where
     /// ```
     #[must_use]
     pub fn into_cloneable(self) -> Report<C, Cloneable, T> {
-        unsafe { Report::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+        unsafe { Report::from_raw(raw) }
     }
 
     /// Changes the thread safety mode of the [`Report`] to [`Local`].
@@ -688,7 +820,8 @@ where
     /// ```
     #[must_use]
     pub fn into_local(self) -> Report<C, O, Local> {
-        unsafe { Report::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+        unsafe { Report::from_raw(raw) }
     }
 
     /// Checks if there is only a single unique owner of the root node of the
@@ -714,8 +847,10 @@ where
     /// }
     /// ```
     pub fn try_into_mutable(self) -> Result<Report<C, Mutable, T>, Report<C, O, T>> {
-        if self.as_raw_ref().strong_count() == 1 {
-            unsafe { Ok(Report::from_raw(self.into_raw())) }
+        if self.strong_count() == 1 {
+            let raw = self.into_raw();
+            let report = unsafe { Report::from_raw(raw) };
+            Ok(report)
         } else {
             Err(self)
         }
@@ -734,7 +869,8 @@ where
     /// ```
     #[must_use]
     pub fn as_ref(&self) -> ReportRef<'_, C, O::RefMarker, T> {
-        unsafe { ReportRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+        unsafe { ReportRef::from_raw(raw) }
     }
 
     /// Returns an iterator over the complete report hierarchy including this
@@ -882,7 +1018,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
-        self.as_raw_ref().context_type_id()
+        self.as_ref().current_context_type_id()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.
@@ -900,7 +1036,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
-        self.as_raw_ref().context_handler_type_id()
+        self.as_ref().current_context_handler_type_id()
     }
 
     /// Returns the error source if the context implements [`Error`].
@@ -928,7 +1064,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_error_source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        self.as_raw_ref().context_source()
+        self.as_ref().current_context_error_source()
     }
 
     /// Formats the current context with hook processing.
@@ -942,17 +1078,7 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
-            unsafe { ReportRef::from_raw(self.as_raw_ref()) };
-        format_helper(
-            report,
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::display_context(report, formatter)
-            },
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::debug_context(report, formatter)
-            },
-        )
+        self.as_ref().format_current_context()
     }
 
     /// Formats the current context without hook processing.
@@ -966,11 +1092,7 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |report, formatter| report.context_display(formatter),
-            |report, formatter| report.context_debug(formatter),
-        )
+        self.as_ref().format_current_context_unhooked()
     }
 
     /// Gets the preferred formatting style for the context with hook
@@ -999,7 +1121,7 @@ where
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
-            unsafe { ReportRef::from_raw(self.as_raw_ref()) };
+            self.as_ref().into_dyn_any().into_uncloneable().into_local();
         crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
@@ -1030,8 +1152,8 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        self.as_raw_ref()
-            .preferred_context_formatting_style(report_formatting_function)
+        self.as_ref()
+            .preferred_context_formatting_style_unhooked(report_formatting_function)
     }
 
     /// Returns the number of references to this report.
@@ -1044,7 +1166,29 @@ where
     /// ```
     #[must_use]
     pub fn strong_count(&self) -> usize {
-        self.as_raw_ref().strong_count()
+        self.as_ref().strong_count()
+    }
+}
+
+impl<C, O, T> Report<C, O, T>
+where
+    C: markers::ObjectMarker,
+    O: markers::ReportOwnershipMarker,
+    T: markers::ThreadSafetyMarker,
+{
+    /// Returns a reference to the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # struct MyError;
+    /// # let my_error = MyError;
+    /// let report: Report<MyError> = report!(my_error);
+    /// let context: &MyError = report.current_context();
+    /// ```
+    #[must_use]
+    pub fn current_context(&self) -> &C {
+        self.as_ref().current_context()
     }
 }
 
@@ -1080,8 +1224,10 @@ where
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the current context is actually of type `C`.
-    /// This can be verified by calling [`current_context_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
     ///
     /// [`current_context_type_id()`]: Report::current_context_type_id
     ///
@@ -1104,7 +1250,8 @@ where
     where
         C: markers::ObjectMarker,
     {
-        unsafe { self.as_ref().downcast_current_context_unchecked() }
+        let report = self.as_ref();
+        unsafe { report.downcast_current_context_unchecked() }
     }
 
     /// Attempts to downcast the report to a specific context type.
@@ -1125,9 +1272,7 @@ where
     where
         C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == TypeId::of::<dyn Any>()
-            || TypeId::of::<C>() == self.current_context_type_id()
-        {
+        if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
             // - The context is valid because we just checked that it matches
             // - The thread marker is valid, because does not change
@@ -1141,8 +1286,10 @@ where
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the current context is actually of type `C`.
-    /// This can be verified by calling [`current_context_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
     ///
     /// [`current_context_type_id()`]: Report::current_context_type_id
     ///
@@ -1165,7 +1312,8 @@ where
     where
         C: markers::ObjectMarker,
     {
-        unsafe { Report::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+        unsafe { Report::from_raw(raw) }
     }
 }
 
@@ -1275,12 +1423,18 @@ where
     }
 }
 
+// SAFETY: The `SendSync` marker indicates that all objects in the report are
+// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
+// itself.
 unsafe impl<C, O> Send for Report<C, O, SendSync>
 where
     C: markers::ObjectMarker + ?Sized,
     O: markers::ReportOwnershipMarker,
 {
 }
+// SAFETY: The `SendSync` marker indicates that all objects in the report are
+// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
+// itself.
 unsafe impl<C, O> Sync for Report<C, O, SendSync>
 where
     C: markers::ObjectMarker + ?Sized,
@@ -1338,17 +1492,7 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn clone(&self) -> Self {
-        // SAFETY: We must guarantee that there are no external assumptions
-        // that Arc is unique. However since we are a `Report<C, Cloneable, T>` there
-        // are no such external assumptions.
-        let raw = unsafe { self.as_raw_ref().clone_arc() };
-
-        // SAFETY:
-        // - The context is valid, because does not change
-        // - The ownership of the cloned report is also set to Cloneable, which is still
-        //   valid
-        // - The thread marker is valid, because it does not change
-        unsafe { Report::from_raw(raw) }
+        self.as_ref().clone_arc()
     }
 }
 
@@ -1377,14 +1521,15 @@ where
 mod from_impls {
     use super::*;
 
-    macro_rules! unsafe_report_to_report {
+    macro_rules! from_impls {
         ($(
             <
                 $($param:ident),*
             >:
             $context1:ty => $context2:ty,
             $ownership1:ty => $ownership2:ty,
-            $thread_safety1:ty => $thread_safety2:ty
+            $thread_safety1:ty => $thread_safety2:ty,
+            [$($op:ident),*]
         ),* $(,)?) => {
             $(
                 impl<$($param),*> From<Report<$context1, $ownership1, $thread_safety1>> for Report<$context2, $ownership2, $thread_safety2>
@@ -1394,37 +1539,34 @@ mod from_impls {
                  {
                     #[track_caller]
                     fn from(report: Report<$context1, $ownership1, $thread_safety1>) -> Self {
-                        // SAFETY:
-                        // - The context is valid, because it either doesn't change or goes from a known `C` to `dyn Any`
-                        // - The ownership marker is valid, because it either does not change or it goes from `Mutable` to `Cloneable`
-                        // - The thread marker is valid, because it either does not change or it goes from `SendSync` to `Local`
-                        unsafe { Report::from_raw(report.into_raw()) }
+                        report
+                            $(.$op())*
                     }
                 }
             )*
         };
     }
 
-    unsafe_report_to_report!(
-        <C>: C => C, Mutable => Mutable, SendSync => Local,
-        <C>: C => C, Mutable => Cloneable, SendSync => SendSync,
-        <C>: C => C, Mutable => Cloneable, SendSync => Local,
-        <C>: C => C, Mutable => Cloneable, Local => Local,
-        <C>: C => C, Cloneable => Cloneable, SendSync => Local,
-        <C>: C => dyn Any, Mutable => Mutable, SendSync => SendSync,
-        <C>: C => dyn Any, Mutable => Mutable, SendSync => Local,
-        <C>: C => dyn Any, Mutable => Mutable, Local => Local,
-        <C>: C => dyn Any, Mutable => Cloneable, SendSync => SendSync,
-        <C>: C => dyn Any, Mutable => Cloneable, SendSync => Local,
-        <C>: C => dyn Any, Mutable => Cloneable, Local => Local,
-        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync,
-        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local,
-        <C>: C => dyn Any, Cloneable => Cloneable, Local => Local,
-        <>:  dyn Any => dyn Any, Mutable => Mutable, SendSync => Local,
-        <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => SendSync,
-        <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => Local,
-        <>:  dyn Any => dyn Any, Mutable => Cloneable, Local => Local,
-        <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local,
+    from_impls!(
+        <C>: C => C, Mutable => Mutable, SendSync => Local, [into_local],
+        <C>: C => C, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
+        <C>: C => C, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
+        <C>: C => C, Mutable => Cloneable, Local => Local, [into_cloneable],
+        <C>: C => C, Cloneable => Cloneable, SendSync => Local, [into_local],
+        <C>: C => dyn Any, Mutable => Mutable, SendSync => SendSync, [into_dyn_any],
+        <C>: C => dyn Any, Mutable => Mutable, SendSync => Local, [into_dyn_any, into_local],
+        <C>: C => dyn Any, Mutable => Mutable, Local => Local, [into_dyn_any],
+        <C>: C => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
+        <C>: C => dyn Any, Mutable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
+        <C>: C => dyn Any, Mutable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
+        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
+        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
+        <C>: C => dyn Any, Cloneable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
+        <>:  dyn Any => dyn Any, Mutable => Mutable, SendSync => Local, [into_local],
+        <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
+        <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
+        <>:  dyn Any => dyn Any, Mutable => Cloneable, Local => Local, [into_cloneable],
+        <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_local],
     );
 }
 

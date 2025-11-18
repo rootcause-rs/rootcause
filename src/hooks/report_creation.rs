@@ -97,11 +97,7 @@
 //! ```
 
 use alloc::{boxed::Box, vec::Vec};
-use core::{
-    any::{Any, TypeId},
-    fmt,
-    panic::Location,
-};
+use core::{any::Any, fmt, panic::Location};
 
 use rootcause_internals::handlers::AttachmentHandler;
 
@@ -113,7 +109,7 @@ use crate::{
         builtin_hooks::location::{LocationCollector, LocationHandler},
         hook_lock::{HookLock, HookLockReadGuard},
     },
-    markers::{self, Local, SendSync, ThreadSafetyMarker},
+    markers::{Local, SendSync},
     report_attachment::ReportAttachment,
 };
 
@@ -546,56 +542,19 @@ fn get_hooks() -> HookLockReadGuard<HookSet> {
 }
 
 #[track_caller]
-fn run_creation_hooks_local(mut report: ReportMut<'_, dyn Any, Local>) {
+pub(crate) fn run_creation_hooks_local(mut report: ReportMut<'_, dyn Any, Local>) {
     if let Some(hooks) = get_hooks().get() {
         for hook in hooks {
-            hook.on_local_creation(report.reborrow());
+            hook.on_local_creation(report.as_mut());
         }
     }
 }
 
 #[track_caller]
-fn run_creation_hooks_sendsync(mut report: ReportMut<'_, dyn Any, SendSync>) {
+pub(crate) fn run_creation_hooks_sendsync(mut report: ReportMut<'_, dyn Any, SendSync>) {
     if let Some(hooks) = get_hooks().get() {
         for hook in hooks {
-            hook.on_sendsync_creation(report.reborrow());
+            hook.on_sendsync_creation(report.as_mut());
         }
-    }
-}
-
-#[inline(always)]
-fn safe_transmute_thread_marker<'a, T1, T2>(
-    report: &'a mut ReportMut<'_, dyn Any, T1>,
-) -> Option<ReportMut<'a, dyn Any, T2>>
-where
-    T1: ThreadSafetyMarker,
-    T2: ThreadSafetyMarker,
-{
-    if core::any::TypeId::of::<T1>() == core::any::TypeId::of::<T2>() {
-        let report: ReportMut<'a, dyn Any, T1> = report.reborrow();
-        // SAFETY: The type IDs match, so the transmute does not change the actual
-        // type.
-        let report: ReportMut<'a, dyn Any, T2> = unsafe { core::mem::transmute(report) };
-        Some(report)
-    } else {
-        None
-    }
-}
-
-#[track_caller]
-#[inline(never)]
-pub(crate) fn __run_creation_hooks<T>(mut report: ReportMut<'_, dyn Any, T>)
-where
-    T: markers::ThreadSafetyMarker,
-{
-    if let Some(report) = safe_transmute_thread_marker::<T, Local>(&mut report) {
-        run_creation_hooks_local(report);
-    } else if let Some(report) = safe_transmute_thread_marker::<T, SendSync>(&mut report) {
-        run_creation_hooks_sendsync(report);
-    } else {
-        unreachable!(
-            "Unsupported thread safety marker for report creation: {:?}",
-            TypeId::of::<T>()
-        );
     }
 }

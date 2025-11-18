@@ -123,13 +123,65 @@ use crate::{
     report_attachment::ReportAttachmentRef,
 };
 
-type HookMap =
-    HashMap<TypeId, Arc<dyn UntypedAttachmentFormattingOverride>, rustc_hash::FxBuildHasher>;
+#[derive(Default)]
+struct HookMap {
+    /// # Safety Invariant
+    ///
+    /// The hook stored under `TypeId::of::<A>()` is guaranteed to be an
+    /// instance of the type `Hook<A, H>`.
+    map: HashMap<TypeId, Arc<dyn UntypedAttachmentFormattingOverride>, rustc_hash::FxBuildHasher>,
+}
 
+impl HookMap {
+    /// Retrieves the formatting override hook for the specified attachment
+    /// type.
+    ///
+    /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
+    /// where `TypeId::of::<A>() == type_id`.
+    fn get(&self, type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverride>> {
+        self.map.get(&type_id).cloned()
+    }
+
+    fn insert<A, H: AttachmentFormattingOverride<A>>(&mut self, hook: Hook<A, H>) {
+        let hook: Arc<Hook<A, H>> = Arc::new(hook);
+        let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentFormattingOverride));
+        // We must uphold the safety invariant of HookMap.
+        //
+        // The safety invariant requires that the hook stored under
+        // `TypeId::of::<A>()` is always of type `Hook<A, H>`.
+        //
+        // However this is exactly what we are doing here,
+        // so the invariant is upheld.
+        self.map.insert(TypeId::of::<A>(), hook);
+    }
+
+    fn values(&self) -> impl Iterator<Item = &dyn core::fmt::Display> {
+        self.map
+            .values()
+            .map(|hook| hook.as_ref() as &dyn core::fmt::Display)
+    }
+}
+
+/// Global registry of attachment formatting override hooks.
+///
+/// # Safety invariant
+///
+/// This registry can only contained hooks of type `Hook<A, H>`, where
+/// `TypeId::of::<A>()` is the key used to store the hook in the [`HashMap`].
+///
+/// This invariant is guaranteed by the [`register_attachment_hook`] function.
 static HOOKS: HookLock<HookMap> = HookLock::new();
 
+/// Retrieves the formatting override hook for the specified attachment type.
+///
+/// # Safety invariant
+///
+/// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
+/// where `TypeId::of::<A>() == type_id`.
 fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverride>> {
-    HOOKS.read().get()?.get(&type_id).cloned()
+    // We use the safety invariant of the global HOOKS registry here, which
+    // guarantees that the hook is of the correct type.
+    HOOKS.read().get()?.get(type_id)
 }
 
 struct Hook<A, H>
@@ -205,17 +257,18 @@ pub struct AttachmentParent<'a> {
     pub attachment_index: usize,
 }
 
+/// Trait for untyped attachment formatting overrides.
+///
+/// This trait is guaranteed to only be implemented for [`Hook<A, H>`].
 trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Display {
     /// Formats the attachment using Display formatting.
     ///
     /// # Safety
     ///
-    /// The implementation of this trait is free to make assumptions about the
-    /// type of the inner attachment and call
-    /// [`ReportAttachmentRef::downcast_attachment_unchecked`]. It is the
-    /// responsibility of the caller to ensure that whatever those
-    /// assumptions might be for the type in question, they hold for the
-    /// attachment given as the argument.
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` stored in the attachment matches the `A` from type
+    ///    `Hook<A, H>` this is implemented for.
     unsafe fn display(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -227,12 +280,10 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
     ///
     /// # Safety
     ///
-    /// The implementation of this trait is free to make assumptions about the
-    /// type of the inner attachment and call
-    /// [`ReportAttachmentRef::downcast_attachment_unchecked`]. It is the
-    /// responsibility of the caller to ensure that whatever those
-    /// assumptions might be for the type in question, they hold for the
-    /// attachment given as the argument.
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` stored in the attachment matches the `A` from type
+    ///    `Hook<A, H>` this is implemented for.
     unsafe fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
@@ -449,42 +500,26 @@ where
     A: markers::ObjectMarker,
     H: AttachmentFormattingOverride<A>,
 {
-    /// Formats the attachment using Display formatting.
-    ///
-    /// # Safety
-    ///
-    /// As specified in the trait, the implementer can make assumptions about
-    /// the type of the inner attachment contained in the argument.
-    ///
-    /// This implementation will downcast the attachment to the expected type
-    /// `A`, so the caller must ensure that the argument indeed contains a
-    /// attachment of type `A`.
     unsafe fn display(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let attachment = unsafe { attachment.downcast_attachment_unchecked::<A>() };
         self.hook.display(attachment, attachment_parent, formatter)
     }
 
-    /// Formats the attachment using Debug formatting.
-    ///
-    /// # Safety
-    ///
-    /// As specified in the trait, the implementer can make assumptions about
-    /// the type of the inner attachment contained in the argument.
-    ///
-    /// This implementation will downcast the attachment to the expected type
-    /// `A`, so the caller must ensure that the argument indeed contains a
-    /// attachment of type `A`.
     unsafe fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, dyn Any>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let attachment = unsafe { attachment.downcast_attachment_unchecked::<A>() };
         self.hook.debug(attachment, attachment_parent, formatter)
     }
@@ -582,14 +617,8 @@ where
         added_at: added_location,
         _hooked_type: PhantomData,
     };
-    let hook: Arc<Hook<A, H>> = Arc::new(hook);
-    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentFormattingOverride));
 
-    HOOKS
-        .write()
-        .get()
-        .get_or_insert_default()
-        .insert(TypeId::of::<A>(), hook);
+    HOOKS.write().get().get_or_insert_default().insert(hook);
 }
 
 pub(crate) fn display_attachment(
@@ -602,7 +631,15 @@ pub(crate) fn display_attachment(
     {
         hook.display_preformatted(attachment, attachment_parent, formatter)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
-        unsafe { hook.display(attachment, attachment_parent, formatter) }
+        // SAFETY:
+        // 1. We must ensure that the attachment's inner type ID matches the type ID
+        //    that the hook was registered for. This is guaranteed by the safety
+        //    invariant of get_hook.
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: get_hook
+            hook.display(attachment, attachment_parent, formatter)
+        }
     } else {
         fmt::Display::fmt(&attachment.format_inner_unhooked(), formatter)
     }
@@ -618,7 +655,15 @@ pub(crate) fn debug_attachment(
     {
         hook.debug_preformatted(attachment, attachment_parent, formatter)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
-        unsafe { hook.debug(attachment, attachment_parent, formatter) }
+        // SAFETY:
+        // 1. We must ensure that the attachment's inner type ID matches the type ID
+        //    that the hook was registered for. This is guaranteed by the safety
+        //    invariant of get_hook.
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: get_hook
+            hook.debug(attachment, attachment_parent, formatter)
+        }
     } else {
         fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
     }

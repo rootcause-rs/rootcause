@@ -1,8 +1,6 @@
 use alloc::vec::Vec;
 use core::{any::Any, iter::FusedIterator, marker::PhantomData};
 
-use rootcause_internals::RawReportRef;
-
 use crate::{ReportRef, markers};
 
 /// An iterator over a report and all its descendant reports in depth-first
@@ -18,7 +16,7 @@ where
     Ownership: markers::ReportRefOwnershipMarker,
     ThreadSafety: markers::ThreadSafetyMarker,
 {
-    stack: Vec<RawReportRef<'a>>,
+    stack: Vec<ReportRef<'a, dyn Any, Ownership, ThreadSafety>>,
     _ownership: PhantomData<Ownership>,
     _thread_safety: PhantomData<ThreadSafety>,
 }
@@ -28,16 +26,8 @@ where
     O: crate::markers::ReportRefOwnershipMarker,
     T: crate::markers::ThreadSafetyMarker,
 {
-    /// Creates a new `ReportIter` from a vector of raw report references
-    ///
-    /// # Safety
-    ///
-    /// - The thread safety marker must match the contents of the reports. More
-    ///   specifically if the marker is `SendSync`, then all the data
-    ///   (recursively) contained by the reports must be `Send+Sync`.
-    /// - The ownership marker must match the ownership semantics of the report
-    ///   references.
-    pub(crate) unsafe fn from_raw(stack: Vec<RawReportRef<'a>>) -> Self {
+    /// Creates a new [`ReportIter`] from a vector of raw report references
+    pub(crate) fn from_raw(stack: Vec<ReportRef<'a, dyn Any, O, T>>) -> Self {
         Self {
             stack,
             _ownership: PhantomData,
@@ -51,13 +41,17 @@ where
     O: markers::ReportRefOwnershipMarker,
     T: markers::ThreadSafetyMarker,
 {
-    type Item = ReportRef<'a, dyn Any, markers::Cloneable, T>;
+    type Item = ReportRef<'a, dyn Any, O, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let cur = self.stack.pop()?;
-        self.stack
-            .extend(cur.children().iter().map(|r| r.as_ref()).rev());
-        Some(unsafe { ReportRef::from_raw(cur) })
+        let new_children = cur
+            .children()
+            .iter()
+            .map(|c| O::convert_cloneable_report_ref(c))
+            .rev();
+        self.stack.extend(new_children);
+        Some(cur)
     }
 }
 

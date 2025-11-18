@@ -31,6 +31,13 @@ use crate::{
 ///
 /// Contains function pointers for performing operations on reports without
 /// knowing their concrete type at compile time.
+///
+/// # Safety Invariant
+///
+/// The fields drop, clone_arc, strong_count, source, display, debug, and
+/// preferred_context_formatting_style are guaranteed to point to the
+/// functions defined below instantiated with the same context type `C`
+/// and handler type `H` that were used to create this `ReportVtable`.
 pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].
@@ -97,21 +104,23 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// - The caller must ensure that the pointer comes from an
-    ///   [`triomphe::Arc<ReportData<C>>`], which was turned into a pointer
-    ///   using [`triomphe::Arc::into_raw`].
-    /// - The context type `C` stored in the [`ReportData`] must match the `C`
-    ///   used when creating this [`ReportVtable`].
-    /// - After calling this method, the pointer must no longer be used.
+    /// The caller must ensure:
+    ///
+    /// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned
+    ///    into a pointer via [`triomphe::Arc::into_raw`]
+    /// 2. The context type `C` in the [`ReportData`] matches the `C` used when
+    ///    creating this [`ReportVtable`]
+    /// 3. After calling this method, the pointer is no longer used
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<ReportData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<C>` below.
-        // That function has three requirements, all of which are guaranteed by our
-        // caller:
-        // - The pointer must come from `triomphe::Arc::into_raw`
-        // - The context type `C` must match the stored type
-        // - The pointer must not be used after calling
+        // That function's safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        // 2. Guaranteed by the caller
+        // 3. Guaranteed by the caller
         unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: drop
             (self.drop)(ptr);
         }
     }
@@ -120,22 +129,27 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// - The caller must ensure that the pointer comes from an
-    ///   [`triomphe::Arc<ReportData<C>>`], which was turned into a pointer
-    ///   using [`triomphe::Arc::into_raw`].
-    /// - The context type `C` stored in the [`ReportData`] must match the `C`
-    ///   used when creating this [`ReportVtable`].
-    /// - There must be no external assumptions that there is a unique ownership
-    ///   of the [`triomphe::Arc`].
+    /// The caller must ensure:
+    ///
+    /// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned
+    ///    into a pointer via [`triomphe::Arc::into_raw`]
+    /// 2. The context type `C` in the [`ReportData`] matches the `C` used when
+    ///    creating this [`ReportVtable`]
+    /// 3. All other references to this report are compatible with shared
+    ///    ownership. Specifically none of them assume that the strong_count is
+    ///    `1`.
     #[inline]
     pub(super) unsafe fn clone_arc(&self, ptr: NonNull<ReportData<Erased>>) -> RawReport {
         // SAFETY: We know that `self.clone_arc` points to the function `clone_arc::<C>`
-        // below. That function has three requirements, all of which are
-        // guaranteed by our caller:
-        // - The pointer must come from `triomphe::Arc::into_raw`
-        // - The context type `C` must match the stored type
-        // - There must be no external assumptions about pointer uniqueness
-        unsafe { (self.clone_arc)(ptr) }
+        // below. That function's safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        // 2. Guaranteed by the caller
+        // 3. Guaranteed by the caller
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: clone_arc
+            (self.clone_arc)(ptr)
+        }
     }
 
     /// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to
@@ -143,19 +157,24 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// - The caller must ensure that the pointer comes from an
-    ///   [`triomphe::Arc<ReportData<C>>`], which was turned into a pointer
-    ///   using [`triomphe::Arc::into_raw`].
-    /// - The context type `C` stored in the [`ReportData`] must match the `C`
-    ///   used when creating this [`ReportVtable`].
+    /// The caller must ensure:
+    ///
+    /// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
+    ///    [`triomphe::Arc::into_raw`]
+    /// 2. The context type `C` stored in the [`ReportData`] matches the `C`
+    ///    used when creating this [`ReportVtable`]
     #[inline]
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
-        // `strong_count::<C>` below. That function has two requirements, both
-        // of which are guaranteed by our caller:
-        // - The pointer must come from `triomphe::Arc::into_raw`
-        // - The context type `C` must match the stored type
-        unsafe { (self.strong_count)(ptr) }
+        // `strong_count::<C>` below. That function's safety requirements are
+        // upheld:
+        // 1. Guaranteed by the caller
+        // 2. Guaranteed by the caller
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: strong_count
+            (self.strong_count)(ptr)
+        }
     }
 
     /// Returns a reference to the source of the error using the [`H::source`]
@@ -163,8 +182,11 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// The context type `C` used when creating this [`ReportVtable`] must match
-    /// the type of the `C` stored in the [`ReportData`] pointed to by the
+    /// The caller must ensure:
+    ///
+    /// 1. The context type `C` used when creating this [`ReportVtable`] must
+    ///    match the type of the `C` stored in the [`ReportData`] pointed to by
+    ///    the
     /// [`RawReportRef`].
     ///
     /// [`H::source`]: ContextHandler::source
@@ -173,11 +195,14 @@ impl ReportVtable {
         &self,
         ptr: RawReportRef<'a>,
     ) -> Option<&'a (dyn core::error::Error + 'static)> {
-        // SAFETY: We know that the `self.source` field points to the function
-        // `source::<C>` below. The safety requirement of that function is that
-        // the `C` matches the one stored in the `ReportData` pointed to by
-        // `ptr`. This is guaranteed by the caller of this method.
-        unsafe { (self.source)(ptr) }
+        // SAFETY: We know that `self.source` points to the function `source::<C, H>`
+        // below. That function's safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: source
+            (self.source)(ptr)
+        }
     }
 
     /// Formats the report using the [`H::display`] function
@@ -187,19 +212,24 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// The context type `C` used when creating this [`ReportVtable`] must match
-    /// the type stored in the [`ReportData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The context type `C` used when creating this [`ReportVtable`] must
+    ///    match the type stored in the [`ReportData`].
     #[inline]
     pub(super) unsafe fn display(
         &self,
         ptr: RawReportRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
-        // SAFETY: We know that the `self.display` field points to the function
-        // `display::<C, H>` below. That function requires that the context type
-        // `C` matches the actual context type stored in the `ReportData`, which
-        // is guaranteed by our caller.
-        unsafe { (self.display)(ptr, formatter) }
+        // SAFETY: We know that `self.display` points to the function `display::<C, H>`
+        // below. That function's safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: display
+            (self.display)(ptr, formatter)
+        }
     }
 
     /// Formats the given `RawReportRef` using the [`H::debug`] function
@@ -209,19 +239,24 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// The context type `C` used when creating this [`ReportVtable`] must match
-    /// the type stored in the [`ReportData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The context type `C` used when creating this [`ReportVtable`] must
+    ///    match the type stored in the [`ReportData`].
     #[inline]
     pub(super) unsafe fn debug(
         &self,
         ptr: RawReportRef<'_>,
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
-        // SAFETY: We know that the `self.debug` field points to the function
-        // `debug::<C, H>` below. That function requires that the context type
-        // `C` matches the actual context type stored in the `ReportData`, which
-        // is guaranteed by our caller.
-        unsafe { (self.debug)(ptr, formatter) }
+        // SAFETY: We know that `self.debug` points to the function `debug::<C, H>`
+        // below. That function's safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: debug
+            (self.debug)(ptr, formatter)
+        }
     }
 
     /// Calls the [`H::preferred_formatting_style`] function to get the
@@ -232,19 +267,25 @@ impl ReportVtable {
     ///
     /// # Safety
     ///
-    /// The context type `C` used when creating this [`ReportVtable`] must match
-    /// the type stored in the [`ReportData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The context type `C` used when creating this [`ReportVtable`] must
+    ///    match the type stored in the [`ReportData`].
     #[inline]
     pub(super) unsafe fn preferred_context_formatting_style(
         &self,
         ptr: RawReportRef<'_>,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        // SAFETY: We know that the `self.preferred_context_formatting_style` field
-        // points to the function `preferred_context_formatting_style::<C, H>` below.
-        // That function requires that the context type `C` matches the actual context
-        // type stored in the `ReportData`, which is guaranteed by our caller.
-        unsafe { (self.preferred_context_formatting_style)(ptr, report_formatting_function) }
+        // SAFETY: We know that `self.preferred_context_formatting_style` points to the
+        // function `preferred_context_formatting_style::<C, H>` below.
+        // That function's safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: preferred_context_formatting_style
+            (self.preferred_context_formatting_style)(ptr, report_formatting_function)
+        }
     }
 }
 
@@ -253,29 +294,47 @@ impl ReportVtable {
 ///
 /// # Safety
 ///
-/// - The caller must ensure that the pointer comes from an
-///   [`triomphe::Arc<ReportData<C>>`], which was turned into a pointer using
-///   [`triomphe::Arc::into_raw`].
-/// - The context type `C` must match the actual context type stored in the
-///   [`ReportData`].
-/// - After calling this method, the pointer must no longer be used.
+/// The caller must ensure:
+///
+/// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
+///    [`triomphe::Arc::into_raw`]
+/// 2. The context type `C` matches the actual context type stored in the
+///    [`ReportData`]
+/// 3. The pointer is not used after calling this method
 pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
     let ptr: NonNull<ReportData<C>> = ptr.cast();
     let ptr = ptr.as_ptr();
-    // SAFETY: Triomphe has two requirements:
-    // - The given pointer must be of the correct type and have come from a call to
-    //   `Arc::into_raw`.
-    // - After `from_raw`, the pointer must not be accessed.
-    //
-    // The first requirement is guaranteed by the fact that we created the pointer
-    // using `Arc::into_raw` and the caller guarantees that the type `C` matches
-    // the context type stored in the `ReportData`.
-    //
-    // The second requirement is guaranteed by the fact that there are no existing
-    // references to the same `ReportData` instance, as this method consumes the
-    // pointer.
+    // SAFETY:
+    // 1. The pointer has the correct type and came from `Arc::into_raw` (guaranteed
+    //    by caller)
+    // 2. After `from_raw`, the pointer is consumed and not accessed again
     let arc = unsafe { triomphe::Arc::from_raw(ptr) };
     core::mem::drop(arc);
+}
+
+/// Gets the clones the [`triomphe::Arc<ReportData<C>>`] pointed to by
+/// this pointer.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned into a
+///    pointer via [`triomphe::Arc::into_raw`]
+/// 2. The context type `C` matches the actual context type stored in the
+///    [`ReportData`]
+/// 3. All other references to this report are compatible with shared ownership.
+///    Specifically none of them assume that the strong_count is `1`.
+unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
+    let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
+
+    // SAFETY: The pointer is valid and came from `Arc::into_raw` with the correct
+    // type (guaranteed by the caller), which fulfills the requirements for
+    // `ArcBorrow::from_ptr`.
+    let arc_borrow = unsafe { triomphe::ArcBorrow::from_ptr(ptr) };
+
+    let arc = arc_borrow.clone_arc();
+    RawReport::from_arc(arc)
 }
 
 /// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to by
@@ -283,23 +342,21 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
 ///
 /// # Safety
 ///
-/// - The caller must ensure that the pointer comes from an
-///   [`triomphe::Arc<ReportData<C>>`], which was turned into a pointer using
-///   [`triomphe::Arc::into_raw`].
-/// - The context type `C` stored in the [`ReportData`] must match the `C` used
-///   when creating this [`ReportVtable`].
-unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
+/// The caller must ensure:
+///
+/// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
+///    [`triomphe::Arc::into_raw`]
+/// 2. The context type `C` matches the actual context type stored in the
+///    [`ReportData`]
+unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 
-    // SAFETY: Our caller guarantees that we point to a `ReportData<C>` and that
-    // this pointer came from a `triomphe::Arc::into_raw`.
-    //
-    // This fulfills the safety docs for `ArcBorrow::from_ptr`, which explicitly
-    // mentions the `as_ptr` (which is called from `into_raw`) is safe.
+    // SAFETY: The pointer is valid and came from `Arc::into_raw` with the correct
+    // type (guaranteed by the caller), which fulfills the requirements for
+    // `ArcBorrow::from_ptr`.
     let arc_borrow = unsafe { triomphe::ArcBorrow::from_ptr(ptr) };
 
-    let arc = arc_borrow.clone_arc();
-    RawReport::from_arc(arc)
+    triomphe::ArcBorrow::strong_count(&arc_borrow)
 }
 
 /// Gets the source error from a report using its handler's source
@@ -307,13 +364,14 @@ unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `C` matches the actual context type
-/// stored in the [`ReportData`].
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
 unsafe fn source<'a, C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'a>,
 ) -> Option<&'a (dyn core::error::Error + 'static)> {
-    // SAFETY: Our caller guarantees that the type `C` matches the actual context
-    // type stored in the `ReportData`.
+    // SAFETY:
+    // 1. Guaranteed by the caller
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
     H::source(context)
 }
@@ -322,14 +380,15 @@ unsafe fn source<'a, C: 'static, H: ContextHandler<C>>(
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `C` matches the actual context type
-/// stored in the [`ReportData`].
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
 unsafe fn display<C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'_>,
     formatter: &mut core::fmt::Formatter<'_>,
 ) -> core::fmt::Result {
-    // SAFETY: Our caller guarantees that the type `C` matches the actual context
-    // type stored in the `ReportData`.
+    // SAFETY:
+    // 1. Guaranteed by the caller
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
     H::display(context, formatter)
 }
@@ -338,14 +397,15 @@ unsafe fn display<C: 'static, H: ContextHandler<C>>(
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `C` matches the actual context type
-/// stored in the [`ReportData`].
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
 unsafe fn debug<C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'_>,
     formatter: &mut core::fmt::Formatter<'_>,
 ) -> core::fmt::Result {
-    // SAFETY: Our caller guarantees that the type `C` matches the actual context
-    // type stored in the `ReportData`.
+    // SAFETY:
+    // 1. Guaranteed by the caller
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
     H::debug(context, formatter)
 }
@@ -357,39 +417,17 @@ unsafe fn debug<C: 'static, H: ContextHandler<C>>(
 ///
 /// # Safety
 ///
-/// The caller must ensure that the type `C` matches the actual context type
-/// stored in the [`ReportData`].
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
 unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
     ptr: RawReportRef<'_>,
     report_formatting_function: FormattingFunction,
 ) -> ContextFormattingStyle {
-    // SAFETY: Our caller guarantees that the type `C` matches the actual context
-    // type stored in the `ReportData`.
+    // SAFETY:
+    // 1. Guaranteed by the caller
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
     H::preferred_formatting_style(context, report_formatting_function)
-}
-
-/// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to by
-/// this pointer.
-///
-/// # Safety
-///
-/// The caller must ensure that:
-/// - The pointer comes from an [`triomphe::Arc<ReportData<C>>`], which was
-///   turned into a pointer using [`triomphe::Arc::into_raw`].
-/// - The context type `C` matches the actual context type stored in the
-///   [`ReportData`].
-unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
-    let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
-
-    // SAFETY: Our caller guarantees that we point to a `ReportData<C>` and that
-    // this pointer came from a `triomphe::Arc::into_raw`.
-    //
-    // This fulfills the safety docs for `ArcBorrow::from_ptr`, which explicitly
-    // mentions the `as_ptr` (which is called from `into_raw`) is safe.
-    let arc_borrow = unsafe { triomphe::ArcBorrow::from_ptr(ptr) };
-
-    triomphe::ArcBorrow::strong_count(&arc_borrow)
 }
 
 #[cfg(test)]

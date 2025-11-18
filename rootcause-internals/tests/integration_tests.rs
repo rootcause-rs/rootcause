@@ -328,15 +328,9 @@ fn test_attachment_creation_and_basic_operations() {
     );
 
     // Test downcast_inner
-    let downcast = attachment_ref.attachment_downcast::<TestAttachment>();
-    assert!(downcast.is_some());
-    let downcast_ref = downcast.unwrap();
+    let downcast_ref = unsafe { attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
     assert_eq!(downcast_ref.name, "test");
     assert_eq!(downcast_ref.value, 42);
-
-    // Test failed downcast
-    let failed_downcast = attachment_ref.attachment_downcast::<String>();
-    assert!(failed_downcast.is_none());
 }
 
 #[test]
@@ -383,9 +377,11 @@ fn test_multiple_attachments() {
 
     for (i, attachment) in attachments.iter().enumerate() {
         let attachment_ref = attachment.as_ref();
-        let downcast = attachment_ref
-            .attachment_downcast::<TestAttachment>()
-            .unwrap();
+        assert_eq!(
+            attachment_ref.attachment_type_id(),
+            TypeId::of::<TestAttachment>()
+        );
+        let downcast = unsafe { attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
         assert_eq!(downcast.value, (i + 1) as i32);
     }
 }
@@ -587,9 +583,11 @@ fn test_report_with_attachments() {
     // Check attachments
     for (i, attachment) in attachments.iter().enumerate() {
         let attachment_ref = attachment.as_ref();
-        let downcast = attachment_ref
-            .attachment_downcast::<TestAttachment>()
-            .unwrap();
+        assert_eq!(
+            attachment_ref.attachment_type_id(),
+            TypeId::of::<TestAttachment>()
+        );
+        let downcast = unsafe { attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
         assert_eq!(downcast.name, format!("attachment{}", i + 1));
         assert_eq!(downcast.value, (i + 1) as i32 * 100);
     }
@@ -710,9 +708,12 @@ fn test_mutable_operations() {
     assert_eq!(child_display, "added child");
 
     let attachment_ref = report_ref.attachments()[0].as_ref();
-    let attachment_downcast = attachment_ref
-        .attachment_downcast::<TestAttachment>()
-        .unwrap();
+    assert_eq!(
+        attachment_ref.attachment_type_id(),
+        TypeId::of::<TestAttachment>()
+    );
+    let attachment_downcast =
+        unsafe { attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
     assert_eq!(attachment_downcast.name, "added_attachment");
     assert_eq!(attachment_downcast.value, 555);
 }
@@ -787,43 +788,44 @@ fn test_different_attachment_types() {
     );
 
     // Test downcasting
-    assert!(
-        attachments[0]
-            .as_ref()
-            .attachment_downcast::<String>()
-            .is_some()
+    assert_eq!(
+        attachments[0].as_ref().attachment_type_id(),
+        TypeId::of::<String>()
     );
-    assert!(
-        attachments[0]
-            .as_ref()
-            .attachment_downcast::<i32>()
-            .is_none()
-    );
-
-    assert!(
-        attachments[1]
-            .as_ref()
-            .attachment_downcast::<i32>()
-            .is_some()
-    );
-    assert!(
-        attachments[1]
-            .as_ref()
-            .attachment_downcast::<String>()
-            .is_none()
+    assert_eq!(
+        unsafe {
+            attachments[0]
+                .as_ref()
+                .attachment_downcast_unchecked::<String>()
+        },
+        "test string"
     );
 
-    assert!(
-        attachments[2]
-            .as_ref()
-            .attachment_downcast::<TestAttachment>()
-            .is_some()
+    assert_eq!(
+        attachments[1].as_ref().attachment_type_id(),
+        TypeId::of::<i32>()
     );
-    assert!(
-        attachments[2]
-            .as_ref()
-            .attachment_downcast::<i32>()
-            .is_none()
+    assert_eq!(
+        unsafe {
+            *attachments[1]
+                .as_ref()
+                .attachment_downcast_unchecked::<i32>()
+        },
+        42i32
+    );
+
+    assert_eq!(
+        attachments[2].as_ref().attachment_type_id(),
+        TypeId::of::<TestAttachment>()
+    );
+    assert_eq!(
+        unsafe {
+            let att = attachments[2]
+                .as_ref()
+                .attachment_downcast_unchecked::<TestAttachment>();
+            (att.name.clone(), att.value)
+        },
+        ("mixed".to_owned(), 123)
     );
 }
 
@@ -1141,9 +1143,11 @@ fn test_large_hierarchy() {
     // Verify all attachments
     for (i, attachment) in root_ref.attachments().iter().enumerate() {
         let attachment_ref = attachment.as_ref();
-        let downcast = attachment_ref
-            .attachment_downcast::<TestAttachment>()
-            .unwrap();
+        assert_eq!(
+            attachment_ref.attachment_type_id(),
+            TypeId::of::<TestAttachment>()
+        );
+        let downcast = unsafe { attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
         assert_eq!(downcast.name, format!("attachment_{i}"));
         assert_eq!(downcast.value, i as i32);
     }
@@ -2223,9 +2227,11 @@ fn test_raw_report_mut_attachments_manipulation() {
     // Check first two attachments (default handler)
     for (i, attachment) in attachments[..2].iter().enumerate() {
         let attachment_ref = attachment.as_ref();
-        let downcast = attachment_ref
-            .attachment_downcast::<TestAttachment>()
-            .unwrap();
+        assert_eq!(
+            attachment_ref.attachment_type_id(),
+            core::any::TypeId::of::<TestAttachment>()
+        );
+        let downcast = unsafe { attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
         assert_eq!(downcast.name, format!("attachment{}", i + 1));
         assert_eq!(downcast.value, (i + 1) as i32 * 100);
 
@@ -2235,9 +2241,12 @@ fn test_raw_report_mut_attachments_manipulation() {
 
     // Check custom attachment (different display format)
     let custom_attachment_ref = attachments[2].as_ref();
-    let custom_downcast = custom_attachment_ref
-        .attachment_downcast::<TestAttachment>()
-        .unwrap();
+    assert_eq!(
+        custom_attachment_ref.attachment_type_id(),
+        core::any::TypeId::of::<TestAttachment>()
+    );
+    let custom_downcast =
+        unsafe { custom_attachment_ref.attachment_downcast_unchecked::<TestAttachment>() };
     assert_eq!(custom_downcast.name, "custom_attachment");
     assert_eq!(custom_downcast.value, 300);
 
@@ -2332,17 +2341,23 @@ fn test_raw_report_mut_complex_hierarchy_manipulation() {
     let custom_attachment = root_attachments[1].as_ref();
 
     assert_eq!(
-        initial_attachment
-            .attachment_downcast::<TestAttachment>()
-            .unwrap()
-            .name,
+        initial_attachment.attachment_type_id(),
+        core::any::TypeId::of::<TestAttachment>()
+    );
+    assert_eq!(
+        unsafe {
+            &initial_attachment
+                .attachment_downcast_unchecked::<TestAttachment>()
+                .name
+        },
         "initial_attachment"
     );
     assert_eq!(
-        custom_attachment
-            .attachment_downcast::<TestAttachment>()
-            .unwrap()
-            .name,
+        unsafe {
+            &custom_attachment
+                .attachment_downcast_unchecked::<TestAttachment>()
+                .name
+        },
         "root_custom"
     );
 
@@ -2546,23 +2561,38 @@ fn test_raw_report_mut_type_safety_and_downcasting() {
     );
 
     // Test attachment downcasting
-    let test_attachment = int_attachments[0]
-        .as_ref()
-        .attachment_downcast::<TestAttachment>()
-        .unwrap();
+    assert_eq!(
+        int_attachments[0].as_ref().attachment_type_id(),
+        core::any::TypeId::of::<TestAttachment>()
+    );
+    let test_attachment = unsafe {
+        int_attachments[0]
+            .as_ref()
+            .attachment_downcast_unchecked::<TestAttachment>()
+    };
     assert_eq!(test_attachment.name, "int_attachment");
     assert_eq!(test_attachment.value, 777);
 
-    let string_attachment = int_attachments[1]
-        .as_ref()
-        .attachment_downcast::<String>()
-        .unwrap();
+    assert_eq!(
+        int_attachments[1].as_ref().attachment_type_id(),
+        core::any::TypeId::of::<String>()
+    );
+    let string_attachment = unsafe {
+        int_attachments[1]
+            .as_ref()
+            .attachment_downcast_unchecked::<String>()
+    };
     assert_eq!(string_attachment, "string attachment in int report");
 
-    let i32_attachment = string_attachments[0]
-        .as_ref()
-        .attachment_downcast::<i32>()
-        .unwrap();
+    assert_eq!(
+        string_attachments[0].as_ref().attachment_type_id(),
+        core::any::TypeId::of::<i32>()
+    );
+    let i32_attachment = unsafe {
+        string_attachments[0]
+            .as_ref()
+            .attachment_downcast_unchecked::<i32>()
+    };
     assert_eq!(*i32_attachment, 999);
 }
 
@@ -2692,7 +2722,12 @@ fn test_raw_report_mut_modification_correctness() {
     assert_eq!(child_display, "child");
 
     let attachment = final_ref.attachments()[0].as_ref();
-    let attachment_downcast = attachment.attachment_downcast::<TestAttachment>().unwrap();
+    assert_eq!(
+        attachment.attachment_type_id(),
+        core::any::TypeId::of::<TestAttachment>()
+    );
+    let attachment_downcast =
+        unsafe { attachment.attachment_downcast_unchecked::<TestAttachment>() };
     assert_eq!(attachment_downcast.name, "attachment");
     assert_eq!(attachment_downcast.value, 123);
 }
