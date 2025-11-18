@@ -46,14 +46,11 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All other references to any of these reports or any sub-reports
-        ///    are compatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of
-        ///    the report and all sub-reports must be `Send+Sync`
-        /// 4. If `T = Local`: There exist no `Report`, `ReportMut` or
-        ///    `ReportRef` with `T=SendSync` which point to one of these
-        ///    reports.
+        /// 2. All references to these reports or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        ///    report and all sub-reports must be `Send+Sync`
         raw: Vec<RawReport>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
@@ -72,14 +69,11 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All other references to any of these reports or any sub-reports
-        ///    are compatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of
-        ///    the report and all sub-reports must be `Send+Sync`
-        /// 4. If `T = Local`: There exist no `Report`, `ReportMut` or
-        ///    `ReportRef` with `T=SendSync` which point to one of these
-        ///    reports.
+        /// 2. All references to these reports or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
             Self {
@@ -98,22 +92,20 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All other references to any of these reports or any sub-reports
-        ///    are compatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of
-        ///    the report and all sub-reports must be `Send+Sync`
-        /// 4. If `T = Local`: There exist no `Report`, `ReportMut` or
-        ///    `ReportRef` with `T=SendSync` which point to one of these
-        ///    reports.
+        /// 2. All references to these reports or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
             let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
 
             // SAFETY:
-            // - The raw pointer is derived from a valid reference with the same lifetime and representation
-            // - Creating this reference does not violate any aliasing rules as we are only creating
-            //    a shared reference
+            // - The raw pointer is derived from a valid reference with the same lifetime
+            //   and representation
+            // - Creating this reference does not violate any aliasing rules as we are only
+            //   creating a shared reference
             // - The type invariants of `Self` are upheld as per the caller's guarantee
             unsafe { &*raw_ptr }
         }
@@ -127,22 +119,21 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All other references to any of these reports or any sub-reports
-        ///    are compatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of
-        ///    the report and all sub-reports must be `Send+Sync`
-        /// 4. If `T = Local`: There exist no `Report`, `ReportMut` or
-        ///    `ReportRef` with `T=SendSync` which point to one of these
-        ///    reports.
+        /// 2. All references to these reports or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
             let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
             // SAFETY:
-            // - The raw pointer is derived from a valid reference with the same lifetime and representation
-            // - Creating this reference does not violate any aliasing rules as we are only creating
-            //    a shared reference
+            // - The raw pointer is derived from a valid reference with the same lifetime
+            //   and representation
+            // - Creating this reference does not violate any aliasing rules as we are only
+            //   creating a mutable reference from a different reference that is no longer
+            //   being used.
             // - The type invariants of `Self` are upheld as per the caller's guarantee
             unsafe { &mut *raw_ptr }
         }
@@ -160,7 +151,6 @@ mod limit_field_access {
             // 1. Upheld, as we are not allowing mutation
             // 2. Upheld, as we are not creating any such references
             // 3. Upheld, as we are not allowing mutation
-            // 4. Upheld, as we are not creating any such references
             let raw = &self.raw;
 
             raw
@@ -176,17 +166,15 @@ mod limit_field_access {
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 2. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
-        /// 3. If `T = SendSync`: No mutation is performed that invalidate the invariant
-        ///    that all inner contexts and attachments are `Send + Sync`.
-        /// 4. If `T = Local`: No mutation is performed that invalidate the invariant
-        ///    that there exist no `Report`, `ReportMut` or `ReportRef` with `T=SendSync`.
+        /// 3. If `T = SendSync`: No mutation is performed that invalidate the
+        ///    invariant that all inner contexts and attachments are `Send +
+        ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawReport> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
-            // 4. Guaranteed by the caller
             let raw = &mut self.raw;
 
             raw
@@ -218,6 +206,10 @@ where
     #[must_use]
     pub fn new() -> Self {
         let reports = Vec::new();
+        // SAFETY:
+        // 1. We just created the empty Vec, so the invariants are upheld for all reports in it.
+        // 2. We just created the empty Vec, so the invariants are upheld for all reports in it.
+        // 3. We just created the empty Vec, so the invariants are upheld for all reports in it.
         unsafe { Self::from_raw(reports) }
     }
 
@@ -240,6 +232,10 @@ where
     /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         let reports = Vec::with_capacity(capacity);
+        // SAFETY:
+        // 1. We just created the empty Vec, so the invariants are upheld for all reports in it.
+        // 2. We just created the empty Vec, so the invariants are upheld for all reports in it.
+        // 3. We just created the empty Vec, so the invariants are upheld for all reports in it.
         unsafe { Self::from_raw(reports) }
     }
 
@@ -261,7 +257,13 @@ where
     /// assert_eq!(collection.len(), 1);
     /// ```
     pub fn push(&mut self, report: Report<C, Cloneable, T>) {
+        // SAFETY:
+        // 1. The invariants of the pushed report guarantee this.
+        // 2. The argument has `O=Cloneable`, so the invariants of the pushed report
+        //    guarantee this.
+        // 3. If `T = SendSync`: The invariants of the pushed report guarantee this.
         let raw = unsafe { self.as_raw_mut() };
+
         raw.push(report.into_raw())
     }
 
@@ -291,12 +293,22 @@ where
     /// assert!(empty_pop.is_none());
     /// ```
     pub fn pop(&mut self) -> Option<Report<C, Cloneable, T>> {
+        // SAFETY:
+        // 1. We only remove reports, so the invariants of the collection remain upheld.
+        // 2. We only remove reports, so the invariants of the collection remain upheld.
+        // 3. We only remove reports, so the invariants of the collection remain upheld.
+        // 4. We only remove reports, so the invariants of the collection remain upheld.
         let raw = unsafe { self.as_raw_mut() };
+
         let report = raw.pop()?;
 
-        // SAFETY: The thread safety marker matches, because we only
-        // contain attachments with a matching thread safety marker
-        let report = unsafe { Report::from_raw(report) };
+        // SAFETY:
+        // 1. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 2. `O=Cloneable`, so this is trivially true.
+        // 3. Guaranteed by the invariants of the collection.
+        // 4. Guaranteed by the invariants of the collection.
+        // 5. If `T = SendSync`: Guaranteed by the invariants of the collection.
+        let report = unsafe { Report::<C, Cloneable, T>::from_raw(report) };
 
         Some(report)
     }
@@ -352,7 +364,13 @@ where
     /// assert!(collection.capacity() >= 10);
     /// ```
     pub fn reserve(&mut self, additional: usize) {
+        // SAFETY:
+        // 1. We only reserve space, so the invariants of the collection remain upheld.
+        // 2. We only reserve space, so the invariants of the collection remain upheld.
+        // 3. We only reserve space, so the invariants of the collection remain upheld.
+        // 4. We only reserve space, so the invariants of the collection remain upheld.
         let raw = unsafe { self.as_raw_mut() };
+
         raw.reserve(additional)
     }
 
@@ -378,7 +396,16 @@ where
     #[must_use]
     pub fn get(&self, index: usize) -> Option<ReportRef<'_, C, Cloneable, T>> {
         let raw = self.as_raw().get(index)?.as_ref();
-        Some(unsafe { ReportRef::from_raw(raw) })
+
+        // SAFETY:
+        // 1. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 2. Guaranteed by the invariants of the collection.
+        // 3. Guaranteed by the invariants of the collection.
+        // 4. If `T = SendSync`: All contexts and attachments in the report and all
+        //    sub-reports must be `Send+Sync`
+        let report = unsafe { ReportRef::from_raw(raw) };
+
+        Some(report)
     }
 
     /// Returns `true` if the collection contains no reports.
@@ -418,7 +445,13 @@ where
     /// }
     /// ```
     pub fn iter(&self) -> ReportCollectionIter<'_, C, T> {
-        unsafe { ReportCollectionIter::from_raw(self.as_raw()) }
+        let raw = self.as_raw();
+
+        // SAFETY:
+        // 1. Guaranteed by the invariants of the collection.
+        // 2. Guaranteed by the invariants of the collection.
+        // 3. Guaranteed by the invariants of the collection.
+        unsafe { ReportCollectionIter::from_raw(raw) }
     }
 
     /// Converts the collection to use type-erased contexts via `dyn Any`.
@@ -450,7 +483,13 @@ where
     #[must_use]
     pub fn into_dyn_any(self) -> ReportCollection<dyn Any, T> {
         let raw = self.into_raw();
-        unsafe { ReportCollection::from_raw(raw) }
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. The invariants of the collection guarantee this.
+        // 3. The invariants of the collection guarantee this.
+        // 4. The invariants of the collection guarantee this.
+        unsafe { ReportCollection::<dyn Any, T>::from_raw(raw) }
     }
 
     /// Returns a reference to the collection with type-erased contexts via
@@ -458,7 +497,13 @@ where
     #[must_use]
     pub fn as_dyn_any(&self) -> &ReportCollection<dyn Any, T> {
         let raw = self.as_raw();
-        unsafe { ReportCollection::from_raw_ref(raw) }
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. The invariants of the collection guarantee this.
+        // 3. The invariants of the collection guarantee this.
+        // 4. The invariants of the collection guarantee this.
+        unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
     }
 
     /// Converts the collection to use [`Local`] thread safety semantics.
@@ -487,7 +532,13 @@ where
     /// ```
     #[must_use]
     pub fn into_local(self) -> ReportCollection<C, Local> {
-        unsafe { ReportCollection::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+
+        // SAFETY:
+        // 1. The invariants of the collection guarantee this.
+        // 2. The invariants of the collection guarantee this.
+        // 3. If we currently have `T=SendSend`:
+        unsafe { ReportCollection::<C, Local>::from_raw(raw) }
     }
 
     /// Returns a reference to the collection with [`Local`] thread safety

@@ -28,7 +28,7 @@ use core::{any::TypeId, ptr::NonNull};
 use crate::{
     attachment::data::AttachmentData,
     handlers::{AttachmentFormattingStyle, AttachmentHandler, FormattingFunction},
-    util::{CastTo, Erased},
+    util::Erased,
 };
 
 /// A pointer to an [`AttachmentData`] that is guaranteed to point to an
@@ -122,11 +122,11 @@ impl<'a> RawAttachmentRef<'a> {
     /// 1. The type `A` matches the actual attachment type stored in the
     ///    [`AttachmentData`].
     #[inline]
-    pub(super) unsafe fn cast_inner<A: CastTo>(self) -> &'a AttachmentData<A::Target> {
+    pub(super) unsafe fn cast_inner<A>(self) -> &'a AttachmentData<A> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<A>());
 
-        let this = self.ptr.cast::<AttachmentData<A::Target>>();
+        let this = self.ptr.cast::<AttachmentData<A>>();
         // SAFETY: Our caller guarantees that we point to an AttachmentData<A>.
         // Converting NonNull to a reference is safe because:
         // - The pointer is valid and aligned (from Box allocation in
@@ -165,7 +165,10 @@ impl<'a> RawAttachmentRef<'a> {
         // SAFETY:
         // 1. The `A` type matches because vtable and data are created together in
         //    `AttachmentData::new`.
-        unsafe { vtable.display(self, formatter) }
+        unsafe {
+            // @add-unsafe-context: AttachmentData
+            vtable.display(self, formatter)
+        }
     }
 
     /// Formats the attachment by using the [`AttachmentHandler::debug`] method
@@ -173,10 +176,14 @@ impl<'a> RawAttachmentRef<'a> {
     #[inline]
     pub fn attachment_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
+
         // SAFETY:
         // 1. The `A` type matches because vtable and data are created together in
         //    `AttachmentData::new`.
-        unsafe { vtable.debug(self, formatter) }
+        unsafe {
+            // @add-unsafe-context: RawAttachmentRef::vtable
+            vtable.debug(self, formatter)
+        }
     }
 
     /// The formatting style preferred by the attachment when formatted as part
@@ -196,10 +203,14 @@ impl<'a> RawAttachmentRef<'a> {
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         let vtable = self.vtable();
+
         // SAFETY:
         // 1. The `A` type matches because vtable and data are created together in
         //    `AttachmentData::new`.
-        unsafe { vtable.preferred_formatting_style(self, report_formatting_function) }
+        unsafe {
+            // @add-unsafe-context: RawAttachmentRef::vtable
+            vtable.preferred_formatting_style(self, report_formatting_function)
+        }
     }
 }
 

@@ -82,7 +82,8 @@ mod limit_field_access {
         }
     }
 
-    // SAFETY: We must uphold the safety invariants of the raw field for both the original and the copy:
+    // SAFETY: We must uphold the safety invariants of the raw field for both the
+    // original and the copy:
     // 1. This remains true for both the original and the copy
     impl<'a, A> Copy for ReportAttachmentRef<'a, A> where A: markers::ObjectMarker + ?Sized {}
 }
@@ -213,7 +214,9 @@ where
     pub fn into_dyn_any(self) -> ReportAttachmentRef<'a, dyn Any> {
         let raw = self.as_raw_ref();
 
-        unsafe { ReportAttachmentRef::from_raw(raw) }
+        // SAFETY:
+        // 1. `A==dyn Any`, so this is trivially satisfied
+        unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) }
     }
 
     /// Returns a reference to the inner attachment data.
@@ -249,6 +252,8 @@ where
     {
         let raw = self.as_raw_ref();
 
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
         unsafe { raw.attachment_downcast_unchecked() }
     }
 
@@ -342,7 +347,11 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
         A: markers::ObjectMarker,
     {
         if TypeId::of::<A>() == self.inner_type_id() {
-            Some(unsafe { self.downcast_attachment_unchecked() })
+            // SAFETY:
+            // 1. We just checked that the types match
+            let attachment = unsafe { self.downcast_attachment_unchecked() };
+
+            Some(attachment)
         } else {
             None
         }
@@ -386,6 +395,8 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     {
         let raw = self.as_raw_ref();
 
+        // SAFETY:
+        // 1. Guaranteed by the caller
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 
@@ -461,6 +472,8 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     {
         let raw = self.as_raw_ref();
 
+        // SAFETY:
+        // 1. Guaranteed by the caller
         unsafe { raw.attachment_downcast_unchecked() }
     }
 }

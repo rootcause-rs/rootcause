@@ -41,11 +41,14 @@ use crate::{
 pub(crate) struct ReportData<C: 'static> {
     /// Reference to the vtable of this report
     ///
-    /// # Safety invariant
+    /// # Safety
     ///
-    /// We guarantee that the `ReportVtable` always pointers to a vtable
-    /// created for the actual context type `C` stored below. This is
-    /// true even when accessed via type-erased pointers.
+    /// The following safety invariants must be upheld as long as this
+    /// struct exists:
+    ///
+    /// 1. The `ReportVtable` always pointers to a vtable created for
+    ///    the actual context type `C` stored below. This is true even
+    ///    when accessed via type-erased pointers.
     vtable: &'static ReportVtable,
     /// The children of this report
     children: Vec<RawReport>,

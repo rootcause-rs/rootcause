@@ -32,6 +32,15 @@ use crate::{
 #[repr(C)]
 pub(crate) struct AttachmentData<A: 'static> {
     /// The Vtable of this attachment
+    ///
+    /// # Safety
+    ///
+    /// The following safety invariants must be upheld as long as this
+    /// struct exists:
+    ///
+    /// 1. The `AttachmentVtable` always pointers to a vtable created for
+    ///    the actual vtable type `A` stored below. This is true even
+    ///    when accessed via type-erased pointers.
     vtable: &'static AttachmentVtable,
     /// The actual attachment data
     attachment: A,
@@ -55,6 +64,10 @@ impl<A: 'static> AttachmentData<A> {
 impl<'a> RawAttachmentRef<'a> {
     /// Returns a reference to the [`AttachmentVtable`] of the
     /// [`AttachmentData`] instance.
+    ///
+    /// This is guaranteed to be valid for the actual attachment type
+    /// stored in the `AttachmentData`, even when accessed via
+    /// type-erased pointers.
     #[inline]
     pub(super) fn vtable(self) -> &'static AttachmentVtable {
         let ptr = self.as_ptr();
@@ -66,7 +79,10 @@ impl<'a> RawAttachmentRef<'a> {
         // We need to take care to avoid creating an actual reference to
         // the `AttachmentData` itself though, as that would still be undefined behavior
         // since we don't have the right type.
-        let vtable_ptr: *const &'static AttachmentVtable = unsafe { &raw const (*ptr).vtable };
+        let vtable_ptr: *const &'static AttachmentVtable = unsafe {
+            // @add-unsafe-context: AttachmentData
+            &raw const (*ptr).vtable
+        };
 
         // SAFETY: The vtable_ptr is derived from a valid Box pointer and points
         // to an initialized `&'static AttachmentVtable` field. Dereferencing is safe
@@ -89,7 +105,10 @@ impl<'a> RawAttachmentRef<'a> {
     pub unsafe fn attachment_downcast_unchecked<A: 'static>(self) -> &'a A {
         // SAFETY:
         // 1. Guaranteed by the caller
-        let this = unsafe { self.cast_inner::<A>() };
+        let this = unsafe {
+            // @add-unsafe-context: AttachmentData
+            self.cast_inner::<A>()
+        };
         &this.attachment
     }
 }

@@ -368,14 +368,8 @@ where
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        // SAFETY: The safety pre-requisites for downcast_report_unchecked are:
-        // - The caller must ensure that the current context is actually of type `C`.
-        //   This can be verified by calling [`current_context_type_id()`] first.
-        //
-        // The safety invariants of this method states that the caller must ensure
-        // that the reports's context type ID matches the type ID that the hook
-        // was registered for. This means that the current context is indeed of type
-        // `C`.
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let report = unsafe { report.downcast_report_unchecked::<C>() };
         self.hook.display(report, formatter)
     }
@@ -385,14 +379,8 @@ where
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        // SAFETY: The safety pre-requisites for downcast_report_unchecked are:
-        // - The caller must ensure that the current context is actually of type `C`.
-        //   This can be verified by calling [`current_context_type_id()`] first.
-        //
-        // The safety invariants of this method states that the caller must ensure
-        // that the reports's context type ID matches the type ID that the hook
-        // was registered for. This means that the current context is indeed of type
-        // `C`.
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let report = unsafe { report.downcast_report_unchecked::<C>() };
         self.hook.debug(report, formatter)
     }
@@ -518,19 +506,14 @@ pub(crate) fn display_context(
     {
         hook.display_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        // SAFETY: The safety pre-requisites for
-        // UntypedContextFormattingOverride::display are:
-        // - This trait is guaranteed to only be implemented for [`Hook<A, H>`]. To call
-        //   this method, the caller must ensure that this function is only called with
-        //   reports where context type is `C`.
-        //
-        // The safety invariant of get_hook guarantees that
-        // the returned hook is of type `Hook<C, H>`, with `TypeId::of::<C>() ==
-        // report.current_context_type_id()`.
-        //
-        // This means that the current context is indeed of type `C`, so it is safe to
-        // call the method.
-        unsafe { hook.display(report, formatter) }
+        // SAFETY:
+        // 1. This is guaranteed by `get_hook`.
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: get_hook
+            // @add-unsafe-context: UntypedContextFormattingOverride
+            hook.display(report, formatter)
+        }
     } else {
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
     }
@@ -545,19 +528,14 @@ pub(crate) fn debug_context(
     {
         hook.debug_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        // SAFETY: The safety pre-requisites for
-        // UntypedContextFormattingOverride::display are:
-        // - This trait is guaranteed to only be implemented for [`Hook<A, H>`]. To call
-        //   this method, the caller must ensure that this function is only called with
-        //   reports where context type is `C`.
-        //
-        // The safety invariant of get_hook guarantees that
-        // the returned hook is of type `Hook<C, H>`, with `TypeId::of::<C>() ==
-        // report.current_context_type_id()`.
-        //
-        // This means that the current context is indeed of type `C`, so it is safe to
-        // call the method.
-        unsafe { hook.debug(report, formatter) }
+        // SAFETY:
+        // 1. This is guaranteed by `get_hook`.
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: get_hook
+            // @add-unsafe-context: UntypedContextFormattingOverride
+            hook.debug(report, formatter)
+        }
     } else {
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
     }

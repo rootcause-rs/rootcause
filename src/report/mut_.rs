@@ -70,15 +70,15 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants must be upheld as long as the
+        /// inner `RawReportMut` exists:
         ///
         /// 1. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
         /// 2. The strong count of the underlying `triomphe::Arc` is exactly 1.
-        /// 3. There are no references to any of the sub-reports of this report that
-        ///    are incompatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
+        /// 3. All references to any sub-reports of this report are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
         /// 4. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
         /// 5. If `T = Local`: No other references to this report are allowed to
@@ -102,9 +102,9 @@ mod limit_field_access {
         /// 1. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
         /// 2. The strong count of the underlying `triomphe::Arc` is exactly 1.
-        /// 3. There are no references to any of the sub-reports of this report that
-        ///    are incompatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
+        /// 3. All references to any sub-reports of this report are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
         /// 4. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
         /// 5. If `T = Local`: No other references to this report are allowed to
@@ -151,8 +151,18 @@ mod limit_field_access {
         ///    this `RawReportMut` that are not `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn into_raw_mut(self) -> RawReportMut<'a> {
-            // SAFETY: We are destroying `self`, so we no longer
-            // need to uphold any safety invariants.
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. While mutation of the context is possible through this reference, it is
+            //    not possible to change the type of the context. Therefore this invariant
+            //    is upheld.
+            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            //    that method has a `safety` requirement that the caller must ensure that no
+            //    owners exist which are incompatible with shared ownership. Since `self` is
+            //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
+            // 3. We are not creating any such references here.
+            // 4. Guaranteed by the caller
+            // 5. Upheld, as this does not create any such references.
+
             self.raw
         }
 
@@ -234,23 +244,13 @@ where
     /// ```
     #[must_use]
     pub fn into_current_context_mut(self) -> &'a mut C {
-        // SAFETY: The safety requirements for ReportMut::into_raw_mut are:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // The first invariant is upheld because we are not creating any new owners.
-        // The second invariant is upheld because we do not add any new objects to the
-        // report.
+        // SAFETY:
+        // 1. We are not adding any objects
         let raw = unsafe { self.into_raw_mut() };
 
-        // SAFETY: We must ensure that the context type `C` matches the actual
-        // context type stored in the report. However we know that `C` is a
-        // concrete type (not `dyn Any`), so the context must match because
-        // of the invariants of this type.
+        // SAFETY:
+        // 1. We know that `C` is a concrete type, so this is guaranteed by the
+        //    invariants of this type.
         unsafe { raw.into_context_downcast_unchecked() }
     }
 }
@@ -302,44 +302,20 @@ where
     #[must_use]
     pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
         // SAFETY:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // The first invariant is upheld because we are not creating any new owners.
-        // The second invariant is upheld, because the [`ReportCollection`] guarantees
-        // that no invalid objects are added to the report.
+        // 1. If `T=Local`: This is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the `&mut ReportCollection` we are creating.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
-        // 1. If `T=Local`, then the invariants of this type guarantee that there exist
-        //    no `Report`, `ReportMut` or `ReportRef` with `T=SendSync`. This fulfills
-        //    the safety requirements.
-        //
-        //    If on the other hand `T=SendSync`, then `ReportCollection` created
-        //    below will also have `T=SendSync`, so the safety requirements are
-        //    fulfilled as well.
+        // 1. If `T=Local`: We know that no such references are allowed to exist, so
+        //    this is trivially true. If `T=SendSync`, then these guarantees are upheld
+        //    by the `&mut ReportCollection` we are creating.
         let raw_children = unsafe { raw.into_children_mut() };
-        // SAFETY:
-        // 1. `C` is `dyn Any`, so there are no requirements on the context type.
-        // 1. If `C` is a concrete type: The contexts contained in all of the
-        //    reports in the `Vec` are of type `C`.
-        // 2. All other references to one of these reports are
-        //    compatible with shared ownership. Specifically there are no
-        //    references with an assumption that the strong_count is `1`.
-        // 3. If `T = SendSync`: All contexts and attachments in the all of
-        //    the report and all sub-reports must be `Send+Sync`
-        // 4. If `T = Local`: There exist no `Report`, `ReportMut` or
-        //    `ReportRef` with `T=SendSync` which point to one of these
-        //    reports.
 
-        // 1. The contexts of the [`RawReport`]s are actually of type `C` (when `C` is
-        //    not `dyn Any`)
-        // 2. The thread safety marker matches the reports' contents (if marker is
-        //    [`SendSync`], all data recursively must be `Send+Sync`)
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true
+        // 2. Guaranteed by the invariants of this type.
+        // 3. Guaranteed by the invariants of this type.
         unsafe { ReportCollection::<dyn Any, T>::from_raw_mut(raw_children) }
     }
 
@@ -383,29 +359,20 @@ where
     /// ```
     #[must_use]
     pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
-        // SAFETY: The safety requirements for ReportMut::into_raw_mut are:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // The first invariant is upheld because we are not creating any new owners.
-        // The second invariant is upheld because `ReportAttachments` guarantees that
-        // no invalid objects are added to the report.
+        // SAFETY:
+        // 1. If `T=Local`: This is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the `&mut ReportCollection` we are creating.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
-
+        // 1. If `T=Local`: We know that no such references are allowed to exist, so
+        //    this is trivially true. If `T=SendSync`, then these guarantees are upheld
+        //    by the `&mut ReportCollection` we are creating.
         let raw = unsafe { raw.into_attachments_mut() };
-        // SAFETY: The safety requirements for ReportAttachments::from_raw_mut are:
-        // The thread safety marker must match the contents of the attachments.
-        // More specifically if the marker is [`SendSync`], then all the inner
-        // attachments must be `Send+Sync`
-        //
-        // This requirement is upheld because our own invariants guarantee that
-        // the thread safety marker matches the contents of the report.
+
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the invariants of this type.
         unsafe { ReportAttachments::from_raw_mut(raw) }
     }
 
@@ -436,19 +403,18 @@ where
     /// ```
     #[must_use]
     pub fn into_dyn_any(self) -> ReportMut<'a, dyn Any, T> {
-        // SAFETY: The safety requirements for ReportMut::into_raw_mut are:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // Both invariants are upheld, because the created `ReportMut` has the same safe
-        // invariants as `self`.
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the invariants of the `ReportMut` we are creating.
         let raw = unsafe { self.into_raw_mut() };
 
-        unsafe { ReportMut::from_raw(raw) }
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
+        unsafe { ReportMut::<dyn Any, T>::from_raw(raw) }
     }
 
     /// Returns an immutable reference to the report.
@@ -465,24 +431,12 @@ where
     pub fn as_ref(&self) -> ReportRef<'_, C, Uncloneable, T> {
         let raw = self.as_raw_ref();
 
-        // SAFETY: The safety requirements for ReportRef::from_raw are:
-        // - The context embedded in the [`RawReportRef`] must either be of type `C`, or
-        //   the `C` must be `dyn Any`
-        // - The ownership marker must match the ownership semantics of the
-        //   [`RawReportRef`]. That is, if the ownership marker is [`Cloneable`], then
-        //   there must not exist any owners of the [`RawReport`] that assume unique
-        //   ownership or they are able to mutate the report. Specifically this means
-        //   that there cannot be any [`Report`] with a [`Mutable`] ownership marker or
-        //   any [`ReportMut`] that shares the same underlying report.
-        // - The thread safety marker must match the contents of the report. More
-        //   specifically if the marker is [`SendSync`], then all contexts and
-        //   attachments must be `Send+Sync`
-        //
-        // The first invariant is upheld because of our own invariants.
-        // The second invariant is upheld because we are creating an `Uncloneable`
-        // report reference. The third invariant is upheld because of our own
-        // invariants.
-        unsafe { ReportRef::from_raw(raw) }
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
     /// Consumes the [`ReportMut`] and returns a [`ReportRef`] with same
@@ -498,42 +452,19 @@ where
     /// ```
     #[must_use]
     pub fn into_ref(self) -> ReportRef<'a, C, Uncloneable, T> {
-        // SAFETY: The safety requirements for ReportMut::into_raw_mut are:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // The first requirement is upheld, because the created `ReportRef` has the
-        // `Uncloneable` ownership marker, which means that no additional owners
-        // can be created through it.
-        //
-        // The second requirement is upheld because a `ReportRef` cannot modify the
-        // report.
+        // SAFETY:
+        // 1. We are creating an immutable reference just after this, so no mutation
+        //    will occur through this `RawReportMut`.
         let raw = unsafe { self.into_raw_mut() };
 
         let raw = raw.into_ref();
 
-        // SAFETY: The safety requirements for ReportRef::from_raw are:
-        // - The context embedded in the [`RawReportRef`] must either be of type `C`, or
-        //   the `C` must be `dyn Any`
-        // - The ownership marker must match the ownership semantics of the
-        //   [`RawReportRef`]. That is, if the ownership marker is [`Cloneable`], then
-        //   there must not exist any owners of the [`RawReport`] that assume unique
-        //   ownership or they are able to mutate the report. Specifically this means
-        //   that there cannot be any [`Report`] with a [`Mutable`] ownership marker or
-        //   any [`ReportMut`] that shares the same underlying report.
-        // - The thread safety marker must match the contents of the report. More
-        //   specifically if the marker is [`SendSync`], then all contexts and
-        //   attachments must be `Send+Sync`
-        //
-        // The first invariant is upheld because of our own invariants.
-        // The second invariant is upheld because we are creating an `Uncloneable`
-        // report reference. The third invariant is upheld because of our own
-        // invariants.
-        unsafe { ReportRef::from_raw(raw) }
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
     /// Reborrows the [`ReportMut`] to return a new [`ReportMut`] with a shorter
@@ -554,18 +485,18 @@ where
     /// ```
     #[must_use]
     pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY: The safety requirements for ReportMut::as_raw_mut are:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // Both invariants are upheld, because the created `ReportMut` has the same safe
-        // invariants as `self`.
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the invariants of the `ReportMut` we are creating.
         let raw = unsafe { self.as_raw_mut() };
 
+        // SAFETY:
+        // 1. If `C` is a concrete type: This is guaranteed by the invariants of this
+        //    type.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. If `T = SendSync`: This is guaranteed by the invariants of this type.
+        // 5. If `T = Local`: This is guaranteed by the invariants of this type.
         unsafe { ReportMut::from_raw(raw) }
     }
 
@@ -954,12 +885,9 @@ where
         C: markers::ObjectMarker,
     {
         let report = self.as_ref();
-        // SAFETY: The safety requirements for
-        // ReportRef::downcast_current_context_unchecked are: The caller must
-        // ensure that the current context is actually of type `C`. This can be
-        // verified by calling [`current_context_type_id()`] first.
-        //
-        // However we are just forwarding the safety requirements here.
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
         unsafe { report.downcast_current_context_unchecked() }
     }
 
@@ -994,12 +922,11 @@ where
         C: markers::ObjectMarker,
     {
         let report = self.as_mut();
-        // SAFETY: The safety requirements for ReportMut::downcast_report_unchecked are:
-        // The caller must ensure that the current context is actually of type `C`.
-        // This can be verified by calling [`current_context_type_id()`] first.
-        //
-        // However we are just forwarding the safety requirements here.
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let report = unsafe { report.downcast_report_unchecked() };
+
         report.into_current_context_mut()
     }
 
@@ -1023,13 +950,10 @@ where
         C: markers::ObjectMarker,
     {
         if TypeId::of::<C>() == self.current_context_type_id() {
-            // SAFETY: The safety requirements for ReportMut::downcast_report_unchecked are:
-            // The caller must ensure that the current context is actually of type `C`.
-            // This can be verified by calling [`current_context_type_id()`] first.
-            //
-            // We have just verified that the type IDs match, so we can uphold the safety
-            // requirements.
+            // SAFETY:
+            // 1. We just verified that the type matches
             let report = unsafe { self.downcast_report_unchecked() };
+
             Ok(report)
         } else {
             Err(self)
@@ -1067,18 +991,17 @@ where
     where
         C: markers::ObjectMarker,
     {
-        // SAFETY: The safety requirements for ReportMut::into_raw_mut are:
-        // - The caller must guarantee that no additional owners of this report are
-        //   created through this [`RawReportMut`]. Specifically this means that if any
-        //   [`RawReportRef`]s are derived from the returned value, then no calls to
-        //   [`RawReportRef::clone_arc`] are allowed on them.
-        // - If `T = SendSync`, then the caller must guarantee that no objects gets
-        //   added to this report through this `RawReportMut` that are not `Send+Sync`.
-        //
-        // Both invariants are upheld, because the created `ReportMut` has the same safe
-        // invariants as `self`.
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the invariants of the `ReportMut` we are creating.
         let raw = unsafe { self.into_raw_mut() };
 
+        // SAFETY:
+        // 1. This is guaranteed by the caller
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
         unsafe { ReportMut::from_raw(raw) }
     }
 }

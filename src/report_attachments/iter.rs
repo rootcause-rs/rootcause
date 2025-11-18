@@ -46,9 +46,11 @@ impl<'a> Iterator for ReportAttachmentsIter<'a> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let raw = self.raw.next()?.as_ref();
+
         // SAFETY:
         // 1. `A = dyn Any`, so this is trivially satisfied.
         let attachment = unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) };
+
         Some(attachment)
     }
 
@@ -60,9 +62,11 @@ impl<'a> Iterator for ReportAttachmentsIter<'a> {
 impl<'a> DoubleEndedIterator for ReportAttachmentsIter<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let raw = self.raw.next_back()?.as_ref();
+
         // SAFETY:
         // 1. `A = dyn Any`, so this is trivially satisfied.
         let attachment = unsafe { ReportAttachmentRef::from_raw(raw) };
+
         Some(attachment)
     }
 }
@@ -86,8 +90,8 @@ mod limit_field_access {
 
     /// An iterator that consumes report attachments and yields owned values.
     ///
-    /// This iterator yields [`ReportAttachment`] items and is created by calling
-    /// [`ReportAttachments::into_iter`].
+    /// This iterator yields [`ReportAttachment`] items and is created by
+    /// calling [`ReportAttachments::into_iter`].
     ///
     /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
     /// [`ReportAttachments::into_iter`]: crate::report_attachments::ReportAttachments::into_iter
@@ -116,7 +120,8 @@ mod limit_field_access {
         /// The following safety invariants must be upheld as long as this
         /// struct exists:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send + Sync`.
+        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        ///    Sync`.
         raw: alloc::vec::IntoIter<RawAttachment>,
         _thread_safety: PhantomData<T>,
     }
@@ -132,7 +137,8 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send + Sync`.
+        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        ///    Sync`.
         pub(crate) unsafe fn from_raw(raw: alloc::vec::IntoIter<RawAttachment>) -> Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
@@ -157,8 +163,8 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: No mutation is performed that invalidate the invariant
-        ///    that all inner attachments are `Send + Sync`.
+        /// 1. If `T = SendSync`: No mutation is performed that invalidate the
+        ///    invariant that all inner attachments are `Send + Sync`.
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
@@ -178,12 +184,18 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         // SAFETY:
-        // 1. We do not mutate the iterator or add any additional
-        //    attachments during this call.
+        // 1. We do not mutate the iterator or add any additional attachments during
+        //    this call.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.next()?;
-        unsafe { Some(ReportAttachment::from_raw(attachment)) }
+
+        // SAFETY:
+        // 1. `A=dyn Any`, so this is trivially satisfied.
+        // 2. Guaranteed by the invariants of this type.
+        let report_attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
+
+        Some(report_attachment)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -197,12 +209,18 @@ where
 {
     fn next_back(&mut self) -> Option<Self::Item> {
         // SAFETY:
-        // 1. We do not mutate the iterator or add any additional
-        //    attachments during this call.
+        // 1. We do not mutate the iterator or add any additional attachments during
+        //    this call.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.next_back()?;
-        unsafe { Some(ReportAttachment::from_raw(attachment)) }
+
+        // SAFETY:
+        // 1. `A=dyn Any`, so this is trivially satisfied.
+        // 2. Guaranteed by the invariants of this type.
+        let attachment = unsafe { ReportAttachment::from_raw(attachment) };
+
+        Some(attachment)
     }
 }
 

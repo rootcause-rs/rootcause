@@ -16,8 +16,8 @@ mod limit_field_access {
 
     /// An iterator over references to reports in a [`ReportCollection`].
     ///
-    /// This iterator yields [`ReportRef`] instances, allowing you to iterate over
-    /// the reports in a collection without taking ownership.
+    /// This iterator yields [`ReportRef`] instances, allowing you to iterate
+    /// over the reports in a collection without taking ownership.
     ///
     /// # Examples
     ///
@@ -48,12 +48,9 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All other references to these reports are compatible with shared
-        ///    ownership. Specifically there are no references with an assumption
-        ///    that the strong_count is `1`.
-        /// 3. There are no references to any of the sub-reports of these reports that
-        ///    are incompatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
+        /// 2. All references to this report or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
         /// 4. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         raw: core::slice::Iter<'a, RawReport>,
@@ -74,17 +71,14 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All other references to this report are compatible with shared
-        ///    ownership. Specifically there are no references with an assumption
-        ///    that the strong_count is `1`.
-        /// 3. There are no references to any of the sub-reports of these reports that
-        ///    are incompatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in the
+        /// 2. All references to this report or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: &'a [RawReport]) -> Self {
-            // SAFETY: We must uphold the safety invariants of the raw field:
+            // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
@@ -99,11 +93,10 @@ mod limit_field_access {
         /// Returns a reference to the underlying raw report iterator
         #[must_use]
         pub(crate) fn as_raw(&self) -> &core::slice::Iter<'a, RawReport> {
-            // SAFETY: We must uphold the safety invariants of the raw field:
+            // SAFETY: We must uphold the safety invariants of this type:
             // 1. No mutation occurs here, so the invariants are preserved
-            // 2. No mutation occurs here, so the invariants are preserved
-            // 3. Upheld, as this does not create any such references.
-            // 4. No mutation occurs here, so the invariants are preserved
+            // 2. Upheld, as all references created here are compatible
+            // 3. No mutation occurs here, so the invariants are preserved
             let raw = &self.raw;
 
             raw
@@ -119,14 +112,14 @@ mod limit_field_access {
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 2. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
-        /// 3. If `T = SendSync`: No mutation is performed that invalidate the invariant
-        ///    that all inner contexts and attachments are `Send + Sync`.
+        /// 3. If `T = SendSync`: No mutation is performed that invalidate the
+        ///    invariant that all inner contexts and attachments are `Send +
+        ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut core::slice::Iter<'a, RawReport> {
-            // SAFETY: We must uphold the safety invariants of the raw field:
+            // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
-            // 2. Guaranteed by the caller
-            // 3. Upheld, as this does not create any such references.
+            // 2. Upheld, as all references created here are compatible
             // 4. Guaranteed by the caller
             let raw = &mut self.raw;
 
@@ -153,12 +146,11 @@ where
         let item = raw.next()?.as_ref();
 
         // SAFETY:
-        // 1. If `C` is a concrete type: Guaranteed by the invariants of the the raw field.
-        //    Otherwise we are using `dyn Any` which has no requirements.
-        // 2. Guaranteed by the invariants of the the raw field.
-        // 3. If `T = SendSync`: Guaranteed by the invariants of the the raw field.
-        //    Otherwise we are using `Local` which has no requirements.
-        let raw = unsafe { ReportRef::from_raw(item) };
+        // 1. Guaranteed by the invariants of this type.
+        // 2. Guaranteed by the invariants of this type.
+        // 3. Guaranteed by the invariants of this type.
+        // 4. Guaranteed by the invariants of this type.
+        let raw = unsafe { ReportRef::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
     }
@@ -183,12 +175,11 @@ where
         let item = raw.next_back()?.as_ref();
 
         // SAFETY:
-        // 1. If `C` is a concrete type: Guaranteed by the invariants of the the raw field.
-        //    Otherwise we are using `dyn Any` which has no requirements.
-        // 2. Guaranteed by the invariants of the the raw field.
-        // 3. If `T = SendSync`: Guaranteed by the invariants of the the raw field.
-        //    Otherwise we are using `Local` which has no requirements.
-        let raw = unsafe { ReportRef::from_raw(item) };
+        // 1. Guaranteed by the invariants of this type.
+        // 2. Guaranteed by the invariants of this type.
+        // 3. Guaranteed by the invariants of this type.
+        // 4. Guaranteed by the invariants of this type.
+        let raw = unsafe { ReportRef::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
     }
@@ -214,18 +205,19 @@ where
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access2 {
+    use alloc::vec::Vec;
     use core::{any::Any, marker::PhantomData};
 
-    use alloc::vec::Vec;
     use rootcause_internals::RawReport;
 
     use crate::markers::{self, SendSync};
 
     /// An owning iterator over reports in a [`ReportCollection`].
     ///
-    /// This iterator consumes a [`ReportCollection`] and yields owned [`Report`]
-    /// instances. Unlike [`ReportCollectionIter`], this iterator takes ownership of
-    /// the reports, allowing you to move them out of the collection.
+    /// This iterator consumes a [`ReportCollection`] and yields owned
+    /// [`Report`] instances. Unlike [`ReportCollectionIter`], this iterator
+    /// takes ownership of the reports, allowing you to move them out of the
+    /// collection.
     ///
     /// # Examples
     ///
@@ -257,12 +249,10 @@ mod limit_field_access2 {
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 2. All other references to this report are compatible with shared
-        ///    ownership. Specifically there are no references with an assumption
-        ///    that the strong_count is `1`.
+        ///    ownership. Specifically there are no references with an
+        ///    assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
-        /// 4. If `T = Local`: No other references to these reports are allowed to
-        ///    have `T = SendSync`.
         raw: alloc::vec::IntoIter<RawReport>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
@@ -273,7 +263,8 @@ mod limit_field_access2 {
         C: markers::ObjectMarker + ?Sized,
         T: markers::ThreadSafetyMarker,
     {
-        /// Creates a new [`ReportCollectionIntoIter`] from a vector of raw reports
+        /// Creates a new [`ReportCollectionIntoIter`] from a vector of raw
+        /// reports
         ///
         /// # Safety
         ///
@@ -282,15 +273,13 @@ mod limit_field_access2 {
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 2. All other references to this report are compatible with shared
-        ///    ownership. Specifically there are no references with an assumption
-        ///    that the strong_count is `1`.
+        ///    ownership. Specifically there are no references with an
+        ///    assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
-        /// 4. If `T = Local`: No other references to these reports are allowed to
-        ///    have `T = SendSync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
-            // SAFETY: We must uphold the safety invariants of the raw field:
+            // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
@@ -304,7 +293,7 @@ mod limit_field_access2 {
         /// Returns a reference to the underlying raw report iterator
         #[must_use]
         pub(crate) fn as_raw(&self) -> &alloc::vec::IntoIter<RawReport> {
-            // SAFETY: We must uphold the safety invariants of the raw field:
+            // SAFETY: We must uphold the safety invariants of this type:
             // 1. No mutation occurs here, so the invariants are preserved
             // 2. No mutation occurs here, so the invariants are preserved
             // 3. No mutation occurs here, so the invariants are preserved
@@ -326,14 +315,12 @@ mod limit_field_access2 {
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 2. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
-        /// 3. If `T = SendSync`: No mutation is performed that invalidate the invariant
-        ///    that all inner contexts and attachments are `Send + Sync`.
-        /// 4. If `T = Local`: No mutation is performed that invalidate the invariant
-        ///    that there are no invariants to any of the reports in the iterator with
-        ///    `T = SendSync`.
+        /// 3. If `T = SendSync`: No mutation is performed that invalidate the
+        ///    invariant that all inner contexts and attachments are `Send +
+        ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawReport> {
-            // SAFETY: We must uphold the safety invariants of the raw field:
+            // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
@@ -354,9 +341,22 @@ where
     type Item = Report<C, Cloneable, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
+        // SAFETY:
+        // 1. We only remove items, we don't mutate them
+        // 2. We only remove items, we don't mutate them
+        // 3. We only remove items, we don't mutate them
         let raw = unsafe { self.as_raw_mut() };
+
         let item = raw.next()?;
+
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
+        // 2. `O=Cloneable`, so this is trivially true.
+        // 3. Guaranteed by the invariants of this type.
+        // 4. Guaranteed by the invariants of this type.
+        // 5. Guaranteed by the invariants of this type.
         let raw = unsafe { Report::<C, Cloneable, T>::from_raw(item) };
+
         Some(raw)
     }
 
@@ -375,18 +375,16 @@ where
         // 1. We only remove items, we don't mutate them
         // 2. We only remove items, we don't mutate them
         // 3. We only remove items, we don't mutate them
-        // 4. We only remove items, we don't mutate them
         let raw = unsafe { self.as_raw_mut() };
 
         let item = raw.next_back()?;
 
         // SAFETY:
-        // 1. If `C` is a concrete type: Guaranteed by the invariants of the the raw field.
-        //    Otherwise we are using `dyn Any` which has no requirements.
-        // 2. `O = Cloneable`, so this is trivially true.
-        // 3. Guaranteed by the invariants of the the raw field.
-        // 4. If `T = SendSync`: Guaranteed by the invariants of the the raw field.
-        // 5. If `T = Local`: Guaranteed by the invariants of the the raw field.
+        // 1. Guaranteed by the invariants of this type.
+        // 2. `O=Cloneable`, so this is trivially true.
+        // 3. Guaranteed by the invariants of this type.
+        // 4. Guaranteed by the invariants of this type.
+        // 5. Guaranteed by the invariants of this type.
         let raw = unsafe { Report::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)

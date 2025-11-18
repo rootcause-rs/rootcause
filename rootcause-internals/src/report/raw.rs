@@ -36,7 +36,7 @@ use crate::{
     attachment::RawAttachment,
     handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction},
     report::data::ReportData,
-    util::{CastTo, Erased},
+    util::Erased,
 };
 
 /// A pointer to a [`ReportData`] that is guaranteed to point to an initialized
@@ -166,11 +166,11 @@ impl<'a> RawReportRef<'a> {
     /// 1. The type `C` matches the actual context type stored in the
     ///    [`ReportData`]
     #[inline]
-    pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a ReportData<C::Target> {
+    pub(super) unsafe fn cast_inner<C>(self) -> &'a ReportData<C> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<C>());
 
-        let this = self.ptr.cast::<ReportData<C::Target>>();
+        let this = self.ptr.cast::<ReportData<C>>();
         // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
         // safe because:
         // - The pointer originated from Arc::into_raw in RawReport construction
@@ -328,11 +328,11 @@ impl<'a> RawReportMut<'a> {
     /// 1. The type `C` matches the actual context type stored in the
     ///    [`ReportData`]
     #[inline]
-    pub(super) unsafe fn cast_inner<C: CastTo>(self) -> &'a mut ReportData<C::Target> {
+    pub(super) unsafe fn cast_inner<C>(self) -> &'a mut ReportData<C> {
         // Debug assertion to catch type mismatches in case of bugs
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
 
-        let mut this = self.ptr.cast::<ReportData<C::Target>>();
+        let mut this = self.ptr.cast::<ReportData<C>>();
         // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
         // safe because:
         // - The pointer originated from Arc::into_raw in RawReport construction

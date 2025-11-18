@@ -174,8 +174,6 @@ static HOOKS: HookLock<HookMap> = HookLock::new();
 
 /// Retrieves the formatting override hook for the specified attachment type.
 ///
-/// # Safety invariant
-///
 /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
 /// where `TypeId::of::<A>() == type_id`.
 fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverride>> {
@@ -632,12 +630,11 @@ pub(crate) fn display_attachment(
         hook.display_preformatted(attachment, attachment_parent, formatter)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
         // SAFETY:
-        // 1. We must ensure that the attachment's inner type ID matches the type ID
-        //    that the hook was registered for. This is guaranteed by the safety
-        //    invariant of get_hook.
+        // 1. This is guaranteed by `get_hook`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
+            // @add-unsafe-context: UntypedAttachmentFormattingOverride
             hook.display(attachment, attachment_parent, formatter)
         }
     } else {
@@ -656,12 +653,11 @@ pub(crate) fn debug_attachment(
         hook.debug_preformatted(attachment, attachment_parent, formatter)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
         // SAFETY:
-        // 1. We must ensure that the attachment's inner type ID matches the type ID
-        //    that the hook was registered for. This is guaranteed by the safety
-        //    invariant of get_hook.
+        // 1. This is guaranteed by `get_hook`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
+            // @add-unsafe-context: UntypedAttachmentFormattingOverride
             hook.debug(attachment, attachment_parent, formatter)
         }
     } else {

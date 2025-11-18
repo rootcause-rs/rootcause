@@ -156,8 +156,13 @@ where
         H: AttachmentHandler<A>,
     {
         let raw = RawAttachment::new::<A, H>(attachment);
-        // SAFETY: The inner attachment is of type `A`, which is `Send+Sync` because of
-        // the bounds on this function
+
+        // SAFETY:
+        // 1. We just created the `RawAttachment` and it does indeed
+        //    have an attachment of type `A`.
+        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then
+        //    the bound `A: ObjectMarkerFor<SendSync>` guarantees that the
+        //    attachment is `Send+Sync`.
         unsafe { ReportAttachment::from_raw(raw) }
     }
 
@@ -181,7 +186,10 @@ where
     pub fn into_dyn_any(self) -> ReportAttachment<dyn Any, T> {
         let raw = self.into_raw();
 
-        unsafe { ReportAttachment::from_raw(raw) }
+        // SAFETY:
+        // 1. `A=dyn Any`, so this is trivially true.
+        // 2. Guaranteed by the invariants of this type.
+        unsafe { ReportAttachment::<dyn Any, T>::from_raw(raw) }
     }
 
     /// Changes the thread safety mode of the [`ReportAttachment`] to [`Local`].
@@ -200,6 +208,9 @@ where
     pub fn into_local(self) -> ReportAttachment<A, Local> {
         let raw = self.into_raw();
 
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
+        // 2. `T=Local`, so this is trivially true.
         unsafe { ReportAttachment::from_raw(raw) }
     }
 
@@ -304,6 +315,8 @@ where
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         let raw = self.as_raw_ref();
 
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 }
@@ -413,6 +426,8 @@ where
     {
         let raw = self.as_raw_ref();
 
+        // SAFETY:
+        // 1. Guaranteed by the caller
         unsafe { raw.attachment_downcast_unchecked() }
     }
 
@@ -426,7 +441,11 @@ where
         A: markers::ObjectMarker,
     {
         if TypeId::of::<A>() == self.inner_type_id() {
-            Ok(unsafe { self.downcast_unchecked() })
+            // SAFETY:
+            // 1. We just checked that the type IDs match
+            let attachment = unsafe { self.downcast_unchecked() };
+
+            Ok(attachment)
         } else {
             Err(self)
         }
@@ -450,6 +469,9 @@ where
     {
         let raw = self.into_raw();
 
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        // 2. Guaranteed by the invariants of this type.
         unsafe { ReportAttachment::from_raw(raw) }
     }
 }
@@ -474,12 +496,13 @@ where
     }
 }
 
-// SAFETY: The `SendSync` marker indicates that all objects in the report are
-// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
+// SAFETY: The `SendSync` marker indicates that the inner attachment
+// is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
 unsafe impl<A> Send for ReportAttachment<A, SendSync> where A: markers::ObjectMarker + ?Sized {}
-// SAFETY: The `SendSync` marker indicates that all objects in the report are
-// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
+
+// SAFETY: The `SendSync` marker indicates that the inner attachment
+// is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
 unsafe impl<A> Sync for ReportAttachment<A, SendSync> where A: markers::ObjectMarker + ?Sized {}
 
