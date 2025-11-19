@@ -32,12 +32,15 @@ use crate::{
 /// Contains function pointers for performing operations on reports without
 /// knowing their concrete type at compile time.
 ///
-/// # Safety Invariant
+/// # Safety
 ///
-/// The fields drop, clone_arc, strong_count, source, display, debug, and
-/// preferred_context_formatting_style are guaranteed to point to the
-/// functions defined below instantiated with the same context type `C`
-/// and handler type `H` that were used to create this `ReportVtable`.
+/// The following safety invariants are guaranteed to be upheld as long as this
+/// struct exists:
+///
+/// * The fields `drop`, `clone_arc`, `strong_count`, `source`, `display`, `debug`, and
+///   `preferred_context_formatting_style` all point to the functions defined
+/// * The concrete pointers are all instantiated with the same context type `C` and
+///   handler type `H` that were used to create this `ReportVtable`.
 pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].

@@ -57,7 +57,7 @@ pub struct RawReport {
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
@@ -139,7 +139,7 @@ impl core::ops::Drop for RawReport {
 
         // SAFETY:
         // 1. The pointer comes from `Arc::into_raw` (guaranteed by `RawReport::new`)
-        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the data in the
         //    `ReportData`.
         // 3. The pointer is not used after this call (we're in the drop function)
         unsafe {
@@ -156,6 +156,14 @@ impl core::ops::Drop for RawReport {
 /// us to know the actual type of the context, which we do not.
 ///
 /// [`&'a ReportData<C>`]: ReportData
+///
+/// # Safety invariants
+///
+/// This reference behaves like a `&'a ReportData<C>` for some unknown
+/// `C` and upholds the the usual safety invariants of shared references:
+///
+/// 1. The pointee is properly initialized for the entire lifetime `'a`.
+/// 2. The pointee is not mutated for the entire lifetime `'a`.
 #[derive(Clone, Copy)]
 #[repr(transparent)]
 pub struct RawReportRef<'a> {
@@ -163,7 +171,7 @@ pub struct RawReportRef<'a> {
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
@@ -327,13 +335,24 @@ impl<'a> RawReportRef<'a> {
 /// require us to know the actual type of the context, which we do not.
 ///
 /// [`&'a mut ReportData<C>`]: ReportData
+///
+/// # Safety invariants
+///
+/// This reference behaves like a `&'a mut ReportData<C>` for some unknown
+/// `C` and upholds the the usual safety invariants of mutable references:
+///
+/// 1. The pointee is properly initialized for the entire lifetime `'a`.
+/// 2. The pointee is not aliased for the entire lifetime `'a`.
+/// 3. Like a `&'a mut T`, it is possible to reborrow this reference to a shorter
+///    lifetime. The borrow checker will ensure that original longer lifetime is not used
+///    while the shorter lifetime exists.
 #[repr(transparent)]
 pub struct RawReportMut<'a> {
     /// Pointer to the inner report data
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`

@@ -41,7 +41,7 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
+        /// The following safety invariants are guaranteed to be upheld as long as this
         /// struct exists:
         ///
         /// 1. If `C` is a concrete type: The contexts contained in all of the
@@ -231,13 +231,10 @@ where
     /// ```
     pub fn with_capacity(capacity: usize) -> Self {
         let reports = Vec::with_capacity(capacity);
-        // SAFETY:
-        // 1. We just created the empty Vec, so the invariants are upheld for all
-        //    reports in it.
-        // 2. We just created the empty Vec, so the invariants are upheld for all
-        //    reports in it.
-        // 3. We just created the empty Vec, so the invariants are upheld for all
-        //    reports in it.
+        // SAFETY: We just created the empty Vec, so there are no reports in it.
+        // 1. No reports, so the invariants are upheld.
+        // 2. No reports, so the invariants are upheld.
+        // 3. No reports, so the invariants are upheld.
         unsafe { Self::from_raw(reports) }
     }
 
@@ -492,7 +489,6 @@ where
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. The invariants of the collection guarantee this.
         // 3. The invariants of the collection guarantee this.
-        // 4. The invariants of the collection guarantee this.
         unsafe { ReportCollection::<dyn Any, T>::from_raw(raw) }
     }
 
@@ -506,7 +502,6 @@ where
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. The invariants of the collection guarantee this.
         // 3. The invariants of the collection guarantee this.
-        // 4. The invariants of the collection guarantee this.
         unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
     }
 
@@ -796,11 +791,15 @@ where
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
-        // 2. `O=Uncloneable`, so this is trivially true.
+        // 1. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 2. For the called method we set `O=Uncloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of the collection.
-        // 4. `T=Local`, so this is trivially true.
-        let slice = unsafe { ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw) };
+        // 4. For the called method we set `T=Local`, so this is trivially true.
+        let slice = unsafe {
+            // @add-unsafe-context: rootcause_internals::RawReport
+            // @add-unsafe-context: rootcause_internals::RawReportRef
+            ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw)
+        };
 
         crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Display)
     }
@@ -815,11 +814,15 @@ where
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
-        // 2. `O=Uncloneable`, so this is trivially true.
+        // 1. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 2. For the called method we set `O=Uncloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of the collection.
-        // 4. `T=Local`, so this is trivially true.
-        let slice = unsafe { ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw) };
+        // 4. For the called method we set `T=Local`, so this is trivially true.
+        let slice = unsafe {
+            // @add-unsafe-context: rootcause_internals::RawReport
+            // @add-unsafe-context: rootcause_internals::RawReportRef
+            ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw)
+        };
 
         crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Debug)
     }

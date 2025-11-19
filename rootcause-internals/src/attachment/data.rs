@@ -35,7 +35,7 @@ pub(crate) struct AttachmentData<A: 'static> {
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The vtable must always point to an `AttachmentVtable` created for the

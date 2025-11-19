@@ -8,7 +8,7 @@
 //! This module encapsulates the fields of [`AttachmentVtable`] so they cannot
 //! be accessed directly. This visibility restriction guarantees the safety
 //! invariant: **the vtable's type parameters must match the actual attachment
-//! type and handler stored in the `AttachmentData`**.
+//! type and handler stored in the [`AttachmentData`]**.
 //!
 //! # Safety Invariant
 //!
@@ -32,10 +32,10 @@ use crate::{
 ///
 /// # Safety Invariant
 ///
-/// The fields drop, display, debug, and preferred_formatting_style are
+/// The fields `drop`, `display`, `debug`, and `preferred_formatting_style` are
 /// guaranteed to point to the functions defined below instantiated with the
 /// attachment type `A` and handler type `H` that were used to create this
-/// `AttachmentVtable`.
+/// [`AttachmentVtable`].
 pub(crate) struct AttachmentVtable {
     /// Gets the [`TypeId`] of the attachment type that was used to create this
     /// [`AttachmentVtable`].

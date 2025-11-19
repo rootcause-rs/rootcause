@@ -36,7 +36,7 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
+        /// The following safety invariants are guaranteed to be upheld as long as this
         /// struct exists:
         ///
         /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
@@ -103,7 +103,7 @@ mod limit_field_access {
             let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
             // SAFETY:
-            // - Ths raw pointer is derived from a valid reference with the same lifetime
+            // - This raw pointer is derived from a valid reference with the same lifetime
             //   and representation
             // - Creating this reference does not violate any aliasing rules as we are only
             //   creating a mutable reference from a different mutable reference which will

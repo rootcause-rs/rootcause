@@ -44,7 +44,7 @@ mod limit_field_access {
     > {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
+        /// The following safety invariants are guaranteed to be upheld as long as this
         /// struct exists:
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
@@ -130,10 +130,10 @@ where
     type Item = ReportRef<'a, C, Cloneable, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // 1. We only remove items from the iterator, we don't mutate them
-        // 2. We only remove items from the iterator, we don't mutate them
-        // 3. We only remove items from the iterator, we don't mutate them
+        // SAFETY: We only remove items, we don't mutate them.
+        // 1. No mutation that breaks the context-type invariant
+        // 2. No mutation that breaks the shared-ownership invariant
+        // 3. No mutation that breaks the Send+Sync invariant for T=SendSync
         let raw = unsafe { self.as_raw_mut() };
 
         let item = raw.next()?.as_ref();
@@ -159,10 +159,10 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // 1. We only remove items from the iterator, we don't mutate them
-        // 2. We only remove items from the iterator, we don't mutate them
-        // 3. We only remove items from the iterator, we don't mutate them
+        // SAFETY: We only remove items, we don't mutate them.
+        // 1. No mutation that breaks the context-type invariant
+        // 2. No mutation that breaks the shared-ownership invariant
+        // 3. No mutation that breaks the Send+Sync invariant for T=SendSync
         let raw = unsafe { self.as_raw_mut() };
 
         let item = raw.next_back()?.as_ref();
@@ -238,7 +238,7 @@ mod limit_field_access2 {
     {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
+        /// The following safety invariants are guaranteed to be upheld as long as this
         /// struct exists:
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
@@ -330,10 +330,10 @@ where
     type Item = Report<C, Cloneable, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // 1. We only remove items, we don't mutate them
-        // 2. We only remove items, we don't mutate them
-        // 3. We only remove items, we don't mutate them
+        // SAFETY: We only remove items, we don't mutate them.
+        // 1. No mutation that breaks the context-type invariant
+        // 2. No mutation that breaks the shared-ownership invariant
+        // 3. No mutation that breaks the Send+Sync invariant for T=SendSync
         let raw = unsafe { self.as_raw_mut() };
 
         let item = raw.next()?;
@@ -360,10 +360,10 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn next_back(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // 1. We only remove items, we don't mutate them
-        // 2. We only remove items, we don't mutate them
-        // 3. We only remove items, we don't mutate them
+        // SAFETY: We only remove items, we don't mutate them.
+        // 1. No mutation that breaks the context-type invariant
+        // 2. No mutation that breaks the shared-ownership invariant
+        // 3. No mutation that breaks the Send+Sync invariant for T=SendSync
         let raw = unsafe { self.as_raw_mut() };
 
         let item = raw.next_back()?;

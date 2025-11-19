@@ -70,6 +70,13 @@ mod limit_field_access {
     /// [`Uncloneable`]: crate::markers::Uncloneable
     /// [`Mutable`]: crate::markers::Mutable
     /// [`clone_arc`]: ReportRef::clone_arc
+    // # Safety invariants
+    //
+    // This reference behaves like a `&'a Report<C, O, T>` for some unknown
+    // `C` and `O`, and upholds the the usual safety invariants of shared references:
+    //
+    // 1. The pointee is properly initialized for the entire lifetime `'a`.
+    // 2. The pointee is not mutated for the entire lifetime `'a`.
     #[repr(transparent)]
     pub struct ReportRef<'a, Context = dyn Any, Ownership = Cloneable, ThreadSafety = SendSync>
     where
@@ -79,7 +86,7 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
+        /// The following safety invariants are guaranteed to be upheld as long as this
         /// struct exists:
         ///
         /// 1. If `C` is a concrete type: The context embedded in the report
@@ -183,7 +190,11 @@ mod limit_field_access {
             //    consider
             // 5. The safety invariants for each `ReportRef` are upheld as guaranteed by our
             //    caller
-            unsafe { core::slice::from_raw_parts(report_ref_ptr, len) }
+            unsafe {
+                // @add-unsafe-context: RawReport
+                // @add-unsafe-context: RawReportRef
+                core::slice::from_raw_parts(report_ref_ptr, len)
+            }
         }
 
         /// Returns the underlying raw report reference.

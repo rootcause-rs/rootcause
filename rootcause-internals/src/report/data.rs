@@ -7,7 +7,7 @@
 //!
 //! # Safety Invariant
 //!
-//! Since `ReportData` can only be constructed via [`ReportData::new`] (which
+//! Since [`ReportData`] can only be constructed via [`ReportData::new`] (which
 //! creates matching vtable and context), and fields cannot be modified after
 //! construction (no `pub` or `pub(crate)` fields), the types remain in sync
 //! throughout the value's lifetime.
@@ -43,7 +43,7 @@ pub(crate) struct ReportData<C: 'static> {
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The vtable must always point to a `ReportVtable` created for the
@@ -80,6 +80,8 @@ impl<C: 'static> ReportData<C> {
 }
 
 impl RawReport {
+    /// Deconstructs this report into its context, children, and attachments.
+    ///
     /// # Safety
     ///
     /// The caller must ensure:
@@ -105,10 +107,10 @@ impl RawReport {
                 (data.context, data.children, data.attachments)
             }
             Err(_) => {
-                // We could definitely get away with using unreachable_unchecked here in release
-                // builds, but since we don't expect anybody to use into_parts in
-                // performance-critical paths, it's probably better to just have
-                // a normal panic even in release builds.
+                // Note: We could use `unreachable_unchecked` here in release builds for
+                // performance, but `into_parts` is not expected to be used in
+                // performance-critical paths, so a normal panic is preferable for
+                // better debugging.
                 unreachable!("Caller did not fulfill the guarantee that pointer is unique")
             }
         }
@@ -116,11 +118,10 @@ impl RawReport {
 }
 
 impl<'a> RawReportRef<'a> {
-    /// Returns a reference to the [`ReportVtable`] of the [`ReportData`]
-    /// instance.
+    /// Returns a reference to the [`ReportVtable`] of this report.
     ///
-    /// The returned vtable is guaranteed to be a vtable for the
-    /// context type stored in the [`ReportData`].
+    /// The returned vtable is guaranteed to match the context type stored in
+    /// the [`ReportData`].
     #[inline]
     pub(super) fn vtable(self) -> &'static ReportVtable {
         let ptr = self.as_ptr();
@@ -138,9 +139,9 @@ impl<'a> RawReportRef<'a> {
 
         // SAFETY: The safety requirements for dereferencing `vtable_ptr` are upheld:
         // 1. The pointer is valid and properly aligned because it points to the first
-        //    field of a valid `AttachmentData<A>` instance
-        // 2. The `vtable` field is initialized in `AttachmentData::new` and never
-        //    modified, so it contains a valid `&'static AttachmentVtable` value
+        //    field of a valid `ReportData<C>` instance
+        // 2. The `vtable` field is initialized in `ReportData::new` and never
+        //    modified, so it contains a valid `&'static ReportVtable` value
         unsafe { *vtable_ptr }
     }
 
@@ -190,8 +191,7 @@ impl<'a> RawReportRef<'a> {
         unsafe { &*attachments_ptr }
     }
 
-    /// Accesses the inner context of the [`ReportData`] instance as a reference
-    /// to the specified type.
+    /// Downcasts the context to the specified type and returns a reference.
     ///
     /// # Safety
     ///
@@ -224,7 +224,7 @@ impl<'a> RawReportMut<'a> {
 
         // SAFETY: The safety requirements for `&raw const (*ptr).children` are upheld:
         // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
-        //    guaranteed by `RawReportRef`'s invariants
+        //    guaranteed by `RawReportMut`'s invariants
         // 2. `ReportData<C>` is `#[repr(C)]`, so the `children` field is at a
         //    consistent offset regardless of the type parameter `C`
         // 3. We avoid creating a reference to the full `ReportData` struct, which
@@ -240,7 +240,8 @@ impl<'a> RawReportMut<'a> {
         unsafe { &mut *children_ptr }
     }
 
-    /// Gets a mutable reference to the attachments.
+    /// Deconstructs the `RawReportMut` and returns a mutable reference to the
+    /// attachments vector.
     ///
     /// # Safety
     ///
@@ -255,7 +256,7 @@ impl<'a> RawReportMut<'a> {
 
         // SAFETY: The safety requirements for `&raw const (*ptr).attachments` are upheld:
         // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
-        //    guaranteed by `RawReportRef`'s invariants
+        //    guaranteed by `RawReportMut`'s invariants
         // 2. `ReportData<C>` is `#[repr(C)]`, so the `attachments` field is at a
         //    consistent offset regardless of the type parameter `C`
         // 3. We avoid creating a reference to the full `ReportData` struct, which
@@ -271,8 +272,7 @@ impl<'a> RawReportMut<'a> {
         unsafe { &mut *attachments_ptr }
     }
 
-    /// Accesses the inner context of the [`ReportData`] instance as a mutable
-    /// reference to the specified type.
+    /// Downcasts the context to the specified type and returns a mutable reference.
     ///
     /// # Safety
     ///

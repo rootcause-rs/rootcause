@@ -48,7 +48,7 @@ pub struct RawAttachment {
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
@@ -61,6 +61,9 @@ pub struct RawAttachment {
 impl RawAttachment {
     /// Creates a new [`RawAttachment`] with the specified handler and
     /// attachment.
+    ///
+    /// The returned attachment will embed the specified attachment and use the
+    /// specified handler for all operations.
     #[inline]
     pub fn new<A, H>(attachment: A) -> Self
     where
@@ -95,7 +98,7 @@ impl core::ops::Drop for RawAttachment {
         // SAFETY:
         // 1. The pointer comes from `Box::into_raw` (guaranteed by
         //    `RawAttachment::new`)
-        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the data in the
         //    `AttachmentData`.
         // 3. The pointer is not used after this call (we're in the drop function)
         unsafe {
@@ -120,7 +123,7 @@ pub struct RawAttachmentRef<'a> {
     ///
     /// # Safety
     ///
-    /// The following safety invariants must be upheld as long as this
+    /// The following safety invariants are guaranteed to be upheld as long as this
     /// struct exists:
     ///
     /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`

@@ -82,7 +82,7 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants must be upheld as long as this
+        /// The following safety invariants are guaranteed to be upheld as long as this
         /// struct exists:
         ///
         /// 1. If `C` is a concrete type: The context embedded in the report
@@ -240,7 +240,7 @@ where
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
-        // 5. Have have a `&mut self`. This means that there are no other borrows active
+        // 5. We have a `&mut self`. This means that there are no other borrows active
         //    to `self`. We also know that this is the unique owner of the report, so
         //    there are no other references to it through different ownership. This
         //    means that there are no other references to this report at all, so there
