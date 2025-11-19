@@ -366,14 +366,14 @@ where
     #[must_use]
     pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
         // SAFETY:
-        // 1. If `T=Local`: This is trivially true. If `T = SendSync`, then this is
-        //    guaranteed by the `&mut ReportCollection` we are creating.
+        // 1. If `T=Local`: This is trivially true. If `T=SendSync`, then this is
+        //    guaranteed by the `&mut ReportAttachments` we are creating.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
         // 1. If `T=Local`: We know that no such references are allowed to exist, so
         //    this is trivially true. If `T=SendSync`, then these guarantees are upheld
-        //    by the `&mut ReportCollection` we are creating.
+        //    by the `&mut ReportAttachments` we are creating.
         let raw = unsafe { raw.into_attachments_mut() };
 
         // SAFETY:
@@ -410,8 +410,10 @@ where
     #[must_use]
     pub fn into_dyn_any(self) -> ReportMut<'a, dyn Any, T> {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T = SendSync`, then this is
-        //    guaranteed by the invariants of the `ReportMut` we are creating.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
+        //    we are not allowed to mutate the returned raw report in a way that
+        //    adds non-`Send+Sync` objects. However the invariants of the created
+        //    `ReportMut` guarantee that no such mutation can occur.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:

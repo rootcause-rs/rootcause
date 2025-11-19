@@ -121,37 +121,39 @@ impl<'a> RawReportRef<'a> {
     #[inline]
     pub(super) fn vtable(self) -> &'static ReportVtable {
         let ptr = self.as_ptr();
-        // SAFETY: We don't know the actual inner context type, but we do know
-        // that it points to an instance of `ReportData<C>` for some specific `C`.
-        // Since `ReportData<C>` is `#[repr(C)]`, that means we can access
-        // the fields before the actual context.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `ReportData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
+        // SAFETY: The safety requirements for `&raw const (*ptr).vtable` are upheld:
+        // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
+        //    guaranteed by `RawReportRef`'s invariants
+        // 2. `ReportData<C>` is `#[repr(C)]`, so the `vtable` field is at a
+        //    consistent offset regardless of the type parameter `C`
+        // 3. We avoid creating a reference to the full `ReportData` struct, which
+        //    would be UB since we don't know the correct type parameter
         let vtable_ptr: *const &'static ReportVtable = unsafe { &raw const (*ptr).vtable };
 
-        // SAFETY: The vtable_ptr is derived from a valid Arc pointer and points
-        // to an initialized `&'static ReportVtable` field. Dereferencing is safe
-        // because:
-        // - The pointer is valid and properly aligned
-        // - The vtable field is initialized in ReportData::new and never modified
+        // SAFETY: The safety requirements for dereferencing `vtable_ptr` are upheld:
+        // 1. The pointer is valid and properly aligned because it points to the first
+        //    field of a valid `AttachmentData<A>` instance
+        // 2. The `vtable` field is initialized in `AttachmentData::new` and never
+        //    modified, so it contains a valid `&'static AttachmentVtable` value
         unsafe { *vtable_ptr }
     }
 
     /// Returns the child reports of this report.
     #[inline]
     pub fn children(self) -> &'a Vec<RawReport> {
-        let ptr = self.as_ptr();
-        // SAFETY: We don't know the actual inner context type, but we do know
-        // that it points to an instance of `ReportData<C>` for some specific `C`.
-        // Since `ReportData<C>` is `#[repr(C)]`, that means we can access
-        // the fields before the actual context.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `ReportData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
-        let children_ptr: *const Vec<RawReport> = unsafe { &raw const (*ptr).children };
+        let ptr: *const ReportData<Erased> = self.as_ptr();
+
+        // SAFETY: The safety requirements for `&raw const (*ptr).children` are upheld:
+        // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
+        //    guaranteed by `RawReportRef`'s invariants
+        // 2. `ReportData<C>` is `#[repr(C)]`, so the `children` field is at a
+        //    consistent offset regardless of the type parameter `C`
+        // 3. We avoid creating a reference to the full `ReportData` struct, which
+        //    would be UB since we don't know the correct type parameter
+        let children_ptr: *const Vec<RawReport> = unsafe {
+            // @add-unsafe-context: ReportData
+            &raw const (*ptr).children
+        };
 
         // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
         // because the existence of the `RawReportRef<'a>` already implies that
@@ -163,15 +165,17 @@ impl<'a> RawReportRef<'a> {
     #[inline]
     pub fn attachments(self) -> &'a Vec<RawAttachment> {
         let ptr = self.as_ptr();
-        // SAFETY: We don't know the actual inner context type, but we do know
-        // that it points to an instance of `ReportData<C>` for some specific `C`.
-        // Since `ReportData<C>` is `#[repr(C)]`, that means we can access
-        // the fields before the actual context.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `ReportData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
-        let attachments_ptr: *const Vec<RawAttachment> = unsafe { &raw const (*ptr).attachments };
+        // SAFETY: The safety requirements for `&raw const (*ptr).attachments` are upheld:
+        // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
+        //    guaranteed by `RawReportRef`'s invariants
+        // 2. `ReportData<C>` is `#[repr(C)]`, so the `attachments` field is at a
+        //    consistent offset regardless of the type parameter `C`
+        // 3. We avoid creating a reference to the full `ReportData` struct, which
+        //    would be UB since we don't know the correct type parameter
+        let attachments_ptr: *const Vec<RawAttachment> = unsafe {
+            // @add-unsafe-context: ReportData
+            &raw const (*ptr).attachments
+        };
 
         // SAFETY: We turn the `*const` pointer into a `&'a` reference. This is valid
         // because the existence of the `RawReportRef<'a>` already implies that

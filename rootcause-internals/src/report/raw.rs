@@ -333,6 +333,7 @@ impl<'a> RawReportMut<'a> {
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<C>());
 
         let mut this = self.ptr.cast::<ReportData<C>>();
+
         // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
         // safe because:
         // - The pointer originated from Arc::into_raw in RawReport construction
