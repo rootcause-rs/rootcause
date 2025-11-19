@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Change the formatting of Backtraces and Location and how they are customized [#44](https://github.com/rootcause-rs/rootcause/pull/44)
 - `ReportMut::reborrow` has been renamed to `ReportMut::as_mut` [#47](https://github.com/rootcause-rs/rootcause/pull/47)
+- Update the backtrace formatting [#48](https://github.com/rootcause-rs/rootcause/pull/48)
 
 ## [0.7.0] - 2025-11-06
 
