@@ -37,7 +37,7 @@
 //! ## Quick Example
 //!
 //! ```rust
-//! use rootcause::prelude::*;
+//! use rootcause::{Report, result_ext::ResultExt};
 //!
 //! fn read_config(path: &str) -> Result<String, Report> {
 //!     std::fs::read_to_string(path).context("Failed to read configuration file")?;
@@ -82,18 +82,20 @@
 //! - **Optionally typed**: Users should be able to (optionally) specify the
 //!   type of the context in the root node.
 //! - **Beautiful**: The default formatting should look pleasant—and if it
-//!   doesn't match your style, the hook system lets you customize it.
-//! - **Cloneable**: It should be possible to clone a `Report` when you need to.
+//!   doesn't match your style, the [hook system] lets you customize it.
+//! - **Cloneable**: It should be possible to clone a [`Report`] when you need to.
 //! - **Self-documenting**: Reports should automatically capture information
 //!   (like backtraces and locations) that might be useful in debugging.
 //! - **Customizable**: It should be possible to customize what data gets
 //!   collected, or how reports are formatted.
-//! - **Lightweight**: `Report` has a pointer-sized representation, keeping
+//! - **Lightweight**: [`Report`] has a pointer-sized representation, keeping
 //!   `Result<T, Report>` small and fast.
+//!
+//! [hook system]: crate::hooks
 //!
 //! ## Report Type Parameters
 //!
-//! The `Report` type is generic over three parameters, but for most users the
+//! The [`Report`] type is generic over three parameters, but for most users the
 //! defaults work fine.
 //!
 //! **Most common usage:**
@@ -137,20 +139,20 @@
 //! these variants immediately - but if you do need cloning, thread-local
 //! errors, or want to understand what's possible, read on.*
 //!
-//! The `Report` type has three type parameters: `Report<Context, Ownership,
+//! The [`Report`] type has three type parameters: `Report<Context, Ownership,
 //! ThreadSafety>`. This section explains all the options and when you'd use
 //! them.
 //!
 //! ### Context Type: Typed vs Dynamic Errors
 //!
-//! **Use `Report<dyn Any>`** (or just `Report`) when errors just need to
+//! **Use `Report<dyn Any>`** (or just [`Report`]) when errors just need to
 //! propagate. **Use `Report<YourErrorType>`** when callers need to pattern
 //! match on specific error variants.
 //!
-//! **`Report<dyn Any>`** (or just `Report`) — Flexible, like [`anyhow`]
+//! **`Report<dyn Any>`** (or just [`Report`]) — Flexible, like [`anyhow`]
 //!
 //! Can hold any error type at the root. The `?` operator automatically converts
-//! any error into a `Report`. Note: `dyn Any` is just a marker - no actual
+//! any error into a [`Report`]. Note: `dyn Any` is just a marker - no actual
 //! trait object is stored. Converting between typed and dynamic reports is
 //! zero-cost.
 //!
@@ -189,34 +191,36 @@
 //! ### Ownership: Mutable vs Cloneable
 //!
 //! **Use the default ([`Mutable`])** when errors just propagate with `?`.
-//! **Use `.into_cloneable()`** when you need to store errors in collections or
+//! **Use [`.into_cloneable()`]** when you need to store errors in collections or
 //! use them multiple times.
+//!
+//! [`.into_cloneable()`]: crate::report::owned::Report::into_cloneable
 //!
 //! **[`Mutable`]** (default) — Unique ownership
 //!
 //! You can add attachments and context to the root, but can't clone the whole
-//! report. Note: child reports are still cloneable internally (they use `Arc`),
-//! but the top-level `Report` doesn't implement `Clone`. Start here, then
+//! [`Report`]. Note: child reports are still cloneable internally (they use `Arc`),
+//! but the top-level [`Report`] doesn't implement `Clone`. Start here, then
 //! convert to [`Cloneable`] if you need to clone the entire tree.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
 //! let mut report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let report = report.attach("debug info"); // ✅ Can mutate root
-//! // let cloned = report.clone();            // ❌ Can't clone whole report
+//! // let cloned = report.clone();           // ❌ Can't clone whole report
 //! ```
 //!
 //! **[`Cloneable`]** — Shared ownership
 //!
-//! The report can be cloned cheaply (via `Arc`), but can't be mutated. Use when
+//! The [`Report`] can be cloned cheaply (via `Arc`), but can't be mutated. Use when
 //! you need to pass the same error to multiple places.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let cloneable = report.into_cloneable();
-//! let copy1 = cloneable.clone(); // ✅ Can clone
-//! let copy2 = cloneable.clone(); // ✅ Cheap (Arc clone)
+//! let copy1 = cloneable.clone();          // ✅ Can clone
+//! let copy2 = cloneable.clone();          // ✅ Cheap (Arc clone)
 //! // let modified = copy1.attach("info"); // ❌ Can't mutate
 //! ```
 //!
@@ -232,7 +236,7 @@
 //!
 //! **[`SendSync`]** (default) — Thread-safe
 //!
-//! The report and all its contents are `Send + Sync`. Most types (String, Vec,
+//! The [`Report`] and all its contents are `Send + Sync`. Most types (String, Vec,
 //! primitives) are already `Send + Sync`, so this just works.
 //!
 //! ```rust
@@ -269,9 +273,10 @@
 //! and to more clearly communicate intent:
 //!
 //! - [`Report::into_dyn_any`] converts from `Report<C, *, *>` to `Report<dyn
-//!   Any, *, *>`.
+//!   Any, *, *>`. See [`examples/error_coercion.rs`] for usage patterns.
 //! - [`Report::into_cloneable`] converts from `Report<*, Mutable, *>` to
-//!   `Report<*, Cloneable, *>`.
+//!   `Report<*, Cloneable, *>`. See [`examples/retry_with_collection.rs`] for
+//!   storing multiple errors.
 //! - [`Report::into_local`] converts from `Report<*, *, SendSync>` to
 //!   `Report<*, *, Local>`.
 //!
@@ -282,6 +287,7 @@
 //!   - You can check if the type of the root node matches a specific type by
 //!     using [`Report::downcast_report`]. This will return either the requested
 //!     report type or the original report depending on whether the types match.
+//!     See [`examples/inspecting_errors.rs`] for downcasting techniques.
 //! - From `Report<*, Cloneable, *>` to `Report<*, Mutable, *>`:
 //!   - You can check if the root node only has a single owner using
 //!     [`Report::try_into_mutable`]. This will check the number of references
@@ -292,10 +298,13 @@
 //!     allocating a new root node is to call [`Report::context`].
 //! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable,
 //!   SendSync>`:
-//!   - You can preformat the entire report using [`Report::preformat`]. This
-//!     creates an entirely new report that has the same structure and will look
+//!   - You can preformat the entire [`Report`] using [`Report::preformat`]. This
+//!     creates an entirely new [`Report`] that has the same structure and will look
 //!     the same as the current one if printed, but all contexts and attachments
 //!     will be replaced with a [`PreformattedContext`] version.
+//!
+//! [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
+//! [`examples/inspecting_errors.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/inspecting_errors.rs
 //!
 //! # Acknowledgements
 //!

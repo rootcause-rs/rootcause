@@ -83,6 +83,20 @@ pub struct BacktraceHandler<const SHOW_FULL_PATH: bool>;
 
 impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandler<SHOW_FULL_PATH> {
     fn display(value: &Backtrace, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        const MAX_UNWRAPPED_SYM_LENGTH: usize = 25;
+        let mut max_seen_length = 0;
+        for entry in &value.entries {
+            if let BacktraceEntry::Frame(frame) = entry {
+                let sym = frame
+                    .sym_demangled
+                    .rsplit_once("::")
+                    .map_or(frame.sym_demangled.as_str(), |(_, sym)| sym);
+                if sym.len() <= MAX_UNWRAPPED_SYM_LENGTH && sym.len() > max_seen_length {
+                    max_seen_length = sym.len();
+                }
+            }
+        }
+
         for entry in &value.entries {
             match entry {
                 BacktraceEntry::OmittedFrames {
@@ -101,6 +115,12 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                         .rsplit_once("::")
                         .map_or(frame.sym_demangled.as_str(), |(_, sym)| sym);
 
+                    if sym.len() <= MAX_UNWRAPPED_SYM_LENGTH {
+                        write!(f, "{:<max_seen_length$} - ", sym)?;
+                    } else {
+                        write!(f, "{sym}\n   - ")?;
+                    }
+
                     if let Some(path) = &frame.frame_path {
                         if SHOW_FULL_PATH {
                             write!(f, "{}", path.raw_path.display())?;
@@ -114,8 +134,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                             write!(f, ":{lineno}")?;
                         }
                     }
-
-                    writeln!(f, " - {sym}")?;
+                    writeln!(f)?;
                 }
             }
         }
@@ -224,7 +243,7 @@ impl Default for BacktraceFilter {
     fn default() -> Self {
         Self {
             skipped_initial_crates: &["backtrace", "rootcause", "core", "std", "alloc"],
-            skipped_middle_crates: &["tokio"],
+            skipped_middle_crates: &["std", "core", "alloc", "tokio"],
             skipped_final_crates: &["std", "core", "alloc", "tokio"],
             max_entry_count: 20,
         }
@@ -306,6 +325,7 @@ impl Backtrace {
         let mut entries: Vec<BacktraceEntry> = Vec::new();
         let mut total_omitted_frames = 0;
 
+        let mut delayed_omitted_frame: Option<Frame> = None;
         let mut currently_omitted_crate_name: Option<&'static str> = None;
         let mut currently_omitted_frames = 0;
 
@@ -338,16 +358,21 @@ impl Backtrace {
                     && let Some(currently_omitted_crate_name) = &currently_omitted_crate_name
                     && cur_crate_name == currently_omitted_crate_name
                 {
+                    delayed_omitted_frame = None;
                     currently_omitted_frames += 1;
                     total_omitted_frames += 1;
                     return;
                 }
 
                 if let Some(currently_omitted_crate_name) = currently_omitted_crate_name.take() {
-                    entries.push(BacktraceEntry::OmittedFrames {
-                        count: currently_omitted_frames,
-                        skipped_crate: currently_omitted_crate_name,
-                    });
+                    if let Some(delayed_frame) = delayed_omitted_frame.take() {
+                        entries.push(BacktraceEntry::Frame(delayed_frame));
+                    } else {
+                        entries.push(BacktraceEntry::OmittedFrames {
+                            count: currently_omitted_frames,
+                            skipped_crate: currently_omitted_crate_name,
+                        });
+                    }
                     currently_omitted_frames = 0;
                 }
 
@@ -360,6 +385,11 @@ impl Backtrace {
                     currently_omitted_crate_name = Some(skipped_crate);
                     currently_omitted_frames = 1;
                     total_omitted_frames += 1;
+                    delayed_omitted_frame = Some(Frame {
+                        sym_demangled: format!("{sym:#}"),
+                        frame_path: Some(frame_path),
+                        lineno: symbol.lineno(),
+                    });
                     return;
                 }
 
@@ -374,10 +404,14 @@ impl Backtrace {
         });
 
         if let Some(currently_omitted_crate_name) = currently_omitted_crate_name.take() {
-            entries.push(BacktraceEntry::OmittedFrames {
-                count: currently_omitted_frames,
-                skipped_crate: currently_omitted_crate_name,
-            });
+            if let Some(delayed_frame) = delayed_omitted_frame.take() {
+                entries.push(BacktraceEntry::Frame(delayed_frame));
+            } else {
+                entries.push(BacktraceEntry::OmittedFrames {
+                    count: currently_omitted_frames,
+                    skipped_crate: currently_omitted_crate_name,
+                });
+            }
         }
 
         while let Some(last) = entries.last() {
