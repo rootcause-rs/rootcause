@@ -181,7 +181,7 @@ impl<'a> RawAttachmentRef<'a> {
         // 1. The `A` type matches because vtable and data are created together in
         //    `AttachmentData::new`.
         unsafe {
-            // @add-unsafe-context: RawAttachmentRef::vtable
+            // @add-unsafe-context: AttachmentData
             vtable.debug(self, formatter)
         }
     }
@@ -208,7 +208,7 @@ impl<'a> RawAttachmentRef<'a> {
         // 1. The `A` type matches because vtable and data are created together in
         //    `AttachmentData::new`.
         unsafe {
-            // @add-unsafe-context: RawAttachmentRef::vtable
+            // @add-unsafe-context: AttachmentData
             vtable.preferred_formatting_style(self, report_formatting_function)
         }
     }

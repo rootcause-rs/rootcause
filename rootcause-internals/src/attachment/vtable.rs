@@ -46,11 +46,11 @@ pub(crate) struct AttachmentVtable {
     /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this
     /// pointer.
     drop: unsafe fn(NonNull<AttachmentData<Erased>>),
-    /// Formats the report using the `display` method on the handler.
+    /// Formats the attachment using the `display` method on the handler.
     display: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Formats the report using the `debug` method on the handler.
+    /// Formats the attachment using the `debug` method on the handler.
     debug: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Get the formatting style preferred by the context when formatted as part
+    /// Get the formatting style preferred by the attachment when formatted as part
     /// of a report.
     preferred_formatting_style:
         unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
@@ -228,8 +228,8 @@ unsafe fn display<A: 'static, H: AttachmentHandler<A>>(
 ) -> core::fmt::Result {
     // SAFETY:
     // 1. Guaranteed by the caller
-    let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
-    H::display(context, formatter)
+    let attachment: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
+    H::display(attachment, formatter)
 }
 
 /// Formats an attachment using its handler's debug implementation.
@@ -246,8 +246,8 @@ unsafe fn debug<A: 'static, H: AttachmentHandler<A>>(
 ) -> core::fmt::Result {
     // SAFETY:
     // 1. Guaranteed by the caller
-    let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
-    H::debug(context, formatter)
+    let attachment: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
+    H::debug(attachment, formatter)
 }
 
 /// Gets the preferred formatting style using the
@@ -267,8 +267,8 @@ unsafe fn preferred_formatting_style<A: 'static, H: AttachmentHandler<A>>(
 ) -> AttachmentFormattingStyle {
     // SAFETY:
     // 1. Guaranteed by the caller
-    let context: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
-    H::preferred_formatting_style(context, report_formatting_function)
+    let attachment: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
+    H::preferred_formatting_style(attachment, report_formatting_function)
 }
 
 #[cfg(test)]

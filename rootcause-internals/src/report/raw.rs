@@ -251,7 +251,7 @@ impl<'a> RawReportRef<'a> {
     /// # Arguments
     ///
     /// - `report_formatting_function`: Whether the report in which this
-    ///   attachment will be embedded is being formatted using [`Display`]
+    ///   context will be embedded is being formatted using [`Display`]
     ///   formatting or [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display

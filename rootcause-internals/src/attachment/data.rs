@@ -38,8 +38,8 @@ pub(crate) struct AttachmentData<A: 'static> {
     /// The following safety invariants must be upheld as long as this
     /// struct exists:
     ///
-    /// 1. The `AttachmentVtable` always pointers to a vtable created for
-    ///    the actual vtable type `A` stored below. This is true even
+    /// 1. The vtable must always point to an `AttachmentVtable` created for
+    ///    the actual attachment type `A` stored below. This is true even
     ///    when accessed via type-erased pointers.
     vtable: &'static AttachmentVtable,
     /// The actual attachment data
