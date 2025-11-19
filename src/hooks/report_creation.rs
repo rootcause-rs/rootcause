@@ -102,7 +102,7 @@ use core::{any::Any, fmt, panic::Location};
 use rootcause_internals::handlers::AttachmentHandler;
 
 #[cfg(feature = "backtrace")]
-use crate::hooks::builtin_hooks::backtrace::{BacktraceCollector, BacktraceHandler};
+use crate::hooks::builtin_hooks::backtrace::BacktraceCollector;
 use crate::{
     ReportMut, handlers,
     hooks::{
@@ -289,9 +289,7 @@ fn default_hooks() -> HookSet {
     )];
 
     #[cfg(feature = "backtrace")]
-    hooks.push(attachment_hook_to_untyped::<_, BacktraceHandler, _>(
-        BacktraceCollector::default(),
-    ));
+    hooks.push(creation_hook_to_untyped(BacktraceCollector::new_from_env()));
 
     hooks
 }
