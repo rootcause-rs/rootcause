@@ -1,47 +1,94 @@
 use alloc::fmt;
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-};
+use core::any::{Any, TypeId};
 
-use rootcause_internals::{
-    RawAttachmentRef,
-    handlers::{AttachmentFormattingStyle, FormattingFunction},
-};
+use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
 use crate::{markers, util::format_helper};
 
-/// A reference to a [`ReportAttachment`].
-///
-/// # Examples
-/// ```
-/// # use core::any::Any;
-/// use rootcause::{
-///     prelude::*,
-///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-/// };
-///
-/// let attachment: ReportAttachment<&str> = ReportAttachment::new("An important attachment");
-/// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
-///
-/// let mut report = report!("An error occurred");
-/// report.attachments_mut().push(attachment.into_dyn_any());
-///
-/// // You can also get an attachment reference through the attachments on a report
-/// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = report.attachments().get(0).unwrap();
-/// ```
-///
-/// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
-#[repr(transparent)]
-pub struct ReportAttachmentRef<'a, Attachment = dyn Any>
-where
-    Attachment: markers::ObjectMarker + ?Sized,
-{
-    raw: RawAttachmentRef<'a>,
-    _attachment: PhantomData<Attachment>,
-}
+/// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
+/// an unsafe field and remove this module.
+mod limit_field_access {
+    use core::{any::Any, marker::PhantomData};
 
-impl<'a, A> Copy for ReportAttachmentRef<'a, A> where A: markers::ObjectMarker + ?Sized {}
+    use rootcause_internals::RawAttachmentRef;
+
+    use crate::markers;
+
+    /// A reference to a [`ReportAttachment`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use core::any::Any;
+    /// use rootcause::{
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("An important attachment");
+    /// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
+    ///
+    /// let mut report = report!("An error occurred");
+    /// report.attachments_mut().push(attachment.into_dyn_any());
+    ///
+    /// // You can also get an attachment reference through the attachments on a report
+    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = report.attachments().get(0).unwrap();
+    /// ```
+    ///
+    /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
+    #[repr(transparent)]
+    pub struct ReportAttachmentRef<'a, Attachment = dyn Any>
+    where
+        Attachment: markers::ObjectMarker + ?Sized,
+    {
+        /// # Safety
+        ///
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
+        ///
+        /// 1. If `A` is a concrete type: The attachment embedded in the
+        ///    [`RawAttachmentRef`] must be of type `A`.
+        raw: RawAttachmentRef<'a>,
+        _attachment: PhantomData<Attachment>,
+    }
+
+    impl<'a, A> ReportAttachmentRef<'a, A>
+    where
+        A: markers::ObjectMarker + ?Sized,
+    {
+        /// Creates a new AttachmentRef from a raw attachment reference
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `A` is a concrete type: The attachment embedded in the
+        ///    [`RawAttachmentRef`] must be of type `A`.
+        #[must_use]
+        pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            ReportAttachmentRef {
+                raw,
+                _attachment: PhantomData,
+            }
+        }
+
+        /// Returns the underlying raw attachment reference
+        #[must_use]
+        pub(crate) fn as_raw_ref(self) -> RawAttachmentRef<'a> {
+            // We are destroying `self`, so we no longer
+            // need to uphold any safety invariants.
+            self.raw
+        }
+    }
+
+    // SAFETY: We must uphold the safety invariants of the raw field for both the
+    // original and the copy:
+    // 1. This remains true for both the original and the copy
+    impl<'a, A> Copy for ReportAttachmentRef<'a, A> where A: markers::ObjectMarker + ?Sized {}
+}
+pub use limit_field_access::ReportAttachmentRef;
+
 impl<'a, A> Clone for ReportAttachmentRef<'a, A>
 where
     A: markers::ObjectMarker + ?Sized,
@@ -55,27 +102,6 @@ impl<'a, A> ReportAttachmentRef<'a, A>
 where
     A: markers::ObjectMarker + ?Sized,
 {
-    /// Creates a new AttachmentRef from a raw attachment reference
-    ///
-    /// # Safety
-    ///
-    /// To call this method you must ensure the following:
-    ///
-    /// - The attachment embedded in the RawAttachmentRef must match the `A` of
-    ///   the output type, or the `A` of the output type must be `dyn Any`
-    #[must_use]
-    pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
-        ReportAttachmentRef {
-            raw,
-            _attachment: PhantomData,
-        }
-    }
-
-    #[must_use]
-    pub(crate) fn as_raw_ref(self) -> RawAttachmentRef<'a> {
-        self.raw
-    }
-
     /// Returns the [`TypeId`] of the inner attachment.
     ///
     /// # Examples
@@ -152,8 +178,7 @@ where
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
     #[must_use]
     pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'a, dyn Any> =
-            unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) };
+        let attachment: ReportAttachmentRef<'a, dyn Any> = self.into_dyn_any();
         format_helper(
             attachment,
             |attachment, formatter| {
@@ -187,7 +212,11 @@ where
     /// [`ReportAttachmentRef::downcast_attachment`].
     #[must_use]
     pub fn into_dyn_any(self) -> ReportAttachmentRef<'a, dyn Any> {
-        unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. `A==dyn Any`, so this is trivially satisfied
+        unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) }
     }
 
     /// Returns a reference to the inner attachment data.
@@ -221,7 +250,11 @@ where
     where
         A: Sized,
     {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
+        unsafe { raw.attachment_downcast_unchecked() }
     }
 
     /// Returns the preferred formatting style for this attachment with
@@ -311,11 +344,14 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     #[must_use]
     pub fn downcast_attachment<A>(self) -> Option<ReportAttachmentRef<'a, A>>
     where
-        A: markers::ObjectMarker + ?Sized,
+        A: markers::ObjectMarker,
     {
-        if TypeId::of::<A>() == TypeId::of::<dyn Any>() || TypeId::of::<A>() == self.inner_type_id()
-        {
-            Some(unsafe { self.downcast_attachment_unchecked() })
+        if TypeId::of::<A>() == self.inner_type_id() {
+            // SAFETY:
+            // 1. We just checked that the types match
+            let attachment = unsafe { self.downcast_attachment_unchecked() };
+
+            Some(attachment)
         } else {
             None
         }
@@ -329,8 +365,10 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the inner attachment is actually of type
-    /// `A`. This can be verified by calling [`inner_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A`. This can be verified by
+    ///    calling [`inner_type_id()`] first.
     ///
     /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
     ///
@@ -353,9 +391,13 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     #[must_use]
     pub unsafe fn downcast_attachment_unchecked<A>(self) -> ReportAttachmentRef<'a, A>
     where
-        A: markers::ObjectMarker + ?Sized,
+        A: markers::ObjectMarker,
     {
-        unsafe { ReportAttachmentRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 
     /// Attempts to downcast the inner attachment data to a reference of type
@@ -394,24 +436,20 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     where
         A: markers::ObjectMarker,
     {
-        self.as_raw_ref().attachment_downcast()
+        Some(self.downcast_attachment()?.inner())
     }
 
     /// Performs an unchecked downcast of the inner attachment data to a
     /// reference of type `A`.
     ///
-    /// This method bypasses type checking and performs the cast without
-    /// verifying that the attachment actually contains data of type `A`. It
-    /// returns a direct reference to the data. It is the caller's
-    /// responsibility to ensure the cast is valid.
-    ///
     /// # Safety
-    /// The caller must guarantee that the attachment actually contains data of
-    /// type `A`. Violating this requirement leads to undefined behavior.
     ///
-    /// # Type Parameters
-    /// - `A`: The target type to downcast to. Must implement
-    ///   [`markers::ObjectMarker`] and be [`Sized`].
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A`. This can be verified by
+    ///    calling [`inner_type_id()`] first.
+    ///
+    /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
     ///
     /// # Examples
     /// ```
@@ -434,7 +472,11 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     where
         A: markers::ObjectMarker,
     {
-        unsafe { self.as_raw_ref().attachment_downcast_unchecked() }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        unsafe { raw.attachment_downcast_unchecked() }
     }
 }
 

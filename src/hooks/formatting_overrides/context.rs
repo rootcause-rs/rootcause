@@ -75,8 +75,22 @@ use crate::{
 type HookMap =
     HashMap<TypeId, Arc<dyn UntypedContextFormattingOverride>, rustc_hash::FxBuildHasher>;
 
+/// Global registry of context formatting override hooks.
+///
+/// # Safety invariant
+///
+/// This registry can only contain hooks of type `Hook<C, H>`, where
+/// `TypeId::of::<C>()` is the key used to store the hook in the [`HashMap`].
+///
+/// This invariant is guaranteed by the [`register_context_hook`] function.
 static HOOKS: HookLock<HookMap> = HookLock::new();
 
+/// Retrieves the formatting override hook for the specified context type.
+///
+/// # Safety invariant
+///
+/// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
+/// where `TypeId::of::<C>() == type_id`.
 fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextFormattingOverride>> {
     HOOKS.read().get()?.get(&type_id).cloned()
 }
@@ -106,16 +120,18 @@ where
     }
 }
 
+/// Trait for untyped context formatting overrides.
+///
+/// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
 trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Display {
     /// Formats the context using Display formatting.
     ///
     /// # Safety
     ///
-    /// The implementation of this trait is free to make assumptions about the
-    /// type of the context contained in the report and call
-    /// [`ReportRef::downcast_report_unchecked`]. It is the responsibility
-    /// of the caller to ensure that whatever those assumptions might be for
-    /// the type in question, they hold for the report given as the argument.
+    /// The caller must ensure:
+    ///
+    /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
+    ///    H>` this is implemented for.
     unsafe fn display(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -126,11 +142,10 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
     ///
     /// # Safety
     ///
-    /// The implementation of this trait is free to make assumptions about the
-    /// type of the context contained in the report and call
-    /// [`ReportRef::downcast_report_unchecked`]. It is the responsibility
-    /// of the caller to ensure that whatever those assumptions might be for
-    /// the type in question, they hold for the report given as the argument.
+    /// The caller must ensure:
+    ///
+    /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
+    ///    H>` this is implemented for.
     unsafe fn debug(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
@@ -348,40 +363,24 @@ where
     C: 'static,
     H: ContextFormattingOverride<C>,
 {
-    /// Formats the context using Display formatting.
-    ///
-    /// # Safety
-    ///
-    /// As specified in the trait, the implementer can make assumptions about
-    /// the type of the context contained in the report.
-    ///
-    /// This implementation will downcast the report to the expected type `C`,
-    /// so the caller must ensure that the report indeed contains a context
-    /// of type `C`.
     unsafe fn display(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let report = unsafe { report.downcast_report_unchecked::<C>() };
         self.hook.display(report, formatter)
     }
 
-    /// Formats the context using Debug formatting.
-    ///
-    /// # Safety
-    ///
-    /// As specified in the trait, the implementer can make assumptions about
-    /// the type of the context contained in the report.
-    ///
-    /// This implementation will downcast the report to the expected type `C`,
-    /// so the caller must ensure that the report indeed contains a context
-    /// of type `C`.
     unsafe fn debug(
         &self,
         report: ReportRef<'_, dyn Any, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
+        // SAFETY:
+        // 1. Guaranteed by the caller
         let report = unsafe { report.downcast_report_unchecked::<C>() };
         self.hook.debug(report, formatter)
     }
@@ -481,6 +480,16 @@ where
     let hook: Arc<Hook<C, H>> = Arc::new(hook);
     let hook = hook.unsize(unsize::Coercion!(to dyn UntypedContextFormattingOverride));
 
+    // We must uphold the safety invariant of
+    // the global `HOOKS` registry here.
+    //
+    // The safety invariant requires that the registry
+    // can only contain hooks of type `Hook<A, H>` for some
+    // `C` and `H`, where the key used to store the hook
+    // is `TypeId::of::<C>()`.
+    //
+    // However this is exactly what we are doing here,
+    // so the invariant is upheld.
     HOOKS
         .write()
         .get()
@@ -497,7 +506,17 @@ pub(crate) fn display_context(
     {
         hook.display_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        unsafe { hook.display(report, formatter) }
+        // SAFETY:
+        // 1. The call to `get_hook` guarantees that the returned hook is of type
+        //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+        //    Therefore the type `C` stored in the context matches the `C` from type
+        //    `Hook<C, H>`.
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: get_hook
+            // @add-unsafe-context: UntypedContextFormattingOverride
+            hook.display(report, formatter)
+        }
     } else {
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
     }
@@ -512,7 +531,17 @@ pub(crate) fn debug_context(
     {
         hook.debug_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        unsafe { hook.debug(report, formatter) }
+        // SAFETY:
+        // 1. The call to `get_hook` guarantees that the returned hook is of type
+        //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+        //    Therefore the type `C` stored in the context matches the `C` from type
+        //    `Hook<C, H>`.
+        unsafe {
+            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
+            // @add-unsafe-context: get_hook
+            // @add-unsafe-context: UntypedContextFormattingOverride
+            hook.debug(report, formatter)
+        }
     } else {
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
     }

@@ -1,13 +1,6 @@
-use alloc::vec;
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-};
+use core::any::{Any, TypeId};
 
-use rootcause_internals::{
-    RawReportMut, RawReportRef,
-    handlers::{ContextFormattingStyle, FormattingFunction},
-};
+use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter, ReportRef,
@@ -18,92 +11,213 @@ use crate::{
     util::format_helper,
 };
 
-/// A mutable reference to a [`Report`].
-///
-/// [`ReportMut`] provides mutable access to a report's children and attachments
-/// while maintaining safe borrowing semantics. Unlike owned reports, mutable
-/// references cannot be consumed for chaining operations like
-/// [`Report::context`] or [`Report::attach`].
-///
-/// # Key Characteristics
-///
-/// - **Not `Copy` or `Clone`**: Ensures exclusive mutable access
-/// - **Lifetime-bound**: Tied to the lifetime of the underlying report
-/// - **Two type parameters**: Has context type `C` and thread safety marker `T`
-///   (no ownership marker since mutable references are always uniquely owned)
-///
-/// # Thread Safety
-///
-/// Unlike [`Report`] and [`ReportRef`], you cannot change the thread safety
-/// marker on [`ReportMut`]:
-///
-/// - You cannot convert [`SendSync`] → [`Local`] because that would allow
-///   adding non-thread-safe data to a report that should remain thread-safe
-/// - You cannot convert [`Local`] → [`SendSync`] because that would allow
-///   cloning a child report with thread-local data and sending it across
-///   threads
-///
-/// # Common Usage
-///
-/// ```
-/// use rootcause::{ReportMut, prelude::*};
-///
-/// let mut report: Report = report!("error message");
-///
-/// // Get mutable access to modify children or attachments
-/// let mut report_mut: ReportMut<'_> = report.as_mut();
-/// report_mut
-///     .children_mut()
-///     .push(report!("child error").into_cloneable());
-///
-/// println!("{}", report);
-/// ```
-#[repr(transparent)]
-pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
-where
-    Context: markers::ObjectMarker + ?Sized,
-    ThreadSafety: markers::ThreadSafetyMarker,
-{
-    raw: RawReportMut<'a>,
-    _context: PhantomData<Context>,
-    _thread_safety: PhantomData<ThreadSafety>,
+/// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
+/// an unsafe field and remove this module.
+mod limit_field_access {
+    use core::{any::Any, marker::PhantomData};
+
+    use rootcause_internals::{RawReportMut, RawReportRef};
+
+    use crate::markers::{self, SendSync};
+
+    /// A mutable reference to a [`Report`].
+    ///
+    /// [`ReportMut`] provides mutable access to a report's children and
+    /// attachments while maintaining safe borrowing semantics. Unlike owned
+    /// reports, mutable references cannot be consumed for chaining
+    /// operations like [`Report::context`] or [`Report::attach`].
+    ///
+    /// # Key Characteristics
+    ///
+    /// - **Not `Copy` or `Clone`**: Ensures exclusive mutable access
+    /// - **Lifetime-bound**: Tied to the lifetime of the underlying report
+    /// - **Two type parameters**: Has context type `C` and thread safety marker
+    ///   `T` (no ownership marker since mutable references are always uniquely
+    ///   owned)
+    ///
+    /// # Thread Safety
+    ///
+    /// Unlike [`Report`] and [`ReportRef`], you cannot change the thread safety
+    /// marker on [`ReportMut`]:
+    ///
+    /// - You cannot convert [`SendSync`] → [`Local`] because that would allow
+    ///   adding non-thread-safe data to a report that should remain thread-safe
+    /// - You cannot convert [`Local`] → [`SendSync`] because that would allow
+    ///   cloning a child report with thread-local data and sending it across
+    ///   threads
+    ///
+    /// # Common Usage
+    ///
+    /// ```
+    /// use rootcause::{ReportMut, prelude::*};
+    ///
+    /// let mut report: Report = report!("error message");
+    ///
+    /// // Get mutable access to modify children or attachments
+    /// let mut report_mut: ReportMut<'_> = report.as_mut();
+    /// report_mut
+    ///     .children_mut()
+    ///     .push(report!("child error").into_cloneable());
+    ///
+    /// println!("{}", report);
+    /// ```
+    ///
+    /// [`Report`]: crate::Report
+    /// [`Report::context`]: crate::Report::context
+    /// [`Report::attach`]: crate::Report::attach
+    /// [`ReportRef`]: crate::ReportRef
+    /// [`SendSync`]: crate::markers::SendSync
+    /// [`Local`]: crate::markers::Local
+    //
+    // # Safety invariants
+    //
+    // This reference behaves like a `&'a mut Report<C, Mutable, T>` for some unknown
+    // `C` and upholds the usual safety invariants of mutable references:
+    //
+    // 1. The pointee is properly initialized for the entire lifetime `'a`.
+    // 2. The pointee is not aliased for the entire lifetime `'a`.
+    // 3. Like a `&'a mut T`, it is possible to reborrow this reference to a shorter lifetime. The
+    //    borrow checker will ensure that original longer lifetime is not used while the shorter
+    //    lifetime exists.
+    #[repr(transparent)]
+    pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
+    where
+        Context: markers::ObjectMarker + ?Sized,
+        ThreadSafety: markers::ThreadSafetyMarker,
+    {
+        /// # Safety
+        ///
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists and must be continue to be upheld as
+        /// long as the inner `RawReportMut` exists:
+        ///
+        /// 1. If `C` is a concrete type: The context embedded in the report
+        ///    must be of type `C`
+        /// 2. The strong count of the underlying `triomphe::Arc` is exactly 1.
+        /// 3. All references to any sub-reports of this report are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        ///    all sub-reports must be `Send+Sync`
+        /// 5. If `T = Local`: No other references to this report are allowed to
+        ///    have `T = SendSync`
+        raw: RawReportMut<'a>,
+        _context: PhantomData<Context>,
+        _thread_safety: PhantomData<ThreadSafety>,
+    }
+
+    impl<'a, C, T> ReportMut<'a, C, T>
+    where
+        C: markers::ObjectMarker + ?Sized,
+        T: markers::ThreadSafetyMarker,
+    {
+        /// Creates a new Report from a raw report
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `C` is a concrete type: The context embedded in the report
+        ///    must be of type `C`
+        /// 2. The strong count of the underlying `triomphe::Arc` is exactly 1.
+        /// 3. All references to any sub-reports of this report are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        ///    all sub-reports must be `Send+Sync`
+        /// 5. If `T = Local`: No other references to this report are allowed to
+        ///    have `T = SendSync`
+        #[must_use]
+        pub(crate) unsafe fn from_raw(raw: RawReportMut<'a>) -> Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by our caller
+            // 2. Guaranteed by our caller
+            // 3. Guaranteed by our caller
+            // 4. Guaranteed by our caller
+            // 5. Guaranteed by our caller
+            Self {
+                raw,
+                _context: PhantomData,
+                _thread_safety: PhantomData,
+            }
+        }
+
+        /// Creates a raw reference to the underlying report.
+        #[must_use]
+        pub(crate) fn as_raw_ref<'b>(&'b self) -> RawReportRef<'b> {
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. No mutation of the context occurs through the returned `RawReportRef`
+            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            //    that method has a `safety` requirement that the caller must ensure that no
+            //    owners exist which are incompatible with shared ownership. Since `self` is
+            //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
+            // 3. Upheld, as this does not create any such references.
+            // 4. No mutation of the report occurs through the returned `RawReportRef`
+            // 5. Upheld, as this does not create any such references.
+            let raw = &self.raw;
+
+            raw.as_ref()
+        }
+
+        /// Consumes the [`ReportMut`] and returns the inner [`RawReportMut`].
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`, no objects are added to the report through
+        ///    this `RawReportMut` that are not `Send+Sync`
+        #[must_use]
+        pub(crate) unsafe fn into_raw_mut(self) -> RawReportMut<'a> {
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. While mutation of the context is possible through this reference, it is
+            //    not possible to change the type of the context. Therefore this invariant
+            //    is upheld.
+            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            //    that method has a `safety` requirement that the caller must ensure that no
+            //    owners exist which are incompatible with shared ownership. Since `self` is
+            //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
+            // 3. We are not creating any such references here.
+            // 4. Guaranteed by the caller
+            // 5. Upheld, as this does not create any such references.
+
+            self.raw
+        }
+
+        /// Creates a raw reference to the underlying report.
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`, no objects are added to the report through
+        ///    this `RawReportMut` that are not `Send+Sync`
+        #[must_use]
+        pub(crate) unsafe fn as_raw_mut<'b>(&'b mut self) -> RawReportMut<'b> {
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. While mutation of the context is possible through this reference, it is
+            //    not possible to change the type of the context. Therefore this invariant
+            //    is upheld.
+            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            //    that method has a `safety` requirement that the caller must ensure that no
+            //    owners exist which are incompatible with shared ownership. Since `self` is
+            //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
+            // 3. Upheld, as this does not create any such references.
+            // 4. Guaranteed by the caller
+            // 5. Upheld, as this does not create any such references.
+            let raw = &mut self.raw;
+
+            raw.reborrow()
+        }
+    }
 }
+pub use limit_field_access::ReportMut;
 
 impl<'a, C, T> ReportMut<'a, C, T>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: markers::ObjectMarker,
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new Report from a raw report
-    ///
-    /// # Safety
-    ///
-    /// To call this method you must ensure the following:
-    ///
-    /// - The context embedded in the RawReport must match the `C` of the output
-    ///   type, or the `C` of the output type must be `dyn Any`
-    /// - The thread safety marker must match the contents of the report. More
-    ///   specifically if the marker is [`SendSync`], then all contexts and
-    ///   attachments must be `Send+Sync`
-    #[must_use]
-    pub(crate) unsafe fn from_raw(raw: RawReportMut<'a>) -> Self {
-        Self {
-            raw,
-            _context: PhantomData,
-            _thread_safety: PhantomData,
-        }
-    }
-
-    #[must_use]
-    pub(crate) fn into_raw(self) -> RawReportMut<'a> {
-        self.raw
-    }
-
-    #[must_use]
-    pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
-        self.raw.as_ref()
-    }
-
     /// Returns a reference to the current context.
     ///
     /// # Examples
@@ -116,11 +230,23 @@ where
     /// let context: &MyError = report_mut.current_context();
     /// ```
     #[must_use]
-    pub fn current_context(&self) -> &C
-    where
-        C: Sized,
-    {
+    pub fn current_context(&self) -> &C {
         self.as_ref().current_context()
+    }
+
+    /// Returns a mutable reference to the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut};
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let mut report_mut: ReportMut<'_, String> = report.as_mut();
+    /// let context: &mut String = report_mut.current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    #[must_use]
+    pub fn current_context_mut(&mut self) -> &mut C {
+        self.as_mut().into_current_context_mut()
     }
 
     /// Turns the [`ReportMut`] into a mutable reference to the current context
@@ -135,32 +261,23 @@ where
     /// context.push_str(" and that's bad");
     /// ```
     #[must_use]
-    pub fn into_current_context_mut(self) -> &'a mut C
-    where
-        C: Sized,
-    {
-        let raw = self.into_raw();
+    pub fn into_current_context_mut(self) -> &'a mut C {
+        // SAFETY:
+        // 1. We are not adding any objects
+        let raw = unsafe { self.into_raw_mut() };
+
+        // SAFETY:
+        // 1. We know that `C` is a concrete type, so this is guaranteed by the
+        //    invariants of this type.
         unsafe { raw.into_context_downcast_unchecked() }
     }
+}
 
-    /// Returns a mutable reference to the current context.
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, ReportMut};
-    /// # let mut report: Report<String> = report!("An error occurred".to_string());
-    /// let mut report_mut: ReportMut<'_, String> = report.as_mut();
-    /// let context: &mut String = report_mut.current_context_mut();
-    /// context.push_str(" and that's bad");
-    /// ```
-    #[must_use]
-    pub fn current_context_mut(&mut self) -> &mut C
-    where
-        C: Sized,
-    {
-        self.reborrow().into_current_context_mut()
-    }
-
+impl<'a, C, T> ReportMut<'a, C, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    T: markers::ThreadSafetyMarker,
+{
     /// Returns an immutable reference to the child reports.
     ///
     /// # Examples
@@ -187,8 +304,7 @@ where
     /// ```
     #[must_use]
     pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
-        let raw = self.raw.reborrow().into_children_mut();
-        unsafe { ReportCollection::from_raw_mut(raw) }
+        self.as_mut().into_children_mut()
     }
 
     /// Consumes the [`ReportMut`] and returns a mutable reference to the child
@@ -203,8 +319,25 @@ where
     /// ```
     #[must_use]
     pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
-        let raw = self.into_raw().into_children_mut();
-        unsafe { ReportCollection::from_raw_mut(raw) }
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportCollection` guarantee that no such
+        //    mutation can occur in the future either.
+        let raw = unsafe { self.into_raw_mut() };
+
+        // SAFETY:
+        // 1. If `T=Local`: We know that no such references are allowed to exist, so
+        //    this is trivially true. If `T=SendSync`, then these guarantees are upheld
+        //    by the `&mut ReportCollection` we are creating.
+        let raw_children = unsafe { raw.into_children_mut() };
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true
+        // 2. Guaranteed by the invariants of this type.
+        // 3. Guaranteed by the invariants of this type.
+        unsafe { ReportCollection::<dyn Any, T>::from_raw_mut(raw_children) }
     }
 
     /// Returns an immutable reference to the attachments.
@@ -232,8 +365,7 @@ where
     /// ```
     #[must_use]
     pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
-        let raw = self.raw.reborrow().into_attachments_mut();
-        unsafe { ReportAttachments::from_raw_mut(raw) }
+        self.as_mut().into_attachments_mut()
     }
 
     /// Consumes the [`ReportMut`] and returns a mutable reference to the
@@ -248,7 +380,23 @@ where
     /// ```
     #[must_use]
     pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
-        let raw = self.into_raw().into_attachments_mut();
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportAttachments` guarantee that no such
+        //    mutation can occur in the future either.
+        let raw = unsafe { self.into_raw_mut() };
+
+        // SAFETY:
+        // 1. If `T=Local`: We know that no such references are allowed to exist, so
+        //    this is trivially true. If `T=SendSync`, then these guarantees are upheld
+        //    by the `&mut ReportAttachments` we are creating.
+        let raw = unsafe { raw.into_attachments_mut() };
+
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T = SendSync`, then this is
+        //    guaranteed by the invariants of this type.
         unsafe { ReportAttachments::from_raw_mut(raw) }
     }
 
@@ -279,7 +427,21 @@ where
     /// ```
     #[must_use]
     pub fn into_dyn_any(self) -> ReportMut<'a, dyn Any, T> {
-        unsafe { ReportMut::from_raw(self.into_raw()) }
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
+        let raw = unsafe { self.into_raw_mut() };
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
+        unsafe { ReportMut::<dyn Any, T>::from_raw(raw) }
     }
 
     /// Returns an immutable reference to the report.
@@ -294,7 +456,14 @@ where
     /// ```
     #[must_use]
     pub fn as_ref(&self) -> ReportRef<'_, C, Uncloneable, T> {
-        unsafe { ReportRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
     /// Consumes the [`ReportMut`] and returns a [`ReportRef`] with same
@@ -310,7 +479,19 @@ where
     /// ```
     #[must_use]
     pub fn into_ref(self) -> ReportRef<'a, C, Uncloneable, T> {
-        unsafe { ReportRef::from_raw(self.raw.into_ref()) }
+        // SAFETY:
+        // 1. We are creating an immutable reference just after this, so no mutation
+        //    will occur through this `RawReportMut`.
+        let raw = unsafe { self.into_raw_mut() };
+
+        let raw = raw.into_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
     /// Reborrows the [`ReportMut`] to return a new [`ReportMut`] with a shorter
@@ -324,15 +505,29 @@ where
     /// let mut report_mut: ReportMut<'_, MyError> = report.as_mut();
     /// {
     ///     // Create a new mutable reference with a shorter lifetime
-    ///     let mut borrowed_report_mut: ReportMut<'_, MyError> = report_mut.reborrow();
+    ///     let mut borrowed_report_mut: ReportMut<'_, MyError> = report_mut.as_mut();
     /// }
     /// // After dropping the inner reference report, we can still use the outer one
     /// let _context: &MyError = report_mut.current_context();
     /// ```
     #[must_use]
-    pub fn reborrow(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY: The reborrow does not change the context or thread safety markers
-        unsafe { ReportMut::from_raw(self.raw.reborrow()) }
+    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
+        let raw = unsafe { self.as_raw_mut() };
+
+        // SAFETY:
+        // 1. If `C` is a concrete type: This is guaranteed by the invariants of this
+        //    type.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. If `T = SendSync`: This is guaranteed by the invariants of this type.
+        // 5. If `T = Local`: This is guaranteed by the invariants of this type.
+        unsafe { ReportMut::from_raw(raw) }
     }
 
     /// Returns an iterator over the complete report hierarchy including this
@@ -383,8 +578,7 @@ where
     /// assert_eq!(all_reports.len(), 6);
     /// ```
     pub fn iter_reports(&self) -> ReportIter<'_, Uncloneable, T> {
-        let stack = vec![self.as_raw_ref()];
-        unsafe { ReportIter::from_raw(stack) }
+        self.as_ref().iter_reports()
     }
 
     /// Returns an iterator over child reports in the report hierarchy
@@ -435,13 +629,7 @@ where
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
-        let stack = self
-            .children()
-            .iter()
-            .map(|r| r.as_raw_ref())
-            .rev()
-            .collect();
-        unsafe { ReportIter::from_raw(stack) }
+        self.as_ref().iter_sub_reports()
     }
 
     /// Creates a new report, which has the same structure as the current
@@ -671,12 +859,38 @@ where
         self.as_ref().downcast_current_context()
     }
 
+    /// Attempts to downcast the current context to a specific type.
+    ///
+    /// Returns `Some(&mut C)` if the current context is of type `C`, otherwise
+    /// returns `None`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # struct MyError;
+    /// let report: Report<MyError> = report!(MyError);
+    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut mut_report = dyn_report.as_mut();
+    /// let context: Option<&mut MyError> = mut_report.downcast_current_context_mut();
+    /// assert!(context.is_some());
+    /// ```
+    #[must_use]
+    pub fn downcast_current_context_mut<C>(&mut self) -> Option<&mut C>
+    where
+        C: markers::ObjectMarker,
+    {
+        let report = self.as_mut().downcast_report().ok()?;
+        Some(report.into_current_context_mut())
+    }
+
     /// Downcasts the current context to a specific type without checking.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the current context is actually of type `C`.
-    /// This can be verified by calling [`current_context_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
     ///
     /// [`current_context_type_id()`]: ReportMut::current_context_type_id
     ///
@@ -700,7 +914,50 @@ where
     where
         C: markers::ObjectMarker,
     {
-        unsafe { self.as_ref().downcast_current_context_unchecked() }
+        let report = self.as_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        unsafe { report.downcast_current_context_unchecked() }
+    }
+
+    /// Downcasts the current context to a specific type without checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
+    ///
+    /// [`current_context_type_id()`]: ReportMut::current_context_type_id
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::{Any, TypeId};
+    /// # struct MyError;
+    /// let report: Report<MyError> = report!(MyError);
+    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut mut_report = dyn_report.as_mut();
+    ///
+    /// // Verify the type first
+    /// if mut_report.current_context_type_id() == TypeId::of::<MyError>() {
+    ///     // SAFETY: We verified the type matches
+    ///     let context: &mut MyError = unsafe { mut_report.downcast_current_context_mut_unchecked() };
+    /// }
+    /// ```
+    pub unsafe fn downcast_current_context_mut_unchecked<C>(&mut self) -> &mut C
+    where
+        C: markers::ObjectMarker,
+    {
+        let report = self.as_mut();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        let report = unsafe { report.downcast_report_unchecked() };
+
+        report.into_current_context_mut()
     }
 
     /// Attempts to downcast the entire report to a specific context type.
@@ -720,15 +977,14 @@ where
     /// ```
     pub fn downcast_report<C>(self) -> Result<ReportMut<'a, C, T>, ReportMut<'a, dyn Any, T>>
     where
-        C: markers::ObjectMarker + ?Sized,
+        C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == TypeId::of::<dyn Any>()
-            || TypeId::of::<C>() == self.current_context_type_id()
-        {
+        if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
-            // - The context is valid because we just checked that it matches
-            // - The thread marker is valid, because does not change
-            Ok(unsafe { self.downcast_report_unchecked() })
+            // 1. We just verified that the type matches
+            let report = unsafe { self.downcast_report_unchecked() };
+
+            Ok(report)
         } else {
             Err(self)
         }
@@ -738,8 +994,10 @@ where
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the current context is actually of type `C`.
-    /// This can be verified by calling [`current_context_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
     ///
     /// [`current_context_type_id()`]: ReportMut::current_context_type_id
     ///
@@ -761,9 +1019,23 @@ where
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportMut<'a, C, T>
     where
-        C: markers::ObjectMarker + ?Sized,
+        C: markers::ObjectMarker,
     {
-        unsafe { ReportMut::from_raw(self.into_raw()) }
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
+        let raw = unsafe { self.into_raw_mut() };
+
+        // SAFETY:
+        // 1. This is guaranteed by the caller
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
+        unsafe { ReportMut::from_raw(raw) }
     }
 }
 
@@ -787,43 +1059,18 @@ where
     }
 }
 
-mod from_impls {
-    use super::*;
-
-    macro_rules! unsafe_reportref_to_reportref {
-        ($(
-            <
-                $($param:ident),*
-            >:
-            $context1:ty => $context2:ty,
-            $thread_safety:ty
-        ),* $(,)?) => {
-            $(
-                impl<'a, $($param),*> From<ReportMut<'a, $context1, $thread_safety>> for ReportMut<'a, $context2, $thread_safety>
-                    where $(
-                        $param: markers::ObjectMarker,
-                    )* {
-                    fn from(report: ReportMut<'a, $context1, $thread_safety>) -> Self {
-                        // SAFETY:
-                        // - The context is valid, because it either doesn't change or goes from a known `C` to `dyn Any`.
-                        // - The thread marker is valid, because it does not change.
-                        unsafe { ReportMut::from_raw(report.into_raw()) }
-                    }
-                }
-            )*
-        };
+impl<'a, C: markers::ObjectMarker> From<ReportMut<'a, C, SendSync>>
+    for ReportMut<'a, dyn Any, SendSync>
+{
+    fn from(report: ReportMut<'a, C, SendSync>) -> Self {
+        report.into_dyn_any()
     }
+}
 
-    // NOTE: A mutable report reference is not variant over thread safety.
-    //
-    // * If you allow a SendSync => Local conversion, then you permit adding local
-    //   attachments to the root.
-    // * If you allow a Local => SendSync conversion, then you permit cloning a
-    //   subreport that contains local data and sending it to another thread
-    unsafe_reportref_to_reportref!(
-        <C>: C => dyn Any, SendSync,
-        <C>: C => dyn Any, Local,
-    );
+impl<'a, C: markers::ObjectMarker> From<ReportMut<'a, C, Local>> for ReportMut<'a, dyn Any, Local> {
+    fn from(report: ReportMut<'a, C, Local>) -> Self {
+        report.into_dyn_any()
+    }
 }
 
 #[cfg(test)]

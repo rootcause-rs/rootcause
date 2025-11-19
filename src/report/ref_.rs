@@ -1,13 +1,7 @@
 use alloc::vec;
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-};
+use core::any::{Any, TypeId};
 
-use rootcause_internals::{
-    RawReportRef,
-    handlers::{ContextFormattingStyle, FormattingFunction},
-};
+use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter,
@@ -19,104 +13,232 @@ use crate::{
     util::format_helper,
 };
 
-/// A reference to a [`Report`].
-///
-/// [`ReportRef`] is a lightweight, copyable reference to a report that allows
-/// you to inspect report data without taking ownership. It's the primary way to
-/// work with reports in a read-only manner.
-///
-/// # Key Characteristics
-///
-/// - **Always `Copy` + `Clone`**: Unlike [`Report`], all [`ReportRef`]
-///   instances can be freely copied regardless of their ownership marker
-/// - **Lifetime-bound**: Tied to the lifetime of the underlying report
-/// - **Type parameters**: Like [`Report`], has context type `C`, ownership
-///   marker `O`, and thread safety marker `T`
-///
-/// # Ownership Markers
-///
-/// The ownership marker on [`ReportRef`] indicates what the *underlying*
-/// report's ownership status is:
-///
-/// - [`Cloneable`]: The underlying report is shared (can use [`clone_arc`] to
-///   get an owned [`Report`])
-/// - [`Uncloneable`]: The underlying report has unique ownership (cannot use
-///   [`clone_arc`])
-///
-/// Note that when you create a [`ReportRef`] from a [`Report`] marked as
-/// [`Mutable`], it becomes a [`ReportRef`] with the [`Uncloneable`] marker to
-/// prevent cloning while mutable access exists.
-///
-/// # Examples
-///
-/// ```
-/// use rootcause::{ReportRef, markers::Uncloneable, prelude::*};
-///
-/// let report: Report = report!("error message");
-///
-/// // Get a reference - this is Uncloneable because report is Mutable
-/// let report_ref: ReportRef<'_, _, Uncloneable> = report.as_ref();
-///
-/// // Inspect the report
-/// println!("{}", report_ref);
-/// assert_eq!(report_ref.children().len(), 0);
-/// ```
-///
-/// [`clone_arc`]: ReportRef::clone_arc
-#[repr(transparent)]
-pub struct ReportRef<'a, Context = dyn Any, Ownership = Cloneable, ThreadSafety = SendSync>
-where
-    Context: markers::ObjectMarker + ?Sized,
-    Ownership: markers::ReportRefOwnershipMarker,
-    ThreadSafety: markers::ThreadSafetyMarker,
-{
-    raw: RawReportRef<'a>,
-    _context: PhantomData<Context>,
-    _ownership: PhantomData<Ownership>,
-    _thread_safety: PhantomData<ThreadSafety>,
-}
+/// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
+/// an unsafe field and remove this module.
+mod limit_field_access {
+    use core::{any::Any, marker::PhantomData};
 
-impl<'a, C, O, T> ReportRef<'a, C, O, T>
+    use rootcause_internals::{RawReport, RawReportRef};
+
+    use crate::markers::{self, Cloneable, SendSync};
+
+    /// A reference to a [`Report`].
+    ///
+    /// [`ReportRef`] is a lightweight, copyable reference to a report that
+    /// allows you to inspect report data without taking ownership. It's the
+    /// primary way to work with reports in a read-only manner.
+    ///
+    /// # Key Characteristics
+    ///
+    /// - **Always `Copy` + `Clone`**: Unlike [`Report`], all [`ReportRef`]
+    ///   instances can be freely copied regardless of their ownership marker
+    /// - **Lifetime-bound**: Tied to the lifetime of the underlying report
+    /// - **Type parameters**: Like [`Report`], has context type `C`, ownership
+    ///   marker `O`, and thread safety marker `T`
+    ///
+    /// # Ownership Markers
+    ///
+    /// The ownership marker on [`ReportRef`] indicates what the *underlying*
+    /// report's ownership status is:
+    ///
+    /// - [`Cloneable`]: The underlying report is shared (can use [`clone_arc`]
+    ///   to get an owned [`Report`])
+    /// - [`Uncloneable`]: The underlying report has unique ownership (cannot
+    ///   use [`clone_arc`])
+    ///
+    /// Note that when you create a [`ReportRef`] from a [`Report`] marked as
+    /// [`Mutable`], it becomes a [`ReportRef`] with the [`Uncloneable`] marker
+    /// to prevent cloning while mutable access exists.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{ReportRef, markers::Uncloneable, prelude::*};
+    ///
+    /// let report: Report = report!("error message");
+    ///
+    /// // Get a reference - this is Uncloneable because report is Mutable
+    /// let report_ref: ReportRef<'_, _, Uncloneable> = report.as_ref();
+    ///
+    /// // Inspect the report
+    /// println!("{}", report_ref);
+    /// assert_eq!(report_ref.children().len(), 0);
+    /// ```
+    ///
+    /// [`Report`]: crate::Report
+    /// [`Cloneable`]: crate::markers::Cloneable
+    /// [`Uncloneable`]: crate::markers::Uncloneable
+    /// [`Mutable`]: crate::markers::Mutable
+    /// [`clone_arc`]: ReportRef::clone_arc
+    // # Safety invariants
+    //
+    // This reference behaves like a `&'a Report<C, O, T>` for some unknown
+    // `C` and `O`, and upholds the usual safety invariants of shared references:
+    //
+    // 1. The pointee is properly initialized for the entire lifetime `'a`.
+    // 2. The pointee is not mutated for the entire lifetime `'a`.
+    #[repr(transparent)]
+    pub struct ReportRef<'a, Context = dyn Any, Ownership = Cloneable, ThreadSafety = SendSync>
+    where
+        Context: markers::ObjectMarker + ?Sized,
+        Ownership: markers::ReportRefOwnershipMarker,
+        ThreadSafety: markers::ThreadSafetyMarker,
+    {
+        /// # Safety
+        ///
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
+        ///
+        /// 1. If `C` is a concrete type: The context embedded in the report
+        ///    must be of type `C`
+        /// 2. If `O = Cloneable`: All other references to this report are
+        ///    compatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 3. All references to any sub-reports of this report are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        ///    all sub-reports must be `Send+Sync`
+        ///
+        /// [`RawReport`]: rootcause_internals::RawReport
+        /// [`Mutable`]: crate::markers::Mutable
+        raw: RawReportRef<'a>,
+        _context: PhantomData<Context>,
+        _ownership: PhantomData<Ownership>,
+        _thread_safety: PhantomData<ThreadSafety>,
+    }
+
+    impl<'a, C, O, T> ReportRef<'a, C, O, T>
+    where
+        C: markers::ObjectMarker + ?Sized,
+        O: markers::ReportRefOwnershipMarker,
+        T: markers::ThreadSafetyMarker,
+    {
+        /// Creates a new Report from a raw report
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `C` is a concrete type: The context embedded in the report
+        ///    must be of type `C`
+        /// 2. If `O = Cloneable`: All other references to this report are
+        ///    compatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 3. All references to any sub-reports of this report are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        ///    all sub-reports must be `Send+Sync`
+        ///
+        /// [`Report`]: crate::Report
+        /// [`RawReport`]: rootcause_internals::RawReport
+        /// [`ReportMut`]: crate::ReportMut
+        /// [`Mutable`]: crate::markers::Mutable
+        #[must_use]
+        pub(crate) unsafe fn from_raw(raw: RawReportRef<'a>) -> Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by our caller
+            // 2. Guaranteed by our caller
+            // 3. Guaranteed by our caller
+            // 4. Guaranteed by our caller
+            Self {
+                raw,
+                _context: PhantomData,
+                _ownership: PhantomData,
+                _thread_safety: PhantomData,
+            }
+        }
+
+        /// Creates a slice of [`ReportRef`] from a slice of [`RawReport`].
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `C` is a concrete type: The contexts embedded in all of the
+        ///    [`RawReport`]s in the slice are of type `C`
+        /// 2. If `O = Cloneable`: All other references to these reports are
+        ///    compatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 3. All references to any sub-reports of these reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 4. If `T = SendSync`: All contexts and attachments in these reports
+        ///    and all sub-reports must be `Send+Sync`
+        pub(crate) unsafe fn from_raw_slice(raw: &'a [RawReport]) -> &'a [ReportRef<'a, C, O, T>] {
+            let len = raw.len();
+            let raw_ptr: *const RawReport = raw.as_ptr();
+
+            // SAFETY: We must uphold the safety invariants of the raw field for
+            // all reports in the slice:
+            // 1. Guaranteed by our caller
+            // 2. Guaranteed by our caller
+            // 3. Guaranteed by our caller
+            // 4. Guaranteed by our caller
+            let report_ref_ptr = raw_ptr.cast::<ReportRef<'a, C, O, T>>();
+
+            // SAFETY:
+            // 1. The pointer is valid and properly aligned because it points to the first
+            //    element of a valid slice of `RawReport`s
+            // 2. The length is correct because we obtained it from the original slice of
+            //    `RawReport`s
+            // 3. Each `ReportRef` is `repr(transparent)` over `RawReportRef`, which is
+            //    repr(transparent) over the same underlying pointer as `RawReport`, so the
+            //    alignment and validity are preserved
+            // 4. We are not creating mutable references, so there are no aliasing issues to
+            //    consider
+            // 5. The safety invariants for each `ReportRef` are upheld as guaranteed by our
+            //    caller
+            unsafe {
+                // @add-unsafe-context: RawReport
+                // @add-unsafe-context: RawReportRef
+                core::slice::from_raw_parts(report_ref_ptr, len)
+            }
+        }
+
+        /// Returns the underlying raw report reference.
+        #[must_use]
+        pub(crate) fn as_raw_ref(self) -> RawReportRef<'a> {
+            // SAFETY: We are destroying `self`, so we no longer
+            // need to uphold any safety invariants.
+            self.raw
+        }
+    }
+
+    // SAFETY: We must uphold the safety invariants of the raw field for both the
+    // original and the copy:
+    // 1. This remains true for both the original and the copy
+    // 2. This remains true for both the original and the copy
+    // 3. This remains true for both the original and the copy
+    // 4. This remains true for both the original and the copy
+    impl<'a, C, O, T> Copy for ReportRef<'a, C, O, T>
+    where
+        C: markers::ObjectMarker + ?Sized,
+        O: markers::ReportRefOwnershipMarker,
+        T: markers::ThreadSafetyMarker,
+    {
+    }
+}
+pub use limit_field_access::ReportRef;
+
+impl<'a, C, O, T> Clone for ReportRef<'a, C, O, T>
 where
     C: markers::ObjectMarker + ?Sized,
     O: markers::ReportRefOwnershipMarker,
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new Report from a raw report
-    ///
-    /// # Safety
-    ///
-    /// To call this method you must ensure the following:
-    ///
-    /// - The context embedded in the [`RawReportRef`] must either be of type
-    ///   `C`, or the `C` must be `dyn Any`
-    /// - The ownership marker must match the ownership semantics of the
-    ///   [`RawReportRef`]. That is, if the ownership marker is [`Cloneable`],
-    ///   then there must not be other exist owners of the [`RawReport`] that
-    ///   assumes that they are able to mutate the report. Specifically this
-    ///   means that there cannot be any [`Report`] with a [`Mutable`] ownership
-    ///   marker or any [`ReportMut`] that shares the same underlying report.
-    /// - The thread safety marker must match the contents of the report. More
-    ///   specifically if the marker is [`SendSync`], then all contexts and
-    ///   attachments must be `Send+Sync`
-    ///
-    /// [`RawReport`]: rootcause_internals::RawReport
-    /// [`ReportMut`]: crate::ReportMut
-    #[must_use]
-    pub(crate) unsafe fn from_raw(raw: RawReportRef<'a>) -> Self {
-        Self {
-            raw,
-            _context: PhantomData,
-            _ownership: PhantomData,
-            _thread_safety: PhantomData,
-        }
+    fn clone(&self) -> Self {
+        *self
     }
+}
 
-    #[must_use]
-    pub(crate) fn as_raw_ref(self) -> RawReportRef<'a> {
-        self.raw
-    }
-
+impl<'a, C, O, T> ReportRef<'a, C, O, T>
+where
+    C: markers::ObjectMarker,
+    O: markers::ReportRefOwnershipMarker,
+    T: markers::ThreadSafetyMarker,
+{
     /// Returns a reference to the current context.
     ///
     /// # Examples
@@ -128,13 +250,21 @@ where
     /// let context: &MyError = report_ref.current_context();
     /// ```
     #[must_use]
-    pub fn current_context(self) -> &'a C
-    where
-        C: Sized,
-    {
-        unsafe { self.as_raw_ref().context_downcast_unchecked() }
-    }
+    pub fn current_context(self) -> &'a C {
+        let raw = self.as_raw_ref();
 
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
+        unsafe { raw.context_downcast_unchecked() }
+    }
+}
+
+impl<'a, C, O, T> ReportRef<'a, C, O, T>
+where
+    C: markers::ObjectMarker + ?Sized,
+    O: markers::ReportRefOwnershipMarker,
+    T: markers::ThreadSafetyMarker,
+{
     /// Returns a reference to the child reports.
     ///
     /// # Examples
@@ -148,7 +278,12 @@ where
     #[must_use]
     pub fn children(self) -> &'a ReportCollection<dyn Any, T> {
         let raw = self.as_raw_ref().children();
-        unsafe { ReportCollection::from_raw_ref(raw) }
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. This is guaranteed by our safety invariants.
+        // 3. This is guaranteed by our safety invariants.
+        unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
     }
 
     /// Returns a reference to the attachments.
@@ -163,7 +298,10 @@ where
     #[must_use]
     pub fn attachments(self) -> &'a ReportAttachments<T> {
         let raw = self.as_raw_ref().attachments();
-        unsafe { ReportAttachments::from_raw_ref(raw) }
+
+        // SAFETY:
+        // 1. This is guaranteed by our own safety invariants.
+        unsafe { ReportAttachments::<T>::from_raw_ref(raw) }
     }
 
     /// Changes the context type of the [`ReportRef`] to `dyn Any`.
@@ -193,7 +331,14 @@ where
     /// ```
     #[must_use]
     pub fn into_dyn_any(self) -> ReportRef<'a, dyn Any, O, T> {
-        unsafe { ReportRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. This is guaranteed by our own safety invariants.
+        // 3. This is guaranteed by our own safety invariants.
+        // 4. This is guaranteed by our own safety invariants.
+        unsafe { ReportRef::<dyn Any, O, T>::from_raw(raw) }
     }
 
     /// Changes the ownership mode of the [`ReportRef`] to [`Uncloneable`].
@@ -225,7 +370,14 @@ where
     /// ```
     #[must_use]
     pub fn into_uncloneable(self) -> ReportRef<'a, C, Uncloneable, T> {
-        unsafe { ReportRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by our own safety invariants.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by our own safety invariants.
+        // 4. This is guaranteed by our own safety invariants.
+        unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
     /// Changes the thread safety mode of the [`ReportRef`] to [`Local`].
@@ -254,7 +406,14 @@ where
     /// ```
     #[must_use]
     pub fn into_local(self) -> ReportRef<'a, C, O, Local> {
-        unsafe { ReportRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by our own safety invariants.
+        // 2. This is guaranteed by our own safety invariants.
+        // 3. This is guaranteed by our own safety invariants.
+        // 4. `T=Local`, so this is trivially true.
+        unsafe { ReportRef::<C, O, Local>::from_raw(raw) }
     }
 
     /// Returns an iterator over the complete report hierarchy including this
@@ -307,8 +466,8 @@ where
     /// assert_eq!(all_reports.len(), 6);
     /// ```
     pub fn iter_reports(self) -> ReportIter<'a, O, T> {
-        let stack = vec![self.as_raw_ref()];
-        unsafe { ReportIter::from_raw(stack) }
+        let stack = vec![self.into_dyn_any()];
+        ReportIter::from_raw(stack)
     }
 
     /// Returns an iterator over child reports in the report hierarchy
@@ -358,13 +517,8 @@ where
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
     pub fn iter_sub_reports(self) -> ReportIter<'a, Cloneable, T> {
-        let stack = self
-            .children()
-            .iter()
-            .map(|r| r.as_raw_ref())
-            .rev()
-            .collect();
-        unsafe { ReportIter::from_raw(stack) }
+        let stack = self.children().iter().rev().collect();
+        ReportIter::from_raw(stack)
     }
 
     /// Creates a new report, which has the same structure as the current
@@ -442,7 +596,7 @@ where
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
     #[must_use]
-    pub fn current_context_handler_type_id(&self) -> TypeId {
+    pub fn current_context_handler_type_id(self) -> TypeId {
         self.as_raw_ref().context_handler_type_id()
     }
 
@@ -474,9 +628,8 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context(self) -> impl core::fmt::Display + core::fmt::Debug {
-        let report = self.into_dyn_any().into_uncloneable().into_local();
         format_helper(
-            report,
+            self.into_dyn_any().into_uncloneable().into_local(),
             |report, formatter| {
                 crate::hooks::formatting_overrides::context::display_context(report, formatter)
             },
@@ -527,7 +680,7 @@ where
     /// ```
     #[must_use]
     pub fn preferred_context_formatting_style(
-        &self,
+        self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
@@ -558,7 +711,7 @@ where
     /// ```
     #[must_use]
     pub fn preferred_context_formatting_style_unhooked(
-        &self,
+        self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         self.as_raw_ref()
@@ -575,7 +728,7 @@ where
     /// assert_eq!(report_ref.strong_count(), 1); // The report has just been created, so it has a single owner
     /// ```
     #[must_use]
-    pub fn strong_count(&self) -> usize {
+    pub fn strong_count(self) -> usize {
         self.as_raw_ref().strong_count()
     }
 }
@@ -606,22 +759,18 @@ where
     where
         C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == self.current_context_type_id() {
-            // SAFETY:
-            // - The context is valid because we just checked that it matches
-            // - The thread marker is valid, because does not change
-            Some(unsafe { self.downcast_current_context_unchecked() })
-        } else {
-            None
-        }
+        let report = self.downcast_report()?;
+        Some(report.current_context())
     }
 
     /// Downcasts the current context to a specific type without checking.
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the current context is actually of type `C`.
-    /// This can be verified by calling [`current_context_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
     ///
     /// [`current_context_type_id()`]: ReportRef::current_context_type_id
     ///
@@ -644,7 +793,14 @@ where
     where
         C: markers::ObjectMarker,
     {
-        unsafe { self.as_raw_ref().context_downcast_unchecked::<C>() }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by the caller.
+        unsafe {
+            // @add-unsafe-context: markers::ObjectMarker
+            raw.context_downcast_unchecked()
+        }
     }
 
     /// Attempts to downcast the report to a specific context type.
@@ -666,15 +822,14 @@ where
     #[must_use]
     pub fn downcast_report<C>(self) -> Option<ReportRef<'a, C, O, T>>
     where
-        C: markers::ObjectMarker + ?Sized,
+        C: markers::ObjectMarker,
     {
-        if TypeId::of::<C>() == TypeId::of::<dyn Any>()
-            || TypeId::of::<C>() == self.current_context_type_id()
-        {
+        if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
-            // - The context is valid because we just checked that it matches
-            // - The thread marker is valid, because does not change
-            Some(unsafe { self.downcast_report_unchecked() })
+            // 1. We just verified that the type matches.
+            let report = unsafe { self.downcast_report_unchecked() };
+
+            Some(report)
         } else {
             None
         }
@@ -684,8 +839,10 @@ where
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the current context is actually of type `C`.
-    /// This can be verified by calling [`current_context_type_id()`] first.
+    /// The caller must ensure:
+    ///
+    /// 1. The current context is actually of type `C` (can be verified by
+    ///    calling [`current_context_type_id()`] first)
     ///
     /// [`current_context_type_id()`]: ReportRef::current_context_type_id
     ///
@@ -706,9 +863,16 @@ where
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportRef<'a, C, O, T>
     where
-        C: markers::ObjectMarker + ?Sized,
+        C: markers::ObjectMarker,
     {
-        unsafe { ReportRef::from_raw(self.as_raw_ref()) }
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller.
+        // 2. Guaranteed by our own safety invariants.
+        // 3. Guaranteed by our own safety invariants.
+        // 4. Guaranteed by our own safety invariants.
+        unsafe { ReportRef::<C, O, T>::from_raw(raw) }
     }
 }
 
@@ -742,26 +906,19 @@ where
     /// [`Cloneable`]: crate::markers::Cloneable
     #[must_use]
     pub fn clone_arc(self) -> Report<C, Cloneable, T> {
-        let raw = unsafe { self.as_raw_ref().clone_arc() };
-        unsafe { Report::from_raw(raw) }
-    }
-}
+        let raw = self.as_raw_ref();
 
-impl<'a, C, O, T> Copy for ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
-}
-impl<'a, C, O, T> Clone for ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
-    fn clone(&self) -> Self {
-        *self
+        // SAFETY:
+        // 1. Since `O=Cloneable`, this is guaranteed by our own safety invariants.
+        let cloned_raw = unsafe { raw.clone_arc() };
+
+        // SAFETY:
+        // 1. This is guaranteed by our own safety invariants.
+        // 2. `O=Cloneable`, so this is trivially true.
+        // 3. This is guaranteed by our own safety invariants.
+        // 4. This is guaranteed by our own safety invariants.
+        // 5. This is guaranteed by our own safety invariants.
+        unsafe { Report::<C, Cloneable, T>::from_raw(cloned_raw) }
     }
 }
 
@@ -802,14 +959,15 @@ where
 mod from_impls {
     use super::*;
 
-    macro_rules! unsafe_reportref_to_reportref {
+    macro_rules! from_impls {
         ($(
             <
                 $($param:ident),*
             >:
             $context1:ty => $context2:ty,
             $ownership1:ty => $ownership2:ty,
-            $thread_safety1:ty => $thread_safety2:ty
+            $thread_safety1:ty => $thread_safety2:ty,
+            [$($op:ident),*]
         ),* $(,)?) => {
             $(
                 impl<'a, $($param),*> From<ReportRef<'a, $context1, $ownership1, $thread_safety1>> for ReportRef<'a, $context2, $ownership2, $thread_safety2>
@@ -818,37 +976,36 @@ mod from_impls {
                     )*
                 {
                     fn from(report: ReportRef<'a, $context1, $ownership1, $thread_safety1>) -> Self {
-                        // SAFETY:
-                        // - The context is valid, because it either doesn't change or goes from a known `C` to `dyn Any`.
-                        // - The ownership marker is valid, because it either does not change or it goes from `Cloneable` to `Uncloneable`.
-                        // - The thread marker is valid, because it either does not change or it goes from `SendSync` to `Local`.
-                        unsafe { ReportRef::from_raw(report.as_raw_ref()) }
+                        report
+                            $(
+                                .$op()
+                            )*
                     }
                 }
             )*
         };
     }
 
-    unsafe_reportref_to_reportref!(
-        <C>: C => C, Cloneable => Cloneable, SendSync => Local,
-        <C>: C => C, Cloneable => Uncloneable, SendSync => SendSync,
-        <C>: C => C, Cloneable => Uncloneable, SendSync => Local,
-        <C>: C => C, Cloneable => Uncloneable, Local => Local,
-        <C>: C => C, Uncloneable => Uncloneable, SendSync => Local,
-        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync,
-        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local,
-        <C>: C => dyn Any, Cloneable => Cloneable, Local => Local,
-        <C>: C => dyn Any, Cloneable => Uncloneable, SendSync => SendSync,
-        <C>: C => dyn Any, Cloneable => Uncloneable, SendSync => Local,
-        <C>: C => dyn Any, Cloneable => Uncloneable, Local => Local,
-        <C>: C => dyn Any, Uncloneable => Uncloneable, SendSync => SendSync,
-        <C>: C => dyn Any, Uncloneable => Uncloneable, SendSync => Local,
-        <C>: C => dyn Any, Uncloneable => Uncloneable, Local => Local,
-        <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local,
-        <>:  dyn Any => dyn Any, Cloneable => Uncloneable, SendSync => SendSync,
-        <>:  dyn Any => dyn Any, Cloneable => Uncloneable, SendSync => Local,
-        <>:  dyn Any => dyn Any, Cloneable => Uncloneable, Local => Local,
-        <>:  dyn Any => dyn Any, Uncloneable => Uncloneable, SendSync => Local,
+    from_impls!(
+        <C>: C => C, Cloneable => Cloneable, SendSync => Local, [into_local],
+        <C>: C => C, Cloneable => Uncloneable, SendSync => SendSync, [into_uncloneable],
+        <C>: C => C, Cloneable => Uncloneable, SendSync => Local, [into_uncloneable, into_local],
+        <C>: C => C, Cloneable => Uncloneable, Local => Local, [into_uncloneable],
+        <C>: C => C, Uncloneable => Uncloneable, SendSync => Local, [into_local],
+        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync, [into_dyn_any],
+        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_dyn_any, into_local],
+        <C>: C => dyn Any, Cloneable => Cloneable, Local => Local, [into_dyn_any],
+        <C>: C => dyn Any, Cloneable => Uncloneable, SendSync => SendSync, [into_dyn_any, into_uncloneable],
+        <C>: C => dyn Any, Cloneable => Uncloneable, SendSync => Local, [into_dyn_any, into_uncloneable, into_local],
+        <C>: C => dyn Any, Cloneable => Uncloneable, Local => Local, [into_dyn_any, into_uncloneable],
+        <C>: C => dyn Any, Uncloneable => Uncloneable, SendSync => SendSync, [into_dyn_any],
+        <C>: C => dyn Any, Uncloneable => Uncloneable, SendSync => Local, [into_dyn_any, into_local],
+        <C>: C => dyn Any, Uncloneable => Uncloneable, Local => Local, [into_dyn_any, into_uncloneable],
+        <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_local],
+        <>:  dyn Any => dyn Any, Cloneable => Uncloneable, SendSync => SendSync, [into_uncloneable],
+        <>:  dyn Any => dyn Any, Cloneable => Uncloneable, SendSync => Local, [into_uncloneable, into_local],
+        <>:  dyn Any => dyn Any, Cloneable => Uncloneable, Local => Local, [into_uncloneable],
+        <>:  dyn Any => dyn Any, Uncloneable => Uncloneable, SendSync => Local, [into_local],
     );
 }
 

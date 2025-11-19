@@ -19,4 +19,4 @@ jobs:
       - name: Run cargo-semver-checks
         uses: obi1kenobi/cargo-semver-checks-action@v2
         with:
-          package: rootcause, rootcause-internals
+          package: rootcause

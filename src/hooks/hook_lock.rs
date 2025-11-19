@@ -29,7 +29,7 @@ impl<T: 'static + Send + Sync> HookLock<T> {
         let guard = self.0.read();
 
         #[cfg(feature = "std")]
-        let guard = self.0.read().expect("Unable to lock attachment hooks");
+        let guard = self.0.read().expect("Unable to acquire hook lock");
 
         HookLockReadGuard(guard)
     }
@@ -40,7 +40,7 @@ impl<T: 'static + Send + Sync> HookLock<T> {
         let guard = self.0.write();
 
         #[cfg(feature = "std")]
-        let guard = self.0.write().expect("Unable to lock attachment hooks");
+        let guard = self.0.write().expect("Unable to acquire hook lock");
 
         HookLockWriteGuard(guard)
     }

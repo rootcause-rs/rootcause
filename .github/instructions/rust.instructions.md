@@ -135,6 +135,78 @@ Eagerly implement common traits where appropriate:
 - Document error conditions, panic scenarios, and safety considerations.
 - Examples should use `?` operator, not `unwrap()` or deprecated `try!` macro.
 
+### Safety Documentation
+
+All `unsafe` functions and `unsafe` blocks MUST follow these documentation patterns to ensure safety requirements are clear and easy to verify:
+
+#### Safety Documentation in Docstrings
+
+**ALL safety documentation MUST use numbered lists, even for single requirements:**
+
+**Single requirement:**
+
+```rust
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. `ptr` is valid and properly aligned
+```
+
+**Multiple requirements:**
+
+```rust
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The pointer comes from [`triomphe::Arc::into_raw`]
+/// 2. The context type `C` matches the stored type in [`ReportData`]
+/// 3. The pointer is not used after calling this function
+```
+
+#### Safety Comments in Implementation
+
+Every `unsafe` block MUST have a `// SAFETY:` comment explaining why the safety requirements **of the unsafe operation being performed** are upheld.
+
+**CRITICAL: The `// SAFETY:` comment addresses the requirements of the unsafe function/operation being called, NOT the requirements of the outer function you're implementing.**
+
+**ALL safety comments MUST use numbered lists, even for single requirements:**
+
+**Single requirement:**
+
+```rust
+// SAFETY: The safety requirement for `ptr.read()` is upheld:
+// 1. The pointer is valid and properly aligned because we just created it from a valid reference above
+unsafe { ptr.read() }
+```
+
+**Multiple requirements:**
+
+```rust
+// SAFETY: The safety requirements for `from_raw` are upheld:
+// 1. The pointer comes from `Arc::into_raw` as guaranteed by the caller
+// 2. The context type matches because we don't perform any type transmutation
+// 3. The pointer is not reused after this call due to the move semantics
+unsafe { Report::from_raw(raw) }
+```
+
+**Rules for LLMs:**
+
+1. **Identify what unsafe operation is being performed** (e.g., calling `from_raw`, dereferencing a pointer, calling a vtable function)
+2. **Look up that operation's safety requirements** (from its `/// # Safety` docs if it's a function, or from Rust docs for intrinsics)
+3. **Always use numbered lists**: Whether 1 requirement or multiple, always use numbered list format (1. 2. 3.)
+4. **Explain WHY each requirement is satisfied**, don't just repeat what the requirement says
+5. **Include helpful context** when it aids understanding (e.g., "We know that `self.drop` points to `drop::<A>` below")
+6. **Never skip the comment** - every `unsafe` block needs one
+
+**Common mistakes to avoid:**
+
+- ❌ Don't use bullet points (`-` or `•`) - use numbered lists (`1. 2. 3.`) for multiple requirements
+- ❌ Don't repeat the requirement verbatim (e.g., "We must ensure X" → just explain why X is true)
+- ❌ Don't be overly verbose - be concise while remaining clear
+- ❌ Don't address the outer function's requirements - address the called function's requirements
+
 ## Project Organization
 
 - Use semantic versioning in `Cargo.toml`.

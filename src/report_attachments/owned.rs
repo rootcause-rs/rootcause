@@ -1,7 +1,5 @@
 use alloc::vec::Vec;
-use core::{any::Any, marker::PhantomData};
-
-use rootcause_internals::RawAttachment;
+use core::any::Any;
 
 use crate::{
     markers::{self, Local, SendSync},
@@ -9,81 +7,149 @@ use crate::{
     report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
 };
 
-/// A collection of report attachments.
-///
-/// This type provides storage and management for multiple attachments that can
-/// be added to a report.
-///
-/// You can think of a [`ReportAttachments<T>`] as a wrapper around a
-/// `Vec<ReportAttachment<dyn Any, T>>`, however, it has a slightly
-/// different API:
-/// - It has convenience methods to convert between different thread safety
-///   markers such as [`into_local`](Self::into_local).
-/// - It is also possible to convert between different context and thread safety
-///   markers using the [`From`] and [`Into`] traits.
-#[repr(transparent)]
-pub struct ReportAttachments<ThreadSafety = SendSync>
-where
-    ThreadSafety: markers::ThreadSafetyMarker,
-{
-    raw: Vec<RawAttachment>,
-    _thread_safety: PhantomData<ThreadSafety>,
+/// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
+/// an unsafe field and remove this module.
+mod limit_field_access {
+    use alloc::vec::Vec;
+    use core::marker::PhantomData;
+
+    use rootcause_internals::RawAttachment;
+
+    use crate::markers::{self, SendSync};
+
+    /// A collection of report attachments.
+    ///
+    /// This type provides storage and management for multiple attachments that
+    /// can be added to a report.
+    ///
+    /// You can think of a [`ReportAttachments<T>`] as a wrapper around a
+    /// `Vec<ReportAttachment<dyn Any, T>>`, however, it has a slightly
+    /// different API:
+    /// - It has convenience methods to convert between different thread safety
+    ///   markers such as [`into_local`](Self::into_local).
+    /// - It is also possible to convert between different context and thread
+    ///   safety markers using the [`From`] and [`Into`] traits.
+    #[repr(transparent)]
+    pub struct ReportAttachments<ThreadSafety = SendSync>
+    where
+        ThreadSafety: markers::ThreadSafetyMarker,
+    {
+        /// # Safety
+        ///
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
+        ///
+        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        ///    Sync`.
+        raw: Vec<RawAttachment>,
+        _thread_safety: PhantomData<ThreadSafety>,
+    }
+
+    impl<T> ReportAttachments<T>
+    where
+        T: markers::ThreadSafetyMarker,
+    {
+        /// Creates a new [`ReportAttachments`] from a vector of raw attachments
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        ///    Sync`.
+        #[must_use]
+        pub(crate) unsafe fn from_raw(raw: Vec<RawAttachment>) -> Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            Self {
+                raw,
+                _thread_safety: PhantomData,
+            }
+        }
+
+        /// Creates a reference to [`ReportAttachments`] from reference to a
+        /// vector of raw attachments
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        ///    Sync`.
+        #[must_use]
+        pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
+            let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
+
+            // SAFETY:
+            // - The raw pointer is derived from a valid reference with the same lifetime
+            //   and representation
+            // - Creating this reference does not violate any aliasing rules as we are only
+            //   creating a shared reference
+            // - The type invariants of `Self` are upheld as per the caller's guarantee
+            unsafe { &*raw_ptr }
+        }
+
+        /// Creates a mutable reference to [`ReportAttachments`] from a mutable
+        /// vector of raw attachments
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        ///    Sync`.
+        #[must_use]
+        pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
+            let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
+
+            // SAFETY:
+            // - This raw pointer is derived from a valid reference with the same lifetime
+            //   and representation
+            // - Creating this reference does not violate any aliasing rules as we are only
+            //   creating a mutable reference from a different mutable reference which will
+            //   no longer be used.
+            // - The type invariants of `Self` are upheld as per the caller's guarantee
+            unsafe { &mut *raw_ptr }
+        }
+
+        /// Provides ownership of the inner raw attachments vector
+        #[must_use]
+        pub(crate) fn into_raw(self) -> Vec<RawAttachment> {
+            // We are destroying `self`, so we no longer
+            // need to uphold any safety invariants.
+            self.raw
+        }
+
+        /// Provides access to the inner raw attachments vector
+        #[must_use]
+        pub(crate) fn as_raw(&self) -> &Vec<RawAttachment> {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. This remains true for the duration of the reference
+            &self.raw
+        }
+
+        /// Provides mutable access to the inner raw attachments vector
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `T = SendSync`: No mutation is performed that invalidates the
+        ///    invariant that all inner attachments are `Send + Sync`.
+        #[must_use]
+        pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawAttachment> {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            &mut self.raw
+        }
+    }
 }
+pub use limit_field_access::ReportAttachments;
 
 impl<T> ReportAttachments<T>
 where
     T: markers::ThreadSafetyMarker,
 {
-    /// Creates a new [`ReportAttachments`] from a vector of raw attachments
-    ///
-    /// # Safety
-    ///
-    /// The thread safety marker must match the contents of the attachments.
-    /// More specifically if the marker is `SendSync`, then all the inner
-    /// attachments must be `Send+Sync`
-    #[must_use]
-    pub(crate) unsafe fn from_raw(raw: Vec<RawAttachment>) -> Self {
-        Self {
-            raw,
-            _thread_safety: PhantomData,
-        }
-    }
-
-    /// Creates a reference to [`ReportAttachments`] from reference to a vector
-    /// of raw attachments
-    ///
-    /// # Safety
-    ///
-    /// The thread safety marker must match the contents of the attachments.
-    /// More specifically if the marker is `SendSync`, then all the inner
-    /// attachments must be `Send+Sync`
-    #[must_use]
-    pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
-        let raw_ptr = raw as *const Vec<RawAttachment>;
-        let raw_ptr = raw_ptr.cast::<Self>();
-        unsafe { &*raw_ptr }
-    }
-
-    /// Creates a mutable reference to [`ReportAttachments`] from a mutable
-    /// vector of raw attachments
-    ///
-    /// # Safety
-    ///
-    /// The thread safety marker must match the contents of the attachments.
-    /// More specifically if the marker is `SendSync`, then all the inner
-    /// attachments must be `Send+Sync`
-    #[must_use]
-    pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
-        let raw_ptr = raw as *mut Vec<RawAttachment>;
-        let raw_ptr = raw_ptr.cast::<Self>();
-        unsafe { &mut *raw_ptr }
-    }
-
-    #[must_use]
-    pub(crate) fn into_raw(self) -> Vec<RawAttachment> {
-        self.raw
-    }
-
     /// Creates a new, empty attachments collection.
     ///
     /// The collection will not allocate until attachments are added to it.
@@ -105,6 +171,8 @@ where
     /// [`new_local()`]: ReportAttachments<Local>::new_local
     #[must_use]
     pub fn new() -> Self {
+        // SAFETY:
+        // 1. An empty Vec trivially upholds all safety invariants.
         unsafe { Self::from_raw(Vec::new()) }
     }
 
@@ -127,7 +195,13 @@ where
     /// assert_eq!(attachments.len(), 1);
     /// ```
     pub fn push(&mut self, attachment: ReportAttachment<dyn Any, T>) {
-        self.raw.push(attachment.into_raw())
+        // SAFETY:
+        // 1. If `T = Local`, then this is trivially true. If `T = SendSync`, then the
+        //    safety requirement is upheld because we are adding an attachment that
+        //    already has the `SendSync` marker.
+        let raw = unsafe { self.as_raw_mut() };
+
+        raw.push(attachment.into_raw())
     }
 
     /// Removes and returns the last attachment from the collection.
@@ -154,11 +228,18 @@ where
     /// assert_eq!(last.inner_type_id(), std::any::TypeId::of::<&str>());
     /// ```
     pub fn pop(&mut self) -> Option<ReportAttachment<dyn Any, T>> {
-        let attachment = self.raw.pop()?;
+        // SAFETY:
+        // 1. We are only removing an attachment.
+        let raw = unsafe { self.as_raw_mut() };
 
-        // SAFETY: The thread safety marker matches, because we only
-        // contain attachments with a matching thread safety marker
-        let attachment = unsafe { ReportAttachment::from_raw(attachment) };
+        let attachment = raw.pop()?;
+
+        // SAFETY:
+        // 1. `A=dyn Any`, so this is trivially true.
+        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then the
+        //    safety requirement is upheld because the collection invariant guarantees
+        //    this.
+        let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
 
         Some(attachment)
     }
@@ -179,7 +260,7 @@ where
     /// ```
     #[must_use]
     pub fn len(&self) -> usize {
-        self.raw.len()
+        self.as_raw().len()
     }
 
     /// Returns a reference to the attachment at the given index.
@@ -202,8 +283,13 @@ where
     /// ```
     #[must_use]
     pub fn get(&self, index: usize) -> Option<ReportAttachmentRef<'_, dyn Any>> {
-        let attachment = self.raw.get(index)?.as_ref();
-        unsafe { Some(ReportAttachmentRef::from_raw(attachment)) }
+        let raw = self.as_raw().get(index)?.as_ref();
+
+        // SAFETY:
+        // 1. `A=dyn Any`, so this is trivially true.
+        let attachment = unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) };
+
+        Some(attachment)
     }
 
     /// Returns `true` if the collection contains no attachments.
@@ -221,7 +307,7 @@ where
     /// ```
     #[must_use]
     pub fn is_empty(&self) -> bool {
-        self.raw.is_empty()
+        self.as_raw().is_empty()
     }
 
     /// Returns an iterator over references to the attachments in the
@@ -247,7 +333,7 @@ where
     ///
     /// [`into_iter()`]: Self::into_iter
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
-        ReportAttachmentsIter::from_raw(self.raw.iter())
+        ReportAttachmentsIter::from_raw(self.as_raw().iter())
     }
 
     /// Converts this collection to use the [`Local`] thread safety marker.
@@ -274,7 +360,11 @@ where
     /// ```
     #[must_use]
     pub fn into_local(self) -> ReportAttachments<Local> {
-        unsafe { ReportAttachments::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+
+        // SAFETY:
+        // 1. `T=Local`, so this is trivially true.
+        unsafe { ReportAttachments::<Local>::from_raw(raw) }
     }
 
     /// Returns a reference to this collection with the [`Local`] thread safety
@@ -303,7 +393,11 @@ where
     /// ```
     #[must_use]
     pub fn as_local(&self) -> &ReportAttachments<Local> {
-        unsafe { ReportAttachments::from_raw_ref(&self.raw) }
+        let raw = self.as_raw();
+
+        // SAFETY:
+        // 1. `T=Local`, so this is trivially true.
+        unsafe { ReportAttachments::from_raw_ref(raw) }
     }
 }
 
@@ -387,7 +481,14 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn from(attachments: Vec<ReportAttachment<A, T>>) -> Self {
-        let raw_attachments = attachments.into_iter().map(|v| v.into_raw()).collect();
+        let raw_attachments = attachments
+            .into_iter()
+            .map(|v: ReportAttachment<A, T>| v.into_raw())
+            .collect();
+
+        // SAFETY:
+        // 1. If `T=Local`: This is trivially true. If `T=SendSync`: This is upheld by
+        //    the invariants of each `ReportAttachment`.
         unsafe { ReportAttachments::from_raw(raw_attachments) }
     }
 }
@@ -398,12 +499,28 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn from(attachments: [ReportAttachment<A, T>; N]) -> Self {
-        let raw_attachments = attachments.into_iter().map(|v| v.into_raw()).collect();
+        let raw_attachments = attachments
+            .into_iter()
+            .map(|v: ReportAttachment<A, T>| v.into_raw())
+            .collect();
+
+        // SAFETY:
+        // 1. If `T=Local`: This is trivially true. If `T=SendSync`: This is upheld by
+        //    the invariants of each `ReportAttachment`.
         unsafe { ReportAttachments::from_raw(raw_attachments) }
     }
 }
 
+// SAFETY:
+// The invariants of the `ReportAttachments` type guarantees that all
+// attachments are `Send + Sync` so the collection itself can safely implement
+// `Send` and `Sync`.
 unsafe impl Send for ReportAttachments<SendSync> {}
+
+// SAFETY:
+// The invariants of the `ReportAttachments` type guarantees that all
+// attachments are `Send + Sync` so the collection itself can safely implement
+// `Send` and `Sync`.
 unsafe impl Sync for ReportAttachments<SendSync> {}
 
 impl<T> IntoIterator for ReportAttachments<T>
@@ -414,7 +531,11 @@ where
     type Item = ReportAttachment<dyn Any, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        unsafe { ReportAttachmentsIntoIter::from_raw(self.raw.into_iter()) }
+        let raw = self.into_raw().into_iter();
+
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
+        unsafe { ReportAttachmentsIntoIter::from_raw(raw) }
     }
 }
 

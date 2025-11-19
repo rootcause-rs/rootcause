@@ -32,6 +32,15 @@ use crate::{
 #[repr(C)]
 pub(crate) struct AttachmentData<A: 'static> {
     /// The Vtable of this attachment
+    ///
+    /// # Safety
+    ///
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
+    ///
+    /// 1. The vtable must always point to an `AttachmentVtable` created for the
+    ///    actual attachment type `A` stored below. This is true even when
+    ///    accessed via type-erased pointers.
     vtable: &'static AttachmentVtable,
     /// The actual attachment data
     attachment: A,
@@ -55,24 +64,29 @@ impl<A: 'static> AttachmentData<A> {
 impl<'a> RawAttachmentRef<'a> {
     /// Returns a reference to the [`AttachmentVtable`] of the
     /// [`AttachmentData`] instance.
+    ///
+    /// The returned vtable is guaranteed to be a vtable for the
+    /// attachment type stored in the [`AttachmentData`].
     #[inline]
     pub(super) fn vtable(self) -> &'static AttachmentVtable {
         let ptr = self.as_ptr();
-        // SAFETY: We don't know the actual inner attachment type, but we do know
-        // that it points to an instance of `AttachmentData<A>` for some specific `A`.
-        // Since `AttachmentData<A>` is `#[repr(C)]`, that means that it's
-        // safe to create pointers to the fields before the actual attachment.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `AttachmentData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
-        let vtable_ptr: *const &'static AttachmentVtable = unsafe { &raw const (*ptr).vtable };
+        // SAFETY: The safety requirements for `&raw const (*ptr).vtable` are upheld:
+        // 1. `ptr` is a valid pointer to a live `AttachmentData<A>` (for some `A`) as
+        //    guaranteed by `RawAttachmentRef`'s invariants
+        // 2. `AttachmentData<A>` is `#[repr(C)]`, so the `vtable` field is at a
+        //    consistent offset regardless of the type parameter `A`
+        // 3. We avoid creating a reference to the full `AttachmentData` struct, which
+        //    would be UB since we don't know the correct type parameter
+        let vtable_ptr: *const &'static AttachmentVtable = unsafe {
+            // @add-unsafe-context: AttachmentData
+            &raw const (*ptr).vtable
+        };
 
-        // SAFETY: The vtable_ptr is derived from a valid Box pointer and points
-        // to an initialized `&'static AttachmentVtable` field. Dereferencing is safe
-        // because:
-        // - The pointer is valid and properly aligned
-        // - The vtable field is initialized in AttachmentData::new and never modified
+        // SAFETY: The safety requirements for dereferencing `vtable_ptr` are upheld:
+        // 1. The pointer is valid and properly aligned because it points to the first
+        //    field of a valid `AttachmentData<A>` instance
+        // 2. The `vtable` field is initialized in `AttachmentData::new` and never
+        //    modified, so it contains a valid `&'static AttachmentVtable` value
         unsafe { *vtable_ptr }
     }
 
@@ -81,13 +95,18 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// # Safety
     ///
-    /// The caller must ensure that the type `A` matches the actual attachment
-    /// type stored in the [`AttachmentData`].
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` matches the actual attachment type stored in the
+    ///    [`AttachmentData`].
     #[inline]
     pub unsafe fn attachment_downcast_unchecked<A: 'static>(self) -> &'a A {
-        // SAFETY: The inner function requires that `A` matches the type stored, but
-        // that is guaranteed by our caller.
-        let this = unsafe { self.cast_inner::<A>() };
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        let this = unsafe {
+            // @add-unsafe-context: AttachmentData
+            self.cast_inner::<A>()
+        };
         &this.attachment
     }
 }

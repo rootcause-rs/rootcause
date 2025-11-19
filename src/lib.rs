@@ -5,14 +5,14 @@
     clippy::std_instead_of_alloc,
     clippy::std_instead_of_core,
     clippy::missing_safety_doc,
-//     clippy::undocumented_unsafe_blocks,
+    clippy::undocumented_unsafe_blocks,
     clippy::multiple_unsafe_ops_per_block,
     clippy::as_ptr_cast_mut,
     clippy::ptr_as_ptr,
     rustdoc::invalid_rust_codeblocks,
     rustdoc::broken_intra_doc_links,
     missing_copy_implementations,
-    unused_doc_comments,
+    unused_doc_comments
 )]
 // Extra checks on nightly
 #![cfg_attr(nightly_extra_checks, feature(rustdoc_missing_doc_code_examples))]

@@ -1,7 +1,3 @@
-//! Handlers used to implement or override the behavior of
-//! [`core::error::Error`], [`core::fmt::Display`] and [`core::fmt::Debug`] when
-//! creating an attachment or report.
-
 //! Handlers that define formatting and error-chaining behavior for reports and
 //! attachments.
 //!

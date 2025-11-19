@@ -23,7 +23,7 @@ pub struct Location {
 
 /// Handler for formatting [`Location`] attachments.
 ///
-/// This handler formats location information as `filename:line:column` for both
+/// This handler formats location information as `filename:line` for both
 /// [`Display`] and [`Debug`] formatting.
 ///
 /// [`Display`]: core::fmt::Display
