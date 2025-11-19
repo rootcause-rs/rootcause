@@ -69,6 +69,9 @@ mod limit_field_access {
     ///
     /// [`Arc`]: triomphe::Arc
     /// [`Local`]: crate::markers::Local
+    /// [`Mutable`]: crate::markers::Mutable
+    /// [`Cloneable`]: crate::markers::Cloneable
+    /// [`SendSync`]: crate::markers::SendSync
     /// [`report!()`]: crate::report!
     #[repr(transparent)]
     pub struct Report<Context = dyn Any, Ownership = Mutable, ThreadSafety = SendSync>

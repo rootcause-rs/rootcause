@@ -80,7 +80,7 @@ use crate::{ReportMut, ReportRef};
 /// Marker type for owned reports with unique ownership.
 ///
 /// This marker is used exclusively with [`Report<C, Mutable,
-/// T>`](crate::Report) (not [`ReportRef`](crate::ReportRef)). It indicates that
+/// T>`](crate::Report) (not [`ReportRef`]). It indicates that
 /// the report has unique ownership of its data, which allows mutation
 /// operations but prevents cloning.
 ///

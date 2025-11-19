@@ -65,6 +65,10 @@ mod limit_field_access {
     /// assert_eq!(report_ref.children().len(), 0);
     /// ```
     ///
+    /// [`Report`]: crate::Report
+    /// [`Cloneable`]: crate::markers::Cloneable
+    /// [`Uncloneable`]: crate::markers::Uncloneable
+    /// [`Mutable`]: crate::markers::Mutable
     /// [`clone_arc`]: ReportRef::clone_arc
     #[repr(transparent)]
     pub struct ReportRef<'a, Context = dyn Any, Ownership = Cloneable, ThreadSafety = SendSync>

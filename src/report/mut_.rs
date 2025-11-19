@@ -61,6 +61,13 @@ mod limit_field_access {
     ///
     /// println!("{}", report);
     /// ```
+    ///
+    /// [`Report`]: crate::Report
+    /// [`Report::context`]: crate::Report::context
+    /// [`Report::attach`]: crate::Report::attach
+    /// [`ReportRef`]: crate::ReportRef
+    /// [`SendSync`]: crate::markers::SendSync
+    /// [`Local`]: crate::markers::Local
     #[repr(transparent)]
     pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
     where

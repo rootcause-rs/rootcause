@@ -449,6 +449,8 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     /// 1. The inner attachment is actually of type `A`. This can be verified by
     ///    calling [`inner_type_id()`] first.
     ///
+    /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
+    ///
     /// # Examples
     /// ```
     /// # use core::any::Any;

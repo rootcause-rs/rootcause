@@ -33,6 +33,9 @@ mod limit_field_access {
     ///   concrete type, or `dyn Any`.
     /// - `ThreadSafety`: The thread safety marker for the attachment. This can
     ///   either be [`SendSync`] or [`Local`].
+    ///
+    /// [`SendSync`]: crate::markers::SendSync
+    /// [`Local`]: crate::markers::Local
     #[repr(transparent)]
     pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
     where

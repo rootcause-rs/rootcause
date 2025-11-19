@@ -34,6 +34,7 @@ mod limit_field_access {
     /// }
     /// ```
     ///
+    /// [`ReportRef`]: crate::ReportRef
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     #[must_use]
     pub struct ReportCollectionIter<
@@ -226,6 +227,8 @@ mod limit_field_access2 {
     /// }
     /// ```
     ///
+    /// [`Report`]: crate::Report
+    /// [`ReportCollectionIter`]: crate::report_collection::ReportCollectionIter
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     #[must_use]
     pub struct ReportCollectionIntoIter<Context = dyn Any, ThreadSafety = SendSync>
