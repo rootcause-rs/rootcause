@@ -18,7 +18,7 @@ use crate::{
 mod limit_field_access {
     use core::{any::Any, marker::PhantomData};
 
-    use rootcause_internals::RawReportRef;
+    use rootcause_internals::{RawReport, RawReportRef};
 
     use crate::markers::{self, Cloneable, SendSync};
 
@@ -137,6 +137,49 @@ mod limit_field_access {
                 _ownership: PhantomData,
                 _thread_safety: PhantomData,
             }
+        }
+
+        /// Creates a slice of [`ReportRef`] from a slice of [`RawReport`].
+        ///
+        /// # Safety
+        ///
+        /// The caller must ensure:
+        ///
+        /// 1. If `C` is a concrete type: The contexts embedded in all of the
+        ///    [`RawReport`]s in the slice are of type `C`
+        /// 2. If `O = Cloneable`: All other references to these reports are
+        ///    compatible with shared ownership. Specifically there are no
+        ///    references with an assumption that the strong_count is `1`.
+        /// 3. All references to any sub-reports of these reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
+        /// 4. If `T = SendSync`: All contexts and attachments in these reports and
+        ///    all sub-reports must be `Send+Sync`
+        pub(crate) unsafe fn from_raw_slice(raw: &'a [RawReport]) -> &'a [ReportRef<'a, C, O, T>] {
+            let len = raw.len();
+            let raw_ptr: *const RawReport = raw.as_ptr();
+
+            // SAFETY: We must uphold the safety invariants of the raw field for
+            // all reports in the slice:
+            // 1. Guaranteed by our caller
+            // 2. Guaranteed by our caller
+            // 3. Guaranteed by our caller
+            // 4. Guaranteed by our caller
+            let report_ref_ptr = raw_ptr.cast::<ReportRef<'a, C, O, T>>();
+
+            // SAFETY:
+            // 1. The pointer is valid and properly aligned because it points to the
+            //    first element of a valid slice of `RawReport`s
+            // 2. The length is correct because we obtained it from the original slice
+            //    of `RawReport`s
+            // 3. Each `ReportRef` is `repr(transparent)` over `RawReportRef`, which is
+            //    repr(transparent) over the same underlying pointer as `RawReport`, so the
+            //    alignment and validity are preserved
+            // 4. We are not creating mutable references, so there are no aliasing issues
+            //    to consider
+            // 5. The safety invariants for each `ReportRef` are upheld as guaranteed by
+            //    our caller
+            unsafe { core::slice::from_raw_parts(report_ref_ptr, len) }
         }
 
         /// Returns the underlying raw report reference.

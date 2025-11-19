@@ -125,9 +125,7 @@ mod limit_field_access {
         pub(crate) fn as_raw(&self) -> &Vec<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. This remains true for the duration of the reference
-            let raw = &self.raw;
-
-            raw
+            &self.raw
         }
 
         /// Provides mutable access to the inner raw attachments vector
@@ -142,9 +140,7 @@ mod limit_field_access {
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
-            let raw = &mut self.raw;
-
-            raw
+            &mut self.raw
         }
     }
 }
@@ -336,7 +332,6 @@ where
     /// ```
     ///
     /// [`into_iter()`]: Self::into_iter
-    #[must_use]
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
         ReportAttachmentsIter::from_raw(self.as_raw().iter())
     }

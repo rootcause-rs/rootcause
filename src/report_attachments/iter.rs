@@ -152,9 +152,7 @@ mod limit_field_access {
         pub(crate) fn as_raw(&self) -> &alloc::vec::IntoIter<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. No mutation is possible through this reference
-            let raw = &self.raw;
-
-            raw
+            &self.raw
         }
 
         /// Provides mutable access to the inner raw iterator
@@ -168,9 +166,7 @@ mod limit_field_access {
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
-            let raw = &mut self.raw;
-
-            raw
+            &mut self.raw
         }
     }
 }

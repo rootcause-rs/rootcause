@@ -76,7 +76,6 @@ mod limit_field_access {
         ///    an assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
-        #[must_use]
         pub(crate) unsafe fn from_raw(raw: &'a [RawReport]) -> Self {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
@@ -90,15 +89,12 @@ mod limit_field_access {
         }
 
         /// Returns a reference to the underlying raw report iterator
-        #[must_use]
         pub(crate) fn as_raw(&self) -> &core::slice::Iter<'a, RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. No mutation occurs here, so the invariants are preserved
             // 2. Upheld, as all references created here are compatible
             // 3. No mutation occurs here, so the invariants are preserved
-            let raw = &self.raw;
-
-            raw
+            &self.raw
         }
 
         /// Returns a mutable reference to the underlying raw report iterator
@@ -114,15 +110,12 @@ mod limit_field_access {
         /// 3. If `T = SendSync`: No mutation is performed that invalidate the
         ///    invariant that all inner contexts and attachments are `Send +
         ///    Sync`.
-        #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut core::slice::Iter<'a, RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Upheld, as all references created here are compatible
             // 3. Guaranteed by the caller
-            let raw = &mut self.raw;
-
-            raw
+            &mut self.raw
         }
     }
 }
@@ -276,7 +269,6 @@ mod limit_field_access2 {
         ///    assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
-        #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
@@ -290,7 +282,6 @@ mod limit_field_access2 {
         }
 
         /// Returns a reference to the underlying raw report iterator
-        #[must_use]
         pub(crate) fn as_raw(&self) -> &alloc::vec::IntoIter<RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. No mutation occurs here, so the invariants are preserved
@@ -299,9 +290,7 @@ mod limit_field_access2 {
             // 4. Upheld, as it is not possible to turn this into a `Report`, `ReportMut` or
             //    `ReportRef` with `T=SendSync`, as that would break the safety invariants
             //    of those types.
-            let raw = &self.raw;
-
-            raw
+            &self.raw
         }
 
         /// Returns a mutable reference to the underlying raw report iterator
@@ -324,9 +313,7 @@ mod limit_field_access2 {
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
-            let raw = &mut self.raw;
-
-            raw
+            &mut self.raw
         }
     }
 }

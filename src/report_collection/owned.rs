@@ -5,7 +5,7 @@ use rootcause_internals::handlers::{ContextHandler, FormattingFunction};
 
 use crate::{
     Report, ReportRef, handlers,
-    markers::{self, Cloneable, Local, Mutable, SendSync},
+    markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
     report_attachments::ReportAttachments,
     report_collection::{ReportCollectionIntoIter, ReportCollectionIter},
 };
@@ -151,9 +151,7 @@ mod limit_field_access {
             // 1. Upheld, as we are not allowing mutation
             // 2. Upheld, as we are not creating any such references
             // 3. Upheld, as we are not allowing mutation
-            let raw = &self.raw;
-
-            raw
+            &self.raw
         }
 
         /// Provides mutable access to the inner raw reports vector
@@ -175,9 +173,7 @@ mod limit_field_access {
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
-            let raw = &mut self.raw;
-
-            raw
+            &mut self.raw
         }
     }
 }
@@ -537,7 +533,7 @@ where
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. If we currently have `T=SendSend`:
+        // 3. `T=Local`, so this is trivially true.
         unsafe { ReportCollection::<C, Local>::from_raw(raw) }
     }
 
@@ -546,7 +542,12 @@ where
     #[must_use]
     pub fn as_local(&self) -> &ReportCollection<C, Local> {
         let raw = self.as_raw();
-        unsafe { ReportCollection::from_raw_ref(raw) }
+
+        // SAFETY:
+        // 1. The invariants of the collection guarantee this.
+        // 2. The invariants of the collection guarantee this.
+        // 3. `T=Local`, so this is trivially true.
+        unsafe { ReportCollection::<C, Local>::from_raw_ref(raw) }
     }
 
     /// Creates a new [`Report`] with the given context and sets the current
@@ -783,12 +784,16 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    fn fmt<'a>(&'a self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let len = self.as_raw().len();
-        let raw_ptr = self.as_raw().as_ptr();
-        let raw_ptr =
-            raw_ptr.cast::<ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>>();
-        let slice = unsafe { core::slice::from_raw_parts(raw_ptr, len) };
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let raw = self.as_raw();
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. Guaranteed by the invariants of the collection.
+        // 4. `T=Local`, so this is trivially true.
+        let slice = unsafe { ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw) };
+
         crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Display)
     }
 }
@@ -798,12 +803,16 @@ where
     C: markers::ObjectMarker + ?Sized,
     T: markers::ThreadSafetyMarker,
 {
-    fn fmt<'a>(&'a self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        let len = self.as_raw().len();
-        let raw_ptr = self.as_raw().as_ptr();
-        let raw_ptr =
-            raw_ptr.cast::<ReportRef<'_, dyn Any, markers::Uncloneable, markers::Local>>();
-        let slice = unsafe { core::slice::from_raw_parts(raw_ptr, len) };
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let raw = self.as_raw();
+
+        // SAFETY:
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. Guaranteed by the invariants of the collection.
+        // 4. `T=Local`, so this is trivially true.
+        let slice = unsafe { ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw) };
+
         crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Debug)
     }
 }
@@ -868,6 +877,7 @@ where
 // SAFETY: The `SendSync` marker guarantees that all reports are `Send + Sync`
 // so the collection can safely implement `Send` and `Sync`.
 unsafe impl<C> Send for ReportCollection<C, SendSync> where C: markers::ObjectMarker + ?Sized {}
+
 // SAFETY: The `SendSync` marker guarantees that all reports are `Send + Sync`
 // so the collection can safely implement `Send` and `Sync`.
 unsafe impl<C> Sync for ReportCollection<C, SendSync> where C: markers::ObjectMarker + ?Sized {}
@@ -881,7 +891,13 @@ where
     type Item = Report<C, Cloneable, T>;
 
     fn into_iter(self) -> Self::IntoIter {
-        unsafe { ReportCollectionIntoIter::from_raw(self.into_raw()) }
+        let raw = self.into_raw();
+
+        // SAFETY:
+        // 1. Guaranteed by the invariants of the collection.
+        // 2. Guaranteed by the invariants of the collection.
+        // 3. Guaranteed by the invariants of the collection.
+        unsafe { ReportCollectionIntoIter::<C, T>::from_raw(raw) }
     }
 }
 
