@@ -58,7 +58,7 @@ pub(crate) struct ReportVtable {
     source: unsafe fn(RawReportRef<'_>) -> Option<&(dyn core::error::Error + 'static)>,
     /// Formats the report using the `display` method on the handler.
     display: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Formats the report using the `debug method on the handler.
+    /// Formats the report using the `debug` method on the handler.
     debug: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     /// Get the formatting style preferred by the context when formatted as part
     /// of a report.
@@ -186,8 +186,7 @@ impl ReportVtable {
     ///
     /// 1. The context type `C` used when creating this [`ReportVtable`] must
     ///    match the type of the `C` stored in the [`ReportData`] pointed to by
-    ///    the
-    /// [`RawReportRef`].
+    ///    the [`RawReportRef`].
     ///
     /// [`H::source`]: ContextHandler::source
     #[inline]
@@ -312,8 +311,7 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
     core::mem::drop(arc);
 }
 
-/// Gets the clones the [`triomphe::Arc<ReportData<C>>`] pointed to by
-/// this pointer.
+/// Clones the [`triomphe::Arc<ReportData<C>>`] pointed to by this pointer.
 ///
 /// # Safety
 ///
@@ -476,7 +474,7 @@ mod tests {
         // SAFETY: There are no assumptions about single ownership
         let cloned_report = unsafe { report.as_ref().clone_arc() };
 
-        // Both reports should be the same after
+        // Both reports should point to the same underlying data
         assert!(core::ptr::eq(
             report.as_ref().as_ptr(),
             cloned_report.as_ref().as_ptr()
