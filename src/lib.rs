@@ -37,7 +37,7 @@
 //! ## Quick Example
 //!
 //! ```rust
-//! use rootcause::{Report, result_ext::ResultExt};
+//! use rootcause::prelude::{Report, ResultExt};
 //!
 //! fn read_config(path: &str) -> Result<String, Report> {
 //!     std::fs::read_to_string(path).context("Failed to read configuration file")?;
