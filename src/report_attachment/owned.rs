@@ -166,7 +166,10 @@ where
         // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then the bound
         //    `A: ObjectMarkerFor<SendSync>` guarantees that the attachment is
         //    `Send+Sync`.
-        unsafe { ReportAttachment::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: markers::ObjectMarkerFor
+            ReportAttachment::from_raw(raw)
+        }
     }
 
     /// Changes the inner attachment type of the [`ReportAttachment`] to [`dyn

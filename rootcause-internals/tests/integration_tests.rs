@@ -968,15 +968,10 @@ fn test_context_downcast() {
     let error_ref = error_report.as_ref();
 
     // Test successful downcast
-    let downcast_result = error_ref.context_downcast::<TestError>();
-    assert!(downcast_result.is_some());
-    let downcast_error = downcast_result.unwrap();
+    assert_eq!(error_ref.context_type_id(), TypeId::of::<TestError>());
+    let downcast_error = unsafe { error_ref.context_downcast_unchecked::<TestError>() };
     assert_eq!(downcast_error.message, "test context downcast");
     assert!(downcast_error.source.is_none());
-
-    // Test failed downcast (wrong type)
-    let failed_downcast = error_ref.context_downcast::<String>();
-    assert!(failed_downcast.is_none());
 
     // Test with different context types
     let string_context = "string context".to_owned();
@@ -990,17 +985,16 @@ fn test_context_downcast() {
     let number_ref = number_report.as_ref();
 
     // Test correct downcasts
+    assert_eq!(string_ref.context_type_id(), TypeId::of::<String>());
     assert_eq!(
-        string_ref.context_downcast::<String>().unwrap(),
+        unsafe { string_ref.context_downcast_unchecked::<String>() },
         "string context"
     );
-    assert_eq!(number_ref.context_downcast::<i32>().unwrap(), &42);
-
-    // Test cross-type failed downcasts
-    assert!(string_ref.context_downcast::<i32>().is_none());
-    assert!(number_ref.context_downcast::<String>().is_none());
-    assert!(string_ref.context_downcast::<TestError>().is_none());
-    assert!(number_ref.context_downcast::<TestError>().is_none());
+    assert_eq!(number_ref.context_type_id(), TypeId::of::<i32>());
+    assert_eq!(
+        unsafe { number_ref.context_downcast_unchecked::<i32>() },
+        &42
+    );
 
     // Test with custom context type
     let simple_context = SimpleStringContext("simple context".to_owned());
@@ -1008,9 +1002,12 @@ fn test_context_downcast() {
         RawReport::new::<_, DefaultContextHandler>(simple_context, Vec::new(), Vec::new());
     let simple_ref = simple_report.as_ref();
 
-    let downcast_simple = simple_ref.context_downcast::<SimpleStringContext>();
-    assert!(downcast_simple.is_some());
-    assert_eq!(downcast_simple.unwrap().0, "simple context");
+    assert_eq!(
+        simple_ref.context_type_id(),
+        TypeId::of::<SimpleStringContext>()
+    );
+    let downcast_simple = unsafe { simple_ref.context_downcast_unchecked::<SimpleStringContext>() };
+    assert_eq!(downcast_simple.0, "simple context");
 
     // Test hierarchical context downcast
     let child_error = TestError::new("child context");
@@ -1025,8 +1022,11 @@ fn test_context_downcast() {
     let child_ref = parent_ref.children()[0].as_ref();
 
     // Both should downcast correctly
-    let parent_downcast = parent_ref.context_downcast::<TestError>().unwrap();
-    let child_downcast = child_ref.context_downcast::<TestError>().unwrap();
+    assert_eq!(parent_ref.context_type_id(), TypeId::of::<TestError>());
+    let parent_downcast = unsafe { parent_ref.context_downcast_unchecked::<TestError>() };
+
+    assert_eq!(child_ref.context_type_id(), TypeId::of::<TestError>());
+    let child_downcast = unsafe { child_ref.context_downcast_unchecked::<TestError>() };
 
     assert_eq!(parent_downcast.message, "parent context");
     assert_eq!(child_downcast.message, "child context");
@@ -1038,7 +1038,8 @@ fn test_context_downcast() {
         RawReport::new::<_, DefaultContextHandler>(main_error, Vec::new(), Vec::new());
     let source_ref = source_report.as_ref();
 
-    let downcast_with_source = source_ref.context_downcast::<TestError>().unwrap();
+    assert_eq!(source_ref.context_type_id(), TypeId::of::<TestError>());
+    let downcast_with_source = unsafe { source_ref.context_downcast_unchecked::<TestError>() };
     assert_eq!(downcast_with_source.message, "main with source");
     assert!(downcast_with_source.source.is_some());
     assert_eq!(
@@ -2512,15 +2513,17 @@ fn test_raw_report_mut_type_safety_and_downcasting() {
     );
 
     // Test context downcast
-    assert_eq!(int_ref.context_downcast::<i32>().unwrap(), &42);
+    assert_eq!(int_ref.context_type_id(), core::any::TypeId::of::<i32>());
+    assert_eq!(unsafe { int_ref.context_downcast_unchecked::<i32>() }, &42);
+
     assert_eq!(
-        string_ref.context_downcast::<String>().unwrap(),
+        string_ref.context_type_id(),
+        core::any::TypeId::of::<String>()
+    );
+    assert_eq!(
+        unsafe { string_ref.context_downcast_unchecked::<String>() },
         "test string"
     );
-
-    // Cross-type downcasting should fail
-    assert!(int_ref.context_downcast::<String>().is_none());
-    assert!(string_ref.context_downcast::<i32>().is_none());
 
     // Test children context types
     let int_child = int_ref.children()[0].as_ref();
@@ -2532,9 +2535,12 @@ fn test_raw_report_mut_type_safety_and_downcasting() {
         core::any::TypeId::of::<String>()
     );
 
-    assert_eq!(int_child.context_downcast::<i32>().unwrap(), &100);
     assert_eq!(
-        string_child.context_downcast::<String>().unwrap(),
+        unsafe { int_child.context_downcast_unchecked::<i32>() },
+        &100
+    );
+    assert_eq!(
+        unsafe { string_child.context_downcast_unchecked::<String>() },
         "child string"
     );
 
@@ -2780,18 +2786,27 @@ fn test_raw_report_mut_context_downcast_unchecked() {
 
     // Verify modifications were applied correctly
     let error_ref = test_error_report.as_ref();
-    let modified_error = error_ref.context_downcast::<TestError>().unwrap();
+    assert_eq!(
+        error_ref.context_type_id(),
+        core::any::TypeId::of::<TestError>()
+    );
+    let modified_error = unsafe { error_ref.context_downcast_unchecked::<TestError>() };
     assert_eq!(modified_error.message, "modified error message");
     assert!(modified_error.source.is_some());
     let nested_error = modified_error.source.as_ref().unwrap();
     assert_eq!(format!("{nested_error}"), "nested error");
 
     let string_ref = string_report.as_ref();
-    let modified_string = string_ref.context_downcast::<String>().unwrap();
+    assert_eq!(
+        string_ref.context_type_id(),
+        core::any::TypeId::of::<String>()
+    );
+    let modified_string = unsafe { string_ref.context_downcast_unchecked::<String>() };
     assert_eq!(modified_string, "modified string");
 
     let number_ref = number_report.as_ref();
-    let modified_number = number_ref.context_downcast::<i32>().unwrap();
+    assert_eq!(number_ref.context_type_id(), core::any::TypeId::of::<i32>());
+    let modified_number = unsafe { number_ref.context_downcast_unchecked::<i32>() };
     assert_eq!(*modified_number, 42);
 
     // Test that display still works correctly after modifications

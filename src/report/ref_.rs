@@ -786,7 +786,10 @@ where
 
         // SAFETY:
         // 1. This is guaranteed by the caller.
-        unsafe { raw.context_downcast_unchecked() }
+        unsafe {
+            // @add-unsafe-context: markers::ObjectMarker
+            raw.context_downcast_unchecked()
+        }
     }
 
     /// Attempts to downcast the report to a specific context type.

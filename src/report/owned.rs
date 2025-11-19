@@ -229,8 +229,10 @@ where
     #[must_use]
     pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
         // SAFETY:
-        // 1. If `T=Local`, this is trivially true. If `T = SendSync`, then this is
-        //    guaranteed by the `ReportMut` we are creating.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
+        //    we are not allowed to mutate the returned raw report in a way that
+        //    adds non-`Send+Sync` objects. However the invariants of the created
+        //    `ReportMut` guarantee that no such mutation can occur.
         let raw = unsafe { self.as_raw_mut() };
 
         // SAFETY:
@@ -383,6 +385,7 @@ where
         unsafe {
             // @add-unsafe-context: ReportCollection
             // @add-unsafe-context: ReportAttachments
+            // @add-unsafe-context: markers::ObjectMarkerFor
             Report::<C, Mutable, T>::from_raw(raw)
         }
     }
@@ -875,7 +878,10 @@ where
         //    invariants of this type guarantee that all references are compatible.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
-        unsafe { ReportRef::<C, O::RefMarker, T>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: markers::ReportOwnershipMarker
+            ReportRef::<C, O::RefMarker, T>::from_raw(raw)
+        }
     }
 
     /// Returns an iterator over the complete report hierarchy including this

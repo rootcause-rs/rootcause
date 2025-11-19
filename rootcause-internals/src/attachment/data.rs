@@ -65,9 +65,8 @@ impl<'a> RawAttachmentRef<'a> {
     /// Returns a reference to the [`AttachmentVtable`] of the
     /// [`AttachmentData`] instance.
     ///
-    /// This is guaranteed to be valid for the actual attachment type
-    /// stored in the `AttachmentData`, even when accessed via
-    /// type-erased pointers.
+    /// The returned vtable is guaranteed to be a vtable for the
+    /// attachment type stored in the [`AttachmentData`].
     #[inline]
     pub(super) fn vtable(self) -> &'static AttachmentVtable {
         let ptr = self.as_ptr();

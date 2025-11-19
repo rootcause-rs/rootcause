@@ -481,7 +481,10 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn from(attachments: Vec<ReportAttachment<A, T>>) -> Self {
-        let raw_attachments = attachments.into_iter().map(|v| v.into_raw()).collect();
+        let raw_attachments = attachments
+            .into_iter()
+            .map(|v: ReportAttachment<A, T>| v.into_raw())
+            .collect();
 
         // SAFETY:
         // 1. If `T=Local`: This is trivially true. If `T=SendSync`: This is upheld by
@@ -496,7 +499,10 @@ where
     T: markers::ThreadSafetyMarker,
 {
     fn from(attachments: [ReportAttachment<A, T>; N]) -> Self {
-        let raw_attachments = attachments.into_iter().map(|v| v.into_raw()).collect();
+        let raw_attachments = attachments
+            .into_iter()
+            .map(|v: ReportAttachment<A, T>| v.into_raw())
+            .collect();
 
         // SAFETY:
         // 1. If `T=Local`: This is trivially true. If `T=SendSync`: This is upheld by

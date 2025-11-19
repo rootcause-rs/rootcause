@@ -507,7 +507,10 @@ pub(crate) fn display_context(
         hook.display_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
         // SAFETY:
-        // 1. This is guaranteed by `get_hook`.
+        // 1. The call to `get_hook` guarantees that the returned hook
+        //    is of type `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+        //    Therefore the type `C` stored in the context matches the `C` from
+        //    type `Hook<C, H>`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
@@ -529,7 +532,10 @@ pub(crate) fn debug_context(
         hook.debug_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
         // SAFETY:
-        // 1. This is guaranteed by `get_hook`.
+        // 1. The call to `get_hook` guarantees that the returned hook
+        //    is of type `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+        //    Therefore the type `C` stored in the context matches the `C` from
+        //    type `Hook<C, H>`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook

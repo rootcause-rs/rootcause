@@ -49,7 +49,7 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to this report or any sub-reports are compatible
+        /// 2. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
@@ -72,7 +72,7 @@ mod limit_field_access {
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to this report or any sub-reports are compatible
+        /// 2. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
@@ -243,9 +243,9 @@ mod limit_field_access2 {
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All other references to this report are compatible with shared
-        ///    ownership. Specifically there are no references with an
-        ///    assumption that the strong_count is `1`.
+        /// 2. All references to these report or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         raw: alloc::vec::IntoIter<RawReport>,
@@ -267,9 +267,9 @@ mod limit_field_access2 {
         ///
         /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All other references to this report are compatible with shared
-        ///    ownership. Specifically there are no references with an
-        ///    assumption that the strong_count is `1`.
+        /// 2. All references to these report or any sub-reports are compatible
+        ///    with shared ownership. Specifically there are no references with
+        ///    an assumption that the strong_count is `1`.
         /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {

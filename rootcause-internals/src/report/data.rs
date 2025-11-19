@@ -118,6 +118,9 @@ impl RawReport {
 impl<'a> RawReportRef<'a> {
     /// Returns a reference to the [`ReportVtable`] of the [`ReportData`]
     /// instance.
+    ///
+    /// The returned vtable is guaranteed to be a vtable for the
+    /// context type stored in the [`ReportData`].
     #[inline]
     pub(super) fn vtable(self) -> &'static ReportVtable {
         let ptr = self.as_ptr();
@@ -128,7 +131,10 @@ impl<'a> RawReportRef<'a> {
         //    consistent offset regardless of the type parameter `C`
         // 3. We avoid creating a reference to the full `ReportData` struct, which
         //    would be UB since we don't know the correct type parameter
-        let vtable_ptr: *const &'static ReportVtable = unsafe { &raw const (*ptr).vtable };
+        let vtable_ptr: *const &'static ReportVtable = unsafe {
+            // @add-unsafe-context: ReportData
+            &raw const (*ptr).vtable
+        };
 
         // SAFETY: The safety requirements for dereferencing `vtable_ptr` are upheld:
         // 1. The pointer is valid and properly aligned because it points to the first
@@ -165,6 +171,7 @@ impl<'a> RawReportRef<'a> {
     #[inline]
     pub fn attachments(self) -> &'a Vec<RawAttachment> {
         let ptr = self.as_ptr();
+
         // SAFETY: The safety requirements for `&raw const (*ptr).attachments` are upheld:
         // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
         //    guaranteed by `RawReportRef`'s invariants
@@ -215,15 +222,17 @@ impl<'a> RawReportMut<'a> {
     pub unsafe fn into_children_mut(self) -> &'a mut Vec<RawReport> {
         let ptr = self.into_mut_ptr();
 
-        // SAFETY: We don't know the actual inner context type, but we do know
-        // that it points to an instance of `ReportData<C>` for some specific `C`.
-        // Since `ReportData<C>` is `#[repr(C)]`, that means we can access
-        // the fields before the actual context.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `ReportData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
-        let children_ptr: *mut Vec<RawReport> = unsafe { &raw mut (*ptr).children };
+        // SAFETY: The safety requirements for `&raw const (*ptr).children` are upheld:
+        // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
+        //    guaranteed by `RawReportRef`'s invariants
+        // 2. `ReportData<C>` is `#[repr(C)]`, so the `children` field is at a
+        //    consistent offset regardless of the type parameter `C`
+        // 3. We avoid creating a reference to the full `ReportData` struct, which
+        //    would be UB since we don't know the correct type parameter
+        let children_ptr: *mut Vec<RawReport> = unsafe {
+            // @add-unsafe-context: ReportData
+            &raw mut (*ptr).children
+        };
 
         // SAFETY: We turn the `*mut` pointer into a `&'a mut` reference. This is valid
         // because the existence of the `RawReportMut<'a>` already implied that
@@ -244,15 +253,17 @@ impl<'a> RawReportMut<'a> {
     pub unsafe fn into_attachments_mut(self) -> &'a mut Vec<RawAttachment> {
         let ptr = self.into_mut_ptr();
 
-        // SAFETY: We don't know the actual inner context type, but we do know
-        // that it points to an instance of `ReportData<C>` for some specific `C`.
-        // Since `ReportData<C>` is `#[repr(C)]`, that means we can access
-        // the fields before the actual context.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `ReportData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
-        let attachments_ptr: *mut Vec<RawAttachment> = unsafe { &raw mut (*ptr).attachments };
+        // SAFETY: The safety requirements for `&raw const (*ptr).attachments` are upheld:
+        // 1. `ptr` is a valid pointer to a live `ReportData<C>` (for some `C`) as
+        //    guaranteed by `RawReportRef`'s invariants
+        // 2. `ReportData<C>` is `#[repr(C)]`, so the `attachments` field is at a
+        //    consistent offset regardless of the type parameter `C`
+        // 3. We avoid creating a reference to the full `ReportData` struct, which
+        //    would be UB since we don't know the correct type parameter
+        let attachments_ptr: *mut Vec<RawAttachment> = unsafe {
+            // @add-unsafe-context: ReportData
+            &raw mut (*ptr).attachments
+        };
 
         // SAFETY: We turn the `*mut` pointer into a `&'a mut` reference. This is valid
         // because the existence of the `RawReportMut<'a>` already implied that

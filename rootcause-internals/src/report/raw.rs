@@ -55,9 +55,15 @@ use crate::{
 pub struct RawReport {
     /// Pointer to the inner report data
     ///
-    /// # Safety Invariants
+    /// # Safety
     ///
-    /// 1. The ptr always comes from a call to [`triomphe::Arc::into_raw`]
+    /// The following safety invariants must be upheld as long as this
+    /// struct exists:
+    ///
+    /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
+    ///    for some `C` using `triomphe::Arc::into_raw`.
+    /// 2. The pointer will point to the same `ReportData<C>` for the entire
+    ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
 }
 
@@ -68,7 +74,8 @@ impl RawReport {
         let ptr: *const ReportData<C> = triomphe::Arc::into_raw(data);
         let ptr: *mut ReportData<Erased> = ptr.cast::<ReportData<Erased>>().cast_mut();
 
-        // SAFETY: Triomphe guarantees that `Arc::into_raw` returns a non-null pointer
+        // SAFETY:
+        // 1. Triomphe guarantees that `Arc::into_raw` returns a non-null pointer.
         let ptr: NonNull<ReportData<Erased>> = unsafe { NonNull::new_unchecked(ptr) };
 
         Self { ptr }
@@ -85,6 +92,9 @@ impl RawReport {
 
     /// Creates a new [`RawReport`] with the specified handler, context,
     /// children, and attachments.
+    ///
+    /// The created report will have the supplied context type and handler type.
+    /// It will also have a strong count of 1.
     #[inline]
     pub fn new<C, H>(context: C, children: Vec<RawReport>, attachments: Vec<RawAttachment>) -> Self
     where
@@ -129,8 +139,8 @@ impl core::ops::Drop for RawReport {
 
         // SAFETY:
         // 1. The pointer comes from `Arc::into_raw` (guaranteed by `RawReport::new`)
-        // 2. The `C` type matches (vtable and data created together in
-        //    `ReportData::new`)
+        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        //    `ReportData`.
         // 3. The pointer is not used after this call (we're in the drop function)
         unsafe {
             vtable.drop(self.ptr);
@@ -150,7 +160,18 @@ impl core::ops::Drop for RawReport {
 #[repr(transparent)]
 pub struct RawReportRef<'a> {
     /// Pointer to the inner report data
+    ///
+    /// # Safety
+    ///
+    /// The following safety invariants must be upheld as long as this
+    /// struct exists:
+    ///
+    /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
+    ///    for some `C` using `triomphe::Arc::into_raw`.
+    /// 2. The pointer will point to the same `ReportData<C>` for the entire
+    ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
+
     /// Marker to tell the compiler that we should
     /// behave the same as a `&'a ReportData<Erased>`
     _marker: core::marker::PhantomData<&'a ReportData<Erased>>,
@@ -171,13 +192,14 @@ impl<'a> RawReportRef<'a> {
         debug_assert_eq!(self.vtable().type_id(), TypeId::of::<C>());
 
         let this = self.ptr.cast::<ReportData<C>>();
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
-        // safe because:
-        // - The pointer originated from Arc::into_raw in RawReport construction
-        // - The Arc provides valid pointer provenance and prevents premature
-        //   deallocation
-        // - Shared access through RawReportRef prevents aliasing violations
-        // - The lifetime 'a is tied to RawReportRef<'a>, preventing use-after-free
+        // SAFETY: Converting the NonNull pointer to a reference is sound because:
+        // - The pointer is non-null, properly aligned, and dereferenceable (guaranteed
+        //   by RawReportRef's type invariants)
+        // - The pointee is properly initialized (RawReportRef's doc comment guarantees
+        //   it points to an initialized ReportData<C> for some C)
+        // - The type `C` matches the actual context type (guaranteed by caller)
+        // - Shared access is allowed
+        // - The reference lifetime 'a is valid (tied to RawReportRef<'a>'s lifetime)
         unsafe { this.as_ref() }
     }
 
@@ -199,27 +221,14 @@ impl<'a> RawReportRef<'a> {
         self.vtable().handler_type_id()
     }
 
-    /// Checks if the type of the context matches the specified type and returns
-    /// a reference to it if it does.
-    #[inline]
-    pub fn context_downcast<C: 'static>(self) -> Option<&'a C> {
-        if self.context_type_id() == core::any::TypeId::of::<C>() {
-            // SAFETY:
-            // 1. Guaranteed by the caller
-            unsafe { Some(self.context_downcast_unchecked::<C>()) }
-        } else {
-            None
-        }
-    }
-
     /// Returns the source of the context using the [`ContextHandler::source`]
     /// method specified when the [`ReportData`] was created.
     #[inline]
     pub fn context_source(self) -> Option<&'a (dyn core::error::Error + 'static)> {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The `C` type matches because vtable and data are created together in
-        //    `ReportData::new`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        //    `ReportData`.
         unsafe { vtable.source(self) }
     }
 
@@ -229,8 +238,8 @@ impl<'a> RawReportRef<'a> {
     pub fn context_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The `C` type matches because vtable and data are created together in
-        //    `ReportData::new`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        //    `ReportData`.
         unsafe { vtable.display(self, formatter) }
     }
 
@@ -240,8 +249,8 @@ impl<'a> RawReportRef<'a> {
     pub fn context_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The `C` type matches because vtable and data are created together in
-        //    `ReportData::new`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        //    `ReportData`.
         unsafe { vtable.debug(self, formatter) }
     }
 
@@ -263,9 +272,12 @@ impl<'a> RawReportRef<'a> {
     ) -> ContextFormattingStyle {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The `C` type matches because vtable and data are created together in
-        //    `ReportData::new`.
-        unsafe { vtable.preferred_context_formatting_style(self, report_formatting_function) }
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        //    `ReportData`.
+        unsafe {
+            // @add-unsafe-context: ReportData
+            vtable.preferred_context_formatting_style(self, report_formatting_function)
+        }
     }
 
     /// Clones the inner [`triomphe::Arc`] and returns a new [`RawReport`]
@@ -286,7 +298,10 @@ impl<'a> RawReportRef<'a> {
         // 2. Guaranteed by the fact that `ReportData` can only be constructed by
         //    `ReportData::new`
         // 3. Guaranteed by the caller
-        unsafe { vtable.clone_arc(self.ptr) }
+        unsafe {
+            // @add-unsafe-context: ReportData
+            vtable.clone_arc(self.ptr)
+        }
     }
 
     /// Gets the strong_count of the inner [`triomphe::Arc`].
@@ -295,9 +310,12 @@ impl<'a> RawReportRef<'a> {
         let vtable = self.vtable();
         // SAFETY:
         // 1. Guaranteed by invariants on this type
-        // 2. Guaranteed by the fact that `ReportData` can only be constructed by
-        //    `ReportData::new`
-        unsafe { vtable.strong_count(self.ptr) }
+        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in the
+        //    `ReportData`.
+        unsafe {
+            // @add-unsafe-context: ReportData
+            vtable.strong_count(self.ptr)
+        }
     }
 }
 
@@ -312,7 +330,18 @@ impl<'a> RawReportRef<'a> {
 #[repr(transparent)]
 pub struct RawReportMut<'a> {
     /// Pointer to the inner report data
+    ///
+    /// # Safety
+    ///
+    /// The following safety invariants must be upheld as long as this
+    /// struct exists:
+    ///
+    /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
+    ///    for some `C` using `triomphe::Arc::into_raw`.
+    /// 2. The pointer will point to the same `ReportData<C>` for the entire
+    ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
+
     /// Marker to tell the compiler that we should
     /// behave the same as a `&'a mut ReportData<Erased>`
     _marker: core::marker::PhantomData<&'a mut ReportData<Erased>>,
@@ -334,13 +363,14 @@ impl<'a> RawReportMut<'a> {
 
         let mut this = self.ptr.cast::<ReportData<C>>();
 
-        // SAFETY: Our caller guarantees that we point to a ReportData<C>. The cast is
-        // safe because:
-        // - The pointer originated from Arc::into_raw in RawReport construction
-        // - The Arc provides valid pointer provenance and prevents premature
-        //   deallocation
-        // - Exclusive access through RawReportMut prevents aliasing violations
-        // - The lifetime 'a is tied to RawReportMut<'a>, preventing use-after-free
+        // SAFETY: Converting the NonNull pointer to a mutable reference is sound because:
+        // - The pointer is non-null, properly aligned, and dereferenceable (guaranteed
+        //   by RawReportMut's type invariants)
+        // - The pointee is properly initialized (RawReportMut's doc comment guarantees
+        //   it points to an initialized ReportData<C> for some C)
+        // - The type `C` matches the actual context type (guaranteed by caller)
+        // - Exclusive access is guaranteed
+        // - The reference lifetime 'a is valid (tied to RawReportMut<'a>'s lifetime)
         unsafe { this.as_mut() }
     }
 
@@ -544,13 +574,12 @@ mod tests {
         // The vtables should be different
         assert!(!core::ptr::eq(int_ref.vtable(), string_ref.vtable()));
 
-        // Cross-type downcasting should fail safely
-        assert!(int_ref.context_downcast::<String>().is_none());
-        assert!(string_ref.context_downcast::<i32>().is_none());
-
         // Correct downcasting should work
-        assert_eq!(int_ref.context_downcast::<i32>().unwrap(), &42);
-        assert_eq!(string_ref.context_downcast::<String>().unwrap(), "test");
+        assert_eq!(unsafe { int_ref.context_downcast_unchecked::<i32>() }, &42);
+        assert_eq!(
+            unsafe { string_ref.context_downcast_unchecked::<String>() },
+            "test"
+        );
     }
 
     #[test]
@@ -559,7 +588,11 @@ mod tests {
         let parent = RawReport::new::<i32, HandlerI32>(0, vec![child], vec![]);
 
         let parent_ref = parent.as_ref();
-        assert_eq!(parent_ref.context_downcast::<i32>().unwrap(), &0);
+        assert_eq!(parent_ref.context_type_id(), TypeId::of::<i32>());
+        assert_eq!(
+            unsafe { parent_ref.context_downcast_unchecked::<i32>() },
+            &0
+        );
 
         // Parent should have one child
         let children = parent_ref.children();
@@ -569,7 +602,7 @@ mod tests {
         let child_ref = children[0].as_ref();
         assert_eq!(child_ref.context_type_id(), TypeId::of::<i32>());
         assert_eq!(child_ref.children().len(), 0);
-        assert_eq!(child_ref.context_downcast::<i32>().unwrap(), &1);
+        assert_eq!(unsafe { child_ref.context_downcast_unchecked::<i32>() }, &1);
 
         // Both should have same vtable (same type)
         assert!(core::ptr::eq(parent_ref.vtable(), child_ref.vtable()));
@@ -602,7 +635,11 @@ mod tests {
         let parent = RawReport::new::<i32, HandlerI32>(0, vec![child], vec![attachment2]);
 
         let parent_ref = parent.as_ref();
-        assert_eq!(parent_ref.context_downcast::<i32>().unwrap(), &0);
+        assert_eq!(parent_ref.context_type_id(), TypeId::of::<i32>());
+        assert_eq!(
+            unsafe { parent_ref.context_downcast_unchecked::<i32>() },
+            &0
+        );
 
         // Parent should have one child and one attachment
         let children = parent_ref.children();
@@ -613,7 +650,7 @@ mod tests {
         // Child should be accessible safely and have one attachment
         let child_ref = children[0].as_ref();
         assert_eq!(child_ref.context_type_id(), TypeId::of::<i32>());
-        assert_eq!(child_ref.context_downcast::<i32>().unwrap(), &1);
+        assert_eq!(unsafe { child_ref.context_downcast_unchecked::<i32>() }, &1);
         assert_eq!(child_ref.children().len(), 0);
         assert_eq!(child_ref.attachments().len(), 1);
 
@@ -654,13 +691,19 @@ mod tests {
         // Test that we can get a reference from the mutable reference
         let report_ref = report_mut.as_ref();
         assert_eq!(report_ref.context_type_id(), TypeId::of::<i32>());
-        assert_eq!(report_ref.context_downcast::<i32>().unwrap(), &789);
+        assert_eq!(
+            unsafe { report_ref.context_downcast_unchecked::<i32>() },
+            &789
+        );
 
         // Test reborrow functionality
         let reborrowed = report_mut.reborrow();
         let ref_from_reborrow = reborrowed.as_ref();
         assert_eq!(ref_from_reborrow.context_type_id(), TypeId::of::<i32>());
-        assert_eq!(ref_from_reborrow.context_downcast::<i32>().unwrap(), &789);
+        assert_eq!(
+            unsafe { ref_from_reborrow.context_downcast_unchecked::<i32>() },
+            &789
+        );
 
         // Test into_mut_ptr
         let ptr = report_mut.into_mut_ptr();
@@ -679,12 +722,20 @@ mod tests {
         {
             let short_reborrow = report_mut.reborrow();
             let ref_from_short = short_reborrow.as_ref();
-            assert_eq!(ref_from_short.context_downcast::<String>().unwrap(), "test");
+            assert_eq!(ref_from_short.context_type_id(), TypeId::of::<String>());
+            assert_eq!(
+                unsafe { ref_from_short.context_downcast_unchecked::<String>() },
+                "test"
+            );
         }
 
         // Original mutable reference should still be usable
         let final_ref = report_mut.as_ref();
-        assert_eq!(final_ref.context_downcast::<String>().unwrap(), "test");
+        assert_eq!(final_ref.context_type_id(), TypeId::of::<String>());
+        assert_eq!(
+            unsafe { final_ref.context_downcast_unchecked::<String>() },
+            "test"
+        );
     }
 
     #[test]
@@ -696,14 +747,19 @@ mod tests {
         let mut parent_mut = unsafe { parent.as_mut() };
 
         let parent_ref = parent_mut.as_ref();
-        assert_eq!(parent_ref.context_downcast::<i32>().unwrap(), &0);
+        assert_eq!(parent_ref.context_type_id(), TypeId::of::<i32>());
+        assert_eq!(
+            unsafe { parent_ref.context_downcast_unchecked::<i32>() },
+            &0
+        );
 
         // Check that children are still accessible through the reference
         let children = parent_ref.children();
         assert_eq!(children.len(), 1);
 
         let child_ref = children[0].as_ref();
-        assert_eq!(child_ref.context_downcast::<i32>().unwrap(), &1);
+        assert_eq!(child_ref.context_type_id(), TypeId::of::<i32>());
+        assert_eq!(unsafe { child_ref.context_downcast_unchecked::<i32>() }, &1);
 
         // Test reborrow with children
         let reborrowed = parent_mut.reborrow();
@@ -711,10 +767,15 @@ mod tests {
         let reborrow_children = reborrow_ref.children();
         assert_eq!(reborrow_children.len(), 1);
         assert_eq!(
-            reborrow_children[0]
-                .as_ref()
-                .context_downcast::<i32>()
-                .unwrap(),
+            reborrow_children[0].as_ref().context_type_id(),
+            TypeId::of::<i32>()
+        );
+        assert_eq!(
+            unsafe {
+                reborrow_children[0]
+                    .as_ref()
+                    .context_downcast_unchecked::<i32>()
+            },
             &1
         );
     }

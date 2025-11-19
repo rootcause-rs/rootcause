@@ -630,7 +630,10 @@ pub(crate) fn display_attachment(
         hook.display_preformatted(attachment, attachment_parent, formatter)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
         // SAFETY:
-        // 1. This is guaranteed by `get_hook`.
+        // 1. The call to `get_hook` guarantees that the returned hook
+        //    is of type `Hook<A, H>`, and `TypeId::of<A>() == attachment.inner_type_id()`.
+        //    Therefore the type `A` stored in the attachment matches the `A` from
+        //    type `Hook<A, H>`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
@@ -653,7 +656,10 @@ pub(crate) fn debug_attachment(
         hook.debug_preformatted(attachment, attachment_parent, formatter)
     } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
         // SAFETY:
-        // 1. This is guaranteed by `get_hook`.
+        // 1. The call to `get_hook` guarantees that the returned hook
+        //    is of type `Hook<A, H>`, and `TypeId::of<A>() == attachment.inner_type_id()`.
+        //    Therefore the type `A` stored in the attachment matches the `A` from
+        //    type `Hook<A, H>`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook

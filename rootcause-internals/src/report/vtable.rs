@@ -108,8 +108,8 @@ impl ReportVtable {
     ///
     /// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned
     ///    into a pointer via [`triomphe::Arc::into_raw`]
-    /// 2. The context type `C` in the [`ReportData`] matches the `C` used when
-    ///    creating this [`ReportVtable`]
+    /// 2. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     /// 3. After calling this method, the pointer is no longer used
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<ReportData<Erased>>) {
@@ -133,8 +133,8 @@ impl ReportVtable {
     ///
     /// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned
     ///    into a pointer via [`triomphe::Arc::into_raw`]
-    /// 2. The context type `C` in the [`ReportData`] matches the `C` used when
-    ///    creating this [`ReportVtable`]
+    /// 2. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     /// 3. All other references to this report are compatible with shared
     ///    ownership. Specifically none of them assume that the strong_count is
     ///    `1`.
@@ -161,8 +161,8 @@ impl ReportVtable {
     ///
     /// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
     ///    [`triomphe::Arc::into_raw`]
-    /// 2. The context type `C` stored in the [`ReportData`] matches the `C`
-    ///    used when creating this [`ReportVtable`]
+    /// 2. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
@@ -184,9 +184,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The context type `C` used when creating this [`ReportVtable`] must
-    ///    match the type of the `C` stored in the [`ReportData`] pointed to by
-    ///    the [`RawReportRef`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     ///
     /// [`H::source`]: ContextHandler::source
     #[inline]
@@ -213,8 +212,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The context type `C` used when creating this [`ReportVtable`] must
-    ///    match the type stored in the [`ReportData`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn display(
         &self,
@@ -240,8 +239,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The context type `C` used when creating this [`ReportVtable`] must
-    ///    match the type stored in the [`ReportData`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn debug(
         &self,
@@ -268,8 +267,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The context type `C` used when creating this [`ReportVtable`] must
-    ///    match the type stored in the [`ReportData`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context
+    ///    type stored in the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn preferred_context_formatting_style(
         &self,
@@ -307,7 +306,10 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
     // 1. The pointer has the correct type and came from `Arc::into_raw` (guaranteed
     //    by caller)
     // 2. After `from_raw`, the pointer is consumed and not accessed again
-    let arc = unsafe { triomphe::Arc::from_raw(ptr) };
+    let arc = unsafe {
+        // @add-unsafe-context: ReportData
+        triomphe::Arc::from_raw(ptr)
+    };
     core::mem::drop(arc);
 }
 
@@ -329,7 +331,10 @@ unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
     // SAFETY: The pointer is valid and came from `Arc::into_raw` with the correct
     // type (guaranteed by the caller), which fulfills the requirements for
     // `ArcBorrow::from_ptr`.
-    let arc_borrow = unsafe { triomphe::ArcBorrow::from_ptr(ptr) };
+    let arc_borrow = unsafe {
+        // @add-unsafe-context: ReportData
+        triomphe::ArcBorrow::from_ptr(ptr)
+    };
 
     let arc = arc_borrow.clone_arc();
     RawReport::from_arc(arc)
@@ -352,7 +357,10 @@ unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
     // SAFETY: The pointer is valid and came from `Arc::into_raw` with the correct
     // type (guaranteed by the caller), which fulfills the requirements for
     // `ArcBorrow::from_ptr`.
-    let arc_borrow = unsafe { triomphe::ArcBorrow::from_ptr(ptr) };
+    let arc_borrow = unsafe {
+        // @add-unsafe-context: ReportData
+        triomphe::ArcBorrow::from_ptr(ptr)
+    };
 
     triomphe::ArcBorrow::strong_count(&arc_borrow)
 }
