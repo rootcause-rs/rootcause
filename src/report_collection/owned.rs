@@ -203,9 +203,12 @@ where
     pub fn new() -> Self {
         let reports = Vec::new();
         // SAFETY:
-        // 1. We just created the empty Vec, so the invariants are upheld for all reports in it.
-        // 2. We just created the empty Vec, so the invariants are upheld for all reports in it.
-        // 3. We just created the empty Vec, so the invariants are upheld for all reports in it.
+        // 1. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
+        // 2. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
+        // 3. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
         unsafe { Self::from_raw(reports) }
     }
 
@@ -229,9 +232,12 @@ where
     pub fn with_capacity(capacity: usize) -> Self {
         let reports = Vec::with_capacity(capacity);
         // SAFETY:
-        // 1. We just created the empty Vec, so the invariants are upheld for all reports in it.
-        // 2. We just created the empty Vec, so the invariants are upheld for all reports in it.
-        // 3. We just created the empty Vec, so the invariants are upheld for all reports in it.
+        // 1. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
+        // 2. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
+        // 3. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
         unsafe { Self::from_raw(reports) }
     }
 
@@ -336,9 +342,10 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report, report_collection::ReportCollection};
+    /// # use core::any::Any;
+    /// use rootcause::{markers::SendSync, report, report_collection::ReportCollection};
     ///
-    /// let mut collection = ReportCollection::with_capacity(5);
+    /// let collection = ReportCollection::<dyn Any, SendSync>::with_capacity(5);
     /// assert!(collection.capacity() <= 5);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -353,9 +360,10 @@ where
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report, report_collection::ReportCollection};
+    /// # use core::any::Any;
+    /// use rootcause::{markers::SendSync, report, report_collection::ReportCollection};
     ///
-    /// let mut collection = ReportCollection::new();
+    /// let mut collection = ReportCollection::<dyn Any, SendSync>::new();
     /// collection.reserve(10);
     /// assert!(collection.capacity() >= 10);
     /// ```

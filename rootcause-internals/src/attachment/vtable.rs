@@ -50,8 +50,8 @@ pub(crate) struct AttachmentVtable {
     display: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     /// Formats the attachment using the `debug` method on the handler.
     debug: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Get the formatting style preferred by the attachment when formatted as part
-    /// of a report.
+    /// Get the formatting style preferred by the attachment when formatted as
+    /// part of a report.
     preferred_formatting_style:
         unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
 }

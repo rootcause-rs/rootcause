@@ -846,7 +846,7 @@ where
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let mut dyn_report: Report = report.into_dyn_any();
-    /// let mut_report = dyn_report.as_mut();
+    /// let mut mut_report = dyn_report.as_mut();
     /// let context: Option<&mut MyError> = mut_report.downcast_current_context_mut();
     /// assert!(context.is_some());
     /// ```
@@ -915,7 +915,7 @@ where
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let mut dyn_report: Report = report.into_dyn_any();
-    /// let mut_report = dyn_report.as_mut();
+    /// let mut mut_report = dyn_report.as_mut();
     ///
     /// // Verify the type first
     /// if mut_report.current_context_type_id() == TypeId::of::<MyError>() {

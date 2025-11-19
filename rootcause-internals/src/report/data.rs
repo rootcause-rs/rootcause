@@ -46,9 +46,9 @@ pub(crate) struct ReportData<C: 'static> {
     /// The following safety invariants must be upheld as long as this
     /// struct exists:
     ///
-    /// 1. The vtable must always point to a `ReportVtable` created for
-    ///    the actual context type `C` stored below. This is true even
-    ///    when accessed via type-erased pointers.
+    /// 1. The vtable must always point to a `ReportVtable` created for the
+    ///    actual context type `C` stored below. This is true even when accessed
+    ///    via type-erased pointers.
     vtable: &'static ReportVtable,
     /// The children of this report
     children: Vec<RawReport>,

@@ -157,8 +157,8 @@ mod limit_field_access {
         /// 3. All references to any sub-reports of these reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in these reports and
-        ///    all sub-reports must be `Send+Sync`
+        /// 4. If `T = SendSync`: All contexts and attachments in these reports
+        ///    and all sub-reports must be `Send+Sync`
         pub(crate) unsafe fn from_raw_slice(raw: &'a [RawReport]) -> &'a [ReportRef<'a, C, O, T>] {
             let len = raw.len();
             let raw_ptr: *const RawReport = raw.as_ptr();
@@ -172,17 +172,17 @@ mod limit_field_access {
             let report_ref_ptr = raw_ptr.cast::<ReportRef<'a, C, O, T>>();
 
             // SAFETY:
-            // 1. The pointer is valid and properly aligned because it points to the
-            //    first element of a valid slice of `RawReport`s
-            // 2. The length is correct because we obtained it from the original slice
-            //    of `RawReport`s
+            // 1. The pointer is valid and properly aligned because it points to the first
+            //    element of a valid slice of `RawReport`s
+            // 2. The length is correct because we obtained it from the original slice of
+            //    `RawReport`s
             // 3. Each `ReportRef` is `repr(transparent)` over `RawReportRef`, which is
             //    repr(transparent) over the same underlying pointer as `RawReport`, so the
             //    alignment and validity are preserved
-            // 4. We are not creating mutable references, so there are no aliasing issues
-            //    to consider
-            // 5. The safety invariants for each `ReportRef` are upheld as guaranteed by
-            //    our caller
+            // 4. We are not creating mutable references, so there are no aliasing issues to
+            //    consider
+            // 5. The safety invariants for each `ReportRef` are upheld as guaranteed by our
+            //    caller
             unsafe { core::slice::from_raw_parts(report_ref_ptr, len) }
         }
 

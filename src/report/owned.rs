@@ -376,9 +376,10 @@ where
         // 4. This is guaranteed by the invariants of the `ReportCollection` we used to
         //    create the raw report.
         // 5. If `T=Local`, then this is trivially true. If `T=SendSync`, then we have
-        //    `C: ObjectMarkerFor<SendSync>`, so the context is `Send+Sync`. Additionally the
-        //    invariants of the `ReportCollection` and `ReportAttachments` guarantee that
-        //    the children and attachments are `Send+Sync` as well.
+        //    `C: ObjectMarkerFor<SendSync>`, so the context is `Send+Sync`.
+        //    Additionally the invariants of the `ReportCollection` and
+        //    `ReportAttachments` guarantee that the children and attachments are
+        //    `Send+Sync` as well.
         unsafe {
             // @add-unsafe-context: ReportCollection
             // @add-unsafe-context: ReportAttachments

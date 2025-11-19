@@ -250,9 +250,9 @@ impl<'a> RawReportRef<'a> {
     ///
     /// # Arguments
     ///
-    /// - `report_formatting_function`: Whether the report in which this
-    ///   context will be embedded is being formatted using [`Display`]
-    ///   formatting or [`Debug`]
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug

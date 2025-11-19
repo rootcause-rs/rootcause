@@ -161,11 +161,11 @@ where
         let raw = RawAttachment::new::<A, H>(attachment);
 
         // SAFETY:
-        // 1. We just created the `RawAttachment` and it does indeed
-        //    have an attachment of type `A`.
-        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    the bound `A: ObjectMarkerFor<SendSync>` guarantees that the
-        //    attachment is `Send+Sync`.
+        // 1. We just created the `RawAttachment` and it does indeed have an attachment
+        //    of type `A`.
+        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then the bound
+        //    `A: ObjectMarkerFor<SendSync>` guarantees that the attachment is
+        //    `Send+Sync`.
         unsafe { ReportAttachment::from_raw(raw) }
     }
 
