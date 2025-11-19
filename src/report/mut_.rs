@@ -72,13 +72,13 @@ mod limit_field_access {
     // # Safety invariants
     //
     // This reference behaves like a `&'a mut Report<C, Mutable, T>` for some unknown
-    // `C` and upholds the the usual safety invariants of mutable references:
+    // `C` and upholds the usual safety invariants of mutable references:
     //
     // 1. The pointee is properly initialized for the entire lifetime `'a`.
     // 2. The pointee is not aliased for the entire lifetime `'a`.
-    // 3. Like a `&'a mut T`, it is possible to reborrow this reference to a shorter
-    //    lifetime. The borrow checker will ensure that original longer lifetime is not used
-    //    while the shorter lifetime exists.
+    // 3. Like a `&'a mut T`, it is possible to reborrow this reference to a shorter lifetime. The
+    //    borrow checker will ensure that original longer lifetime is not used while the shorter
+    //    lifetime exists.
     #[repr(transparent)]
     pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
     where
@@ -87,9 +87,9 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists and must be continue to be upheld as long as the
-        /// inner `RawReportMut` exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists and must be continue to be upheld as
+        /// long as the inner `RawReportMut` exists:
         ///
         /// 1. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
@@ -320,11 +320,11 @@ where
     #[must_use]
     pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    we are not allowed to mutate the returned raw report in a way that
-        //    adds non-`Send+Sync` objects. We do not mutate the report here
-        //    and the invariants of the created `ReportCollection` guarantee that no
-        //    such mutation can occur in the future either.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportCollection` guarantee that no such
+        //    mutation can occur in the future either.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
@@ -381,11 +381,11 @@ where
     #[must_use]
     pub fn into_attachments_mut(self) -> &'a mut ReportAttachments<T> {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    we are not allowed to mutate the returned raw report in a way that
-        //    adds non-`Send+Sync` objects. We do not mutate the report here
-        //    and the invariants of the created `ReportAttachments` guarantee that no
-        //    such mutation can occur in the future either.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportAttachments` guarantee that no such
+        //    mutation can occur in the future either.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
@@ -428,11 +428,11 @@ where
     #[must_use]
     pub fn into_dyn_any(self) -> ReportMut<'a, dyn Any, T> {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    we are not allowed to mutate the returned raw report in a way that
-        //    adds non-`Send+Sync` objects. We do not mutate the report here
-        //    and the invariants of the created `ReportMut` guarantee that no such
-        //    mutation can occur in the future either.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
@@ -513,11 +513,11 @@ where
     #[must_use]
     pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    we are not allowed to mutate the returned raw report in a way that
-        //    adds non-`Send+Sync` objects. We do not mutate the report here
-        //    and the invariants of the created `ReportMut` guarantee that no such
-        //    mutation can occur in the future either.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
         let raw = unsafe { self.as_raw_mut() };
 
         // SAFETY:
@@ -1022,11 +1022,11 @@ where
         C: markers::ObjectMarker,
     {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    we are not allowed to mutate the returned raw report in a way that
-        //    adds non-`Send+Sync` objects. We do not mutate the report here
-        //    and the invariants of the created `ReportMut` guarantee that no such
-        //    mutation can occur in the future either.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:

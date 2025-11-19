@@ -79,7 +79,7 @@ type HookMap =
 ///
 /// # Safety invariant
 ///
-/// This registry can only contained hooks of type `Hook<C, H>`, where
+/// This registry can only contain hooks of type `Hook<C, H>`, where
 /// `TypeId::of::<C>()` is the key used to store the hook in the [`HashMap`].
 ///
 /// This invariant is guaranteed by the [`register_context_hook`] function.
@@ -507,10 +507,10 @@ pub(crate) fn display_context(
         hook.display_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
         // SAFETY:
-        // 1. The call to `get_hook` guarantees that the returned hook
-        //    is of type `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
-        //    Therefore the type `C` stored in the context matches the `C` from
-        //    type `Hook<C, H>`.
+        // 1. The call to `get_hook` guarantees that the returned hook is of type
+        //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+        //    Therefore the type `C` stored in the context matches the `C` from type
+        //    `Hook<C, H>`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
@@ -532,10 +532,10 @@ pub(crate) fn debug_context(
         hook.debug_preformatted(report, formatter)
     } else if let Some(hook) = get_hook(report.current_context_type_id()) {
         // SAFETY:
-        // 1. The call to `get_hook` guarantees that the returned hook
-        //    is of type `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
-        //    Therefore the type `C` stored in the context matches the `C` from
-        //    type `Hook<C, H>`.
+        // 1. The call to `get_hook` guarantees that the returned hook is of type
+        //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+        //    Therefore the type `C` stored in the context matches the `C` from type
+        //    `Hook<C, H>`.
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook

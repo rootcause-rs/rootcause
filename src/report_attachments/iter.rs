@@ -117,8 +117,8 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
         ///
         /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
@@ -161,7 +161,7 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: No mutation is performed that invalidate the
+        /// 1. If `T = SendSync`: No mutation is performed that invalidates the
         ///    invariant that all inner attachments are `Send + Sync`.
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:

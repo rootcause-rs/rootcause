@@ -57,11 +57,12 @@ pub struct RawReport {
     ///
     /// # Safety
     ///
-    /// The following safety invariants are guaranteed to be upheld as long as this
-    /// struct exists:
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
     ///
-    /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
-    ///    for some `C` using `triomphe::Arc::into_raw`.
+    /// 1. The pointer must have been created from a
+    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
+    ///    `triomphe::Arc::into_raw`.
     /// 2. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
@@ -139,8 +140,8 @@ impl core::ops::Drop for RawReport {
 
         // SAFETY:
         // 1. The pointer comes from `Arc::into_raw` (guaranteed by `RawReport::new`)
-        // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the data in the
-        //    `ReportData`.
+        // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
+        //    data in the `ReportData`.
         // 3. The pointer is not used after this call (we're in the drop function)
         unsafe {
             vtable.drop(self.ptr);
@@ -160,7 +161,7 @@ impl core::ops::Drop for RawReport {
 /// # Safety invariants
 ///
 /// This reference behaves like a `&'a ReportData<C>` for some unknown
-/// `C` and upholds the the usual safety invariants of shared references:
+/// `C` and upholds the usual safety invariants of shared references:
 ///
 /// 1. The pointee is properly initialized for the entire lifetime `'a`.
 /// 2. The pointee is not mutated for the entire lifetime `'a`.
@@ -171,11 +172,12 @@ pub struct RawReportRef<'a> {
     ///
     /// # Safety
     ///
-    /// The following safety invariants are guaranteed to be upheld as long as this
-    /// struct exists:
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
     ///
-    /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
-    ///    for some `C` using `triomphe::Arc::into_raw`.
+    /// 1. The pointer must have been created from a
+    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
+    ///    `triomphe::Arc::into_raw`.
     /// 2. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
@@ -235,8 +237,8 @@ impl<'a> RawReportRef<'a> {
     pub fn context_source(self) -> Option<&'a (dyn core::error::Error + 'static)> {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `ReportData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
         unsafe { vtable.source(self) }
     }
 
@@ -246,8 +248,8 @@ impl<'a> RawReportRef<'a> {
     pub fn context_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `ReportData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
         unsafe { vtable.display(self, formatter) }
     }
 
@@ -257,8 +259,8 @@ impl<'a> RawReportRef<'a> {
     pub fn context_debug(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `ReportData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
         unsafe { vtable.debug(self, formatter) }
     }
 
@@ -280,8 +282,8 @@ impl<'a> RawReportRef<'a> {
     ) -> ContextFormattingStyle {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `ReportData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
         unsafe {
             // @add-unsafe-context: ReportData
             vtable.preferred_context_formatting_style(self, report_formatting_function)
@@ -318,8 +320,8 @@ impl<'a> RawReportRef<'a> {
         let vtable = self.vtable();
         // SAFETY:
         // 1. Guaranteed by invariants on this type
-        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `ReportData`.
+        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
         unsafe {
             // @add-unsafe-context: ReportData
             vtable.strong_count(self.ptr)
@@ -339,24 +341,25 @@ impl<'a> RawReportRef<'a> {
 /// # Safety invariants
 ///
 /// This reference behaves like a `&'a mut ReportData<C>` for some unknown
-/// `C` and upholds the the usual safety invariants of mutable references:
+/// `C` and upholds the usual safety invariants of mutable references:
 ///
 /// 1. The pointee is properly initialized for the entire lifetime `'a`.
 /// 2. The pointee is not aliased for the entire lifetime `'a`.
-/// 3. Like a `&'a mut T`, it is possible to reborrow this reference to a shorter
-///    lifetime. The borrow checker will ensure that original longer lifetime is not used
-///    while the shorter lifetime exists.
+/// 3. Like a `&'a mut T`, it is possible to reborrow this reference to a
+///    shorter lifetime. The borrow checker will ensure that original longer
+///    lifetime is not used while the shorter lifetime exists.
 #[repr(transparent)]
 pub struct RawReportMut<'a> {
     /// Pointer to the inner report data
     ///
     /// # Safety
     ///
-    /// The following safety invariants are guaranteed to be upheld as long as this
-    /// struct exists:
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
     ///
-    /// 1. The pointer must have been created from a `triomphe::Arc<ReportData<C>>`
-    ///    for some `C` using `triomphe::Arc::into_raw`.
+    /// 1. The pointer must have been created from a
+    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
+    ///    `triomphe::Arc::into_raw`.
     /// 2. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
@@ -382,7 +385,8 @@ impl<'a> RawReportMut<'a> {
 
         let mut this = self.ptr.cast::<ReportData<C>>();
 
-        // SAFETY: Converting the NonNull pointer to a mutable reference is sound because:
+        // SAFETY: Converting the NonNull pointer to a mutable reference is sound
+        // because:
         // - The pointer is non-null, properly aligned, and dereferenceable (guaranteed
         //   by RawReportMut's type invariants)
         // - The pointee is properly initialized (RawReportMut's doc comment guarantees

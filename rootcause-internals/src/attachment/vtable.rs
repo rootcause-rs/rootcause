@@ -94,8 +94,8 @@ impl AttachmentVtable {
     ///
     /// 1. The pointer comes from [`Box<AttachmentData<A>>`] via
     ///    [`Box::into_raw`]
-    /// 2. This [`AttachmentVtable`] must be a vtable for the attachment
-    ///    type stored in the [`RawAttachmentRef`].
+    /// 2. This [`AttachmentVtable`] must be a vtable for the attachment type
+    ///    stored in the [`RawAttachmentRef`].
     /// 3. The pointer is not used after calling this method
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<AttachmentData<Erased>>) {
@@ -120,8 +120,8 @@ impl AttachmentVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment
-    ///    type stored in the [`RawAttachmentRef`].
+    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment type
+    ///    stored in the [`RawAttachmentRef`].
     #[inline]
     pub(super) unsafe fn display(
         &self,
@@ -147,8 +147,8 @@ impl AttachmentVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment
-    ///    type stored in the [`RawAttachmentRef`].
+    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment type
+    ///    stored in the [`RawAttachmentRef`].
     #[inline]
     pub(super) unsafe fn debug(
         &self,
@@ -175,8 +175,8 @@ impl AttachmentVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment
-    ///    type stored in the [`RawAttachmentRef`].
+    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment type
+    ///    stored in the [`RawAttachmentRef`].
     #[inline]
     pub(super) unsafe fn preferred_formatting_style(
         &self,

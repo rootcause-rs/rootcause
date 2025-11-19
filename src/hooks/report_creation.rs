@@ -458,7 +458,7 @@ where
 /// report that gets created. The collected data will be formatted using the
 /// collector's associated handler and attached to the report.
 ///
-/// Note that internally this function is converts the attachment collector into
+/// Note that internally this function converts the attachment collector into
 /// a report creation hook and registers it using the same system as
 /// [`register_report_creation_hook`].
 ///

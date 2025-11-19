@@ -48,8 +48,8 @@ pub struct RawAttachment {
     ///
     /// # Safety
     ///
-    /// The following safety invariants are guaranteed to be upheld as long as this
-    /// struct exists:
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
     ///
     /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
     ///    for some `A` using `Box::into_raw`.
@@ -98,8 +98,8 @@ impl core::ops::Drop for RawAttachment {
         // SAFETY:
         // 1. The pointer comes from `Box::into_raw` (guaranteed by
         //    `RawAttachment::new`)
-        // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the data in the
-        //    `AttachmentData`.
+        // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
+        //    data in the `AttachmentData`.
         // 3. The pointer is not used after this call (we're in the drop function)
         unsafe {
             // @add-unsafe-context: AttachmentData
@@ -123,8 +123,8 @@ pub struct RawAttachmentRef<'a> {
     ///
     /// # Safety
     ///
-    /// The following safety invariants are guaranteed to be upheld as long as this
-    /// struct exists:
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
     ///
     /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
     ///    for some `A` using `Box::into_raw`.
@@ -159,7 +159,8 @@ impl<'a> RawAttachmentRef<'a> {
         //   guarantees it points to an initialized AttachmentData<A> for some A)
         // - The type `A` matches the actual attachment type (guaranteed by caller)
         // - Shared access is allowed
-        // - The reference lifetime 'a is valid (tied to RawAttachmentRef<'a>'s lifetime)
+        // - The reference lifetime 'a is valid (tied to RawAttachmentRef<'a>'s
+        //   lifetime)
         unsafe { this.as_ref() }
     }
 
@@ -188,8 +189,8 @@ impl<'a> RawAttachmentRef<'a> {
     pub fn attachment_display(self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `AttachmentData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `AttachmentData`.
         unsafe {
             // @add-unsafe-context: AttachmentData
             vtable.display(self, formatter)
@@ -203,8 +204,8 @@ impl<'a> RawAttachmentRef<'a> {
         let vtable = self.vtable();
 
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `AttachmentData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `AttachmentData`.
         unsafe {
             // @add-unsafe-context: AttachmentData
             vtable.debug(self, formatter)
@@ -230,8 +231,8 @@ impl<'a> RawAttachmentRef<'a> {
         let vtable = self.vtable();
 
         // SAFETY:
-        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in the
-        //    `AttachmentData`.
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `AttachmentData`.
         unsafe {
             // @add-unsafe-context: AttachmentData
             vtable.preferred_formatting_style(self, report_formatting_function)

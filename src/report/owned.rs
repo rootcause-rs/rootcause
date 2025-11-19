@@ -82,8 +82,8 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
         ///
         /// 1. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
@@ -229,10 +229,10 @@ where
     #[must_use]
     pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then
-        //    we are not allowed to mutate the returned raw report in a way that
-        //    adds non-`Send+Sync` objects. However the invariants of the created
-        //    `ReportMut` guarantee that no such mutation can occur.
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. However the invariants of the created `ReportMut`
+        //    guarantee that no such mutation can occur.
         let raw = unsafe { self.as_raw_mut() };
 
         // SAFETY:

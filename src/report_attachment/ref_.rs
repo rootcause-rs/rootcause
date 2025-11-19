@@ -42,8 +42,8 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
         ///
         /// 1. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.

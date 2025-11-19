@@ -36,8 +36,8 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
         ///
         /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
@@ -134,7 +134,7 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: No mutation is performed that invalidate the
+        /// 1. If `T = SendSync`: No mutation is performed that invalidates the
         ///    invariant that all inner attachments are `Send + Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawAttachment> {
@@ -512,13 +512,13 @@ where
 }
 
 // SAFETY:
-// The invariants of the `ReportAttachments` type guaratees that this that all
+// The invariants of the `ReportAttachments` type guarantees that all
 // attachments are `Send + Sync` so the collection itself can safely implement
 // `Send` and `Sync`.
 unsafe impl Send for ReportAttachments<SendSync> {}
 
 // SAFETY:
-// The invariants of the `ReportAttachments` type guaratees that this that all
+// The invariants of the `ReportAttachments` type guarantees that all
 // attachments are `Send + Sync` so the collection itself can safely implement
 // `Send` and `Sync`.
 unsafe impl Sync for ReportAttachments<SendSync> {}

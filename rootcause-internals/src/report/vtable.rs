@@ -37,10 +37,11 @@ use crate::{
 /// The following safety invariants are guaranteed to be upheld as long as this
 /// struct exists:
 ///
-/// * The fields `drop`, `clone_arc`, `strong_count`, `source`, `display`, `debug`, and
-///   `preferred_context_formatting_style` all point to the functions defined
-/// * The concrete pointers are all instantiated with the same context type `C` and
-///   handler type `H` that were used to create this `ReportVtable`.
+/// * The fields `drop`, `clone_arc`, `strong_count`, `source`, `display`,
+///   `debug`, and `preferred_context_formatting_style` all point to the
+///   functions defined below
+/// * The concrete pointers are all instantiated with the same context type `C`
+///   and handler type `H` that were used to create this `ReportVtable`.
 pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].
@@ -109,10 +110,10 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned
-    ///    into a pointer via [`triomphe::Arc::into_raw`]
-    /// 2. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into
+    ///    a pointer via [`triomphe::Arc::into_raw`]
+    /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     /// 3. After calling this method, the pointer is no longer used
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<ReportData<Erased>>) {
@@ -134,10 +135,10 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned
-    ///    into a pointer via [`triomphe::Arc::into_raw`]
-    /// 2. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into
+    ///    a pointer via [`triomphe::Arc::into_raw`]
+    /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     /// 3. All other references to this report are compatible with shared
     ///    ownership. Specifically none of them assume that the strong_count is
     ///    `1`.
@@ -164,8 +165,8 @@ impl ReportVtable {
     ///
     /// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
     ///    [`triomphe::Arc::into_raw`]
-    /// 2. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
@@ -187,8 +188,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     ///
     /// [`H::source`]: ContextHandler::source
     #[inline]
@@ -215,8 +216,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn display(
         &self,
@@ -242,8 +243,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn debug(
         &self,
@@ -270,8 +271,8 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. This [`ReportVtable`] must be a vtable for the context
-    ///    type stored in the [`RawReportRef`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     #[inline]
     pub(super) unsafe fn preferred_context_formatting_style(
         &self,
@@ -322,7 +323,7 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
 ///
 /// The caller must ensure:
 ///
-/// 1. The pointer comes from an [`triomphe::Arc<ReportData<C>>`] turned into a
+/// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into a
 ///    pointer via [`triomphe::Arc::into_raw`]
 /// 2. The context type `C` matches the actual context type stored in the
 ///    [`ReportData`]

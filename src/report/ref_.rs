@@ -73,7 +73,7 @@ mod limit_field_access {
     // # Safety invariants
     //
     // This reference behaves like a `&'a Report<C, O, T>` for some unknown
-    // `C` and `O`, and upholds the the usual safety invariants of shared references:
+    // `C` and `O`, and upholds the usual safety invariants of shared references:
     //
     // 1. The pointee is properly initialized for the entire lifetime `'a`.
     // 2. The pointee is not mutated for the entire lifetime `'a`.
@@ -86,8 +86,8 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
         ///
         /// 1. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`

@@ -193,9 +193,9 @@ impl BacktraceCollector {
     /// Creates a new [`BacktraceCollector`] with default settings.
     ///
     /// By default, if the `RUST_BACKTRACE` environment variable is set to
-    /// `full`, the collector will filter out frames from common crates and
-    /// capture backtraces for all reports. Otherwise, no filtering is applied
-    /// and backtraces are only captured for reports without children.
+    /// `full`, the collector will show all frames without filtering and
+    /// capture backtraces for all reports. Otherwise, default filtering is
+    /// applied and backtraces are only captured for reports without children.
     pub fn new_from_env() -> Self {
         let rust_backtrace_full =
             std::env::var_os("RUST_BACKTRACE").is_some_and(|var| var == "full");
@@ -287,8 +287,8 @@ const fn get_rootcause_matcher() -> Option<(&'static str, usize)> {
 
     let mut splitter_prefix = prefix;
     while !splitter_prefix.is_empty() {
-        let (new_prfix, last_char) = splitter_prefix.split_at(splitter_prefix.len() - 1);
-        splitter_prefix = new_prfix;
+        let (new_prefix, last_char) = splitter_prefix.split_at(splitter_prefix.len() - 1);
+        splitter_prefix = new_prefix;
         if last_char.eq_ignore_ascii_case(std::path::MAIN_SEPARATOR_STR) {
             break;
         }

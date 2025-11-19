@@ -41,8 +41,8 @@ mod limit_field_access {
     {
         /// # Safety
         ///
-        /// The following safety invariants are guaranteed to be upheld as long as this
-        /// struct exists:
+        /// The following safety invariants are guaranteed to be upheld as long
+        /// as this struct exists:
         ///
         /// 1. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
@@ -164,7 +164,7 @@ mod limit_field_access {
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 2. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
-        /// 3. If `T = SendSync`: No mutation is performed that invalidate the
+        /// 3. If `T = SendSync`: No mutation is performed that invalidates the
         ///    invariant that all inner contexts and attachments are `Send +
         ///    Sync`.
         #[must_use]
