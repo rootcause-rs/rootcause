@@ -258,17 +258,17 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 
 ## Coming from other libraries?
 
-| Feature                    | anyhow              | error-stack                 | rootcause                    |
-| -------------------------- | ------------------- | --------------------------- | ---------------------------- |
-| **Error structure**        | Linear chain        | Opaque attachment model     | Explicit tree                |
-| **Type safety**            | No                  | Required                    | Optional                     |
-| **Adding context**         | `.context()`        | `.change_context()`         | `.context()`                 |
-| **Structured attachments** | No                  | Yes (`.attach_printable()`) | Yes (`.attach()`)            |
-| **Tree navigation**        | Linear (`.chain()`) | Limited iterators           | Full tree access             |
-| **Cloneable errors**       | No                  | No                          | Yes (`Report<_, Cloneable>`) |
-| **Thread-local errors**    | No                  | No                          | Yes (`Report<_, _, Local>`)  |
-| **Location tracking**      | Single backtrace    | Per-attachment              | Per-attachment               |
-| **Customization hooks**    | No                  | Formatting only             | Creation + formatting        |
+| Feature                    | anyhow              | error-stack                 | rootcause                     |
+| -------------------------- | ------------------- | --------------------------- | ----------------------------- |
+| **Error structure**        | Linear chain        | Opaque attachment model     | Explicit tree                 |
+| **Type safety**            | No                  | Required                    | Optional                      |
+| **Adding context**         | `.context()`        | `.change_context()`         | `.context()`                  |
+| **Structured attachments** | No                  | Yes (`.attach_printable()`) | Yes (`.attach()`)             |
+| **Tree navigation**        | Linear (`.chain()`) | Limited iterators           | Full tree access              |
+| **Cloneable errors**       | No                  | No                          | Yes (`Report<_, Cloneable>`)  |
+| **Thread-local errors**    | No                  | No                          | Yes (`Report<_, _, Local>`)   |
+| **Location tracking**      | Single backtrace    | ?                           | Multiple backtraces supported |
+| **Customization hooks**    | No                  | Formatting only             | Creation + formatting         |
 
 See the retry example in ["Why rootcause?"](#why-rootcause) for how the tree structure enables collecting multiple related errors with `ReportCollection`.
 
