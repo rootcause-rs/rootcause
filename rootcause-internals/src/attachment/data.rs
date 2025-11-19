@@ -71,24 +71,23 @@ impl<'a> RawAttachmentRef<'a> {
     #[inline]
     pub(super) fn vtable(self) -> &'static AttachmentVtable {
         let ptr = self.as_ptr();
-        // SAFETY: We don't know the actual inner attachment type, but we do know
-        // that it points to an instance of `AttachmentData<A>` for some specific `A`.
-        // Since `AttachmentData<A>` is `#[repr(C)]`, that means that it's
-        // safe to create pointers to the fields before the actual attachment.
-        //
-        // We need to take care to avoid creating an actual reference to
-        // the `AttachmentData` itself though, as that would still be undefined behavior
-        // since we don't have the right type.
+        // SAFETY: The safety requirements for `&raw const (*ptr).vtable` are upheld:
+        // 1. `ptr` is a valid pointer to a live `AttachmentData<A>` (for some `A`) as
+        //    guaranteed by `RawAttachmentRef`'s invariants
+        // 2. `AttachmentData<A>` is `#[repr(C)]`, so the `vtable` field is at a
+        //    consistent offset regardless of the type parameter `A`
+        // 3. We avoid creating a reference to the full `AttachmentData` struct, which
+        //    would be UB since we don't know the correct type parameter
         let vtable_ptr: *const &'static AttachmentVtable = unsafe {
             // @add-unsafe-context: AttachmentData
             &raw const (*ptr).vtable
         };
 
-        // SAFETY: The vtable_ptr is derived from a valid Box pointer and points
-        // to an initialized `&'static AttachmentVtable` field. Dereferencing is safe
-        // because:
-        // - The pointer is valid and properly aligned
-        // - The vtable field is initialized in AttachmentData::new and never modified
+        // SAFETY: The safety requirements for dereferencing `vtable_ptr` are upheld:
+        // 1. The pointer is valid and properly aligned because it points to the first
+        //    field of a valid `AttachmentData<A>` instance
+        // 2. The `vtable` field is initialized in `AttachmentData::new` and never
+        //    modified, so it contains a valid `&'static AttachmentVtable` value
         unsafe { *vtable_ptr }
     }
 

@@ -51,7 +51,7 @@ mod limit_field_access {
         /// 2. All references to this report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in the
+        /// 3. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         raw: core::slice::Iter<'a, RawReport>,
         _context: PhantomData<Context>,
@@ -82,7 +82,6 @@ mod limit_field_access {
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
-            // 4. Guaranteed by the caller
             Self {
                 raw: raw.iter(),
                 _context: PhantomData,
@@ -120,7 +119,7 @@ mod limit_field_access {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Upheld, as all references created here are compatible
-            // 4. Guaranteed by the caller
+            // 3. Guaranteed by the caller
             let raw = &mut self.raw;
 
             raw
