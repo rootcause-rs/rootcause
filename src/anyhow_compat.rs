@@ -15,7 +15,7 @@
 //!
 //! # Converting from Anyhow to Rootcause
 //!
-//! Use the [`FromAnyhow`] trait to convert anyhow errors into reports:
+//! Use the [`IntoRootcause`] trait to convert anyhow errors into reports:
 //!
 //! ```
 //! use rootcause::prelude::*;
@@ -26,7 +26,7 @@
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     // Convert anyhow::Result to Result<T, Report>
-//!     let value = anyhow_function().from_anyhow()?;
+//!     let value = anyhow_function().into_rootcause()?;
 //!     Ok(value)
 //! }
 //! ```
@@ -34,10 +34,10 @@
 //! You can also convert individual [`anyhow::Error`] values:
 //!
 //! ```
-//! use rootcause::{anyhow_compat::FromAnyhow, prelude::*};
+//! use rootcause::prelude::*;
 //!
 //! let anyhow_error: anyhow::Error = anyhow::anyhow!("failed to connect");
-//! let report: Report = anyhow_error.from_anyhow();
+//! let report: Report = anyhow_error.into_rootcause();
 //!
 //! // The report preserves anyhow's formatting
 //! println!("{}", report);
@@ -45,10 +45,10 @@
 //!
 //! # Converting from Rootcause to Anyhow
 //!
-//! Use the [`ToAnyhow`] trait to convert reports into anyhow errors:
+//! Use the [`IntoAnyhow`] trait to convert reports into anyhow errors:
 //!
 //! ```
-//! use rootcause::{anyhow_compat::ToAnyhow, prelude::*};
+//! use rootcause::prelude::*;
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(report!("database connection failed"))
@@ -56,7 +56,7 @@
 //!
 //! fn anyhow_function() -> anyhow::Result<String> {
 //!     // Convert Result<T, Report> to anyhow::Result<T>
-//!     let value = rootcause_function().to_anyhow()?;
+//!     let value = rootcause_function().into_anyhow()?;
 //!     Ok(value)
 //! }
 //! ```
@@ -92,13 +92,13 @@
 //! # Using Anyhow's Context Trait
 //!
 //! **Note:** You cannot use [`anyhow::Context`] directly on `Result<T, Report>`
-//! because [`Report`] does not implement [`core::error::Error`]. To use anyhow's
-//! `.context()` method with rootcause reports, you need to convert to anyhow
-//! first:
+//! because [`Report`] does not implement [`core::error::Error`]. To use
+//! anyhow's `.context()` method with rootcause reports, you need to convert to
+//! anyhow first:
 //!
 //! ```
 //! use anyhow::Context;
-//! use rootcause::{anyhow_compat::ToAnyhow, Report};
+//! use rootcause::{Report, anyhow_compat::IntoAnyhow};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(rootcause::report!("connection failed"))
@@ -107,7 +107,7 @@
 //! fn anyhow_function() -> anyhow::Result<String> {
 //!     // First convert to anyhow, then use anyhow's .context()
 //!     let value = rootcause_function()
-//!         .to_anyhow()
+//!         .into_anyhow()
 //!         .context("Failed to fetch data")?;
 //!     Ok(value)
 //! }
@@ -138,7 +138,7 @@ use crate::{Report, markers};
 /// This handler ensures that [`anyhow::Error`] objects display identically
 /// whether they're used directly or wrapped in a rootcause [`Report`]. You
 /// typically don't need to use this handler directly - it's used automatically
-/// by the [`FromAnyhow`] trait.
+/// by the [`IntoRootcause`] trait.
 ///
 /// # Implementation Details
 ///
@@ -188,24 +188,24 @@ impl ContextHandler<anyhow::Error> for AnyhowHandler {
 /// A trait for converting [`anyhow::Error`] and [`anyhow::Result`] into
 /// rootcause types.
 ///
-/// This trait provides the `.from_anyhow()` method for converting anyhow errors
-/// into rootcause [`Report`]s. It's implemented for both [`anyhow::Error`] and
-/// [`anyhow::Result<T>`], making it easy to integrate anyhow-based code with
-/// rootcause.
+/// This trait provides the `.into_rootcause()` method for converting anyhow
+/// errors into rootcause [`Report`]s. It's implemented for both
+/// [`anyhow::Error`] and [`anyhow::Result<T>`], making it easy to integrate
+/// anyhow-based code with rootcause.
 ///
 /// # Examples
 ///
 /// ## Converting a Result
 ///
 /// ```
-/// use rootcause::{anyhow_compat::FromAnyhow, prelude::*};
+/// use rootcause::prelude::*;
 ///
 /// fn uses_anyhow() -> anyhow::Result<i32> {
 ///     Ok(42)
 /// }
 ///
 /// fn uses_rootcause() -> Result<i32, Report> {
-///     let value = uses_anyhow().from_anyhow()?;
+///     let value = uses_anyhow().into_rootcause()?;
 ///     Ok(value)
 /// }
 /// ```
@@ -213,12 +213,12 @@ impl ContextHandler<anyhow::Error> for AnyhowHandler {
 /// ## Converting an Error
 ///
 /// ```
-/// use rootcause::{anyhow_compat::FromAnyhow, prelude::*};
+/// use rootcause::prelude::*;
 ///
 /// let anyhow_err = anyhow::anyhow!("database connection failed");
-/// let report: Report = anyhow_err.from_anyhow();
+/// let report: Report = anyhow_err.into_rootcause();
 /// ```
-pub trait FromAnyhow {
+pub trait IntoRootcause {
     /// The type produced by the conversion.
     ///
     /// - For [`anyhow::Error`]: produces `Report`
@@ -234,61 +234,62 @@ pub trait FromAnyhow {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{anyhow_compat::FromAnyhow, prelude::*};
+    /// use rootcause::prelude::*;
     ///
     /// // Convert a result
     /// let result: anyhow::Result<i32> = Ok(42);
-    /// let converted: Result<i32, Report> = result.from_anyhow();
+    /// let converted: Result<i32, Report> = result.into_rootcause();
     /// assert_eq!(converted.unwrap(), 42);
     ///
     /// // Convert an error
     /// let error: anyhow::Error = anyhow::anyhow!("failed");
-    /// let report: Report = error.from_anyhow();
+    /// let report: Report = error.into_rootcause();
     /// ```
-    fn from_anyhow(self) -> Self::Output;
+    fn into_rootcause(self) -> Self::Output;
 }
 
-impl FromAnyhow for anyhow::Error {
+impl IntoRootcause for anyhow::Error {
     type Output = Report;
 
     #[inline(always)]
-    fn from_anyhow(self) -> Self::Output {
+    fn into_rootcause(self) -> Self::Output {
         Report::new_custom::<AnyhowHandler>(self).into_dyn_any()
     }
 }
 
-impl<T> FromAnyhow for anyhow::Result<T> {
+impl<T> IntoRootcause for anyhow::Result<T> {
     type Output = Result<T, Report>;
 
     #[inline(always)]
-    fn from_anyhow(self) -> Self::Output {
-        self.map_err(|e| e.from_anyhow())
+    fn into_rootcause(self) -> Self::Output {
+        self.map_err(|e| e.into_rootcause())
     }
 }
 
 /// A trait for converting rootcause [`Report`]s into [`anyhow::Error`].
 ///
-/// This trait provides the `.to_anyhow()` method for converting rootcause
+/// This trait provides the `.into_anyhow()` method for converting rootcause
 /// reports into anyhow errors. It's implemented for both [`Report`] and
 /// [`Result<T, Report>`], making it easy to call anyhow-based APIs from
 /// rootcause code.
 ///
-/// The conversion wraps the entire report structure inside an [`anyhow::Error`],
-/// preserving all contexts, attachments, and formatting behavior.
+/// The conversion wraps the entire report structure inside an
+/// [`anyhow::Error`], preserving all contexts, attachments, and formatting
+/// behavior.
 ///
 /// # Examples
 ///
 /// ## Converting a Result
 ///
 /// ```
-/// use rootcause::{anyhow_compat::ToAnyhow, prelude::*};
+/// use rootcause::prelude::*;
 ///
 /// fn uses_rootcause() -> Result<i32, Report> {
 ///     Err(report!("failed"))
 /// }
 ///
 /// fn uses_anyhow() -> anyhow::Result<i32> {
-///     let value = uses_rootcause().to_anyhow()?;
+///     let value = uses_rootcause().into_anyhow()?;
 ///     Ok(value)
 /// }
 /// ```
@@ -296,10 +297,10 @@ impl<T> FromAnyhow for anyhow::Result<T> {
 /// ## Converting a Report
 ///
 /// ```
-/// use rootcause::{anyhow_compat::ToAnyhow, prelude::*};
+/// use rootcause::prelude::*;
 ///
 /// let report = report!("operation failed").attach("debug info");
-/// let anyhow_err: anyhow::Error = report.to_anyhow();
+/// let anyhow_err: anyhow::Error = report.into_anyhow();
 ///
 /// // The anyhow error displays the full report structure
 /// println!("{}", anyhow_err);
@@ -315,7 +316,7 @@ impl<T> FromAnyhow for anyhow::Result<T> {
 /// let report: Report = report!("error");
 /// let anyhow_err: anyhow::Error = report.into();
 /// ```
-pub trait ToAnyhow {
+pub trait IntoAnyhow {
     /// The type produced by the conversion.
     ///
     /// - For [`Report`]: produces [`anyhow::Error`]
@@ -331,41 +332,41 @@ pub trait ToAnyhow {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{anyhow_compat::ToAnyhow, prelude::*};
+    /// use rootcause::prelude::*;
     ///
     /// // Convert a result
     /// let result: Result<i32, Report> = Ok(42);
-    /// let converted: anyhow::Result<i32> = result.to_anyhow();
+    /// let converted: anyhow::Result<i32> = result.into_anyhow();
     /// assert_eq!(converted.unwrap(), 42);
     ///
     /// // Convert a report
     /// let report: Report = report!("failed");
-    /// let anyhow_err: anyhow::Error = report.to_anyhow();
+    /// let anyhow_err: anyhow::Error = report.into_anyhow();
     /// ```
-    fn to_anyhow(self) -> Self::Output;
+    fn into_anyhow(self) -> Self::Output;
 }
 
-impl<C, O> ToAnyhow for Report<C, O>
+impl<C, O> IntoAnyhow for Report<C, O>
 where
     C: markers::ObjectMarker + ?Sized,
     O: markers::ReportOwnershipMarker,
 {
     type Output = anyhow::Error;
 
-    fn to_anyhow(self) -> Self::Output {
+    fn into_anyhow(self) -> Self::Output {
         anyhow::Error::from(self)
     }
 }
 
-impl<T, C, O> ToAnyhow for Result<T, Report<C, O>>
+impl<T, C, O> IntoAnyhow for Result<T, Report<C, O>>
 where
     C: markers::ObjectMarker + ?Sized,
     O: markers::ReportOwnershipMarker,
 {
     type Output = Result<T, anyhow::Error>;
 
-    fn to_anyhow(self) -> Self::Output {
-        self.map_err(|r| r.to_anyhow())
+    fn into_anyhow(self) -> Self::Output {
+        self.map_err(|r| r.into_anyhow())
     }
 }
 

@@ -83,7 +83,8 @@
 //!   type of the context in the root node.
 //! - **Beautiful**: The default formatting should look pleasant—and if it
 //!   doesn't match your style, the [hook system] lets you customize it.
-//! - **Cloneable**: It should be possible to clone a [`Report`] when you need to.
+//! - **Cloneable**: It should be possible to clone a [`Report`] when you need
+//!   to.
 //! - **Self-documenting**: Reports should automatically capture information
 //!   (like backtraces and locations) that might be useful in debugging.
 //! - **Customizable**: It should be possible to customize what data gets
@@ -191,17 +192,17 @@
 //! ### Ownership: Mutable vs Cloneable
 //!
 //! **Use the default ([`Mutable`])** when errors just propagate with `?`.
-//! **Use [`.into_cloneable()`]** when you need to store errors in collections or
-//! use them multiple times.
+//! **Use [`.into_cloneable()`]** when you need to store errors in collections
+//! or use them multiple times.
 //!
 //! [`.into_cloneable()`]: crate::report::owned::Report::into_cloneable
 //!
 //! **[`Mutable`]** (default) — Unique ownership
 //!
 //! You can add attachments and context to the root, but can't clone the whole
-//! [`Report`]. Note: child reports are still cloneable internally (they use `Arc`),
-//! but the top-level [`Report`] doesn't implement `Clone`. Start here, then
-//! convert to [`Cloneable`] if you need to clone the entire tree.
+//! [`Report`]. Note: child reports are still cloneable internally (they use
+//! `Arc`), but the top-level [`Report`] doesn't implement `Clone`. Start here,
+//! then convert to [`Cloneable`] if you need to clone the entire tree.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
@@ -212,15 +213,15 @@
 //!
 //! **[`Cloneable`]** — Shared ownership
 //!
-//! The [`Report`] can be cloned cheaply (via `Arc`), but can't be mutated. Use when
-//! you need to pass the same error to multiple places.
+//! The [`Report`] can be cloned cheaply (via `Arc`), but can't be mutated. Use
+//! when you need to pass the same error to multiple places.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let cloneable = report.into_cloneable();
-//! let copy1 = cloneable.clone();          // ✅ Can clone
-//! let copy2 = cloneable.clone();          // ✅ Cheap (Arc clone)
+//! let copy1 = cloneable.clone(); // ✅ Can clone
+//! let copy2 = cloneable.clone(); // ✅ Cheap (Arc clone)
 //! // let modified = copy1.attach("info"); // ❌ Can't mutate
 //! ```
 //!
@@ -236,8 +237,8 @@
 //!
 //! **[`SendSync`]** (default) — Thread-safe
 //!
-//! The [`Report`] and all its contents are `Send + Sync`. Most types (String, Vec,
-//! primitives) are already `Send + Sync`, so this just works.
+//! The [`Report`] and all its contents are `Send + Sync`. Most types (String,
+//! Vec, primitives) are already `Send + Sync`, so this just works.
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
@@ -298,10 +299,10 @@
 //!     allocating a new root node is to call [`Report::context`].
 //! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable,
 //!   SendSync>`:
-//!   - You can preformat the entire [`Report`] using [`Report::preformat`]. This
-//!     creates an entirely new [`Report`] that has the same structure and will look
-//!     the same as the current one if printed, but all contexts and attachments
-//!     will be replaced with a [`PreformattedContext`] version.
+//!   - You can preformat the entire [`Report`] using [`Report::preformat`].
+//!     This creates an entirely new [`Report`] that has the same structure and
+//!     will look the same as the current one if printed, but all contexts and
+//!     attachments will be replaced with a [`PreformattedContext`] version.
 //!
 //! [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
 //! [`examples/inspecting_errors.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/inspecting_errors.rs
