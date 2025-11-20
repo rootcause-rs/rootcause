@@ -1541,57 +1541,53 @@ where
     }
 }
 
-mod from_impls {
-    use super::*;
-
-    macro_rules! from_impls {
-        ($(
-            <
-                $($param:ident),*
-            >:
-            $context1:ty => $context2:ty,
-            $ownership1:ty => $ownership2:ty,
-            $thread_safety1:ty => $thread_safety2:ty,
-            [$($op:ident),*]
-        ),* $(,)?) => {
-            $(
-                impl<$($param),*> From<Report<$context1, $ownership1, $thread_safety1>> for Report<$context2, $ownership2, $thread_safety2>
-                    where $(
-                        $param: markers::ObjectMarker,
-                    )*
-                 {
-                    #[track_caller]
-                    fn from(report: Report<$context1, $ownership1, $thread_safety1>) -> Self {
-                        report
-                            $(.$op())*
-                    }
+macro_rules! from_impls {
+    ($(
+        <
+            $($param:ident),*
+        >:
+        $context1:ty => $context2:ty,
+        $ownership1:ty => $ownership2:ty,
+        $thread_safety1:ty => $thread_safety2:ty,
+        [$($op:ident),*]
+    ),* $(,)?) => {
+        $(
+            impl<$($param),*> From<Report<$context1, $ownership1, $thread_safety1>> for Report<$context2, $ownership2, $thread_safety2>
+                where $(
+                    $param: markers::ObjectMarker,
+                )*
+             {
+                #[track_caller]
+                fn from(report: Report<$context1, $ownership1, $thread_safety1>) -> Self {
+                    report
+                        $(.$op())*
                 }
-            )*
-        };
-    }
-
-    from_impls!(
-        <C>: C => C, Mutable => Mutable, SendSync => Local, [into_local],
-        <C>: C => C, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
-        <C>: C => C, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
-        <C>: C => C, Mutable => Cloneable, Local => Local, [into_cloneable],
-        <C>: C => C, Cloneable => Cloneable, SendSync => Local, [into_local],
-        <C>: C => dyn Any, Mutable => Mutable, SendSync => SendSync, [into_dyn_any],
-        <C>: C => dyn Any, Mutable => Mutable, SendSync => Local, [into_dyn_any, into_local],
-        <C>: C => dyn Any, Mutable => Mutable, Local => Local, [into_dyn_any],
-        <C>: C => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
-        <C>: C => dyn Any, Mutable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
-        <C>: C => dyn Any, Mutable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
-        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
-        <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
-        <C>: C => dyn Any, Cloneable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
-        <>:  dyn Any => dyn Any, Mutable => Mutable, SendSync => Local, [into_local],
-        <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
-        <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
-        <>:  dyn Any => dyn Any, Mutable => Cloneable, Local => Local, [into_cloneable],
-        <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_local],
-    );
+            }
+        )*
+    };
 }
+
+from_impls!(
+    <C>: C => C, Mutable => Mutable, SendSync => Local, [into_local],
+    <C>: C => C, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
+    <C>: C => C, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
+    <C>: C => C, Mutable => Cloneable, Local => Local, [into_cloneable],
+    <C>: C => C, Cloneable => Cloneable, SendSync => Local, [into_local],
+    <C>: C => dyn Any, Mutable => Mutable, SendSync => SendSync, [into_dyn_any],
+    <C>: C => dyn Any, Mutable => Mutable, SendSync => Local, [into_dyn_any, into_local],
+    <C>: C => dyn Any, Mutable => Mutable, Local => Local, [into_dyn_any],
+    <C>: C => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
+    <C>: C => dyn Any, Mutable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
+    <C>: C => dyn Any, Mutable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
+    <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
+    <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
+    <C>: C => dyn Any, Cloneable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
+    <>:  dyn Any => dyn Any, Mutable => Mutable, SendSync => Local, [into_local],
+    <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
+    <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
+    <>:  dyn Any => dyn Any, Mutable => Cloneable, Local => Local, [into_cloneable],
+    <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_local],
+);
 
 #[cfg(test)]
 mod tests {

@@ -344,6 +344,9 @@ pub mod prelude;
 mod result_ext;
 mod util;
 
+#[cfg(feature = "anyhow")]
+pub mod anyhow_compat;
+
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},
     report::{iter::ReportIter, mut_::ReportMut, owned::Report, ref_::ReportRef},
