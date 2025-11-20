@@ -44,6 +44,8 @@
 
 pub use core::any::Any;
 
+#[cfg(feature = "anyhow")]
+pub use crate::anyhow_compat::{IntoAnyhow, IntoRootcause};
 pub use crate::{
     Report, bail, handlers, iterator_ext::IteratorExt, markers, report, report_attachment,
     result_ext::ResultExt,

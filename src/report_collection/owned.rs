@@ -828,41 +828,37 @@ where
     }
 }
 
-mod from_impls {
-    use super::*;
-
-    macro_rules! from_impls {
-        ($(
-            <
-                $($param:ident),*
-            >:
-            $context1:ty => $context2:ty,
-            $thread_safety1:ty => $thread_safety2:ty,
-            [$($op:ident),*]
-        ),* $(,)?) => {
-            $(
-                impl<$($param),*> From<ReportCollection<$context1, $thread_safety1>> for ReportCollection<$context2, $thread_safety2>
-                    where
-                        $($param: markers::ObjectMarker)*
-                    {
-                    fn from(report_collection: ReportCollection<$context1, $thread_safety1>) -> Self {
-                        report_collection
-                            $(
-                                .$op()
-                            )*
-                    }
+macro_rules! from_impls {
+    ($(
+        <
+            $($param:ident),*
+        >:
+        $context1:ty => $context2:ty,
+        $thread_safety1:ty => $thread_safety2:ty,
+        [$($op:ident),*]
+    ),* $(,)?) => {
+        $(
+            impl<$($param),*> From<ReportCollection<$context1, $thread_safety1>> for ReportCollection<$context2, $thread_safety2>
+                where
+                    $($param: markers::ObjectMarker)*
+                {
+                fn from(report_collection: ReportCollection<$context1, $thread_safety1>) -> Self {
+                    report_collection
+                        $(
+                            .$op()
+                        )*
                 }
-            )*
-        };
-    }
+            }
+        )*
+    };
+}
 
-    from_impls! {
-        <C>: C => C, SendSync => Local, [into_local],
-        <C>: C => dyn Any, SendSync => SendSync, [into_dyn_any],
-        <C>: C => dyn Any, SendSync => Local, [into_dyn_any, into_local],
-        <C>: C => dyn Any, Local => Local, [into_dyn_any],
-        <>: dyn Any => dyn Any, SendSync => Local, [into_local],
-    }
+from_impls! {
+    <C>: C => C, SendSync => Local, [into_local],
+    <C>: C => dyn Any, SendSync => SendSync, [into_dyn_any],
+    <C>: C => dyn Any, SendSync => Local, [into_dyn_any, into_local],
+    <C>: C => dyn Any, Local => Local, [into_dyn_any],
+    <>: dyn Any => dyn Any, SendSync => Local, [into_local],
 }
 
 impl<C, T> From<Vec<Report<C, Cloneable, T>>> for ReportCollection<C, T>

@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added an `anyhow` feature which adds compatibility traits for going back and forth between anyhow [#51](https://github.com/rootcause-rs/rootcause/pull/51)
+
 ## [0.8.0] - 2025-11-19
 
 ### Added

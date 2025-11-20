@@ -11,8 +11,9 @@ members = ["rootcause-internals"]
 
 [features]
 default = []
-std = ["indexmap/std", "triomphe/std"]
+std = ["indexmap/std", "triomphe/std", "anyhow?/std"]
 backtrace = ["dep:backtrace", "dep:regex", "std"]
+anyhow = ["dep:anyhow"]
 
 [dependencies]
 hashbrown = { version = "0.16.0", default-features = false }
@@ -25,6 +26,7 @@ triomphe = { version = "0.1.15", default-features = false, features = [
 unsize = "1.1.0"
 
 # Optional dependencies
+anyhow = { version = "1.0.100", optional = true, default-features = false }
 backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
 regex = { version = "1.12.2", optional = true }
 
@@ -36,6 +38,14 @@ indexmap = "2.12.0"
 serde_json = "1.0.145"
 static_assertions = "1.1.0"
 thiserror = "2.0.17"
+
+[[example]]
+name = "anyhow_interop"
+required-features = ["anyhow"]
+
+[[example]]
+name = "anyhow_migration"
+required-features = ["anyhow"]
 
 [package.metadata.docs.rs]
 all-features = true
