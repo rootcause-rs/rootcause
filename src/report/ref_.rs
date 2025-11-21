@@ -658,6 +658,47 @@ where
         )
     }
 
+    /// Formats the entire report using a specific report formatting hook.
+    ///
+    /// This method allows you to format a report with a custom formatter
+    /// without globally registering it. This is useful for:
+    /// - One-off custom formatting
+    /// - Testing different formatters
+    /// - Using different formatters in different parts of your application
+    ///
+    /// Unlike the default `Display` and `Debug` implementations which use the
+    /// globally registered hook, this method uses the hook you provide
+    /// directly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{hooks::builtin_hooks::report_formatter::DefaultReportFormatter, prelude::*};
+    ///
+    /// let report = report!("error message").into_cloneable();
+    /// let report_ref = report.as_ref();
+    ///
+    /// // Format with ASCII-only output (no Unicode or ANSI colors)
+    /// let formatted = report_ref.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI);
+    /// println!("{}", formatted);
+    /// ```
+    #[must_use]
+    pub fn format_with_hook<H: crate::hooks::report_formatting::ReportFormatterHook>(
+        self,
+        hook: &H,
+    ) -> impl core::fmt::Display + core::fmt::Debug {
+        let report = self.into_dyn_any().into_uncloneable().into_local();
+        format_helper(
+            (report, hook),
+            |(report, hook), formatter| {
+                hook.format_report(report, formatter, FormattingFunction::Display)
+            },
+            |(report, hook), formatter| {
+                hook.format_report(report, formatter, FormattingFunction::Debug)
+            },
+        )
+    }
+
     /// Gets the preferred formatting style for the context with hook
     /// processing.
     ///

@@ -3,45 +3,67 @@
 //! This module provides hooks that allow you to completely customize how entire
 //! reports are formatted, including their structure, colors, and layout.
 //!
-//! # Report Formatter Hooks
+//! # Built-in Formatters
 //!
-//! Report formatting hooks allow you to control the entire presentation of a
-//! report. This includes how multiple reports in a collection are displayed,
-//! how individual reports are formatted, and how attachments are integrated
-//! into the output.
+//! By default, rootcause uses [`DefaultReportFormatter::UNICODE_ANSI`], which
+//! provides Unicode box-drawing characters with ANSI color codes for modern
+//! terminals. An ASCII-only variant is also available:
 //!
 //! ```rust
 //! use rootcause::{
-//!     ReportRef,
-//!     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-//!     markers::{Local, Uncloneable},
+//!     hooks::{
+//!         builtin_hooks::report_formatter::DefaultReportFormatter,
+//!         report_formatting::register_report_formatter_hook,
+//!     },
 //!     prelude::*,
 //! };
 //!
-//! struct CompactFormatter;
+//! // Switch to ASCII-only output globally (affects all reports)
+//! register_report_formatter_hook(DefaultReportFormatter::ASCII_NO_ANSI);
 //!
-//! impl ReportFormatterHook for CompactFormatter {
-//!     fn format_reports(
-//!         &self,
-//!         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
-//!         formatter: &mut std::fmt::Formatter<'_>,
-//!         _function: rootcause::handlers::FormattingFunction,
-//!     ) -> std::fmt::Result {
-//!         for report in reports {
-//!             writeln!(formatter, "{}", report.format_current_context_unhooked())?;
-//!         }
-//!         Ok(())
-//!     }
-//! }
-//!
-//! register_report_formatter_hook(CompactFormatter);
+//! let report = report!("database connection failed");
+//! println!("{}", report);
 //! ```
 //!
-//! # Default Formatter
+//! # Per-Report Formatting
 //!
-//! By default, rootcause installs a [`DefaultReportFormatter`] that provides
-//! a comprehensive, multi-line report format with proper indentation,
-//! attachments, and context information.
+//! You can also apply a formatter to a specific report without changing the
+//! global default using [`Report::format_with_hook`]:
+//!
+//! ```rust
+//! use rootcause::{hooks::builtin_hooks::report_formatter::DefaultReportFormatter, prelude::*};
+//!
+//! let report = report!("parsing error");
+//!
+//! // This report uses the global formatter (Unicode + ANSI by default)
+//! println!("{}", report);
+//!
+//! // This uses ASCII-only for this specific report
+//! println!(
+//!     "{}",
+//!     report.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI)
+//! );
+//! ```
+//!
+//! This is useful when you need different output formats in different contexts,
+//! such as:
+//! - ASCII-only for log files
+//! - Full Unicode+ANSI for terminal output
+//! - Custom formatting for specific error types
+//!
+//! # Custom Formatters
+//!
+//! For complete control over report formatting, you can implement the
+//! [`ReportFormatterHook`] trait. See the trait documentation for details and
+//! examples of implementing custom formatters.
+//!
+//! The [`DefaultReportFormatter`] source code also serves as a comprehensive
+//! example of a full-featured formatter implementation.
+//!
+//! [`Display`]: core::fmt::Display
+//! [`Debug`]: core::fmt::Debug
+//! [`Report::format_with_hook`]: crate::Report::format_with_hook
+//! [`DefaultReportFormatter::UNICODE_ANSI`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter::UNICODE_ANSI
 
 use core::{any::Any, fmt};
 

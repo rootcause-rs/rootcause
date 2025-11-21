@@ -455,6 +455,63 @@ where
         unsafe { ReportCollectionIter::from_raw(raw) }
     }
 
+    /// Formats the entire collection using a specific report formatting hook.
+    ///
+    /// This method allows you to format a collection of reports with a custom
+    /// formatter without globally registering it. This is useful for:
+    /// - One-off custom formatting
+    /// - Testing different formatters
+    /// - Using different formatters in different parts of your application
+    ///
+    /// Unlike the default `Display` and `Debug` implementations which use the
+    /// globally registered hook, this method uses the hook you provide
+    /// directly.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     hooks::builtin_hooks::report_formatter::DefaultReportFormatter, report,
+    ///     report_collection::ReportCollection,
+    /// };
+    ///
+    /// let mut collection = ReportCollection::new();
+    /// collection.push(report!("Error 1").into_cloneable());
+    /// collection.push(report!("Error 2").into_cloneable());
+    ///
+    /// // Format with ASCII-only output (no Unicode or ANSI colors)
+    /// let formatted = collection.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI);
+    /// println!("{}", formatted);
+    /// ```
+    #[must_use]
+    pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
+    where
+        H: crate::hooks::report_formatting::ReportFormatterHook,
+    {
+        let raw = self.as_raw();
+
+        // SAFETY:
+        // 1. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 2. For the called method we set `O=Uncloneable`, so this is trivially true.
+        // 3. Guaranteed by the invariants of the collection.
+        // 4. For the called method we set `T=Local`, so this is trivially true.
+        let slice = unsafe {
+            // @add-unsafe-context: rootcause_internals::RawReport
+            // @add-unsafe-context: rootcause_internals::RawReportRef
+            ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw)
+        };
+
+        crate::util::format_helper(
+            (slice, hook),
+            |(slice, hook), formatter| {
+                hook.format_reports(slice, formatter, FormattingFunction::Display)
+            },
+            |(slice, hook), formatter| {
+                hook.format_reports(slice, formatter, FormattingFunction::Debug)
+            },
+        )
+    }
+
     /// Converts the collection to use type-erased contexts via `dyn Any`.
     ///
     /// This performs type erasure on the context type parameter, allowing
