@@ -38,17 +38,16 @@ regex = { version = "1.12.2", optional = true }
 rootcause-internals = { path = "rootcause-internals", version = "=0.8.1" }
 
 [dev-dependencies]
-eyre = { version = "0.6.12", features = ["auto-install"] }
-indexmap = "2.12.0"
-serde_json = "1.0.145"
-static_assertions = "1.1.0"
-thiserror = "2.0.17"
-
 derive_more = { version = "2.0", default-features = false, features = [
   "error",
   "from",
   "display",
 ] }
+eyre = { version = "0.6.12", features = ["auto-install"] }
+indexmap = "2.12.0"
+serde_json = "1.0.145"
+static_assertions = "1.1.0"
+thiserror = "2.0.17"
 
 [[example]]
 name = "anyhow_interop"
