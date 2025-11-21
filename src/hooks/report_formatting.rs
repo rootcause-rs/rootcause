@@ -11,11 +11,11 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     prelude::*,
 //!     hooks::{
 //!         builtin_hooks::report_formatter::DefaultReportFormatter,
 //!         report_formatting::register_report_formatter_hook,
 //!     },
+//!     prelude::*,
 //! };
 //!
 //! // Switch to ASCII-only output globally (affects all reports)
@@ -31,10 +31,7 @@
 //! global default using [`Report::format_with_hook`]:
 //!
 //! ```rust
-//! use rootcause::{
-//!     prelude::*,
-//!     hooks::builtin_hooks::report_formatter::DefaultReportFormatter,
-//! };
+//! use rootcause::{hooks::builtin_hooks::report_formatter::DefaultReportFormatter, prelude::*};
 //!
 //! let report = report!("parsing error");
 //!
@@ -42,7 +39,10 @@
 //! println!("{}", report);
 //!
 //! // This uses ASCII-only for this specific report
-//! println!("{}", report.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI));
+//! println!(
+//!     "{}",
+//!     report.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI)
+//! );
 //! ```
 //!
 //! This is useful when you need different output formats in different contexts,

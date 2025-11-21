@@ -758,22 +758,20 @@ where
 
     /// Formats the entire report using a specific report formatting hook.
     ///
-    /// This method allows you to format a report with a custom formatter without
-    /// globally registering it. This is useful for:
+    /// This method allows you to format a report with a custom formatter
+    /// without globally registering it. This is useful for:
     /// - One-off custom formatting
     /// - Testing different formatters
     /// - Using different formatters in different parts of your application
     ///
     /// Unlike the default `Display` and `Debug` implementations which use the
-    /// globally registered hook, this method uses the hook you provide directly.
+    /// globally registered hook, this method uses the hook you provide
+    /// directly.
     ///
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{
-    ///     prelude::*,
-    ///     hooks::builtin_hooks::report_formatter::DefaultReportFormatter,
-    /// };
+    /// use rootcause::{hooks::builtin_hooks::report_formatter::DefaultReportFormatter, prelude::*};
     ///
     /// let mut report = report!("error message");
     /// let report_mut = report.as_mut();

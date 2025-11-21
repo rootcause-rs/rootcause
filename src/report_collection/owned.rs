@@ -464,15 +464,15 @@ where
     /// - Using different formatters in different parts of your application
     ///
     /// Unlike the default `Display` and `Debug` implementations which use the
-    /// globally registered hook, this method uses the hook you provide directly.
+    /// globally registered hook, this method uses the hook you provide
+    /// directly.
     ///
     /// # Examples
     ///
     /// ```
     /// use rootcause::{
-    ///     report,
+    ///     hooks::builtin_hooks::report_formatter::DefaultReportFormatter, report,
     ///     report_collection::ReportCollection,
-    ///     hooks::builtin_hooks::report_formatter::DefaultReportFormatter,
     /// };
     ///
     /// let mut collection = ReportCollection::new();
