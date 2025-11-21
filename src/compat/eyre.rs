@@ -15,7 +15,7 @@
 //!
 //! # Converting from Eyre to Rootcause
 //!
-//! Use the [`IntoRootcause`](super::IntoRootcause) trait to convert eyre
+//! Use the [`IntoRootcause`] trait to convert eyre
 //! reports into rootcause reports:
 //!
 //! ```

@@ -96,6 +96,10 @@ use crate::{Report, markers};
 /// - [`error_stack`] module provides implementations for
 ///   [`error_stack::Report<C>`] and `Result<T, error_stack::Report<C>>`
 ///
+/// [`anyhow::Error`]: ::anyhow::Error
+/// [`anyhow::Result<T>`]: ::anyhow::Result
+/// [`error_stack::Report<C>`]: ::error_stack::Report
+///
 /// # Examples
 ///
 /// ```

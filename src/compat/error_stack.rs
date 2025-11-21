@@ -15,7 +15,7 @@
 //!
 //! # Converting from error-stack to Rootcause
 //!
-//! Use the [`IntoRootcause`](super::IntoRootcause) trait to convert error-stack
+//! Use the [`IntoRootcause`] trait to convert error-stack
 //! reports into rootcause reports:
 //!
 //! ```

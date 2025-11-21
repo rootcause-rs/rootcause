@@ -15,7 +15,7 @@
 //!
 //! # Converting from Anyhow to Rootcause
 //!
-//! Use the [`IntoRootcause`](super::IntoRootcause) trait to convert anyhow
+//! Use the [`IntoRootcause`] trait to convert anyhow
 //! errors into reports:
 //!
 //! ```
