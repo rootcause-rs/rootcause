@@ -1,27 +1,43 @@
-//! Quick reference for anyhow interoperability
+//! Quick reference for bidirectional anyhow interoperability.
 //!
-//! This example demonstrates the conversion APIs between rootcause and anyhow.
-//! For a complete migration guide, see
+//! This example demonstrates all the ways to convert between rootcause
+//! [`Report`]s and [`anyhow::Error`]. For a complete migration guide, see
 //! [`anyhow_migration.rs`](anyhow_migration.rs).
 //!
-//! # Conversion APIs
+//! # Running this Example
 //!
-//! - **`.into_rootcause()`** - Convert `anyhow::Result` to rootcause `Result`
-//! - **`.into_anyhow()`** - Convert rootcause `Result` to `anyhow::Result`
-//! - **`From<Report>`** - Automatic conversion to `anyhow::Error`
+//! ```bash
+//! cargo run --example anyhow_interop --features anyhow
+//! ```
+//!
+//! # Conversion Overview
+//!
+//! ## From Anyhow to Rootcause
+//! - `.into_rootcause()` - Convert `anyhow::Result<T>` or `anyhow::Error`
+//!
+//! ## From Rootcause to Anyhow
+//! - `.into_anyhow()` - Convert `Result<T, Report>` or `Report`
+//! - `.into()` - Use `From<Report>` for automatic conversion
+//! - `?` operator - Automatically converts `Report` to `anyhow::Error` in anyhow
+//!   functions
 
-use rootcause::prelude::*;
+// Import only what we need to avoid conflicting with anyhow's Context trait
+use rootcause::compat::{IntoRootcause, anyhow::IntoAnyhow};
+use rootcause::{Report, bail};
 
 // ============================================================================
-// Calling anyhow code from rootcause
+// Example 1: Calling anyhow code from rootcause
 // ============================================================================
 
 fn some_anyhow_function() -> anyhow::Result<String> {
-    Ok("Hello from anyhow".to_string())
+    anyhow::bail!("connection failed");
 }
 
 fn rootcause_calls_anyhow() -> Result<(), Report> {
+    use rootcause::prelude::ResultExt;
+
     // Use .into_rootcause() to convert anyhow::Result to Result<T, Report>
+    // Then use rootcause's .context() to add context
     let value = some_anyhow_function()
         .into_rootcause()
         .context("Failed to get value")?;
@@ -31,52 +47,61 @@ fn rootcause_calls_anyhow() -> Result<(), Report> {
 }
 
 // ============================================================================
-// Exposing rootcause code to anyhow callers
+// Example 2: Exposing rootcause code to anyhow callers
 // ============================================================================
 
 fn some_rootcause_function() -> Result<String, Report> {
-    Ok("Hello from rootcause".to_string())
+    bail!("validation failed");
 }
 
 fn anyhow_calls_rootcause() -> anyhow::Result<()> {
+    use anyhow::Context;
+
     // Use .into_anyhow() to convert Result<T, Report> to anyhow::Result
-    let value = some_rootcause_function().into_anyhow()?;
+    // Then use anyhow's .context() to add context
+    let value = some_rootcause_function()
+        .into_anyhow()
+        .context("Failed to process data")?;
 
     println!("Got value: {}", value);
     Ok(())
 }
 
 // ============================================================================
-// Automatic conversion via From trait
+// Example 3: Automatic conversion via From trait
 // ============================================================================
 
 fn rootcause_function_returning_anyhow() -> anyhow::Result<()> {
-    // Report can be automatically converted to anyhow::Error via ?
+    // The ? operator automatically converts Report to anyhow::Error
     some_rootcause_function()?;
     Ok(())
 }
 
-// ============================================================================
-// Main - demonstrate all patterns
-// ============================================================================
-
 fn main() -> anyhow::Result<()> {
-    println!("RootCause ↔ Anyhow Interoperability\n");
+    println!("Rootcause ↔ Anyhow Interoperability Examples\n");
+    println!("===========================================\n");
 
-    println!("1. Calling anyhow code from rootcause:");
+    println!("=== Example 1: Anyhow → Rootcause ===\n");
     if let Err(e) = rootcause_calls_anyhow() {
-        eprintln!("   Error: {}\n", e);
+        println!("Error occurred:");
+        println!("{}\n", e);
     }
 
-    println!("2. Calling rootcause code from anyhow:");
-    anyhow_calls_rootcause()?;
-    println!();
+    println!("=== Example 2: Rootcause → Anyhow ===\n");
+    if let Err(e) = anyhow_calls_rootcause() {
+        println!("Error occurred:");
+        println!("{}\n", e);
+    }
 
-    println!("3. Automatic conversion (Report → anyhow::Error):");
-    rootcause_function_returning_anyhow()?;
-    println!("   ✓ Conversion works seamlessly\n");
+    println!("=== Example 3: Automatic Conversion with ? ===\n");
+    if let Err(e) = rootcause_function_returning_anyhow() {
+        println!("Error occurred:");
+        println!("{}\n", e);
+    }
 
-    println!("See anyhow_migration.rs for a complete migration guide.");
+    println!("===========================================");
+    println!("\nFor more examples, see:");
+    println!("- examples/anyhow_migration.rs - Complete migration guide");
 
     Ok(())
 }

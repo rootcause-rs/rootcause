@@ -173,15 +173,10 @@ impl ContextHandler<anyhow::Error> for AnyhowHandler {
 
     fn preferred_formatting_style(
         _value: &anyhow::Error,
-        report_formatting_function: FormattingFunction,
+        formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        match report_formatting_function {
-            FormattingFunction::Display => ContextFormattingStyle {
-                function: FormattingFunction::Display,
-            },
-            FormattingFunction::Debug => ContextFormattingStyle {
-                function: FormattingFunction::Debug,
-            },
+        ContextFormattingStyle {
+            function: formatting_function,
         }
     }
 }

@@ -13,6 +13,8 @@
 //!   (requires the `anyhow` feature flag)
 //! - [`error_stack`] - Integration with the `error-stack` error handling library
 //!   (requires the `error-stack` feature flag)
+//! - [`eyre`] - Integration with the `eyre` error handling library
+//!   (requires the `eyre` feature flag)
 //!
 //! # When to Use Compatibility Modules
 //!
@@ -140,6 +142,9 @@ pub mod anyhow;
 
 #[cfg(feature = "error-stack")]
 pub mod error_stack;
+
+#[cfg(feature = "eyre")]
+pub mod eyre;
 
 /// A wrapper that adapts a rootcause [`Report`] to implement
 /// [`core::error::Error`].
