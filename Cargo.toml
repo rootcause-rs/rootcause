@@ -39,6 +39,12 @@ serde_json = "1.0.145"
 static_assertions = "1.1.0"
 thiserror = "2.0.17"
 
+derive_more = { version = "2.0", default-features = false, features = [
+  "error",
+  "from",
+  "display",
+] }
+
 [[example]]
 name = "anyhow_interop"
 required-features = ["anyhow"]
