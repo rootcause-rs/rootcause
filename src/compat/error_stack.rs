@@ -58,7 +58,7 @@
 //! }
 //!
 //! // The ? operator automatically converts Result<T, Report> to Result<T, error_stack::Report>
-//! fn error_stack_function() -> Result<String, error_stack::Report<rootcause::compat::ReportAsError<dyn core::any::Any>>> {
+//! fn error_stack_function() -> Result<String, error_stack::Report<rootcause::compat::ReportAsError>> {
 //!     rootcause_function().into_error_stack()?;
 //!     Ok("success".to_string())
 //! }
@@ -97,7 +97,7 @@
 //!     Err(report!("something failed"))
 //! }
 //!
-//! fn error_stack_function() -> Result<String, error_stack::Report<rootcause::compat::ReportAsError<dyn core::any::Any>>> {
+//! fn error_stack_function() -> Result<String, error_stack::Report<rootcause::compat::ReportAsError>> {
 //!     // The ? operator automatically converts Report to error_stack::Report
 //!     rootcause_function()?;
 //!     Ok("success".to_string())
@@ -229,7 +229,7 @@ where
 ///     Err(report!("failed"))
 /// }
 ///
-/// fn uses_error_stack() -> Result<i32, error_stack::Report<rootcause::compat::ReportAsError<dyn core::any::Any>>> {
+/// fn uses_error_stack() -> Result<i32, error_stack::Report<rootcause::compat::ReportAsError>> {
 ///     let value = uses_rootcause().into_error_stack()?;
 ///     Ok(value)
 /// }

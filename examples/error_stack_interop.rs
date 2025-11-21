@@ -1,28 +1,53 @@
-//! Quick reference for error-stack interoperability
+//! Quick reference for bidirectional error-stack interoperability.
 //!
-//! This example demonstrates the conversion APIs between rootcause and
-//! error-stack.
+//! This example demonstrates all the ways to convert between rootcause
+//! [`Report`]s and [`error_stack::Report`].
 //!
-//! # Conversion APIs
+//! # Running this Example
 //!
-//! - **`.into_rootcause()`** - Convert `error_stack::Report` to rootcause `Report`
-//! - **`.into_error_stack()`** - Convert rootcause `Report` to `error_stack::Report`
-//! - **`From<Report>`** - Automatic conversion to `error_stack::Report`
+//! ```bash
+//! cargo run --example error_stack_interop --features error-stack
+//! ```
+//!
+//! # Conversion Overview
+//!
+//! ## From error-stack to Rootcause
+//! - `.into_rootcause()` - Convert `error_stack::Report<C>` or individual errors
+//!
+//! ## From Rootcause to error-stack
+//! - `.into_error_stack()` - Convert `Result<T, Report>` or `Report`
+//! - `.into()` - Use `From<Report>` for automatic conversion
+//! - `?` operator - Automatically converts `Report` to `error_stack::Report` in
+//!   error-stack functions
 
-use rootcause::compat::error_stack::IntoErrorStack;
-use rootcause::prelude::*;
-use std::io;
+// Import only what we need to avoid conflicting with error-stack's attach trait
+use rootcause::compat::{IntoRootcause, error_stack::IntoErrorStack};
+use rootcause::{Report, bail};
 
 // ============================================================================
-// Calling error-stack code from rootcause
+// Example 1: Calling error-stack code from rootcause
 // ============================================================================
 
-fn some_error_stack_function() -> Result<String, error_stack::Report<io::Error>> {
-    Ok("Hello from error-stack".to_string())
+#[derive(Debug)]
+struct ConnectionError;
+
+impl core::fmt::Display for ConnectionError {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.write_str("connection failed")
+    }
+}
+
+impl core::error::Error for ConnectionError {}
+
+fn some_error_stack_function() -> Result<String, error_stack::Report<ConnectionError>> {
+    error_stack::bail!(ConnectionError);
 }
 
 fn rootcause_calls_error_stack() -> Result<(), Report> {
-    // Use .into_rootcause() to convert error_stack::Report to Report
+    use rootcause::prelude::ResultExt;
+
+    // Use .into_rootcause() to convert error_stack::Report to Result<T, Report>
+    // Then use rootcause's .context() to add context
     let value = some_error_stack_function()
         .into_rootcause()
         .context("Failed to get value")?;
@@ -32,81 +57,64 @@ fn rootcause_calls_error_stack() -> Result<(), Report> {
 }
 
 // ============================================================================
-// Exposing rootcause code to error-stack callers
+// Example 2: Exposing rootcause code to error-stack callers
 // ============================================================================
 
 fn some_rootcause_function() -> Result<String, Report> {
-    Ok("Hello from rootcause".to_string())
+    bail!("validation failed");
 }
 
-fn error_stack_calls_rootcause()
--> Result<(), error_stack::Report<rootcause::compat::ReportAsError<dyn core::any::Any>>> {
-    // Use .into_error_stack() to convert Result<T, Report> to error_stack result
-    let value = some_rootcause_function().into_error_stack()?;
+fn error_stack_calls_rootcause() -> Result<(), error_stack::Report<rootcause::compat::ReportAsError>>
+{
+    use error_stack::ResultExt;
+
+    // Use .into_error_stack() to convert Result<T, Report> to error_stack::Result
+    // Then use error-stack's .attach() to add context
+    let value = some_rootcause_function()
+        .into_error_stack()
+        .attach("Failed to process data")?;
 
     println!("Got value: {}", value);
     Ok(())
 }
 
 // ============================================================================
-// Automatic conversion via From trait
+// Example 3: Automatic conversion via From trait
 // ============================================================================
 
 fn rootcause_function_returning_error_stack()
--> Result<(), error_stack::Report<rootcause::compat::ReportAsError<dyn core::any::Any>>> {
-    // Report can be automatically converted to error_stack::Report via ?
+-> Result<(), error_stack::Report<rootcause::compat::ReportAsError>> {
+    // The ? operator automatically converts Report to error_stack::Report
     some_rootcause_function()?;
     Ok(())
 }
 
-// ============================================================================
-// Converting individual reports
-// ============================================================================
+fn main() -> Result<(), error_stack::Report<rootcause::compat::ReportAsError>> {
+    println!("Rootcause ↔ error-stack Interoperability Examples\n");
+    println!("===========================================\n");
 
-fn demonstrate_report_conversion() {
-    // Convert a rootcause Report to error-stack Report using .into_error_stack()
-    let rootcause_report = report!("something failed").attach("Additional context");
-
-    let es_report: error_stack::Report<_> = rootcause_report.into_error_stack();
-    println!("Using .into_error_stack(): {}", es_report);
-
-    // Convert using the From trait
-    let rootcause_report = report!("another error");
-    let es_report: error_stack::Report<_> = rootcause_report.into();
-    println!("Using From trait: {}", es_report);
-
-    // Convert an error-stack Report to rootcause Report
-    use error_stack::IntoReport;
-    let es_report = io::Error::from(io::ErrorKind::NotFound).into_report();
-    let rootcause_report: Report<_> = es_report.into_rootcause();
-    println!("error-stack to rootcause: {}", rootcause_report);
-}
-
-// ============================================================================
-// Main - demonstrate all patterns
-// ============================================================================
-
-fn main() -> Result<(), error_stack::Report<rootcause::compat::ReportAsError<dyn core::any::Any>>> {
-    println!("RootCause ↔ error-stack Interoperability\n");
-
-    println!("1. Calling error-stack code from rootcause:");
+    println!("=== Example 1: error-stack → Rootcause ===\n");
     if let Err(e) = rootcause_calls_error_stack() {
-        eprintln!("   Error: {}\n", e);
+        println!("Error occurred:");
+        println!("{}\n", e);
     }
 
-    println!("2. Calling rootcause code from error-stack:");
-    error_stack_calls_rootcause()?;
-    println!();
+    println!("=== Example 2: Rootcause → error-stack ===\n");
+    if let Err(e) = error_stack_calls_rootcause() {
+        println!("Error occurred:");
+        println!("{}\n", e);
+    }
 
-    println!("3. Automatic conversion (Report → error_stack::Report):");
-    rootcause_function_returning_error_stack()?;
-    println!("   ✓ Conversion works seamlessly\n");
+    println!("=== Example 3: Automatic Conversion with ? ===\n");
+    if let Err(e) = rootcause_function_returning_error_stack() {
+        println!("Error occurred:");
+        println!("{}\n", e);
+    }
 
-    println!("4. Converting individual reports:");
-    demonstrate_report_conversion();
-    println!();
-
-    println!("✓ All conversions work seamlessly");
+    println!("===========================================");
+    println!("\nFor more examples, see:");
+    println!("- examples/anyhow_interop.rs - anyhow integration");
+    println!("- examples/eyre_interop.rs - eyre integration");
 
     Ok(())
 }
