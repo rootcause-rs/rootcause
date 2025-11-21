@@ -15,7 +15,8 @@
 //!
 //! # Converting from Anyhow to Rootcause
 //!
-//! Use the [`IntoRootcause`] trait to convert anyhow errors into reports:
+//! Use the [`IntoRootcause`](super::IntoRootcause) trait to convert anyhow
+//! errors into reports:
 //!
 //! ```
 //! use rootcause::prelude::*;
@@ -98,7 +99,7 @@
 //!
 //! ```
 //! use anyhow::Context;
-//! use rootcause::{Report, anyhow_compat::IntoAnyhow};
+//! use rootcause::{Report, prelude::IntoAnyhow};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(rootcause::report!("connection failed"))
@@ -126,11 +127,11 @@
 //! (including all contexts and attachments) is preserved and formatted
 //! according to rootcause's formatting rules.
 
-use core::any::Any;
-
 use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
 
-use crate::{Report, markers};
+use crate::{Report, compat::ReportAsError, markers};
+
+use super::IntoRootcause;
 
 /// A custom handler for [`anyhow::Error`] that delegates to anyhow's own
 /// formatting.
@@ -183,69 +184,6 @@ impl ContextHandler<anyhow::Error> for AnyhowHandler {
             },
         }
     }
-}
-
-/// A trait for converting [`anyhow::Error`] and [`anyhow::Result`] into
-/// rootcause types.
-///
-/// This trait provides the `.into_rootcause()` method for converting anyhow
-/// errors into rootcause [`Report`]s. It's implemented for both
-/// [`anyhow::Error`] and [`anyhow::Result<T>`], making it easy to integrate
-/// anyhow-based code with rootcause.
-///
-/// # Examples
-///
-/// ## Converting a Result
-///
-/// ```
-/// use rootcause::prelude::*;
-///
-/// fn uses_anyhow() -> anyhow::Result<i32> {
-///     Ok(42)
-/// }
-///
-/// fn uses_rootcause() -> Result<i32, Report> {
-///     let value = uses_anyhow().into_rootcause()?;
-///     Ok(value)
-/// }
-/// ```
-///
-/// ## Converting an Error
-///
-/// ```
-/// use rootcause::prelude::*;
-///
-/// let anyhow_err = anyhow::anyhow!("database connection failed");
-/// let report: Report = anyhow_err.into_rootcause();
-/// ```
-pub trait IntoRootcause {
-    /// The type produced by the conversion.
-    ///
-    /// - For [`anyhow::Error`]: produces `Report`
-    /// - For [`anyhow::Result<T>`]: produces `Result<T, Report>`
-    type Output;
-
-    /// Converts this value into a rootcause type.
-    ///
-    /// For [`anyhow::Error`], this wraps the error in a [`Report`] with the
-    /// [`AnyhowHandler`]. For [`anyhow::Result<T>`], this converts the error
-    /// variant while preserving the success value.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use rootcause::prelude::*;
-    ///
-    /// // Convert a result
-    /// let result: anyhow::Result<i32> = Ok(42);
-    /// let converted: Result<i32, Report> = result.into_rootcause();
-    /// assert_eq!(converted.unwrap(), 42);
-    ///
-    /// // Convert an error
-    /// let error: anyhow::Error = anyhow::anyhow!("failed");
-    /// let report: Report = error.into_rootcause();
-    /// ```
-    fn into_rootcause(self) -> Self::Output;
 }
 
 impl IntoRootcause for anyhow::Error {
@@ -367,27 +305,6 @@ where
 
     fn into_anyhow(self) -> Self::Output {
         self.map_err(|r| r.into_anyhow())
-    }
-}
-
-#[derive(Clone)]
-struct ReportAsError(Report<dyn Any, markers::Cloneable, markers::SendSync>);
-
-impl core::fmt::Debug for ReportAsError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.0, f)
-    }
-}
-
-impl core::fmt::Display for ReportAsError {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.0, f)
-    }
-}
-
-impl core::error::Error for ReportAsError {
-    fn source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        None
     }
 }
 

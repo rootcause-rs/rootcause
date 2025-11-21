@@ -25,6 +25,8 @@ Demonstrations of rootcause features and patterns.
 
 - [`anyhow_interop.rs`](anyhow_interop.rs) - Quick reference for anyhow conversion APIs: `.into_rootcause()`, `.into_anyhow()`, `From<Report>`
 - [`anyhow_migration.rs`](anyhow_migration.rs) - Gradual migration from anyhow: 5 stages showing top-down adoption strategy
+- [`error_stack_interop.rs`](error_stack_interop.rs) - Quick reference for error-stack conversion APIs: `.into_rootcause()`, `.into_error_stack()`
+- [`thiserror_interop.rs`](thiserror_interop.rs) - Using thiserror errors with rootcause: pattern matching, context chains vs `#[from]` nesting
 
 ## Custom Types & Handlers
 

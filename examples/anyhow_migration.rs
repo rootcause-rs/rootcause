@@ -110,7 +110,7 @@ fn main() {
     println!("\n=== Migration complete! ===");
     println!("\nKey takeaways:");
     println!("  • Start top-down for immediate benefits");
-    println!("  • Use .into_rootcause() when calling anyhow dependencies");
+    println!("  • Use .into_rootcause() when calling dependencies");
     println!("  • Use .into_anyhow() when exposing anyhow-compatible APIs");
     println!("  • Convert public interfaces last (breaking change)");
     println!("  • Migration can be gradual - you don't have to do it all at once!");

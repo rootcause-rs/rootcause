@@ -44,8 +44,11 @@
 
 pub use core::any::Any;
 
+pub use crate::compat::IntoRootcause;
 #[cfg(feature = "anyhow")]
-pub use crate::anyhow_compat::{IntoAnyhow, IntoRootcause};
+pub use crate::compat::anyhow::IntoAnyhow;
+#[cfg(feature = "error-stack")]
+pub use crate::compat::error_stack::IntoErrorStack;
 pub use crate::{
     Report, bail, handlers, iterator_ext::IteratorExt, markers, report, report_attachment,
     result_ext::ResultExt,
