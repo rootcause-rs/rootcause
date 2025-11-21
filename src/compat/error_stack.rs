@@ -19,11 +19,14 @@
 //! reports into rootcause reports:
 //!
 //! ```
-//! use rootcause::prelude::*;
 //! use std::io;
 //!
+//! use rootcause::prelude::*;
+//!
 //! fn error_stack_function() -> Result<String, error_stack::Report<io::Error>> {
-//!     Err(error_stack::report!(io::Error::from(io::ErrorKind::NotFound)))
+//!     Err(error_stack::report!(io::Error::from(
+//!         io::ErrorKind::NotFound
+//!     )))
 //! }
 //!
 //! fn rootcause_function() -> Result<String, Report> {
@@ -58,7 +61,8 @@
 //! }
 //!
 //! // The ? operator automatically converts Result<T, Report> to Result<T, error_stack::Report>
-//! fn error_stack_function() -> Result<String, error_stack::Report<rootcause::compat::ReportAsError>> {
+//! fn error_stack_function()
+//! -> Result<String, error_stack::Report<rootcause::compat::ReportAsError>> {
 //!     rootcause_function().into_error_stack()?;
 //!     Ok("success".to_string())
 //! }
@@ -97,7 +101,8 @@
 //!     Err(report!("something failed"))
 //! }
 //!
-//! fn error_stack_function() -> Result<String, error_stack::Report<rootcause::compat::ReportAsError>> {
+//! fn error_stack_function()
+//! -> Result<String, error_stack::Report<rootcause::compat::ReportAsError>> {
 //!     // The ? operator automatically converts Report to error_stack::Report
 //!     rootcause_function()?;
 //!     Ok("success".to_string())
@@ -132,10 +137,10 @@ use crate::{
 /// A custom handler for [`error_stack::Report`] that delegates to error-stack's
 /// own formatting.
 ///
-/// This handler ensures that [`error_stack::Report`] objects display identically
-/// whether they're used directly or wrapped in a rootcause [`Report`]. You
-/// typically don't need to use this handler directly - it's used automatically
-/// by the [`IntoRootcause`] trait.
+/// This handler ensures that [`error_stack::Report`] objects display
+/// identically whether they're used directly or wrapped in a rootcause
+/// [`Report`]. You typically don't need to use this handler directly - it's
+/// used automatically by the [`IntoRootcause`] trait.
 ///
 /// # Implementation Details
 ///
@@ -211,8 +216,8 @@ where
 ///
 /// This trait provides the `.into_error_stack()` method for converting
 /// rootcause reports into error-stack reports. It's implemented for both
-/// [`Report`] and [`Result<T, Report>`], making it easy to call error-stack-based
-/// APIs from rootcause code.
+/// [`Report`] and [`Result<T, Report>`], making it easy to call
+/// error-stack-based APIs from rootcause code.
 ///
 /// The conversion wraps the entire report structure inside an
 /// [`error_stack::Report`], preserving all contexts, attachments, and
@@ -261,12 +266,15 @@ where
 /// # Type Parameters
 ///
 /// - `C`: The context type parameter of the rootcause report. When converting,
-///   the report will be wrapped as an [`error_stack::Report<ReportAsError<C>>`].
+///   the report will be wrapped as an
+///   [`error_stack::Report<ReportAsError<C>>`].
 pub trait IntoErrorStack<C: ?Sized> {
     /// The type produced by the conversion.
     ///
-    /// - For [`Report`]: produces [`error_stack::Report<ReportAsError<C>>`](error_stack::Report)
-    /// - For [`Result<T, Report>`]: produces `Result<T, error_stack::Report<ReportAsError<C>>>`
+    /// - For [`Report`]: produces
+    ///   [`error_stack::Report<ReportAsError<C>>`](error_stack::Report)
+    /// - For [`Result<T, Report>`]: produces `Result<T,
+    ///   error_stack::Report<ReportAsError<C>>>`
     type Output;
 
     /// Converts this value into an error-stack type.

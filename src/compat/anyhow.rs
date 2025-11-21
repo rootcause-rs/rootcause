@@ -129,9 +129,8 @@
 
 use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
 
-use crate::{Report, compat::ReportAsError, markers};
-
 use super::IntoRootcause;
+use crate::{Report, compat::ReportAsError, markers};
 
 /// A custom handler for [`anyhow::Error`] that delegates to anyhow's own
 /// formatting.

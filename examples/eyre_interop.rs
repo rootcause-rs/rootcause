@@ -23,8 +23,10 @@
 //!   functions
 
 // Import only what we need to avoid conflicting with eyre's WrapErr trait
-use rootcause::compat::{IntoRootcause, eyre::IntoEyre};
-use rootcause::{Report, bail};
+use rootcause::{
+    Report, bail,
+    compat::{IntoRootcause, eyre::IntoEyre},
+};
 
 // ============================================================================
 // Example 1: Calling eyre code from rootcause

@@ -11,10 +11,10 @@
 //!
 //! - [`anyhow`] - Integration with the `anyhow` error handling library
 //!   (requires the `anyhow` feature flag)
-//! - [`error_stack`] - Integration with the `error-stack` error handling library
-//!   (requires the `error-stack` feature flag)
-//! - [`eyre`] - Integration with the `eyre` error handling library
-//!   (requires the `eyre` feature flag)
+//! - [`error_stack`] - Integration with the `error-stack` error handling
+//!   library (requires the `error-stack` feature flag)
+//! - [`eyre`] - Integration with the `eyre` error handling library (requires
+//!   the `eyre` feature flag)
 //!
 //! # When to Use Compatibility Modules
 //!
@@ -31,8 +31,8 @@
 //! # Design Philosophy
 //!
 //! Each compatibility module aims to provide:
-//! - **Bidirectional conversions**: Convert errors in both directions to support
-//!   flexible integration patterns
+//! - **Bidirectional conversions**: Convert errors in both directions to
+//!   support flexible integration patterns
 //! - **Information preservation**: Maintain error context and formatting across
 //!   conversions where possible
 //! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits

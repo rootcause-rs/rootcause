@@ -12,7 +12,8 @@
 //! # Conversion Overview
 //!
 //! ## From error-stack to Rootcause
-//! - `.into_rootcause()` - Convert `error_stack::Report<C>` or individual errors
+//! - `.into_rootcause()` - Convert `error_stack::Report<C>` or individual
+//!   errors
 //!
 //! ## From Rootcause to error-stack
 //! - `.into_error_stack()` - Convert `Result<T, Report>` or `Report`
@@ -21,8 +22,10 @@
 //!   error-stack functions
 
 // Import only what we need to avoid conflicting with error-stack's attach trait
-use rootcause::compat::{IntoRootcause, error_stack::IntoErrorStack};
-use rootcause::{Report, bail};
+use rootcause::{
+    Report, bail,
+    compat::{IntoRootcause, error_stack::IntoErrorStack},
+};
 
 // ============================================================================
 // Example 1: Calling error-stack code from rootcause

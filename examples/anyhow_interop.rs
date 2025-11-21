@@ -18,12 +18,14 @@
 //! ## From Rootcause to Anyhow
 //! - `.into_anyhow()` - Convert `Result<T, Report>` or `Report`
 //! - `.into()` - Use `From<Report>` for automatic conversion
-//! - `?` operator - Automatically converts `Report` to `anyhow::Error` in anyhow
-//!   functions
+//! - `?` operator - Automatically converts `Report` to `anyhow::Error` in
+//!   anyhow functions
 
 // Import only what we need to avoid conflicting with anyhow's Context trait
-use rootcause::compat::{IntoRootcause, anyhow::IntoAnyhow};
-use rootcause::{Report, bail};
+use rootcause::{
+    Report, bail,
+    compat::{IntoRootcause, anyhow::IntoAnyhow},
+};
 
 // ============================================================================
 // Example 1: Calling anyhow code from rootcause
