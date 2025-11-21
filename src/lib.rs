@@ -1,5 +1,5 @@
 #![cfg_attr(not(any(doc, feature = "std")), no_std)]
-#![forbid(
+#![deny(
     missing_docs,
     clippy::alloc_instead_of_core,
     clippy::std_instead_of_alloc,
@@ -334,6 +334,8 @@ pub mod hooks;
 pub mod markers;
 pub mod preformatted;
 
+pub mod compat;
+pub mod prelude;
 mod report;
 pub mod report_attachment;
 pub mod report_attachments;
@@ -341,12 +343,8 @@ pub mod report_collection;
 
 mod into_report;
 mod iterator_ext;
-pub mod prelude;
 mod result_ext;
 mod util;
-
-#[cfg(feature = "anyhow")]
-pub mod anyhow_compat;
 
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},

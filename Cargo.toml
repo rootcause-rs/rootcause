@@ -1,6 +1,6 @@
 [package]
 name = "rootcause"
-version = "0.8.1"
+version = "0.9.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 description = "A flexible, ergonomic, and inspectable error reporting library for Rust"
@@ -11,9 +11,11 @@ members = ["rootcause-internals"]
 
 [features]
 default = []
-std = ["indexmap/std", "triomphe/std", "anyhow?/std"]
+std = []
 backtrace = ["dep:backtrace", "dep:regex", "std"]
 anyhow = ["dep:anyhow"]
+error-stack = ["dep:error-stack"]
+eyre = ["dep:eyre"]
 
 [dependencies]
 hashbrown = { version = "0.16.0", default-features = false }
@@ -23,27 +25,32 @@ spin = { version = "0.10.0", default-features = false, features = ["rwlock"] }
 triomphe = { version = "0.1.15", default-features = false, features = [
   "unsize",
 ] }
-unsize = "1.1.0"
+unsize = { version = "1.1.0", default-features = false }
 
 # Optional dependencies
-anyhow = { version = "1.0.100", optional = true, default-features = false }
-backtrace = { version = "0.3.76", optional = true, features = ["cpp_demangle"] }
-regex = { version = "1.12.2", optional = true }
+anyhow = { version = "1.0.100", default-features = false, optional = true }
+backtrace = { version = "0.3.76", default-features = false, optional = true, features = [
+  "std",
+  "cpp_demangle",
+] }
+error-stack = { version = "0.6.0", default-features = false, optional = true }
+eyre = { version = "0.6.12", default-features = false, optional = true }
+regex = { version = "1.12.2", default-features = false, optional = true }
 
 # Internal dependencies
-rootcause-internals = { path = "rootcause-internals", version = "=0.8.1" }
+rootcause-internals = { path = "rootcause-internals", version = "=0.9.0" }
 
 [dev-dependencies]
-indexmap = "2.12.0"
-serde_json = "1.0.145"
-static_assertions = "1.1.0"
-thiserror = "2.0.17"
-
 derive_more = { version = "2.0", default-features = false, features = [
   "error",
   "from",
   "display",
 ] }
+eyre = { version = "0.6.12", features = ["auto-install"] }
+indexmap = "2.12.0"
+serde_json = "1.0.145"
+static_assertions = "1.1.0"
+thiserror = "2.0.17"
 
 [[example]]
 name = "anyhow_interop"
@@ -52,6 +59,14 @@ required-features = ["anyhow"]
 [[example]]
 name = "anyhow_migration"
 required-features = ["anyhow"]
+
+[[example]]
+name = "error_stack_interop"
+required-features = ["error-stack"]
+
+[[example]]
+name = "eyre_interop"
+required-features = ["eyre"]
 
 [package.metadata.docs.rs]
 all-features = true

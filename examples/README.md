@@ -23,8 +23,20 @@ Demonstrations of rootcause features and patterns.
 
 ## Integration & Migration
 
+**Bidirectional conversion** with other error libraries:
+
 - [`anyhow_interop.rs`](anyhow_interop.rs) - Quick reference for anyhow conversion APIs: `.into_rootcause()`, `.into_anyhow()`, `From<Report>`
+- [`eyre_interop.rs`](eyre_interop.rs) - Quick reference for eyre conversion APIs: `.into_rootcause()`, `.into_eyre()`
+- [`error_stack_interop.rs`](error_stack_interop.rs) - Quick reference for error-stack conversion APIs: `.into_rootcause()`, `.into_error_stack()`
+
+**Migration guides:**
+
 - [`anyhow_migration.rs`](anyhow_migration.rs) - Gradual migration from anyhow: 5 stages showing top-down adoption strategy
+
+**Using derive macro errors with rootcause:**
+
+- [`thiserror_interop.rs`](thiserror_interop.rs) - Using thiserror-generated errors: pattern matching on `Report<E>`, comparison of `#[from]` nesting vs `.context()` chains
+- [`derive_more_interop.rs`](derive_more_interop.rs) - Using derive_more-generated errors: same patterns as thiserror but with `#[display]` instead of `#[error]`
 
 ## Custom Types & Handlers
 

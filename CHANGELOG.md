@@ -5,7 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.9.0] - Unreleased
+
+### Added
+
+- Added a new `compat` module added poulated it with `eyre` and `error-stack` compatibility [#55](https://github.com/rootcause-rs/rootcause/pull/55)
+
+### Changed
+
+- Refactored the `anyhow_compat` module into the new `compat` module [#55](https://github.com/rootcause-rs/rootcause/pull/55)
 
 ## [0.8.1] - 2025-11-20
 
@@ -107,7 +115,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.8.1...HEAD
+[0.9.0]: https://github.com/rootcause-rs/rootcause/compare/v0.8.1...HEAD
 [0.8.1]: https://github.com/rootcause-rs/rootcause/compare/v0.8.0...v0.8.1
 [0.8.0]: https://github.com/rootcause-rs/rootcause/compare/v0.7.0...v0.8.0
 [0.7.0]: https://github.com/rootcause-rs/rootcause/compare/v0.6.0...v0.7.0
