@@ -17,7 +17,6 @@
 // Extra checks on nightly
 #![cfg_attr(nightly_extra_checks, feature(rustdoc_missing_doc_code_examples))]
 #![cfg_attr(nightly_extra_checks, forbid(rustdoc::missing_doc_code_examples))]
-
 // Make docs.rs generate better docs
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
