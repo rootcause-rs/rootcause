@@ -34,6 +34,7 @@
 //! [`register_report_formatter_hook`]: crate::hooks::report_formatting::register_report_formatter_hook
 
 #[cfg(feature = "backtrace")]
+#[cfg_attr(docsrs, doc(cfg(feature = "backtrace")))]
 pub mod backtrace;
 pub mod location;
 pub mod report_formatter;

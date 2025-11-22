@@ -3,8 +3,12 @@ name = "rootcause"
 version = "0.9.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
+categories = ["rust-patterns", "no-std"]
+keywords = ["error", "error-handling", "ergonomic", "library", "no_std"]
 description = "A flexible, ergonomic, and inspectable error reporting library for Rust"
 repository = "https://github.com/rootcause-rs/rootcause"
+documentation = "https://docs.rs/rootcause"
+rust-version = "1.89"
 
 [workspace]
 members = ["rootcause-internals"]
@@ -70,6 +74,7 @@ required-features = ["eyre"]
 
 [package.metadata.docs.rs]
 all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(nightly_extra_checks)'] }
