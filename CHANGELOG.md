@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Refactored the `anyhow_compat` module into the new `compat` module [#55](https://github.com/rootcause-rs/rootcause/pull/55)
 
+### Fixed
+
+- Removed an unintentional dependency on triomphe with default-features turned on [#61](https://github.com/rootcause-rs/rootcause/pull/61)
+
 ## [0.8.1] - 2025-11-20
 
 ### Added

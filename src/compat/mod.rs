@@ -144,12 +144,15 @@ pub trait IntoRootcause {
 }
 
 #[cfg(feature = "anyhow")]
+#[cfg_attr(docsrs, doc(cfg(feature = "anyhow")))]
 pub mod anyhow;
 
 #[cfg(feature = "error-stack")]
+#[cfg_attr(docsrs, oc(cfg(feature = "error-stack")))]
 pub mod error_stack;
 
 #[cfg(feature = "eyre")]
+#[cfg_attr(docsrs, doc(cfg(feature = "eyre")))]
 pub mod eyre;
 
 /// A wrapper that adapts a rootcause [`Report`] to implement
