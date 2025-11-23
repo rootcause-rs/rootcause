@@ -1,6 +1,6 @@
 [package]
 name = "rootcause-internals"
-version = "0.9.1"
+version = "0.10.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 description = "Internals for the rootcause crate"
