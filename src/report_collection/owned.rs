@@ -52,7 +52,7 @@ mod limit_field_access {
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in all of the
         ///    report and all sub-reports must be `Send+Sync`
         raw: Vec<RawReport>,
         _context: PhantomData<Context>,
@@ -75,7 +75,7 @@ mod limit_field_access {
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in all of the
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
@@ -108,7 +108,7 @@ mod limit_field_access {
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in all of the
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
@@ -145,7 +145,7 @@ mod limit_field_access {
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in all of the
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {

@@ -417,7 +417,7 @@ impl<T> ReportAttachments<T> {
         // SAFETY:
         // 1. `T=Local`, so this is trivially true.
         // 2. `T=Local`, so this is trivially true.
-        unsafe { ReportAttachments::from_raw_ref(raw) }
+        unsafe { ReportAttachments::<Local>::from_raw_ref(raw) }
     }
 }
 

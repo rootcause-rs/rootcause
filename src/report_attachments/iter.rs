@@ -176,9 +176,10 @@ impl<T> Iterator for ReportAttachmentsIntoIter<T> {
 
     fn next(&mut self) -> Option<Self::Item> {
         // SAFETY: We only remove items, we don't mutate them.
-        // 1. If the collection is already empty, this is a no-op and it is still empty after.
-        //    On the other hand, if there are items, we are guaranteed by the invariants of this type
-        //    that all inner attachments are `Send + Sync` if `T = SendSync`.
+        // 1. If the collection is already empty, this is a no-op and it is still empty
+        //    after. On the other hand, if there are items, we are guaranteed by the
+        //    invariants of this type that all inner attachments are `Send + Sync` if `T
+        //    = SendSync`.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.next()?;
@@ -201,9 +202,10 @@ impl<T> Iterator for ReportAttachmentsIntoIter<T> {
 impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         // SAFETY: We only remove items, we don't mutate them.
-        // 1. If the collection is already empty, this is a no-op and it is still empty after.
-        //    On the other hand, if there are items, we are guaranteed by the invariants of this type
-        //    that all inner attachments are `Send + Sync` if `T = SendSync`.
+        // 1. If the collection is already empty, this is a no-op and it is still empty
+        //    after. On the other hand, if there are items, we are guaranteed by the
+        //    invariants of this type that all inner attachments are `Send + Sync` if `T
+        //    = SendSync`.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.next_back()?;
