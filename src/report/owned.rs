@@ -84,8 +84,7 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized + 'static`,
-        ///    or `dyn Any`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
         /// 2. `O` must either be `Mutable` or `Cloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
         /// 4. If `C` is a concrete type: The context embedded in the report
@@ -114,28 +113,33 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Mutable` or `Cloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Mutable`: This is the unique owner of the report. More
+        /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
         ///    `triomphe::Arc` is exactly 1.
-        /// 3. If `O = Cloneable`: All other references to this report are
+        /// 6. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 4. All references to any sub-reports of this report are compatible
+        /// 7. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the report and
+        /// 8. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
             // 5. Guaranteed by the caller
+            // 6. Guaranteed by the caller
+            // 7. Guaranteed by the caller
+            // 8. Guaranteed by the caller
             Self {
                 raw,
                 _context: PhantomData,
@@ -156,16 +160,18 @@ mod limit_field_access {
         /// [`RawReport`].
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. Trivially upheld, as no mutation occurs
-            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. Upheld as the type parameters do not change.
+            // 4. Trivially upheld, as no mutation occurs
+            // 5. The only way to break this would be to call `RawReportRef::clone_arc`, but
             //    that method has a `safety` requirement that the caller must ensure that no
             //    owners exist which are incompatible with shared ownership. Since `self` is
             //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
-            // 3. Trivially upheld, as no mutation occurs
-            // 4. Upheld, as this does not create any such references.
-            // 5. Trivially upheld, as no mutation occurs
+            // 6. Trivially upheld, as no mutation occurs
+            // 7. Upheld, as this does not create any such references.
+            // 8. Trivially upheld, as no mutation occurs
             let raw = &self.raw;
 
             raw.as_ref()
@@ -184,18 +190,20 @@ mod limit_field_access {
         ///    this that are not `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> RawReportMut<'_> {
-            // TODO
             // SAFETY: We need to uphold the safety invariants of the raw field:
-            // 1. While mutation of the context is possible through this reference, it is
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. Upheld as the type parameters do not change.
+            // 4. While mutation of the context is possible through this reference, it is
             //    not possible to change the type of the context. Therefore this invariant
             //    is upheld.
-            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            // 5. The only way to break this would be to call `RawReportRef::clone_arc`, but
             //    that method has a `safety` requirement that the caller must ensure that no
             //    owners exist which are incompatible with shared ownership. Since `self` is
             //    the unique owner, this cannot happen.
-            // 3. `O = Mutable`, so this is trivially upheld.
-            // 4. Upheld, as this does not create any such references.
-            // 5. The caller guarantees that the current report is not modified in an
+            // 6. `O = Mutable`, so this is trivially upheld.
+            // 7. Upheld, as this does not create any such references.
+            // 8. The caller guarantees that the current report is not modified in an
             //    incompatible way and it is not possible to mutate the sub-reports.
             let raw = &mut self.raw;
 
@@ -335,12 +343,17 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         let raw = RawReport::new::<C, H>(context, children.into_raw(), attachments.into_raw());
 
         // SAFETY:
-        // 1. We just created the report and the `C` does indeed match.
-        // 2. We just created the report and we are the unique owner.
-        // 3. `O=Mutable`, so this is trivially upheld.
-        // 4. This is guaranteed by the invariants of the `ReportCollection` we used to
+        // 1. `C` is bounded by `Sized`, so this is upheld.
+        // 2. `O=Mutable`, so this is trivially upheld.
+        // 3. `C` is bounded by `markers::ObjectMarkerFor<T>` and this can only be
+        //    implemented for `T=Local` and `T=SendSync`, so this is
+        //   upheld.
+        // 4. We just created the report and the `C` does indeed match.
+        // 5. We just created the report and we are the unique owner.
+        // 6. `O=Mutable`, so this is trivially upheld.
+        // 7. This is guaranteed by the invariants of the `ReportCollection` we used to
         //    create the raw report.
-        // 5. If `T=Local`, then this is trivially true. If `T=SendSync`, then we have
+        // 8. If `T=Local`, then this is trivially true. If `T=SendSync`, then we have
         //    `C: ObjectMarkerFor<SendSync>`, so the context is `Send+Sync`.
         //    Additionally the invariants of the `ReportCollection` and
         //    `ReportAttachments` guarantee that the children and attachments are
@@ -409,13 +422,18 @@ impl<C: Sized, T> Report<C, Mutable, T> {
 
         // SAFETY:
         // 1. `C=dyn Any` for the created collection, so this is trivially true.
-        // 2. This is guaranteed by the invariants of this type.
-        // 3. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
+        // 2. The invariants of this type guarantee that `T` is either `Local` or
+        //    `SendSync`.
+        // 3. `C=dyn Any` for the created collection, so this is trivially true.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
         //    guaranteed by the invariants of this type.
         let children = unsafe { ReportCollection::<dyn Any, T>::from_raw(children) };
 
         // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
+        // 1. `T` is guaranteed to either be `Local` or `SendSync` by the invariants of
+        //    this type.
+        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
         //    guaranteed by the invariants of this type.
         let attachments = unsafe { ReportAttachments::<T>::from_raw(attachments) };
 
@@ -507,7 +525,9 @@ impl<C: ?Sized, T> Report<C, Mutable, T> {
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
-        // 5. We have a `&mut self`. This means that there are no other borrows active
+        // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. We have a `&mut self`. This means that there are no other borrows active
         //    to `self`. We also know that this is the unique owner of the report, so
         //    there are no other references to it through different ownership. This
         //    means that there are no other references to this report at all, so there
@@ -649,7 +669,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         Report::from_parts::<H>(
             context,
             ReportCollection::from([self.into_dyn_any().into_cloneable()]),
-            ReportAttachments::new(),
+            ReportAttachments::<T>::new(),
         )
     }
 
@@ -713,8 +733,11 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
+        // 4. `C=dyn Any`, so this is trivially true.
         // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::<dyn Any, O, T>::from_raw(raw) }
     }
 
@@ -758,7 +781,10 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
-        // 5. This is guaranteed by the invariants of this type.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::<C, Cloneable, T>::from_raw(raw) }
     }
 
@@ -793,9 +819,12 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. This is guaranteed by the invariants of this type.
-        // 3. This is guaranteed by the invariants of this type.
+        // 3. `T=Local`, so this is trivially upheld.
         // 4. This is guaranteed by the invariants of this type.
-        // 5. `T=Local`, so this is trivially true.
+        // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. `T=Local`, so this is trivially true.
         unsafe { Report::<C, O, Local>::from_raw(raw) }
     }
 
@@ -827,12 +856,15 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
 
             // SAFETY:
             // 1. This is guaranteed by the invariants of this type.
-            // 2. We just checked that the strong count is `1`, and we are taking ownership
-            //    of `self`, so we are the unique owner.
-            // 3. `O=Mutable`, so this is trivially upheld.
+            // 2. `O=Mutable`, so this is trivially true.
+            // 3. This is guaranteed by the invariants of this type.
             // 4. This is guaranteed by the invariants of this type.
-            // 5. This is guaranteed by the invariants of this type.
-            let report = unsafe { Report::from_raw(raw) };
+            // 5. We just checked that the strong count is `1`, and we are taking ownership
+            //    of `self`, so we are the unique owner.
+            // 6. `O=Mutable`, so this is trivially upheld.
+            // 7. This is guaranteed by the invariants of this type.
+            // 8. This is guaranteed by the invariants of this type.
+            let report = unsafe { Report::<C, Mutable, T>::from_raw(raw) };
             Ok(report)
         } else {
             Err(self)
@@ -847,6 +879,9 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         // 2. `O=Uncloneable`, so this is trivially true.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
+        // 5. `O=Uncloneable`, so this is trivially true.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
         unsafe {
             // @add-unsafe-context: markers::ReportOwnershipMarker
             ReportRef::<C, Uncloneable, T>::from_raw(raw)
@@ -875,10 +910,16 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         // 1. This is guaranteed by the invariants of this type.
         // 2. If the ownership of `self` is `Mutable`, then the `O=Uncloneable`, which
         //    means that this is trivially true. On the other hand, if the ownership of
-        //    `self` is `Cloneable`, then the `O=Cloneable`. However in that case, the
-        //    invariants of this type guarantee that all references are compatible.
+        //    `self` is `Cloneable`, then the `O=Cloneable`, which is also trivially
+        //    true.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
+        // 5. If the ownership of `self` is `Mutable`, then the `O=Uncloneable`, which
+        //    means that this is trivially true. On the other hand, if the ownership of
+        //    `self` is `Cloneable`, then the `O=Cloneable`. However in that case, the
+        //    invariants of this type guarantee that all references are compatible.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
         unsafe {
             // @add-unsafe-context: markers::ReportOwnershipMarker
             ReportRef::<C, O::RefMarker, T>::from_raw(raw)
@@ -1362,11 +1403,14 @@ impl<O, T> Report<dyn Any, O, T> {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. Guaranteed by the caller
+        // 1. `C` is bounded by `Sized` in the function signature.
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
+        // 4. Guaranteed by the caller
         // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::from_raw(raw) }
     }
 }

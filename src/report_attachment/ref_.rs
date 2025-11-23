@@ -40,8 +40,7 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `A` must either be a type bounded by `Sized + 'static`,
-        ///    or `dyn Any`.
+        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
         /// 2. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         raw: RawAttachmentRef<'a>,
@@ -55,13 +54,14 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `A` is a concrete type: The attachment embedded in the
+        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
             ReportAttachmentRef {
                 raw,
                 _attachment: PhantomData,
@@ -77,10 +77,10 @@ mod limit_field_access {
         }
     }
 
-    // TODO
     // SAFETY: We must uphold the safety invariants of the raw field for both the
     // original and the copy:
     // 1. This remains true for both the original and the copy
+    // 2. This remains true for both the original and the copy
     impl<'a, A: ?Sized> Copy for ReportAttachmentRef<'a, A> {}
 }
 pub use limit_field_access::ReportAttachmentRef;
@@ -242,7 +242,8 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         let raw = self.as_raw_ref();
 
         // SAFETY:
-        // 1. `A==dyn Any`, so this is trivially satisfied
+        // 1. `A=dyn Any`, so this is trivially satisfied
+        // 2. `A=dyn Any`, so this is trivially satisfied
         unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) }
     }
 
@@ -385,7 +386,8 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
         let raw = self.as_raw_ref();
 
         // SAFETY:
-        // 1. Guaranteed by the caller
+        // 1. `A` is bounded by `Sized` in the function signature, so this is satisfied.
+        // 2. Guaranteed by the caller
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 

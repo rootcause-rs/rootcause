@@ -36,7 +36,8 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `T` must either be `SendSync` or `Local`.
+        /// 1. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
         /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         raw: Vec<RawAttachment>,
@@ -50,13 +51,15 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        /// 1. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawAttachment>) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
             Self {
                 raw,
                 _thread_safety: PhantomData,
@@ -70,14 +73,17 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        /// 1. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
             let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
 
-            // TODO
-            // SAFETY: We must uphold the safety invariants of the raw field:
             // SAFETY:
             // - The raw pointer is derived from a valid reference with the same lifetime
             //   and representation
@@ -94,14 +100,17 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        /// 1. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
             let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
-            // TODO
-            // SAFETY: We must uphold the safety invariants of the raw field:
             // SAFETY:
             // - This raw pointer is derived from a valid reference with the same lifetime
             //   and representation
@@ -123,9 +132,9 @@ mod limit_field_access {
         /// Provides access to the inner raw attachments vector
         #[must_use]
         pub(crate) fn as_raw(&self) -> &Vec<RawAttachment> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. This remains true for the duration of the reference
+            // 1. Upheld as the type parameters do not change.
+            // 2. This remains true for the duration of the reference
             &self.raw
         }
 
@@ -135,13 +144,15 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: No mutation is performed that invalidates the
+        /// 1. If the collection is mutated so that is becomes non-empty, then
+        ///    `T` must be either be `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: No mutation is performed that invalidates the
         ///    invariant that all inner attachments are `Send + Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawAttachment> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. Guaranteed by the caller
+            // 1. Upheld as the type parameters do not change.
+            // 2. Guaranteed by the caller
             &mut self.raw
         }
     }
@@ -165,13 +176,13 @@ impl<T> ReportAttachments<T> {
     /// assert!(attachments.is_empty());
     /// assert_eq!(attachments.len(), 0);
     /// ```
-    ///
     /// [`new_sendsync()`]: ReportAttachments<SendSync>::new_sendsync
     /// [`new_local()`]: ReportAttachments<Local>::new_local
     #[must_use]
     pub fn new() -> Self {
         // SAFETY:
-        // 1. An empty Vec trivially upholds all safety invariants.
+        // 1. The collection is empty, so the first invariant is upheld.
+        // 2. An empty Vec trivially upholds all safety invariants.
         unsafe { Self::from_raw(Vec::new()) }
     }
 
@@ -195,7 +206,9 @@ impl<T> ReportAttachments<T> {
     /// ```
     pub fn push(&mut self, attachment: ReportAttachment<dyn Any, T>) {
         // SAFETY:
-        // 1. If `T = Local`, then this is trivially true. If `T = SendSync`, then the
+        // 1. From the invariants of the `ReportAttachment` we know that `T` is either
+        //    `Local` or `SendSync`.
+        // 2. If `T = Local`, then this is trivially true. If `T = SendSync`, then the
         //    safety requirement is upheld because we are adding an attachment that
         //    already has the `SendSync` marker.
         let raw = unsafe { self.as_raw_mut() };
@@ -228,14 +241,19 @@ impl<T> ReportAttachments<T> {
     /// ```
     pub fn pop(&mut self) -> Option<ReportAttachment<dyn Any, T>> {
         // SAFETY:
-        // 1. We are only removing an attachment.
+        // 1. We are only popping from the collection. If this was non-empty, then we
+        //    already know that `T` is either `Local` or `SendSync`, and if it was
+        //    empty, then it still is after this operation.
+        // 2. We are only removing an attachment.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.pop()?;
 
         // SAFETY:
         // 1. `A=dyn Any`, so this is trivially true.
-        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then the
+        // 2. Guaranteed by the invariants of this type.
+        // 3. `A=dyn Any`, so this is trivially true.
+        // 4. If `T=Local`, then this is trivially true. If `T=SendSync`, then the
         //    safety requirement is upheld because the collection invariant guarantees
         //    this.
         let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
@@ -286,6 +304,7 @@ impl<T> ReportAttachments<T> {
 
         // SAFETY:
         // 1. `A=dyn Any`, so this is trivially true.
+        // 2. `A=dyn Any`, so this is trivially true.
         let attachment = unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) };
 
         Some(attachment)
@@ -363,6 +382,7 @@ impl<T> ReportAttachments<T> {
 
         // SAFETY:
         // 1. `T=Local`, so this is trivially true.
+        // 2. `T=Local`, so this is trivially true.
         unsafe { ReportAttachments::<Local>::from_raw(raw) }
     }
 
@@ -395,6 +415,7 @@ impl<T> ReportAttachments<T> {
         let raw = self.as_raw();
 
         // SAFETY:
+        // 1. `T=Local`, so this is trivially true.
         // 1. `T=Local`, so this is trivially true.
         unsafe { ReportAttachments::from_raw_ref(raw) }
     }
@@ -476,29 +497,13 @@ impl From<ReportAttachments<SendSync>> for ReportAttachments<Local> {
 
 impl<A: ?Sized, T> From<Vec<ReportAttachment<A, T>>> for ReportAttachments<T> {
     fn from(attachments: Vec<ReportAttachment<A, T>>) -> Self {
-        let raw_attachments = attachments
-            .into_iter()
-            .map(|v: ReportAttachment<A, T>| v.into_raw())
-            .collect();
-
-        // SAFETY:
-        // 1. If `T=Local`: This is trivially true. If `T=SendSync`: This is upheld by
-        //    the invariants of each `ReportAttachment`.
-        unsafe { ReportAttachments::from_raw(raw_attachments) }
+        attachments.into_iter().collect()
     }
 }
 
 impl<const N: usize, A: ?Sized, T> From<[ReportAttachment<A, T>; N]> for ReportAttachments<T> {
     fn from(attachments: [ReportAttachment<A, T>; N]) -> Self {
-        let raw_attachments = attachments
-            .into_iter()
-            .map(|v: ReportAttachment<A, T>| v.into_raw())
-            .collect();
-
-        // SAFETY:
-        // 1. If `T=Local`: This is trivially true. If `T=SendSync`: This is upheld by
-        //    the invariants of each `ReportAttachment`.
-        unsafe { ReportAttachments::from_raw(raw_attachments) }
+        attachments.into_iter().collect()
     }
 }
 
@@ -523,6 +528,7 @@ impl<T> IntoIterator for ReportAttachments<T> {
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
+        // 2. Guaranteed by the invariants of this type.
         unsafe { ReportAttachmentsIntoIter::from_raw(raw) }
     }
 }

@@ -89,8 +89,8 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized + 'static`,
-        ///    or `dyn Any`.
+        /// 1. `C` must either be a type bounded by `Sized + 'static`, or `dyn
+        ///    Any`.
         /// 2. `O` must either be `Cloneable` or `Uncloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
         /// 4. If `C` is a concrete type: The context embedded in the report
@@ -119,15 +119,18 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Cloneable` or `Uncloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Cloneable`: All other references to this report are
+        /// 5. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 3. All references to any sub-reports of this report are compatible
+        /// 6. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        /// 7. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
         ///
         /// [`Report`]: crate::Report
@@ -136,12 +139,14 @@ mod limit_field_access {
         /// [`Mutable`]: crate::markers::Mutable
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawReportRef<'a>) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by our caller
             // 2. Guaranteed by our caller
             // 3. Guaranteed by our caller
             // 4. Guaranteed by our caller
+            // 5. Guaranteed by our caller
+            // 6. Guaranteed by our caller
+            // 7. Guaranteed by our caller
             Self {
                 raw,
                 _context: PhantomData,
@@ -156,27 +161,32 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts embedded in all of the
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Cloneable` or `Uncloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The contexts embedded in all of the
         ///    [`RawReport`]s in the slice are of type `C`
-        /// 2. If `O = Cloneable`: All other references to these reports are
+        /// 5. If `O = Cloneable`: All other references to these reports are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 3. All references to any sub-reports of these reports are compatible
+        /// 6. All references to any sub-reports of these reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in these reports
+        /// 7. If `T = SendSync`: All contexts and attachments in these reports
         ///    and all sub-reports must be `Send+Sync`
         pub(crate) unsafe fn from_raw_slice(raw: &'a [RawReport]) -> &'a [ReportRef<'a, C, O, T>] {
             let len = raw.len();
             let raw_ptr: *const RawReport = raw.as_ptr();
 
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field for
             // all reports in the slice:
             // 1. Guaranteed by our caller
             // 2. Guaranteed by our caller
             // 3. Guaranteed by our caller
             // 4. Guaranteed by our caller
+            // 5. Guaranteed by our caller
+            // 6. Guaranteed by our caller
+            // 7. Guaranteed by our caller
             let report_ref_ptr = raw_ptr.cast::<ReportRef<'a, C, O, T>>();
 
             // SAFETY:
@@ -209,11 +219,13 @@ mod limit_field_access {
 
     // SAFETY: We must uphold the safety invariants of the raw field for both the
     // original and the copy:
-    // TODO
     // 1. This remains true for both the original and the copy
     // 2. This remains true for both the original and the copy
     // 3. This remains true for both the original and the copy
     // 4. This remains true for both the original and the copy
+    // 5. This remains true for both the original and the copy
+    // 6. This remains true for both the original and the copy
+    // 7. This remains true for both the original and the copy
     impl<'a, C: ?Sized, O, T> Copy for ReportRef<'a, C, O, T> {}
 }
 pub use limit_field_access::ReportRef;
@@ -261,6 +273,9 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         let raw = self.as_raw_ref().children();
 
         // SAFETY:
+        // 1. This is guaranteed by our safety invariants.
+        // 2. The invariants of this type guarantee that `T` is either `SendSync` or
+        //    `Local`.
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. This is guaranteed by our safety invariants.
         // 3. This is guaranteed by our safety invariants.
@@ -281,7 +296,9 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         let raw = self.as_raw_ref().attachments();
 
         // SAFETY:
-        // 1. This is guaranteed by our own safety invariants.
+        // 1. `T` is guaranteed to either be `Local` or `SendSync` by the invariants of
+        //    this type.
+        // 2. This is guaranteed by our own safety invariants.
         unsafe { ReportAttachments::<T>::from_raw_ref(raw) }
     }
 
@@ -318,7 +335,10 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. This is guaranteed by our own safety invariants.
         // 3. This is guaranteed by our own safety invariants.
-        // 4. This is guaranteed by our own safety invariants.
+        // 4. `C=dyn Any`, so this is trivially true.
+        // 5. This is guaranteed by our own safety invariants.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. This is guaranteed by our own safety invariants.
         unsafe { ReportRef::<dyn Any, O, T>::from_raw(raw) }
     }
 
@@ -358,6 +378,9 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         // 2. `O=Uncloneable`, so this is trivially true.
         // 3. This is guaranteed by our own safety invariants.
         // 4. This is guaranteed by our own safety invariants.
+        // 5. `O=Uncloneable`, so this is trivially true.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. This is guaranteed by our own safety invariants.
         unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
@@ -392,8 +415,11 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         // SAFETY:
         // 1. This is guaranteed by our own safety invariants.
         // 2. This is guaranteed by our own safety invariants.
-        // 3. This is guaranteed by our own safety invariants.
-        // 4. `T=Local`, so this is trivially true.
+        // 3. `T=Local`, so this is trivially true.
+        // 4. This is guaranteed by our own safety invariants.
+        // 5. This is guaranteed by our own safety invariants.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. `T=Local`, so this is trivially true.
         unsafe { ReportRef::<C, O, Local>::from_raw(raw) }
     }
 
@@ -886,10 +912,13 @@ impl<'a, O, T> ReportRef<'a, dyn Any, O, T> {
         let raw = self.as_raw_ref();
 
         // SAFETY:
-        // 1. Guaranteed by the caller.
-        // 2. Guaranteed by our own safety invariants.
-        // 3. Guaranteed by our own safety invariants.
-        // 4. Guaranteed by our own safety invariants.
+        // 1. `C` is bounded by `Sized` in the function signature.
+        // 2. This is guaranteed by our own safety invariants.
+        // 3. This is guaranteed by our own safety invariants.
+        // 4. Guaranteed by the caller.
+        // 5. Guaranteed by our own safety invariants.
+        // 6. Guaranteed by our own safety invariants.
+        // 7. Guaranteed by our own safety invariants.
         unsafe { ReportRef::<C, O, T>::from_raw(raw) }
     }
 }
@@ -927,11 +956,14 @@ impl<'a, C: ?Sized, T> ReportRef<'a, C, Cloneable, T> {
         let cloned_raw = unsafe { raw.clone_arc() };
 
         // SAFETY:
-        // 1. This is guaranteed by our own safety invariants.
+        // 1. Guaranteed by the invariants of this type.
         // 2. `O=Cloneable`, so this is trivially true.
-        // 3. This is guaranteed by our own safety invariants.
+        // 3. Guaranteed by the invariants of this type.
         // 4. This is guaranteed by our own safety invariants.
-        // 5. This is guaranteed by our own safety invariants.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. This is guaranteed by our own safety invariants.
+        // 8. This is guaranteed by our own safety invariants.
         unsafe { Report::<C, Cloneable, T>::from_raw(cloned_raw) }
     }
 }

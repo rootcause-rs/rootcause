@@ -46,8 +46,7 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `A` must either be a type bounded by `Sized + 'static`,
-        ///    or `dyn Any`.
+        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
         /// 2. `T` must either be `SendSync` or `Local`.
         /// 3. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachment`] must be of type `A`.
@@ -65,16 +64,19 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `A` is a concrete type: The attachment embedded in the
+        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachment`] must be of type `A`.
-        /// 2. If `T = SendSync`: The attachment embedded in the
+        /// 4. If `T = SendSync`: The attachment embedded in the
         ///    [`RawAttachment`] must be `Send + Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by caller
             // 2. Guaranteed by caller
+            // 3. Guaranteed by caller
+            // 4. Guaranteed by caller
             ReportAttachment {
                 raw,
                 _attachment: PhantomData,
@@ -95,10 +97,11 @@ mod limit_field_access {
         /// [`RawAttachment`].
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. No mutation is possible through the `RawAttachmentRef`
-            // 2. No mutation is possible through the `RawAttachmentRef`
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. No mutation is possible through the `RawAttachmentRef`
+            // 4. No mutation is possible through the `RawAttachmentRef`
             let raw = &self.raw;
 
             raw.as_ref()
@@ -157,9 +160,13 @@ impl<A: Sized, T> ReportAttachment<A, T> {
         let raw = RawAttachment::new::<A, H>(attachment);
 
         // SAFETY:
-        // 1. We just created the `RawAttachment` and it does indeed have an attachment
+        // 1. `A` is bounded by `Sized` in this impl, so this is trivially true.
+        // 2. `A` is bounded by `markers::ObjectMarkerFor<T>` and this can only be
+        //    implemented for `T=Local` and `T=SendSync`, so this is
+        //   upheld.
+        // 3. We just created the `RawAttachment` and it does indeed have an attachment
         //    of type `A`.
-        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then the bound
+        // 4. If `T=Local`, then this is trivially true. If `T=SendSync`, then the bound
         //    `A: ObjectMarkerFor<SendSync>` guarantees that the attachment is
         //    `Send+Sync`.
         unsafe {
@@ -202,6 +209,8 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         // SAFETY:
         // 1. `A=dyn Any`, so this is trivially true.
         // 2. Guaranteed by the invariants of this type.
+        // 3. `A=dyn Any`, so this is trivially true.
+        // 4. Guaranteed by the invariants of this type.
         unsafe { ReportAttachment::<dyn Any, T>::from_raw(raw) }
     }
 
@@ -224,6 +233,8 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
         // 2. `T=Local`, so this is trivially true.
+        // 3. Guaranteed by the invariants of this type.
+        // 4. `T=Local`, so this is trivially true.
         unsafe { ReportAttachment::from_raw(raw) }
     }
 
@@ -318,6 +329,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
+        // 2. Guaranteed by the invariants of this type.
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 }
@@ -461,9 +473,11 @@ impl<T> ReportAttachment<dyn Any, T> {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. Guaranteed by the caller
+        // 1. `A` is bounded by `Sized`, so this is trivially true.
         // 2. Guaranteed by the invariants of this type.
-        unsafe { ReportAttachment::from_raw(raw) }
+        // 3. Guaranteed by the caller
+        // 4. Guaranteed by the invariants of this type.
+        unsafe { ReportAttachment::<A, T>::from_raw(raw) }
     }
 }
 

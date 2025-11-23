@@ -44,8 +44,8 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized + 'static`,
-        ///    or `dyn Any`.
+        /// 1. `C` must either be a type bounded by `Sized + 'static`, or `dyn
+        ///    Any`.
         /// 2. `T` must either be `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
@@ -66,19 +66,23 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 1. `C` must either be a type bounded by `Sized + 'static`, or `dyn
+        ///    Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to these report or any sub-reports are compatible
+        /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the
+        /// 5. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         pub(crate) unsafe fn from_raw(raw: &'a [RawReport]) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             Self {
                 raw: raw.iter(),
                 _context: PhantomData,
@@ -88,11 +92,12 @@ mod limit_field_access {
 
         /// Returns a reference to the underlying raw report iterator
         pub(crate) fn as_raw(&self) -> &core::slice::Iter<'a, RawReport> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. No mutation occurs here, so the invariants are preserved
-            // 2. Upheld, as all references created here are compatible
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. No mutation occurs here, so the invariants are preserved
+            // 4. Upheld, as all references created here are compatible
+            // 5. No mutation occurs here, so the invariants are preserved
             &self.raw
         }
 
@@ -110,11 +115,12 @@ mod limit_field_access {
         ///    invariant that all inner contexts and attachments are `Send +
         ///    Sync`.
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut core::slice::Iter<'a, RawReport> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. Guaranteed by the caller
-            // 2. Upheld, as all references created here are compatible
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. Guaranteed by the caller
+            // 4. Upheld, as all references created here are compatible
+            // 5. Guaranteed by the caller
             &mut self.raw
         }
     }
@@ -135,9 +141,12 @@ impl<'a, C: ?Sized, T> Iterator for ReportCollectionIter<'a, C, T> {
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
-        // 2. Guaranteed by the invariants of this type.
+        // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
+        // 5. Guaranteed by the invariants of this type.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
         let raw = unsafe { ReportRef::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
@@ -160,9 +169,12 @@ impl<'a, C: ?Sized, T> DoubleEndedIterator for ReportCollectionIter<'a, C, T> {
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
-        // 2. Guaranteed by the invariants of this type.
+        // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
+        // 5. Guaranteed by the invariants of this type.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
         let raw = unsafe { ReportRef::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
@@ -222,8 +234,7 @@ mod limit_field_access2 {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`,
-        ///    or `dyn Any`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
         /// 2. `T` must either be `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
@@ -245,19 +256,22 @@ mod limit_field_access2 {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to these report or any sub-reports are compatible
+        /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the
+        /// 5. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             Self {
                 raw: raw.into_iter(),
                 _context: PhantomData,
@@ -267,12 +281,12 @@ mod limit_field_access2 {
 
         /// Returns a reference to the underlying raw report iterator
         pub(crate) fn as_raw(&self) -> &alloc::vec::IntoIter<RawReport> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. No mutation occurs here, so the invariants are preserved
-            // 2. No mutation occurs here, so the invariants are preserved
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. No mutation occurs here, so the invariants are preserved
-            // 4. Upheld, as it is not possible to turn this into a `Report`, `ReportMut` or
+            // 4. No mutation occurs here, so the invariants are preserved
+            // 5. Upheld, as it is not possible to turn this into a `Report`, `ReportMut` or
             //    `ReportRef` with `T=SendSync`, as that would break the safety invariants
             //    of those types.
             &self.raw
@@ -293,12 +307,12 @@ mod limit_field_access2 {
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawReport> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. Guaranteed by the caller
-            // 2. Guaranteed by the caller
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             &mut self.raw
         }
     }
@@ -322,7 +336,10 @@ impl<C: ?Sized, T> Iterator for ReportCollectionIntoIter<C, T> {
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
-        // 5. Guaranteed by the invariants of this type.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
+        // 8. Guaranteed by the invariants of this type.
         let raw = unsafe { Report::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
@@ -348,7 +365,10 @@ impl<C: ?Sized, T> DoubleEndedIterator for ReportCollectionIntoIter<C, T> {
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
-        // 5. Guaranteed by the invariants of this type.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
+        // 8. Guaranteed by the invariants of this type.
         let raw = unsafe { Report::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)

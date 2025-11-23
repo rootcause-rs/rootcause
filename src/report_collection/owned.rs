@@ -43,9 +43,10 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized + 'static`,
-        ///    or `dyn Any`.
-        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
         /// 4. All references to these reports or any sub-reports are compatible
@@ -65,17 +66,25 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts contained in all of the
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All references to these reports or any sub-reports are compatible
+        /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
+            // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             Self {
                 raw,
                 _context: PhantomData,
@@ -90,17 +99,25 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts contained in all of the
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All references to these reports or any sub-reports are compatible
+        /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
+            // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
 
             // SAFETY:
@@ -119,19 +136,26 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts contained in all of the
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All references to these reports or any sub-reports are compatible
+        /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
-            let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
-
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
+            // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
+            let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
             // SAFETY:
             // - The raw pointer is derived from a valid reference with the same lifetime
@@ -152,11 +176,12 @@ mod limit_field_access {
 
         #[must_use]
         pub(crate) fn as_raw(&self) -> &Vec<RawReport> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. Upheld, as we are not allowing mutation
-            // 2. Upheld, as we are not creating any such references
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. Upheld, as we are not allowing mutation
+            // 4. Upheld, as we are not creating any such references
+            // 5. Upheld, as we are not allowing mutation
             &self.raw
         }
 
@@ -166,20 +191,25 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: No mutation is performed that would
+        /// 1. If the collection is mutated so that is becomes non-empty, then
+        ///    `C` must either be a type bounded by `Sized`, or be `dyn Any`.
+        /// 2. If the collection is mutated so that is becomes non-empty, then
+        ///    `T` must be either be `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: No mutation is performed that would
         ///    invalidate the invariant that all contexts are of type `C`.
-        /// 2. No mutation is performed that would invalidate the shared
+        /// 4. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
-        /// 3. If `T = SendSync`: No mutation is performed that invalidates the
+        /// 5. If `T = SendSync`: No mutation is performed that invalidates the
         ///    invariant that all inner contexts and attachments are `Send +
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawReport> {
-            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             &mut self.raw
         }
     }
@@ -206,11 +236,13 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     pub fn new() -> Self {
         let reports = Vec::new();
         // SAFETY:
-        // 1. We just created the empty Vec, so the invariants are upheld for all
-        //    reports in it.
-        // 2. We just created the empty Vec, so the invariants are upheld for all
-        //    reports in it.
+        // 1. The vector is empty, so this is upheld.
+        // 2. The vector is empty, so this is upheld.
         // 3. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
+        // 4. We just created the empty Vec, so the invariants are upheld for all
+        //    reports in it.
+        // 5. We just created the empty Vec, so the invariants are upheld for all
         //    reports in it.
         unsafe { Self::from_raw(reports) }
     }
@@ -238,6 +270,8 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 1. No reports, so the invariants are upheld.
         // 2. No reports, so the invariants are upheld.
         // 3. No reports, so the invariants are upheld.
+        // 4. No reports, so the invariants are upheld.
+        // 5. No reports, so the invariants are upheld.
         unsafe { Self::from_raw(reports) }
     }
 
@@ -261,9 +295,12 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     pub fn push(&mut self, report: Report<C, Cloneable, T>) {
         // SAFETY:
         // 1. The invariants of the pushed report guarantee this.
-        // 2. The argument has `O=Cloneable`, so the invariants of the pushed report
+        // 2. The invariants of the pushed report guarantee that `T` is either
+        //    `Local` or `SendSync`.
+        // 3. The invariants of the pushed report guarantee this.
+        // 4. The argument has `O=Cloneable`, so the invariants of the pushed report
         //    guarantee this.
-        // 3. If `T = SendSync`: The invariants of the pushed report guarantee this.
+        // 5. If `T = SendSync`: The invariants of the pushed report guarantee this.
         let raw = unsafe { self.as_raw_mut() };
 
         raw.push(report.into_raw())
@@ -296,20 +333,26 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// ```
     pub fn pop(&mut self) -> Option<Report<C, Cloneable, T>> {
         // SAFETY:
-        // 1. We only remove reports, so the invariants of the collection remain upheld.
-        // 2. We only remove reports, so the invariants of the collection remain upheld.
+        // 1. If the collection is already non-empty, `C` is already valid. Otherwise
+        //    this will not modify it to become non-empty.
+        // 2. If the collection is already non-empty, `T` is already valid. Otherwise
+        //    this will not modify it to become non-empty.
         // 3. We only remove reports, so the invariants of the collection remain upheld.
         // 4. We only remove reports, so the invariants of the collection remain upheld.
+        // 5. We only remove reports, so the invariants of the collection remain upheld.
         let raw = unsafe { self.as_raw_mut() };
 
         let report = raw.pop()?;
 
         // SAFETY:
-        // 1. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 1. Guaranteed by the invariants of the collection.
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of the collection.
-        // 4. Guaranteed by the invariants of the collection.
-        // 5. If `T = SendSync`: Guaranteed by the invariants of the collection.
+        // 4. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of the collection.
+        // 7. Guaranteed by the invariants of the collection.
+        // 8. If `T = SendSync`: Guaranteed by the invariants of the collection.
         let report = unsafe { Report::<C, Cloneable, T>::from_raw(report) };
 
         Some(report)
@@ -373,6 +416,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 2. We only reserve space, so the invariants of the collection remain upheld.
         // 3. We only reserve space, so the invariants of the collection remain upheld.
         // 4. We only reserve space, so the invariants of the collection remain upheld.
+        // 5. We only reserve space, so the invariants of the collection remain upheld.
         let raw = unsafe { self.as_raw_mut() };
 
         raw.reserve(additional)
@@ -402,12 +446,15 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         let raw = self.as_raw().get(index)?.as_ref();
 
         // SAFETY:
-        // 1. If `C` is a concrete type: Guaranteed by the invariants of the collection.
-        // 2. Guaranteed by the invariants of the collection.
+        // 1. Guaranteed by the invariants of the collection.
+        // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of the collection.
-        // 4. If `T = SendSync`: All contexts and attachments in the report and all
+        // 4. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 5. Guaranteed by the invariants of the collection.
+        // 6. Guaranteed by the invariants of the collection.
+        // 7. If `T = SendSync`: All contexts and attachments in the report and all
         //    sub-reports must be `Send+Sync`
-        let report = unsafe { ReportRef::from_raw(raw) };
+        let report = unsafe { ReportRef::<C, Cloneable, T>::from_raw(raw) };
 
         Some(report)
     }
@@ -455,6 +502,8 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 1. Guaranteed by the invariants of the collection.
         // 2. Guaranteed by the invariants of the collection.
         // 3. Guaranteed by the invariants of the collection.
+        // 4. Guaranteed by the invariants of the collection.
+        // 5. Guaranteed by the invariants of the collection.
         unsafe { ReportCollectionIter::from_raw(raw) }
     }
 
@@ -494,10 +543,13 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. For the called method we set `C=dyn Any`, so this is trivially true.
-        // 2. For the called method we set `O=Uncloneable`, so this is trivially true.
-        // 3. Guaranteed by the invariants of the collection.
-        // 4. For the called method we set `T=Local`, so this is trivially true.
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. `T=Local`, so this is trivially true.
+        // 4. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 5. For the called method we set `O=Uncloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of the collection.
+        // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
@@ -546,9 +598,11 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. The invariants of the collection guarantee this.
+        // 3. `C=dyn Any`, so this is trivially true.
+        // 4. The invariants of the collection guarantee this.
+        // 5. The invariants of the collection guarantee this.
         unsafe { ReportCollection::<dyn Any, T>::from_raw(raw) }
     }
 
@@ -559,9 +613,11 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. The invariants of the collection guarantee this.
+        // 3. `C=dyn Any`, so this is trivially true.
+        // 4. The invariants of the collection guarantee this.
+        // 5. The invariants of the collection guarantee this.
         unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
     }
 
@@ -596,7 +652,9 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. `T=Local`, so this is trivially true.
+        // 3. The invariants of the collection guarantee this.
+        // 4. The invariants of the collection guarantee this.
+        // 5. `T=Local`, so this is trivially true.
         unsafe { ReportCollection::<C, Local>::from_raw(raw) }
     }
 
@@ -609,7 +667,9 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. `T=Local`, so this is trivially true.
+        // 3. The invariants of the collection guarantee this.
+        // 4. The invariants of the collection guarantee this.
+        // 5. `T=Local`, so this is trivially true.
         unsafe { ReportCollection::<C, Local>::from_raw_ref(raw) }
     }
 
@@ -781,7 +841,7 @@ where
     O: markers::ReportOwnershipMarker,
 {
     fn from_iter<I: IntoIterator<Item = Report<C, O, T>>>(iter: I) -> Self {
-        let mut siblings = ReportCollection::new();
+        let mut siblings = ReportCollection::<C, T>::new();
         siblings.extend(iter);
         siblings
     }
@@ -821,10 +881,13 @@ impl<C: ?Sized, T> core::fmt::Display for ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. For the called method we set `C=dyn Any`, so this is trivially true.
-        // 2. For the called method we set `O=Uncloneable`, so this is trivially true.
-        // 3. Guaranteed by the invariants of the collection.
-        // 4. For the called method we set `T=Local`, so this is trivially true.
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. `T=Local`, so this is trivially true.
+        // 4. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 5. For the called method we set `O=Uncloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of the collection.
+        // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
@@ -840,10 +903,13 @@ impl<C: ?Sized, T> core::fmt::Debug for ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. For the called method we set `C=dyn Any`, so this is trivially true.
-        // 2. For the called method we set `O=Uncloneable`, so this is trivially true.
-        // 3. Guaranteed by the invariants of the collection.
-        // 4. For the called method we set `T=Local`, so this is trivially true.
+        // 1. `C=dyn Any`, so this is trivially true.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. `T=Local`, so this is trivially true.
+        // 4. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 5. For the called method we set `O=Uncloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of the collection.
+        // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
@@ -916,6 +982,8 @@ impl<C: ?Sized, T> IntoIterator for ReportCollection<C, T> {
         // 1. Guaranteed by the invariants of the collection.
         // 2. Guaranteed by the invariants of the collection.
         // 3. Guaranteed by the invariants of the collection.
+        // 4. Guaranteed by the invariants of the collection.
+        // 5. Guaranteed by the invariants of the collection.
         unsafe { ReportCollectionIntoIter::<C, T>::from_raw(raw) }
     }
 }
