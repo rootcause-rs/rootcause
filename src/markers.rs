@@ -10,11 +10,14 @@
 //!
 //! The constraints encoded by these markers are enforced at construction time.
 //! It is impossible to construct a [`Report`](crate::Report),
-//! [`ReportRef`](crate::ReportRef), or
-//! [`ReportCollection`](crate::ReportCollection) that violates the invariants
+//! [`ReportRef`], or
+//! [`ReportCollection`] that violates the invariants
 //! associated with its marker types. This means you can trust that a
 //! `Report<_, _, SendSync>` truly is `Send + Sync`, and that a `Report<_,
 //! Mutable>` truly has unique ownership.
+//!
+//! [`ReportRef`]: crate::ReportRef
+//! [`ReportCollection`]: crate::report_collection::ReportCollection
 //!
 //! # Ownership Markers
 //!
@@ -89,10 +92,12 @@ use crate::ReportMut;
 
 /// Marker type for owned reports with unique ownership.
 ///
-/// This marker is used exclusively with [`Report<C, Mutable,
-/// T>`](crate::Report) (not [`ReportRef`]). It indicates that
-/// the report has unique ownership of its data, which allows mutation
-/// operations but prevents cloning.
+/// This marker is used exclusively with [`Report<C, Mutable, T>`] (not
+/// [`ReportRef`]). It indicates that the report has unique ownership of its
+/// data, which allows mutation operations but prevents cloning.
+///
+/// [`Report<C, Mutable, T>`]: crate::Report
+/// [`ReportRef`]: crate::ReportRef
 ///
 /// # Available Operations
 ///

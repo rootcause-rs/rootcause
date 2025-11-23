@@ -333,7 +333,8 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
-        // 2. The invariants of this type guarantee that `T` is either `Local` or `SendSync`.
+        // 2. The invariants of this type guarantee that `T` is either `Local` or
+        //    `SendSync`.
         // 3. `C=dyn Any`, so this is trivially true
         // 4. Guaranteed by the invariants of this type.
         // 5. Guaranteed by the invariants of this type.

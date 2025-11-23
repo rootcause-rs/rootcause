@@ -295,8 +295,8 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     pub fn push(&mut self, report: Report<C, Cloneable, T>) {
         // SAFETY:
         // 1. The invariants of the pushed report guarantee this.
-        // 2. The invariants of the pushed report guarantee that `T` is either
-        //    `Local` or `SendSync`.
+        // 2. The invariants of the pushed report guarantee that `T` is either `Local`
+        //    or `SendSync`.
         // 3. The invariants of the pushed report guarantee this.
         // 4. The argument has `O=Cloneable`, so the invariants of the pushed report
         //    guarantee this.
