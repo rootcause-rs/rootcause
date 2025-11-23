@@ -221,7 +221,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "rootcause"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "anyhow",
  "backtrace",
@@ -243,7 +243,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-internals"
-version = "0.9.0"
+version = "0.9.1"
 dependencies = [
  "static_assertions",
  "triomphe",
@@ -338,9 +338,9 @@ checksum = "a2eb9349b6444b326872e140eb1cf5e7c522154d69e7a0ffb0fb81c06b37543f"
 
 [[package]]
 name = "syn"
-version = "2.0.110"
+version = "2.0.111"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a99801b5bd34ede4cf3fc688c5919368fea4e4814a4664359503e6015b280aea"
+checksum = "390cc9a294ab71bdb1aa2e99d13be9c753cd2d7bd6560c77118597410c4d2e87"
 dependencies = [
  "proc-macro2",
  "quote",
