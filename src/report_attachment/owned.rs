@@ -506,9 +506,6 @@ macro_rules! from_impls {
     ),* $(,)?) => {
         $(
             impl<$($param),*> From<ReportAttachment<$context1, $thread_safety1>> for ReportAttachment<$context2, $thread_safety2>
-                where $(
-                    $param: markers::ObjectMarker,
-                )*
             {
                 fn from(attachment: ReportAttachment<$context1, $thread_safety1>) -> Self {
                     attachment

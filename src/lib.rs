@@ -475,7 +475,6 @@ pub mod __private {
         ) -> Report<C, markers::Mutable, T>
         where
             H: handlers::ContextHandler<C>,
-            T: markers::ThreadSafetyMarker,
             C: markers::ObjectMarkerFor<T>,
         {
             Report::from_parts::<H>(context, ReportCollection::new(), ReportAttachments::new())
@@ -491,7 +490,6 @@ pub mod __private {
         ) -> ReportAttachment<A, T>
         where
             H: handlers::AttachmentHandler<A>,
-            T: markers::ThreadSafetyMarker,
             A: markers::ObjectMarkerFor<T>,
         {
             ReportAttachment::new_custom::<H>(attachment)

@@ -278,11 +278,7 @@ pub trait IntoAnyhow {
     fn into_anyhow(self) -> Self::Output;
 }
 
-impl<C, O> IntoAnyhow for Report<C, O>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> IntoAnyhow for Report<C, O> {
     type Output = anyhow::Error;
 
     fn into_anyhow(self) -> Self::Output {
@@ -290,11 +286,7 @@ where
     }
 }
 
-impl<T, C, O> IntoAnyhow for Result<T, Report<C, O>>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<T, C: ?Sized, O> IntoAnyhow for Result<T, Report<C, O>> {
     type Output = Result<T, anyhow::Error>;
 
     fn into_anyhow(self) -> Self::Output {
@@ -302,11 +294,7 @@ where
     }
 }
 
-impl<C, O> From<Report<C, O, markers::SendSync>> for anyhow::Error
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> From<Report<C, O, markers::SendSync>> for anyhow::Error {
     fn from(report: Report<C, O, markers::SendSync>) -> Self {
         anyhow::Error::new(ReportAsError(report.into_dyn_any().into_cloneable()))
     }

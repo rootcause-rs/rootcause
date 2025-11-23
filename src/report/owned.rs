@@ -1551,9 +1551,6 @@ macro_rules! from_impls {
     ),* $(,)?) => {
         $(
             impl<$($param),*> From<Report<$context1, $ownership1, $thread_safety1>> for Report<$context2, $ownership2, $thread_safety2>
-                where $(
-                    $param: markers::ObjectMarker,
-                )*
              {
                 #[track_caller]
                 fn from(report: Report<$context1, $ownership1, $thread_safety1>) -> Self {

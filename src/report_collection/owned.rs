@@ -865,9 +865,7 @@ macro_rules! from_impls {
     ),* $(,)?) => {
         $(
             impl<$($param),*> From<ReportCollection<$context1, $thread_safety1>> for ReportCollection<$context2, $thread_safety2>
-                where
-                    $($param: markers::ObjectMarker)*
-                {
+            {
                 fn from(report_collection: ReportCollection<$context1, $thread_safety1>) -> Self {
                     report_collection
                         $(

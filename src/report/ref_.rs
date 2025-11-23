@@ -5,7 +5,7 @@ use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter,
-    markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
+    markers::{Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::{self, PreformattedAttachment, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
@@ -968,9 +968,6 @@ macro_rules! from_impls {
     ),* $(,)?) => {
         $(
             impl<'a, $($param),*> From<ReportRef<'a, $context1, $ownership1, $thread_safety1>> for ReportRef<'a, $context2, $ownership2, $thread_safety2>
-                where $(
-                    $param: markers::ObjectMarker,
-                )*
             {
                 fn from(report: ReportRef<'a, $context1, $ownership1, $thread_safety1>) -> Self {
                     report

@@ -304,11 +304,7 @@ pub trait IntoErrorStack<C: ?Sized> {
     fn into_error_stack(self) -> Self::Output;
 }
 
-impl<C, O> IntoErrorStack<C> for Report<C, O, SendSync>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> IntoErrorStack<C> for Report<C, O, SendSync> {
     type Output = error_stack::Report<ReportAsError<C>>;
 
     fn into_error_stack(self) -> Self::Output {
@@ -316,11 +312,7 @@ where
     }
 }
 
-impl<T, C, O> IntoErrorStack<C> for Result<T, Report<C, O, SendSync>>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<T, C: ?Sized, O> IntoErrorStack<C> for Result<T, Report<C, O, SendSync>> {
     type Output = Result<T, error_stack::Report<ReportAsError<C>>>;
 
     fn into_error_stack(self) -> Self::Output {
@@ -328,11 +320,7 @@ where
     }
 }
 
-impl<C, O> From<Report<C, O, markers::SendSync>> for error_stack::Report<ReportAsError<C>>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> From<Report<C, O, markers::SendSync>> for error_stack::Report<ReportAsError<C>> {
     fn from(report: Report<C, O, markers::SendSync>) -> Self {
         error_stack::Report::from(ReportAsError(report.into_cloneable()))
     }

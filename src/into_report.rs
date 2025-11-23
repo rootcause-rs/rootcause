@@ -59,10 +59,10 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// ```
 pub trait IntoReport<T> {
     /// The context type of the resulting report.
-    type Context: markers::ObjectMarker + ?Sized;
+    type Context: ?Sized + 'static;
 
     /// The ownership marker of the resulting report.
-    type Ownership: markers::ReportOwnershipMarker;
+    type Ownership: 'static;
 
     /// Converts `self` into a [`Report`] with the specified thread-safety
     /// marker.
@@ -74,11 +74,7 @@ pub trait IntoReport<T> {
     fn into_report(self) -> Report<Self::Context, Self::Ownership, T>;
 }
 
-impl<C, O> IntoReport<markers::SendSync> for Report<C, O, markers::SendSync>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> IntoReport<markers::SendSync> for Report<C, O, markers::SendSync> {
     type Context = C;
     type Ownership = O;
 
@@ -88,12 +84,7 @@ where
     }
 }
 
-impl<C, O, T> IntoReport<markers::Local> for Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, O, T> IntoReport<markers::Local> for Report<C, O, T> {
     type Context = C;
     type Ownership = O;
 
@@ -103,10 +94,9 @@ where
     }
 }
 
-impl<C, T> IntoReport<T> for C
+impl<C: Sized + 'static, T> IntoReport<T> for C
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     type Context = C;
     type Ownership = markers::Mutable;
@@ -164,9 +154,9 @@ where
 /// let errors: Vec<io::Error> = vec![io::Error::other("error 1")];
 /// let collection2: ReportCollection = errors.into_iter().map(|e| report!(e)).collect();
 /// ```
-pub trait IntoReportCollection<T: markers::ThreadSafetyMarker> {
+pub trait IntoReportCollection<T> {
     /// The context type of the resulting report collection.
-    type Context: markers::ObjectMarker + ?Sized;
+    type Context: ?Sized + 'static;
 
     /// Converts `self` into a [`ReportCollection`] with the specified
     /// thread-safety marker.
@@ -180,7 +170,7 @@ pub trait IntoReportCollection<T: markers::ThreadSafetyMarker> {
 
 impl<C, O> IntoReportCollection<markers::SendSync> for Report<C, O, markers::SendSync>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: ?Sized,
     O: markers::ReportOwnershipMarker,
 {
     type Context = C;
@@ -193,9 +183,8 @@ where
 
 impl<C, O, T> IntoReportCollection<markers::Local> for Report<C, O, T>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: ?Sized,
     O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
 {
     type Context = C;
 
@@ -207,7 +196,7 @@ where
 
 impl<C> IntoReportCollection<markers::SendSync> for ReportCollection<C, markers::SendSync>
 where
-    C: markers::ObjectMarker + ?Sized,
+    C: ?Sized,
 {
     type Context = C;
 
@@ -219,8 +208,7 @@ where
 
 impl<C, T> IntoReportCollection<markers::Local> for ReportCollection<C, T>
 where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
+    C: ?Sized,
 {
     type Context = C;
 
@@ -233,7 +221,6 @@ where
 impl<C, T> IntoReportCollection<T> for C
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     type Context = C;
 

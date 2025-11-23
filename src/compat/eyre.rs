@@ -278,11 +278,7 @@ pub trait IntoEyre {
     fn into_eyre(self) -> Self::Output;
 }
 
-impl<C, O> IntoEyre for Report<C, O>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> IntoEyre for Report<C, O> {
     type Output = eyre::Report;
 
     fn into_eyre(self) -> Self::Output {
@@ -290,11 +286,7 @@ where
     }
 }
 
-impl<T, C, O> IntoEyre for Result<T, Report<C, O>>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<T, C: ?Sized, O> IntoEyre for Result<T, Report<C, O>> {
     type Output = Result<T, eyre::Report>;
 
     fn into_eyre(self) -> Self::Output {
@@ -302,11 +294,7 @@ where
     }
 }
 
-impl<C, O> From<Report<C, O, markers::SendSync>> for eyre::Report
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
+impl<C: ?Sized, O> From<Report<C, O, markers::SendSync>> for eyre::Report {
     fn from(report: Report<C, O, markers::SendSync>) -> Self {
         eyre::Report::new(ReportAsError(report.into_dyn_any().into_cloneable()))
     }
