@@ -2,10 +2,7 @@ use core::{any::Any, iter::FusedIterator};
 
 use rootcause_internals::RawAttachment;
 
-use crate::{
-    markers,
-    report_attachment::{ReportAttachment, ReportAttachmentRef},
-};
+use crate::report_attachment::{ReportAttachment, ReportAttachmentRef};
 
 /// An iterator over references to report attachments.
 ///
@@ -86,8 +83,6 @@ mod limit_field_access {
 
     use rootcause_internals::RawAttachment;
 
-    use crate::markers;
-
     /// An iterator that consumes report attachments and yields owned values.
     ///
     /// This iterator yields [`ReportAttachment`] items and is created by
@@ -111,10 +106,7 @@ mod limit_field_access {
     /// let iterator: ReportAttachmentsIntoIter<_> = attachments.into_iter();
     /// ```
     #[must_use]
-    pub struct ReportAttachmentsIntoIter<T>
-    where
-        T: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportAttachmentsIntoIter<T: 'static> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
@@ -126,10 +118,7 @@ mod limit_field_access {
         _thread_safety: PhantomData<T>,
     }
 
-    impl<T> ReportAttachmentsIntoIter<T>
-    where
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<T> ReportAttachmentsIntoIter<T> {
         /// Creates a new [`ReportAttachmentsIntoIter`] from an iterator of raw
         /// attachments
         ///
@@ -172,10 +161,7 @@ mod limit_field_access {
 }
 pub use limit_field_access::ReportAttachmentsIntoIter;
 
-impl<T> Iterator for ReportAttachmentsIntoIter<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> Iterator for ReportAttachmentsIntoIter<T> {
     type Item = ReportAttachment<dyn Any, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -199,10 +185,7 @@ where
     }
 }
 
-impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         // SAFETY:
         // 1. We do not mutate the iterator or add any additional attachments during
@@ -220,13 +203,10 @@ where
     }
 }
 
-impl<T> ExactSizeIterator for ReportAttachmentsIntoIter<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> ExactSizeIterator for ReportAttachmentsIntoIter<T> {
     fn len(&self) -> usize {
         self.as_raw().len()
     }
 }
 
-impl<T> FusedIterator for ReportAttachmentsIntoIter<T> where T: markers::ThreadSafetyMarker {}
+impl<T> FusedIterator for ReportAttachmentsIntoIter<T> {}

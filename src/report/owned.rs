@@ -74,29 +74,32 @@ mod limit_field_access {
     /// [`SendSync`]: crate::markers::SendSync
     /// [`report!()`]: crate::report!
     #[repr(transparent)]
-    pub struct Report<Context = dyn Any, Ownership = Mutable, ThreadSafety = SendSync>
-    where
-        Context: markers::ObjectMarker + ?Sized,
-        Ownership: markers::ReportOwnershipMarker,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct Report<
+        Context: ?Sized + 'static = dyn Any,
+        Ownership: 'static = Mutable,
+        ThreadSafety: 'static = SendSync,
+    > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized + 'static`,
+        ///    or `dyn Any`.
+        /// 2. `O` must either be `Mutable` or `Cloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Mutable`: This is the unique owner of the report. More
+        /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
         ///    `triomphe::Arc` is exactly 1.
-        /// 3. If `O = Cloneable`: All other references to this report are
+        /// 6. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 4. All references to any sub-reports of this report are compatible
+        /// 7. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the report and
+        /// 8. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`.
         raw: RawReport,
         _context: PhantomData<Context>,
@@ -104,12 +107,7 @@ mod limit_field_access {
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<C, O, T> Report<C, O, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<C: ?Sized, O, T> Report<C, O, T> {
         /// Creates a new [`Report`] from a [`RawReport`]
         ///
         /// # Safety
@@ -131,6 +129,7 @@ mod limit_field_access {
         ///    all sub-reports must be `Send+Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
@@ -157,6 +156,7 @@ mod limit_field_access {
         /// [`RawReport`].
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Trivially upheld, as no mutation occurs
             // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
@@ -172,11 +172,7 @@ mod limit_field_access {
         }
     }
 
-    impl<C, T> Report<C, markers::Mutable, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<C: ?Sized, T> Report<C, markers::Mutable, T> {
         /// Creates a lifetime-bound [`RawReportMut`] from the inner
         /// [`RawReport`].
         ///
@@ -188,6 +184,7 @@ mod limit_field_access {
         ///    this that are not `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> RawReportMut<'_> {
+            // TODO
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. While mutation of the context is possible through this reference, it is
             //    not possible to change the type of the context. Therefore this invariant
@@ -213,41 +210,7 @@ mod limit_field_access {
 
 pub use limit_field_access::Report;
 
-impl<C, T> Report<C, Mutable, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
-    /// Returns a mutable reference to the report.
-    ///
-    /// # Examples
-    /// ```
-    /// use rootcause::{ReportMut, prelude::*};
-    /// let mut report: Report = report!("error message");
-    /// let report_mut: ReportMut<'_> = report.as_mut();
-    /// ```
-    #[must_use]
-    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
-        //    not allowed to mutate the returned raw report in a way that adds
-        //    non-`Send+Sync` objects. However the invariants of the created `ReportMut`
-        //    guarantee that no such mutation can occur.
-        let raw = unsafe { self.as_raw_mut() };
-
-        // SAFETY:
-        // 1. This is guaranteed by the invariants of this type.
-        // 2. This is guaranteed by the invariants of this type.
-        // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
-        // 5. We have a `&mut self`. This means that there are no other borrows active
-        //    to `self`. We also know that this is the unique owner of the report, so
-        //    there are no other references to it through different ownership. This
-        //    means that there are no other references to this report at all, so there
-        //    cannot be any incompatible references.
-        unsafe { ReportMut::from_raw(raw) }
-    }
-
+impl<C: Sized, T> Report<C, Mutable, T> {
     /// Creates a new [`Report`] with the given context.
     ///
     /// This method is generic over the thread safety marker `T`. The context
@@ -279,7 +242,7 @@ where
     #[must_use]
     pub fn new(context: C) -> Self
     where
-        C: core::error::Error + markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T> + core::error::Error,
     {
         Self::new_custom::<handlers::Error>(context)
     }
@@ -306,7 +269,7 @@ where
     #[must_use]
     pub fn new_custom<H>(context: C) -> Self
     where
-        C: markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T>,
         H: ContextHandler<C>,
     {
         Self::from_parts::<H>(context, ReportCollection::new(), ReportAttachments::new())
@@ -335,11 +298,11 @@ where
         attachments: ReportAttachments<T>,
     ) -> Self
     where
-        C: markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T>,
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        T::run_creation_hooks(report.as_mut().into_dyn_any());
+        C::run_creation_hooks(report.as_mut().into_dyn_any());
         report
     }
 
@@ -366,7 +329,7 @@ where
         attachments: ReportAttachments<T>,
     ) -> Self
     where
-        C: markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T>,
         H: ContextHandler<C>,
     {
         let raw = RawReport::new::<C, H>(context, children.into_raw(), attachments.into_raw());
@@ -390,87 +353,6 @@ where
         }
     }
 
-    /// Adds a new attachment to the [`Report`].
-    ///
-    /// This is a convenience method used for chaining method calls; it consumes
-    /// the [`Report`] and returns it.
-    ///
-    /// If you want more direct control over the attachments, you can use the
-    /// [`Report::attachments_mut`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// let report: Report = report!("error message");
-    /// let with_attachment = report.attach("additional info");
-    /// ```
-    #[must_use]
-    pub fn attach<A>(mut self, attachment: A) -> Self
-    where
-        A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
-    {
-        self.attachments_mut()
-            .push(ReportAttachment::new(attachment).into_dyn_any());
-        self
-    }
-
-    /// Adds a new attachment to the [`Report`].
-    ///
-    /// This is a convenience method used for chaining method calls; it consumes
-    /// the [`Report`] and returns it.
-    ///
-    /// If you want more direct control over the attachments, you can use the
-    /// [`Report::attachments_mut`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// let report: Report = report!("error message");
-    /// let with_attachment = report.attach_custom::<handlers::Display, _>("info");
-    /// ```
-    #[must_use]
-    pub fn attach_custom<H, A>(mut self, attachment: A) -> Self
-    where
-        A: markers::ObjectMarkerFor<T>,
-        H: handlers::AttachmentHandler<A>,
-    {
-        self.attachments_mut()
-            .push(ReportAttachment::new_custom::<H>(attachment).into_dyn_any());
-        self
-    }
-
-    /// Returns a mutable reference to the child reports.
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, report_collection::ReportCollection};
-    /// let mut report: Report = report!("error message");
-    /// let children_mut: &mut ReportCollection = report.children_mut();
-    /// ```
-    #[must_use]
-    pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
-        self.as_mut().into_children_mut()
-    }
-
-    /// Returns a mutable reference to the attachments.
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, report_attachments::ReportAttachments};
-    /// let mut report: Report = report!("error message");
-    /// let attachments_mut: &mut ReportAttachments = report.attachments_mut();
-    /// ```
-    #[must_use]
-    pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
-        self.as_mut().into_attachments_mut()
-    }
-}
-
-impl<C, T> Report<C, Mutable, T>
-where
-    C: markers::ObjectMarker,
-    T: markers::ThreadSafetyMarker,
-{
     /// Decomposes the [`Report`] into its constituent parts.
     ///
     /// Returns a tuple containing the children collection, attachments
@@ -602,12 +484,114 @@ where
     }
 }
 
-impl<C, O, T> Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> Report<C, Mutable, T> {
+    /// Returns a mutable reference to the report.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{ReportMut, prelude::*};
+    /// let mut report: Report = report!("error message");
+    /// let report_mut: ReportMut<'_> = report.as_mut();
+    /// ```
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. However the invariants of the created `ReportMut`
+        //    guarantee that no such mutation can occur.
+        let raw = unsafe { self.as_raw_mut() };
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. We have a `&mut self`. This means that there are no other borrows active
+        //    to `self`. We also know that this is the unique owner of the report, so
+        //    there are no other references to it through different ownership. This
+        //    means that there are no other references to this report at all, so there
+        //    cannot be any incompatible references.
+        unsafe { ReportMut::from_raw(raw) }
+    }
+
+    /// Adds a new attachment to the [`Report`].
+    ///
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
+    ///
+    /// If you want more direct control over the attachments, you can use the
+    /// [`Report::attachments_mut`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let report: Report = report!("error message");
+    /// let with_attachment = report.attach("additional info");
+    /// ```
+    #[must_use]
+    pub fn attach<A>(mut self, attachment: A) -> Self
+    where
+        A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+    {
+        self.attachments_mut()
+            .push(ReportAttachment::new(attachment).into_dyn_any());
+        self
+    }
+
+    /// Adds a new attachment to the [`Report`].
+    ///
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
+    ///
+    /// If you want more direct control over the attachments, you can use the
+    /// [`Report::attachments_mut`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let report: Report = report!("error message");
+    /// let with_attachment = report.attach_custom::<handlers::Display, _>("info");
+    /// ```
+    #[must_use]
+    pub fn attach_custom<H, A>(mut self, attachment: A) -> Self
+    where
+        A: markers::ObjectMarkerFor<T>,
+        H: handlers::AttachmentHandler<A>,
+    {
+        self.attachments_mut()
+            .push(ReportAttachment::new_custom::<H>(attachment).into_dyn_any());
+        self
+    }
+
+    /// Returns a mutable reference to the child reports.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection};
+    /// let mut report: Report = report!("error message");
+    /// let children_mut: &mut ReportCollection = report.children_mut();
+    /// ```
+    #[must_use]
+    pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
+        self.as_mut().into_children_mut()
+    }
+
+    /// Returns a mutable reference to the attachments.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachments::ReportAttachments};
+    /// let mut report: Report = report!("error message");
+    /// let attachments_mut: &mut ReportAttachments = report.attachments_mut();
+    /// ```
+    #[must_use]
+    pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
+        self.as_mut().into_attachments_mut()
+    }
+}
+
+impl<C: ?Sized, O, T> Report<C, O, T> {
     /// Creates a new [`Report`] with the given context and sets the current
     /// report as a child of the new report.
     ///
@@ -680,7 +664,7 @@ where
     /// ```
     #[must_use]
     pub fn children(&self) -> &ReportCollection<dyn Any, T> {
-        self.as_ref().children()
+        self.as_uncloneable_ref().children()
     }
 
     /// Returns a reference to the attachments.
@@ -693,7 +677,7 @@ where
     /// ```
     #[must_use]
     pub fn attachments(&self) -> &ReportAttachments<T> {
-        self.as_ref().attachments()
+        self.as_uncloneable_ref().attachments()
     }
 
     /// Changes the context type of the [`Report`] to [`dyn Any`].
@@ -855,6 +839,20 @@ where
         }
     }
 
+    pub(crate) fn as_uncloneable_ref(&self) -> ReportRef<'_, C, Uncloneable, T> {
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        unsafe {
+            // @add-unsafe-context: markers::ReportOwnershipMarker
+            ReportRef::<C, Uncloneable, T>::from_raw(raw)
+        }
+    }
+
     /// Returns an immutable reference to the report.
     ///
     /// # Examples
@@ -867,7 +865,10 @@ where
     /// let report_ref: ReportRef<'_, _, Cloneable> = report.as_ref();
     /// ```
     #[must_use]
-    pub fn as_ref(&self) -> ReportRef<'_, C, O::RefMarker, T> {
+    pub fn as_ref(&self) -> ReportRef<'_, C, O::RefMarker, T>
+    where
+        O: markers::ReportOwnershipMarker,
+    {
         let raw = self.as_raw_ref();
 
         // SAFETY:
@@ -936,7 +937,10 @@ where
     /// assert_eq!(all_reports[1], "root error");
     /// assert_eq!(all_reports.len(), 6);
     /// ```
-    pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T> {
+    pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T>
+    where
+        O: markers::ReportOwnershipMarker,
+    {
         self.as_ref().iter_reports()
     }
 
@@ -985,8 +989,11 @@ where
     /// assert_eq!(sub_reports[1], "context for error 1");
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
-    pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
-        self.as_ref().iter_sub_reports()
+    pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T>
+    where
+        O: markers::ReportOwnershipMarker,
+    {
+        self.as_uncloneable_ref().iter_sub_reports()
     }
 
     /// Creates a new report, which has the same structure as the current
@@ -1009,7 +1016,7 @@ where
     #[track_caller]
     #[must_use]
     pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
-        self.as_ref().preformat()
+        self.as_uncloneable_ref().preformat()
     }
 
     /// Returns the [`TypeId`] of the current context.
@@ -1029,7 +1036,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
-        self.as_ref().current_context_type_id()
+        self.as_uncloneable_ref().current_context_type_id()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.
@@ -1047,7 +1054,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
-        self.as_ref().current_context_handler_type_id()
+        self.as_uncloneable_ref().current_context_handler_type_id()
     }
 
     /// Returns the error source if the context implements [`Error`].
@@ -1075,7 +1082,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_error_source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        self.as_ref().current_context_error_source()
+        self.as_uncloneable_ref().current_context_error_source()
     }
 
     /// Formats the current context with hook processing.
@@ -1089,7 +1096,7 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        self.as_ref().format_current_context()
+        self.as_uncloneable_ref().format_current_context()
     }
 
     /// Formats the current context without hook processing.
@@ -1103,7 +1110,7 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        self.as_ref().format_current_context_unhooked()
+        self.as_uncloneable_ref().format_current_context_unhooked()
     }
 
     /// Formats the entire report using a specific report formatting hook.
@@ -1134,7 +1141,7 @@ where
     where
         H: crate::hooks::report_formatting::ReportFormatterHook,
     {
-        self.as_ref().format_with_hook(hook)
+        self.as_uncloneable_ref().format_with_hook(hook)
     }
 
     /// Gets the preferred formatting style for the context with hook
@@ -1162,8 +1169,11 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
-            self.as_ref().into_dyn_any().into_uncloneable().into_local();
+        let report: ReportRef<'_, dyn Any, Uncloneable, Local> = self
+            .as_uncloneable_ref()
+            .into_dyn_any()
+            .into_uncloneable()
+            .into_local();
         crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
@@ -1194,7 +1204,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        self.as_ref()
+        self.as_uncloneable_ref()
             .preferred_context_formatting_style_unhooked(report_formatting_function)
     }
 
@@ -1208,16 +1218,11 @@ where
     /// ```
     #[must_use]
     pub fn strong_count(&self) -> usize {
-        self.as_ref().strong_count()
+        self.as_uncloneable_ref().strong_count()
     }
 }
 
-impl<C, O, T> Report<C, O, T>
-where
-    C: markers::ObjectMarker,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: Sized, O, T> Report<C, O, T> {
     /// Returns a reference to the current context.
     ///
     /// # Examples
@@ -1230,15 +1235,11 @@ where
     /// ```
     #[must_use]
     pub fn current_context(&self) -> &C {
-        self.as_ref().current_context()
+        self.as_uncloneable_ref().current_context()
     }
 }
 
-impl<O, T> Report<dyn Any, O, T>
-where
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<O, T> Report<dyn Any, O, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise
@@ -1257,9 +1258,9 @@ where
     #[must_use]
     pub fn downcast_current_context<C>(&self) -> Option<&C>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
-        self.as_ref().downcast_current_context()
+        self.as_uncloneable_ref().downcast_current_context()
     }
 
     /// Downcasts the current context to a specific type without checking.
@@ -1290,9 +1291,9 @@ where
     #[must_use]
     pub unsafe fn downcast_current_context_unchecked<C>(&self) -> &C
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
-        let report = self.as_ref();
+        let report = self.as_uncloneable_ref();
 
         // SAFETY:
         // 1. Guaranteed by the caller
@@ -1315,7 +1316,7 @@ where
     /// ```
     pub fn downcast_report<C>(self) -> Result<Report<C, O, T>, Self>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
@@ -1356,7 +1357,7 @@ where
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> Report<C, O, T>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let raw = self.into_raw();
 
@@ -1370,10 +1371,7 @@ where
     }
 }
 
-impl<C> Report<C, Mutable, SendSync>
-where
-    C: markers::ObjectMarker + Send + Sync,
-{
+impl<C: Sized + Send + Sync> Report<C, Mutable, SendSync> {
     /// Creates a new [`Report`] with [`SendSync`] thread safety.
     ///
     /// This is a convenience method that calls [`Report::new`] with explicit
@@ -1423,10 +1421,7 @@ where
     }
 }
 
-impl<C> Report<C, Mutable, Local>
-where
-    C: markers::ObjectMarker,
-{
+impl<C: Sized> Report<C, Mutable, Local> {
     /// Creates a new [`Report`] with [`Local`] thread safety.
     ///
     /// This is a convenience method that calls [`Report::new`] with explicit
@@ -1479,27 +1474,16 @@ where
 // SAFETY: The `SendSync` marker indicates that all objects in the report are
 // `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
 // itself.
-unsafe impl<C, O> Send for Report<C, O, SendSync>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
-}
+unsafe impl<C: ?Sized, O> Send for Report<C, O, SendSync> {}
 
 // SAFETY: The `SendSync` marker indicates that all objects in the report are
 // `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
 // itself.
-unsafe impl<C, O> Sync for Report<C, O, SendSync>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
-}
+unsafe impl<C: ?Sized, O> Sync for Report<C, O, SendSync> {}
 
-impl<C, T> From<C> for Report<C, Mutable, T>
+impl<C: Sized, T> From<C> for Report<C, Mutable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1507,10 +1491,9 @@ where
     }
 }
 
-impl<C, T> From<C> for Report<C, Cloneable, T>
+impl<C: Sized, T> From<C> for Report<C, Cloneable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1518,10 +1501,9 @@ where
     }
 }
 
-impl<C, T> From<C> for Report<dyn Any, Mutable, T>
+impl<C: Sized, T> From<C> for Report<dyn Any, Mutable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1529,10 +1511,9 @@ where
     }
 }
 
-impl<C, T> From<C> for Report<dyn Any, Cloneable, T>
+impl<C: Sized, T> From<C> for Report<dyn Any, Cloneable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1540,35 +1521,21 @@ where
     }
 }
 
-impl<C, T> Clone for Report<C, Cloneable, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> Clone for Report<C, Cloneable, T> {
     fn clone(&self) -> Self {
         self.as_ref().clone_arc()
     }
 }
 
-impl<C, O, T> core::fmt::Display for Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, O, T> core::fmt::Display for Report<C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.as_ref(), f)
+        core::fmt::Display::fmt(&self.as_uncloneable_ref(), f)
     }
 }
 
-impl<C, O, T> core::fmt::Debug for Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.as_ref(), f)
+        core::fmt::Debug::fmt(&self.as_uncloneable_ref(), f)
     }
 }
 

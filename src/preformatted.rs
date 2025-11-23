@@ -140,12 +140,7 @@ pub struct PreformattedContext {
 }
 
 impl PreformattedContext {
-    pub(crate) fn new_from_context<C, O, T>(report: ReportRef<'_, C, O, T>) -> Self
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportRefOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
+    pub(crate) fn new_from_context<C: ?Sized, O, T>(report: ReportRef<'_, C, O, T>) -> Self {
         Self {
             original_type_id: report.current_context_type_id(),
             display: format!("{}", report.format_current_context()),

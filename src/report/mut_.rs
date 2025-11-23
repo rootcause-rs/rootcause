@@ -4,7 +4,7 @@ use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter, ReportRef,
-    markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
+    markers::{Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -18,7 +18,7 @@ mod limit_field_access {
 
     use rootcause_internals::{RawReportMut, RawReportRef};
 
-    use crate::markers::{self, SendSync};
+    use crate::markers::SendSync;
 
     /// A mutable reference to a [`Report`].
     ///
@@ -80,37 +80,32 @@ mod limit_field_access {
     //    borrow checker will ensure that original longer lifetime is not used while the shorter
     //    lifetime exists.
     #[repr(transparent)]
-    pub struct ReportMut<'a, Context = dyn Any, ThreadSafety = SendSync>
-    where
-        Context: markers::ObjectMarker + ?Sized,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportMut<'a, Context: ?Sized + 'static = dyn Any, ThreadSafety: 'static = SendSync> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists and must be continue to be upheld as
         /// long as the inner `RawReportMut` exists:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a concrete type bounded by `Sized`,
+        ///    or `dyn Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. The strong count of the underlying `triomphe::Arc` is exactly 1.
-        /// 3. All references to any sub-reports of this report are compatible
+        /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
+        /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        /// 7. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
-        /// 5. If `T = Local`: No other references to this report are allowed to
+        /// 8. If `T = Local`: No other references to this report are allowed to
         ///    have `T = SendSync`
         raw: RawReportMut<'a>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<'a, C, T> ReportMut<'a, C, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         /// Creates a new Report from a raw report
         ///
         /// # Safety
@@ -129,6 +124,7 @@ mod limit_field_access {
         ///    have `T = SendSync`
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawReportMut<'a>) -> Self {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by our caller
             // 2. Guaranteed by our caller
@@ -145,6 +141,7 @@ mod limit_field_access {
         /// Creates a raw reference to the underlying report.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawReportRef<'b> {
+            // TODO
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. No mutation of the context occurs through the returned `RawReportRef`
             // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
@@ -169,6 +166,7 @@ mod limit_field_access {
         ///    this `RawReportMut` that are not `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn into_raw_mut(self) -> RawReportMut<'a> {
+            // TODO
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. While mutation of the context is possible through this reference, it is
             //    not possible to change the type of the context. Therefore this invariant
@@ -194,6 +192,7 @@ mod limit_field_access {
         ///    this `RawReportMut` that are not `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn as_raw_mut<'b>(&'b mut self) -> RawReportMut<'b> {
+            // TOOD
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. While mutation of the context is possible through this reference, it is
             //    not possible to change the type of the context. Therefore this invariant
@@ -213,11 +212,7 @@ mod limit_field_access {
 }
 pub use limit_field_access::ReportMut;
 
-impl<'a, C, T> ReportMut<'a, C, T>
-where
-    C: markers::ObjectMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: Sized, T> ReportMut<'a, C, T> {
     /// Returns a reference to the current context.
     ///
     /// # Examples
@@ -273,11 +268,7 @@ where
     }
 }
 
-impl<'a, C, T> ReportMut<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// Returns an immutable reference to the child reports.
     ///
     /// # Examples
@@ -864,10 +855,7 @@ where
     }
 }
 
-impl<'a, T> ReportMut<'a, dyn Any, T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise
@@ -886,7 +874,7 @@ where
     #[must_use]
     pub fn downcast_current_context<C>(&self) -> Option<&C>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         self.as_ref().downcast_current_context()
     }
@@ -909,7 +897,7 @@ where
     #[must_use]
     pub fn downcast_current_context_mut<C>(&mut self) -> Option<&mut C>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let report = self.as_mut().downcast_report().ok()?;
         Some(report.into_current_context_mut())
@@ -944,7 +932,7 @@ where
     #[must_use]
     pub unsafe fn downcast_current_context_unchecked<C>(&self) -> &C
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let report = self.as_ref();
 
@@ -981,7 +969,7 @@ where
     /// ```
     pub unsafe fn downcast_current_context_mut_unchecked<C>(&mut self) -> &mut C
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let report = self.as_mut();
 
@@ -1009,7 +997,7 @@ where
     /// ```
     pub fn downcast_report<C>(self) -> Result<ReportMut<'a, C, T>, ReportMut<'a, dyn Any, T>>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
@@ -1051,7 +1039,7 @@ where
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportMut<'a, C, T>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         // SAFETY:
         // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
@@ -1071,35 +1059,25 @@ where
     }
 }
 
-impl<'a, C, T> core::fmt::Display for ReportMut<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> core::fmt::Display for ReportMut<'a, C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Display::fmt(&self.as_ref(), f)
     }
 }
 
-impl<'a, C, T> core::fmt::Debug for ReportMut<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.as_ref(), f)
     }
 }
 
-impl<'a, C: markers::ObjectMarker> From<ReportMut<'a, C, SendSync>>
-    for ReportMut<'a, dyn Any, SendSync>
-{
+impl<'a, C: Sized> From<ReportMut<'a, C, SendSync>> for ReportMut<'a, dyn Any, SendSync> {
     fn from(report: ReportMut<'a, C, SendSync>) -> Self {
         report.into_dyn_any()
     }
 }
 
-impl<'a, C: markers::ObjectMarker> From<ReportMut<'a, C, Local>> for ReportMut<'a, dyn Any, Local> {
+impl<'a, C: Sized> From<ReportMut<'a, C, Local>> for ReportMut<'a, dyn Any, Local> {
     fn from(report: ReportMut<'a, C, Local>) -> Self {
         report.into_dyn_any()
     }

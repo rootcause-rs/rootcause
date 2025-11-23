@@ -18,7 +18,7 @@ mod limit_field_access {
 
     use rootcause_internals::RawReport;
 
-    use crate::markers::{self, SendSync};
+    use crate::markers::SendSync;
 
     /// A collection of reports.
     ///
@@ -34,33 +34,31 @@ mod limit_field_access {
     /// - It is also possible to convert between different context and thread
     ///   safety markers using the [`From`] and [`Into`] traits.
     #[repr(transparent)]
-    pub struct ReportCollection<Context = dyn Any, ThreadSafety = SendSync>
-    where
-        Context: markers::ObjectMarker + ?Sized,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportCollection<
+        Context: ?Sized + 'static = dyn Any,
+        ThreadSafety: 'static = SendSync,
+    > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `C` is a concrete type: The contexts contained in all of the
+        /// 1. `C` must either be a type bounded by `Sized + 'static`,
+        ///    or `dyn Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
-        /// 2. All references to these reports or any sub-reports are compatible
+        /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the all of the
+        /// 5. If `T = SendSync`: All contexts and attachments in the all of the
         ///    report and all sub-reports must be `Send+Sync`
         raw: Vec<RawReport>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<C, T> ReportCollection<C, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<C: ?Sized, T> ReportCollection<C, T> {
         /// Creates a new [`ReportCollection`] from a vector of raw reports
         ///
         /// # Safety
@@ -76,6 +74,8 @@ mod limit_field_access {
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
+            // TODO
+            // SAFETY: We must uphold the safety invariants of the raw field:
             Self {
                 raw,
                 _context: PhantomData,
@@ -99,6 +99,8 @@ mod limit_field_access {
         ///    report and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
+            // TODO
+            // SAFETY: We must uphold the safety invariants of the raw field:
             let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
 
             // SAFETY:
@@ -128,6 +130,9 @@ mod limit_field_access {
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
             let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
+            // TODO
+            // SAFETY: We must uphold the safety invariants of the raw field:
+
             // SAFETY:
             // - The raw pointer is derived from a valid reference with the same lifetime
             //   and representation
@@ -147,6 +152,7 @@ mod limit_field_access {
 
         #[must_use]
         pub(crate) fn as_raw(&self) -> &Vec<RawReport> {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Upheld, as we are not allowing mutation
             // 2. Upheld, as we are not creating any such references
@@ -169,6 +175,7 @@ mod limit_field_access {
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawReport> {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
@@ -179,11 +186,7 @@ mod limit_field_access {
 }
 pub use limit_field_access::ReportCollection;
 
-impl<C, T> ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> ReportCollection<C, T> {
     /// Creates a new, empty `ReportCollection`.
     ///
     /// The collection will be initially empty and will have no capacity
@@ -672,20 +675,7 @@ where
     }
 }
 
-impl<C, T> Default for ReportCollection<C, T>
-where
-    C: markers::ObjectMarkerFor<T> + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-impl<C> ReportCollection<C, SendSync>
-where
-    C: markers::ObjectMarkerFor<SendSync> + ?Sized,
-{
+impl<C: ?Sized> ReportCollection<C, SendSync> {
     /// Creates a new, empty `ReportCollection` with [`SendSync`] thread safety.
     ///
     /// This is equivalent to calling [`new()`](Self::new) but makes the thread
@@ -706,10 +696,7 @@ where
     }
 }
 
-impl<C> ReportCollection<C, Local>
-where
-    C: markers::ObjectMarker + ?Sized,
-{
+impl<C: ?Sized> ReportCollection<C, Local> {
     /// Creates a new, empty `ReportCollection` with [`Local`] thread safety.
     ///
     /// This creates a collection that is not [`Send`] or [`Sync`], meaning it
@@ -731,11 +718,21 @@ where
     }
 }
 
-impl<C, O, T> Extend<Report<C, O, T>> for ReportCollection<C, T>
+impl<C: ?Sized> Default for ReportCollection<C, SendSync> {
+    fn default() -> Self {
+        Self::new_sendsync()
+    }
+}
+
+impl<C: ?Sized> Default for ReportCollection<C, Local> {
+    fn default() -> Self {
+        Self::new_local()
+    }
+}
+
+impl<C: ?Sized, O, T> Extend<Report<C, O, T>> for ReportCollection<C, T>
 where
-    C: markers::ObjectMarker + ?Sized,
     O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
 {
     fn extend<I: IntoIterator<Item = Report<C, O, T>>>(&mut self, iter: I) {
         let iter = iter.into_iter();
@@ -746,11 +743,9 @@ where
     }
 }
 
-impl<C, O, T> Extend<Report<C, O, T>> for ReportCollection<dyn Any, T>
+impl<C: Sized, O, T> Extend<Report<C, O, T>> for ReportCollection<dyn Any, T>
 where
-    C: markers::ObjectMarker,
     O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
 {
     fn extend<I: IntoIterator<Item = Report<C, O, T>>>(&mut self, iter: I) {
         let iter = iter.into_iter();
@@ -761,11 +756,7 @@ where
     }
 }
 
-impl<'a, C, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollection<C, T> {
     fn extend<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(&mut self, iter: I) {
         let iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
@@ -775,11 +766,7 @@ where
     }
 }
 
-impl<'a, C, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollection<dyn Any, T>
-where
-    C: markers::ObjectMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: Sized, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollection<dyn Any, T> {
     fn extend<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(&mut self, iter: I) {
         let iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
@@ -789,11 +776,9 @@ where
     }
 }
 
-impl<C, O, T> FromIterator<Report<C, O, T>> for ReportCollection<C, T>
+impl<C: ?Sized, O, T> FromIterator<Report<C, O, T>> for ReportCollection<C, T>
 where
-    C: markers::ObjectMarker + ?Sized,
     O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
 {
     fn from_iter<I: IntoIterator<Item = Report<C, O, T>>>(iter: I) -> Self {
         let mut siblings = ReportCollection::new();
@@ -802,11 +787,9 @@ where
     }
 }
 
-impl<C, O, T> FromIterator<Report<C, O, T>> for ReportCollection<dyn Any, T>
+impl<C: Sized + 'static, O, T> FromIterator<Report<C, O, T>> for ReportCollection<dyn Any, T>
 where
-    C: markers::ObjectMarker,
     O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
 {
     fn from_iter<I: IntoIterator<Item = Report<C, O, T>>>(iter: I) -> Self {
         let mut siblings = ReportCollection::new();
@@ -815,10 +798,16 @@ where
     }
 }
 
-impl<'a, C, T> FromIterator<ReportRef<'a, C, Cloneable, T>> for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
+impl<'a, C: ?Sized, T> FromIterator<ReportRef<'a, C, Cloneable, T>> for ReportCollection<C, T> {
+    fn from_iter<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(iter: I) -> Self {
+        let mut siblings = ReportCollection::new();
+        siblings.extend(iter);
+        siblings
+    }
+}
+
+impl<'a, C: Sized + 'static, T> FromIterator<ReportRef<'a, C, Cloneable, T>>
+    for ReportCollection<dyn Any, T>
 {
     fn from_iter<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(iter: I) -> Self {
         let mut siblings = ReportCollection::new();
@@ -827,23 +816,7 @@ where
     }
 }
 
-impl<'a, C, T> FromIterator<ReportRef<'a, C, Cloneable, T>> for ReportCollection<dyn Any, T>
-where
-    C: markers::ObjectMarker,
-    T: markers::ThreadSafetyMarker,
-{
-    fn from_iter<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(iter: I) -> Self {
-        let mut siblings = ReportCollection::new();
-        siblings.extend(iter);
-        siblings
-    }
-}
-
-impl<C, T> core::fmt::Display for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> core::fmt::Display for ReportCollection<C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let raw = self.as_raw();
 
@@ -862,11 +835,7 @@ where
     }
 }
 
-impl<C, T> core::fmt::Debug for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> core::fmt::Debug for ReportCollection<C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let raw = self.as_raw();
 
@@ -918,21 +887,13 @@ from_impls! {
     <>: dyn Any => dyn Any, SendSync => Local, [into_local],
 }
 
-impl<C, T> From<Vec<Report<C, Cloneable, T>>> for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> From<Vec<Report<C, Cloneable, T>>> for ReportCollection<C, T> {
     fn from(reports: Vec<Report<C, Cloneable, T>>) -> Self {
         reports.into_iter().collect()
     }
 }
 
-impl<const N: usize, C, T> From<[Report<C, Cloneable, T>; N]> for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<const N: usize, C: ?Sized, T> From<[Report<C, Cloneable, T>; N]> for ReportCollection<C, T> {
     fn from(reports: [Report<C, Cloneable, T>; N]) -> Self {
         reports.into_iter().collect()
     }
@@ -940,17 +901,13 @@ where
 
 // SAFETY: The `SendSync` marker guarantees that all reports are `Send + Sync`
 // so the collection can safely implement `Send` and `Sync`.
-unsafe impl<C> Send for ReportCollection<C, SendSync> where C: markers::ObjectMarker + ?Sized {}
+unsafe impl<C: ?Sized> Send for ReportCollection<C, SendSync> {}
 
 // SAFETY: The `SendSync` marker guarantees that all reports are `Send + Sync`
 // so the collection can safely implement `Send` and `Sync`.
-unsafe impl<C> Sync for ReportCollection<C, SendSync> where C: markers::ObjectMarker + ?Sized {}
+unsafe impl<C: ?Sized> Sync for ReportCollection<C, SendSync> {}
 
-impl<C, T> IntoIterator for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> IntoIterator for ReportCollection<C, T> {
     type IntoIter = ReportCollectionIntoIter<C, T>;
     type Item = Report<C, Cloneable, T>;
 
@@ -965,11 +922,7 @@ where
     }
 }
 
-impl<'a, C, T> IntoIterator for &'a ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> IntoIterator for &'a ReportCollection<C, T> {
     type IntoIter = ReportCollectionIter<'a, C, T>;
     type Item = ReportRef<'a, C, Cloneable, T>;
 
@@ -978,11 +931,7 @@ where
     }
 }
 
-impl<C, T> Clone for ReportCollection<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> Clone for ReportCollection<C, T> {
     fn clone(&self) -> Self {
         self.iter().map(|child| child.clone_arc()).collect()
     }

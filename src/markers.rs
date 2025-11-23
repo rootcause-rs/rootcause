@@ -498,19 +498,19 @@ pub trait ReportRefOwnershipMarker: Sized + sealed_report_ref_ownership_marker::
     ///
     /// In non-generic code, you can use [`From`]/[`Into`] directly.
     #[doc(hidden)]
-    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
+    fn convert_cloneable_report_ref<'a, T>(
         report: ReportRef<'a, dyn Any, Cloneable, T>,
     ) -> ReportRef<'a, dyn Any, Self, T>;
 }
 impl ReportRefOwnershipMarker for Cloneable {
-    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
+    fn convert_cloneable_report_ref<'a, T>(
         report: ReportRef<'a, dyn Any, Cloneable, T>,
     ) -> ReportRef<'a, dyn Any, Self, T> {
         report
     }
 }
 impl ReportRefOwnershipMarker for Uncloneable {
-    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
+    fn convert_cloneable_report_ref<'a, T>(
         report: ReportRef<'a, dyn Any, Cloneable, T>,
     ) -> ReportRef<'a, dyn Any, Self, T> {
         report.into_uncloneable()
@@ -593,8 +593,39 @@ impl ThreadSafetyMarker for Local {
 /// let rc_data: Rc<String> = Rc::new("error".to_string());
 /// let report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(rc_data);
 /// ```
-pub trait ObjectMarkerFor<T: ThreadSafetyMarker>: ObjectMarker {}
-impl<T> ObjectMarkerFor<Local> for T where T: ObjectMarker {}
-impl<T> ObjectMarkerFor<SendSync> for T where T: ObjectMarker + Send + Sync {}
-impl ObjectMarkerFor<Local> for dyn Any {}
-impl ObjectMarkerFor<SendSync> for dyn Any {}
+pub trait ObjectMarkerFor<T>: ObjectMarker {
+    /// Runs report creation hooks specific to this thread-safety marker.
+    #[doc(hidden)]
+    #[track_caller]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, T>);
+}
+impl<O> ObjectMarkerFor<Local> for O
+where
+    O: ObjectMarker,
+{
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Local>) {
+        crate::hooks::report_creation::run_creation_hooks_local(report);
+    }
+}
+impl<O> ObjectMarkerFor<SendSync> for O
+where
+    O: ObjectMarker + Send + Sync,
+{
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, SendSync>) {
+        crate::hooks::report_creation::run_creation_hooks_sendsync(report);
+    }
+}
+impl ObjectMarkerFor<Local> for dyn Any {
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Local>) {
+        crate::hooks::report_creation::run_creation_hooks_local(report);
+    }
+}
+impl ObjectMarkerFor<SendSync> for dyn Any {
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, SendSync>) {
+        crate::hooks::report_creation::run_creation_hooks_sendsync(report);
+    }
+}

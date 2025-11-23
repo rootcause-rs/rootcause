@@ -157,10 +157,9 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
         E: IntoReport<ThreadSafety>;
 }
 
-struct IteratorWrapper<'a, Iter, Error, ThreadSafety>
+struct IteratorWrapper<'a, Iter, Error, ThreadSafety: 'static>
 where
     Error: IntoReport<ThreadSafety>,
-    ThreadSafety: markers::ThreadSafetyMarker,
 {
     iter: Iter,
     error_collection: &'a mut Option<ReportCollection<Error::Context, ThreadSafety>>,

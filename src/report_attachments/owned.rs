@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 use core::any::Any;
 
 use crate::{
-    markers::{self, Local, SendSync},
+    markers::{Local, SendSync},
     report_attachment::{ReportAttachment, ReportAttachmentRef},
     report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
 };
@@ -15,7 +15,7 @@ mod limit_field_access {
 
     use rootcause_internals::RawAttachment;
 
-    use crate::markers::{self, SendSync};
+    use crate::markers::SendSync;
 
     /// A collection of report attachments.
     ///
@@ -30,25 +30,20 @@ mod limit_field_access {
     /// - It is also possible to convert between different context and thread
     ///   safety markers using the [`From`] and [`Into`] traits.
     #[repr(transparent)]
-    pub struct ReportAttachments<ThreadSafety = SendSync>
-    where
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportAttachments<ThreadSafety: 'static = SendSync> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        /// 1. `T` must either be `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         raw: Vec<RawAttachment>,
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<T> ReportAttachments<T>
-    where
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<T> ReportAttachments<T> {
         /// Creates a new [`ReportAttachments`] from a vector of raw attachments
         ///
         /// # Safety
@@ -59,6 +54,7 @@ mod limit_field_access {
         ///    Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawAttachment>) -> Self {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             Self {
@@ -80,6 +76,8 @@ mod limit_field_access {
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawAttachment>) -> &Self {
             let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
 
+            // TODO
+            // SAFETY: We must uphold the safety invariants of the raw field:
             // SAFETY:
             // - The raw pointer is derived from a valid reference with the same lifetime
             //   and representation
@@ -102,6 +100,8 @@ mod limit_field_access {
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawAttachment>) -> &mut Self {
             let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
+            // TODO
+            // SAFETY: We must uphold the safety invariants of the raw field:
             // SAFETY:
             // - This raw pointer is derived from a valid reference with the same lifetime
             //   and representation
@@ -123,6 +123,7 @@ mod limit_field_access {
         /// Provides access to the inner raw attachments vector
         #[must_use]
         pub(crate) fn as_raw(&self) -> &Vec<RawAttachment> {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. This remains true for the duration of the reference
             &self.raw
@@ -138,6 +139,7 @@ mod limit_field_access {
         ///    invariant that all inner attachments are `Send + Sync`.
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut Vec<RawAttachment> {
+            // TODO
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             &mut self.raw
@@ -146,10 +148,7 @@ mod limit_field_access {
 }
 pub use limit_field_access::ReportAttachments;
 
-impl<T> ReportAttachments<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> ReportAttachments<T> {
     /// Creates a new, empty attachments collection.
     ///
     /// The collection will not allocate until attachments are added to it.
@@ -475,11 +474,7 @@ impl From<ReportAttachments<SendSync>> for ReportAttachments<Local> {
     }
 }
 
-impl<A, T> From<Vec<ReportAttachment<A, T>>> for ReportAttachments<T>
-where
-    A: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<A: ?Sized, T> From<Vec<ReportAttachment<A, T>>> for ReportAttachments<T> {
     fn from(attachments: Vec<ReportAttachment<A, T>>) -> Self {
         let raw_attachments = attachments
             .into_iter()
@@ -493,11 +488,7 @@ where
     }
 }
 
-impl<const N: usize, A, T> From<[ReportAttachment<A, T>; N]> for ReportAttachments<T>
-where
-    A: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<const N: usize, A: ?Sized, T> From<[ReportAttachment<A, T>; N]> for ReportAttachments<T> {
     fn from(attachments: [ReportAttachment<A, T>; N]) -> Self {
         let raw_attachments = attachments
             .into_iter()
@@ -523,10 +514,7 @@ unsafe impl Send for ReportAttachments<SendSync> {}
 // `Send` and `Sync`.
 unsafe impl Sync for ReportAttachments<SendSync> {}
 
-impl<T> IntoIterator for ReportAttachments<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> IntoIterator for ReportAttachments<T> {
     type IntoIter = ReportAttachmentsIntoIter<T>;
     type Item = ReportAttachment<dyn Any, T>;
 
@@ -539,10 +527,7 @@ where
     }
 }
 
-impl<'a, T> IntoIterator for &'a ReportAttachments<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, T> IntoIterator for &'a ReportAttachments<T> {
     type IntoIter = ReportAttachmentsIter<'a>;
     type Item = ReportAttachmentRef<'a, dyn Any>;
 
@@ -551,11 +536,7 @@ where
     }
 }
 
-impl<A, T> Extend<ReportAttachment<A, T>> for ReportAttachments<T>
-where
-    A: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<A: ?Sized, T> Extend<ReportAttachment<A, T>> for ReportAttachments<T> {
     fn extend<I: IntoIterator<Item = ReportAttachment<A, T>>>(&mut self, iter: I) {
         for report in iter {
             self.push(report.into_dyn_any());
@@ -563,11 +544,7 @@ where
     }
 }
 
-impl<A, T> FromIterator<ReportAttachment<A, T>> for ReportAttachments<T>
-where
-    A: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<A: ?Sized, T> FromIterator<ReportAttachment<A, T>> for ReportAttachments<T> {
     fn from_iter<I: IntoIterator<Item = ReportAttachment<A, T>>>(iter: I) -> Self {
         let mut siblings = ReportAttachments::new();
         siblings.extend(iter);

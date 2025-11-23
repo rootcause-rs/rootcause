@@ -57,7 +57,7 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// let error2: io::Error = io::Error::new(io::ErrorKind::NotFound, "config.toml");
 /// let report2: Report<io::Error> = report!(error2);
 /// ```
-pub trait IntoReport<T: markers::ThreadSafetyMarker> {
+pub trait IntoReport<T> {
     /// The context type of the resulting report.
     type Context: markers::ObjectMarker + ?Sized;
 
