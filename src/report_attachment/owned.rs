@@ -509,19 +509,21 @@ unsafe impl<A: ?Sized> Send for ReportAttachment<A, SendSync> {}
 // attachment itself.
 unsafe impl<A: ?Sized> Sync for ReportAttachment<A, SendSync> {}
 
+impl<A: ?Sized, T> core::marker::Unpin for ReportAttachment<A, T> {}
+
 macro_rules! from_impls {
     ($(
         <
             $($param:ident),*
         >:
-        $context1:ty => $context2:ty,
+        $attachment1:ty => $attachment2:ty,
         $thread_safety1:ty => $thread_safety2:ty,
         [$($op:ident),*]
     ),* $(,)?) => {
         $(
-            impl<$($param),*> From<ReportAttachment<$context1, $thread_safety1>> for ReportAttachment<$context2, $thread_safety2>
+            impl<$($param),*> From<ReportAttachment<$attachment1, $thread_safety1>> for ReportAttachment<$attachment2, $thread_safety2>
             {
-                fn from(attachment: ReportAttachment<$context1, $thread_safety1>) -> Self {
+                fn from(attachment: ReportAttachment<$attachment1, $thread_safety1>) -> Self {
                     attachment
                         $(
                             .$op()
@@ -533,10 +535,10 @@ macro_rules! from_impls {
 }
 
 from_impls!(
-    <C>: C => C, SendSync => Local, [into_local],
-    <C>: C => dyn Any, SendSync => SendSync, [into_dyn_any],
-    <C>: C => dyn Any, SendSync => Local, [into_dyn_any, into_local],
-    <C>: C => dyn Any, Local => Local, [into_dyn_any],
+    <A>: A => A, SendSync => Local, [into_local],
+    <A>: A => dyn Any, SendSync => SendSync, [into_dyn_any],
+    <A>: A => dyn Any, SendSync => Local, [into_dyn_any, into_local],
+    <A>: A => dyn Any, Local => Local, [into_dyn_any],
     <>:  dyn Any => dyn Any, SendSync => Local, [into_local],
 );
 
