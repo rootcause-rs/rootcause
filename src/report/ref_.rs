@@ -276,9 +276,9 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         // 1. This is guaranteed by our safety invariants.
         // 2. The invariants of this type guarantee that `T` is either `SendSync` or
         //    `Local`.
-        // 1. `C=dyn Any`, so this is trivially true.
-        // 2. This is guaranteed by our safety invariants.
-        // 3. This is guaranteed by our safety invariants.
+        // 3. `C=dyn Any`, so this is trivially true.
+        // 4. This is guaranteed by our safety invariants.
+        // 5. This is guaranteed by our safety invariants.
         unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
     }
 

@@ -44,9 +44,10 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized + 'static`, or `dyn
-        ///    Any`.
-        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
@@ -66,9 +67,10 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `C` must either be a type bounded by `Sized + 'static`, or `dyn
-        ///    Any`.
-        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
@@ -234,8 +236,10 @@ mod limit_field_access2 {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
-        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
@@ -256,8 +260,10 @@ mod limit_field_access2 {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
-        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
         /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible

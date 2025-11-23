@@ -373,6 +373,12 @@ mod sealed_report_ownership_marker {
     impl Sealed for Cloneable {}
 }
 
+mod sealed_object_marker {
+    pub trait Sealed: 'static {}
+
+    impl<C: Sized + 'static> Sealed for C {}
+}
+
 /// Marker trait for ownership semantics of owned reports.
 ///
 /// This trait is implemented for [`Mutable`] and [`Cloneable`], the two
@@ -476,7 +482,7 @@ impl ReportOwnershipMarker for Cloneable {
 /// let rc_data: Rc<String> = Rc::new("error".to_string());
 /// let report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(rc_data);
 /// ```
-pub trait ObjectMarkerFor<T>: Sized + 'static {
+pub trait ObjectMarkerFor<T>: sealed_object_marker::Sealed + Sized + 'static {
     /// Runs report creation hooks specific to this thread-safety marker.
     #[doc(hidden)]
     #[track_caller]
