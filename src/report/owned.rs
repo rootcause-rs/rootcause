@@ -777,14 +777,17 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. This is guaranteed by the invariants of this type.
+        // 1. This is guaranteed by the invariants of `self`.
         // 2. `O=Cloneable`, so this is trivially true.
-        // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of `self`.
+        // 4. This is guaranteed by the invariants of `self`.
         // 5. `O=Cloneable`, so this is trivially true.
-        // 6. This is guaranteed by the invariants of this type.
-        // 7. This is guaranteed by the invariants of this type.
-        // 8. This is guaranteed by the invariants of this type.
+        // 6. If the ownership of `self` is already `Cloneable`, then this is guaranteed
+        //    by the invariants of `self`. If the ownership of `self` is `Mutable`, then
+        //    the invariants of `self` guarantee that we are the only owner and we are
+        //    consuming `self` in this method, so there are no other owners.
+        // 7. This is guaranteed by the invariants of `self`.
+        // 8. This is guaranteed by the invariants of `self`.
         unsafe { Report::<C, Cloneable, T>::from_raw(raw) }
     }
 
