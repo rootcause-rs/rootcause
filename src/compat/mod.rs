@@ -178,7 +178,7 @@ pub struct ReportAsError<C: ?Sized + 'static = dyn Any, T: 'static = markers::Se
     pub Report<C, markers::Cloneable, T>,
 );
 
-impl<C: ?Sized, T: 'static> Clone for ReportAsError<C, T> {
+impl<C: ?Sized, T> Clone for ReportAsError<C, T> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
