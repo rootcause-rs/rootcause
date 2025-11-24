@@ -46,6 +46,8 @@ pub use core::any::Any;
 
 #[cfg(feature = "anyhow")]
 pub use crate::compat::anyhow::IntoAnyhow;
+#[cfg(feature = "boxed-error")]
+pub use crate::compat::boxed_error::IntoBoxedError;
 #[cfg(feature = "error-stack")]
 pub use crate::compat::error_stack::IntoErrorStack;
 #[cfg(feature = "eyre")]
