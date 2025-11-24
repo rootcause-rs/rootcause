@@ -7,9 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.10.0] - Unreleased
 
-### Changed
+### Fixed
 
-- Fix issue [#64](https://github.com/rootcause-rs/rootcause/issues/64) by removing a lot of trait bounds [#67](https://github.com/rootcause-rs/rootcause/pull/67)
+- Fix issue [#64](https://github.com/rootcause-rs/rootcause/issues/64) and parts of [#63](https://github.com/rootcause-rs/rootcause/issues/63) by removing a lot of trait bounds [#67](https://github.com/rootcause-rs/rootcause/pull/67)
+- Implement `Unpin` for most types. This fixes the other half of [#63](https://github.com/rootcause-rs/rootcause/issues/63). [#68](https://github.com/rootcause-rs/rootcause/pull/68)
 
 ## [0.9.1] - 2025-11-23
 
