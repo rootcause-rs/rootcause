@@ -11,6 +11,8 @@
 //!
 //! - [`anyhow`] - Integration with the `anyhow` error handling library
 //!   (requires the `anyhow` feature flag)
+//! - [`boxed_error`] - Convert reports to and from boxed error trait objects
+//!   (`Box<dyn Error>` and `Box<dyn Error + Send + Sync>`)
 //! - [`error_stack`] - Integration with the `error-stack` error handling
 //!   library (requires the `error-stack` feature flag)
 //! - [`eyre`] - Integration with the `eyre` error handling library (requires
@@ -67,7 +69,7 @@
 
 use core::any::Any;
 
-use crate::{Report, markers};
+use crate::{Report, ReportRef, markers};
 
 /// A trait for converting external error types into rootcause [`Report`]s.
 ///
@@ -147,6 +149,8 @@ pub trait IntoRootcause {
 #[cfg_attr(docsrs, doc(cfg(feature = "anyhow")))]
 pub mod anyhow;
 
+pub mod boxed_error;
+
 #[cfg(feature = "error-stack")]
 #[cfg_attr(docsrs, doc(cfg(feature = "error-stack")))]
 pub mod error_stack;
@@ -170,26 +174,38 @@ pub mod eyre;
 /// # Type Parameters
 ///
 /// - `C`: The context type of the wrapped report
-pub struct ReportAsError<C: ?Sized + 'static = dyn Any>(
-    Report<C, markers::Cloneable, markers::SendSync>,
+pub struct ReportAsError<C: ?Sized + 'static = dyn Any, T: 'static = markers::SendSync>(
+    pub Report<C, markers::Cloneable, T>,
 );
 
-impl<C: ?Sized> Clone for ReportAsError<C> {
+impl<C: ?Sized, T> Clone for ReportAsError<C, T> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<C: ?Sized> core::fmt::Debug for ReportAsError<C> {
+impl<C: ?Sized, T> core::fmt::Debug for ReportAsError<C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.0, f)
     }
 }
 
-impl<C: ?Sized> core::fmt::Display for ReportAsError<C> {
+impl<C: ?Sized, T> core::fmt::Display for ReportAsError<C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Display::fmt(&self.0, f)
     }
 }
 
-impl<C: ?Sized> core::error::Error for ReportAsError<C> {}
+impl<C: ?Sized, T> core::error::Error for ReportAsError<C, T> {}
+
+impl<C: ?Sized, O, T> From<Report<C, O, T>> for ReportAsError<C, T> {
+    fn from(value: Report<C, O, T>) -> Self {
+        ReportAsError(value.into_cloneable())
+    }
+}
+
+impl<C: ?Sized, T> From<ReportRef<'_, C, markers::Cloneable, T>> for ReportAsError<C, T> {
+    fn from(value: ReportRef<'_, C, markers::Cloneable, T>) -> Self {
+        ReportAsError(value.clone_arc())
+    }
+}

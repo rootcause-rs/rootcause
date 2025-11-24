@@ -1,6 +1,6 @@
 [package]
 name = "rootcause"
-version = "0.10.0"
+version = "0.11.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns", "no-std"]
@@ -14,9 +14,12 @@ rust-version = "1.89"
 members = ["rootcause-internals"]
 
 [features]
-default = []
+default = ["boxed-error"]
 std = []
 backtrace = ["dep:backtrace", "dep:regex", "std"]
+
+# Compatibility traits
+boxed-error = []
 anyhow = ["dep:anyhow"]
 error-stack = ["dep:error-stack"]
 eyre = ["dep:eyre"]
@@ -42,7 +45,7 @@ eyre = { version = "0.6.12", default-features = false, optional = true }
 regex = { version = "1.12.2", default-features = false, optional = true }
 
 # Internal dependencies
-rootcause-internals = { path = "rootcause-internals", version = "=0.10.0" }
+rootcause-internals = { path = "rootcause-internals", version = "=0.11.0" }
 
 [dev-dependencies]
 derive_more = { version = "2.0", default-features = false, features = [
