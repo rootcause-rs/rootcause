@@ -963,6 +963,8 @@ impl<const N: usize, C: ?Sized, T> From<[Report<C, Cloneable, T>; N]> for Report
     }
 }
 
+impl<C: ?Sized, T> Unpin for ReportCollection<C, T> {}
+
 // SAFETY: The `SendSync` marker guarantees that all reports are `Send + Sync`
 // so the collection can safely implement `Send` and `Sync`.
 unsafe impl<C: ?Sized> Send for ReportCollection<C, SendSync> {}
@@ -1024,6 +1026,19 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportCollection<String, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportCollection<NonSend, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportCollection<dyn Any, Local>: Send, Sync);
+    }
+
+    #[test]
+    fn test_report_collection_unpin() {
+        static_assertions::assert_impl_all!(ReportCollection<(), SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<String, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<NonSend, SendSync>: Unpin); // This still makes sense, since you won't actually be able to construct this report
+        static_assertions::assert_impl_all!(ReportCollection<dyn Any, SendSync>: Unpin);
+
+        static_assertions::assert_impl_all!(ReportCollection<(), Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<String, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<NonSend, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<dyn Any, Local>: Unpin);
     }
 
     #[test]

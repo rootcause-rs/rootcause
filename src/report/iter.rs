@@ -46,3 +46,8 @@ impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> where
     ReportRef<'a, dyn Any, Cloneable, T>: Into<ReportRef<'a, dyn Any, O, T>>
 {
 }
+
+impl<'a, O, T> Unpin for ReportIter<'a, O, T> where
+    ReportRef<'a, dyn Any, Cloneable, T>: Into<ReportRef<'a, dyn Any, O, T>>
+{
+}

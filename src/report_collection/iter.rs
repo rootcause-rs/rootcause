@@ -191,6 +191,8 @@ impl<'a, C: ?Sized, T> ExactSizeIterator for ReportCollectionIter<'a, C, T> {
 
 impl<'a, C: ?Sized, T> FusedIterator for ReportCollectionIter<'a, C, T> {}
 
+impl<'a, C: ?Sized, T> Unpin for ReportCollectionIter<'a, C, T> {}
+
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access2 {
@@ -388,3 +390,5 @@ impl<C: ?Sized, T> ExactSizeIterator for ReportCollectionIntoIter<C, T> {
 }
 
 impl<C: ?Sized, T> FusedIterator for ReportCollectionIntoIter<C, T> {}
+
+impl<C: ?Sized, T> Unpin for ReportCollectionIntoIter<C, T> {}

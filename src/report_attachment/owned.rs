@@ -509,7 +509,7 @@ unsafe impl<A: ?Sized> Send for ReportAttachment<A, SendSync> {}
 // attachment itself.
 unsafe impl<A: ?Sized> Sync for ReportAttachment<A, SendSync> {}
 
-impl<A: ?Sized, T> core::marker::Unpin for ReportAttachment<A, T> {}
+impl<A: ?Sized, T> Unpin for ReportAttachment<A, T> {}
 
 macro_rules! from_impls {
     ($(
@@ -563,6 +563,19 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportAttachment<String, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachment<NonSend, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachment<dyn Any, Local>: Send, Sync);
+    }
+
+    #[test]
+    fn test_attachment_unpin() {
+        static_assertions::assert_impl_all!(ReportAttachment<(), SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<String, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<NonSend, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<dyn Any, SendSync>: Unpin);
+
+        static_assertions::assert_impl_all!(ReportAttachment<(), Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<String, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<NonSend, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<dyn Any, Local>: Unpin);
     }
 
     #[test]

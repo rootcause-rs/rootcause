@@ -1096,6 +1096,8 @@ impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
     }
 }
 
+impl<'a, C: ?Sized, T> Unpin for ReportMut<'a, C, T> {}
+
 impl<'a, C: Sized> From<ReportMut<'a, C, SendSync>> for ReportMut<'a, dyn Any, SendSync> {
     fn from(report: ReportMut<'a, C, SendSync>) -> Self {
         report.into_dyn_any()
@@ -1129,6 +1131,19 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportMut<'static, String, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, dyn Any, Local>: Send, Sync);
+    }
+
+    #[test]
+    fn test_report_mut_unpin() {
+        static_assertions::assert_impl_all!(ReportMut<'static, (), SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, String, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, NonSend, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, dyn Any, SendSync>: Unpin);
+
+        static_assertions::assert_impl_all!(ReportMut<'static, (), Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, String, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, NonSend, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, dyn Any, Local>: Unpin);
     }
 
     #[test]

@@ -489,6 +489,8 @@ impl Default for ReportAttachments<Local> {
     }
 }
 
+impl<T> Unpin for ReportAttachments<T> {}
+
 impl From<ReportAttachments<SendSync>> for ReportAttachments<Local> {
     fn from(attachments: ReportAttachments<SendSync>) -> Self {
         attachments.into_local()
@@ -567,6 +569,12 @@ mod tests {
     fn test_attachments_send_sync() {
         static_assertions::assert_impl_all!(ReportAttachments<SendSync>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachments<Local>: Send, Sync);
+    }
+
+    #[test]
+    fn test_attachments_unpin() {
+        static_assertions::assert_impl_all!(ReportAttachments<SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachments<Local>: Unpin);
     }
 
     #[test]
