@@ -134,6 +134,7 @@ impl<'a> RawReportRef<'a> {
         //    be UB since we don't know the correct type parameter
         let vtable_ptr: *const &'static ReportVtable = unsafe {
             // @add-unsafe-context: ReportData
+            // @add-unsafe-context: crate::util::Erased
             &raw const (*ptr).vtable
         };
 

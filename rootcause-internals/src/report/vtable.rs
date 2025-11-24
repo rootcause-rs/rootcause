@@ -113,8 +113,10 @@ impl ReportVtable {
     /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into
     ///    a pointer via [`triomphe::Arc::into_raw`]
     /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
-    ///    the [`RawReportRef`].
-    /// 3. After calling this method, the pointer is no longer used
+    ///    the [`ReportData`].
+    /// 3. The pointer is not used after calling this method. Storing the
+    ///    pointer in structures that claim ownership of it, such as another
+    ///    `Arc` counts as using after calling this method.
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<ReportData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<C>` below.
@@ -138,7 +140,7 @@ impl ReportVtable {
     /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into
     ///    a pointer via [`triomphe::Arc::into_raw`]
     /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
-    ///    the [`RawReportRef`].
+    ///    the [`ReportData`].
     /// 3. All other references to this report are compatible with shared
     ///    ownership. Specifically none of them assume that the strong_count is
     ///    `1`.
@@ -166,7 +168,7 @@ impl ReportVtable {
     /// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
     ///    [`triomphe::Arc::into_raw`]
     /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
-    ///    the [`RawReportRef`].
+    ///    the [`ReportData`].
     #[inline]
     pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
@@ -302,7 +304,9 @@ impl ReportVtable {
 ///    [`triomphe::Arc::into_raw`]
 /// 2. The context type `C` matches the actual context type stored in the
 ///    [`ReportData`]
-/// 3. The pointer is not used after calling this method
+/// 3. The pointer is not used after calling this method. Storing the
+///    pointer in structures that claim ownership of it, such as another
+///    `Arc` counts as using after calling this method.
 pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
     let ptr: NonNull<ReportData<C>> = ptr.cast();
     let ptr = ptr.as_ptr();
