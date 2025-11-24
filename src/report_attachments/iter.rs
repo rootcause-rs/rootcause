@@ -228,3 +228,5 @@ impl<T> ExactSizeIterator for ReportAttachmentsIntoIter<T> {
 }
 
 impl<T> FusedIterator for ReportAttachmentsIntoIter<T> {}
+
+impl<T> Unpin for ReportAttachmentsIntoIter<T> {}

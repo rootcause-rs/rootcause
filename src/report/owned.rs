@@ -1586,6 +1586,8 @@ impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     }
 }
 
+impl<C: ?Sized, O, T> Unpin for Report<C, O, T> {}
+
 macro_rules! from_impls {
     ($(
         <
@@ -1660,6 +1662,27 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<NonSend, Cloneable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(Report<dyn Any, Mutable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(Report<dyn Any, Cloneable, Local>: Send, Sync);
+    }
+
+    #[test]
+    fn test_report_unpin() {
+        static_assertions::assert_impl_all!(Report<(), Mutable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<(), Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<String, Mutable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<String, Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<NonSend, Mutable, SendSync>: Unpin); // This still makes sense, since you won't actually be able to construct this report
+        static_assertions::assert_impl_all!(Report<NonSend, Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<dyn Any, Mutable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, SendSync>: Unpin);
+
+        static_assertions::assert_impl_all!(Report<(), Mutable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<(), Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<String, Mutable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<String, Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<NonSend, Mutable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<NonSend, Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<dyn Any, Mutable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, Local>: Unpin);
     }
 
     #[test]

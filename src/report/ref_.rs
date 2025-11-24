@@ -988,6 +988,8 @@ impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     }
 }
 
+impl<'a, C: ?Sized, O, T> Unpin for ReportRef<'a, C, O, T> {}
+
 macro_rules! from_impls {
     ($(
         <
@@ -1064,6 +1066,27 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportRef<'static, NonSend, Cloneable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportRef<'static, dyn Any, Uncloneable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportRef<'static, dyn Any, Cloneable, Local>: Send, Sync);
+    }
+
+    #[test]
+    fn test_report_ref_unpin() {
+        static_assertions::assert_impl_all!(ReportRef<'static, (), Uncloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, (), Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, String, Uncloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, String, Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, NonSend, Uncloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, NonSend, Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, dyn Any, Uncloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, dyn Any, Cloneable, SendSync>: Unpin);
+
+        static_assertions::assert_impl_all!(ReportRef<'static, (), Uncloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, (), Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, String, Uncloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, String, Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, NonSend, Uncloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, NonSend, Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, dyn Any, Uncloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportRef<'static, dyn Any, Cloneable, Local>: Unpin);
     }
 
     #[test]

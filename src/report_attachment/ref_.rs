@@ -485,6 +485,8 @@ impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentRef<'a, A> {
     }
 }
 
+impl<'a, A: ?Sized> Unpin for ReportAttachmentRef<'a, A> {}
+
 impl<'a, A: Sized> From<ReportAttachmentRef<'a, A>> for ReportAttachmentRef<'a, dyn Any> {
     fn from(value: ReportAttachmentRef<'a, A>) -> Self {
         value.into_dyn_any()
@@ -507,6 +509,14 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, String>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, NonSend>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, dyn Any>: Send, Sync);
+    }
+
+    #[test]
+    fn test_attachment_ref_unpin() {
+        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, ()>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, String>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, NonSend>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, dyn Any>: Unpin);
     }
 
     #[test]
