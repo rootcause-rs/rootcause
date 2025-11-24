@@ -28,6 +28,7 @@ Demonstrations of rootcause features and patterns.
 - [`anyhow_interop.rs`](anyhow_interop.rs) - Quick reference for anyhow conversion APIs: `.into_rootcause()`, `.into_anyhow()`, `From<Report>`
 - [`eyre_interop.rs`](eyre_interop.rs) - Quick reference for eyre conversion APIs: `.into_rootcause()`, `.into_eyre()`
 - [`error_stack_interop.rs`](error_stack_interop.rs) - Quick reference for error-stack conversion APIs: `.into_rootcause()`, `.into_error_stack()`
+- [`boxed_error_interop.rs`](boxed_error_interop.rs) - Quick reference for boxed error conversion APIs: `.into_rootcause()`, `.into_boxed_error()`, preserving thread safety
 
 **Migration guides:**
 
