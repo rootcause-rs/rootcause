@@ -282,7 +282,6 @@ pub trait IntoBoxedError {
     fn into_boxed_error(self) -> Self::Output;
 }
 
-// Implementation for SendSync reports
 impl<C: ?Sized, O> IntoBoxedError for Report<C, O, SendSync> {
     type Output = Box<dyn Error + Send + Sync>;
 
@@ -291,7 +290,6 @@ impl<C: ?Sized, O> IntoBoxedError for Report<C, O, SendSync> {
     }
 }
 
-// Implementation for Local reports
 impl<C: ?Sized, O> IntoBoxedError for Report<C, O, Local> {
     type Output = Box<dyn Error>;
 
@@ -300,7 +298,6 @@ impl<C: ?Sized, O> IntoBoxedError for Report<C, O, Local> {
     }
 }
 
-// Implementation for Result with SendSync reports
 impl<T, C: ?Sized, O> IntoBoxedError for Result<T, Report<C, O, SendSync>> {
     type Output = Result<T, Box<dyn Error + Send + Sync>>;
 
@@ -309,7 +306,6 @@ impl<T, C: ?Sized, O> IntoBoxedError for Result<T, Report<C, O, SendSync>> {
     }
 }
 
-// Implementation for Result with Local reports
 impl<T, C: ?Sized, O> IntoBoxedError for Result<T, Report<C, O, Local>> {
     type Output = Result<T, Box<dyn Error>>;
 
@@ -318,7 +314,6 @@ impl<T, C: ?Sized, O> IntoBoxedError for Result<T, Report<C, O, Local>> {
     }
 }
 
-// From implementations for automatic conversion
 impl<C: ?Sized, O> From<Report<C, O, SendSync>> for Box<dyn Error + Send + Sync> {
     fn from(report: Report<C, O, SendSync>) -> Self {
         report.into_boxed_error()
@@ -331,7 +326,6 @@ impl<C: ?Sized, O> From<Report<C, O, Local>> for Box<dyn Error> {
     }
 }
 
-// IntoRootcause implementations for converting boxed errors back to reports
 impl IntoRootcause for Box<dyn Error + Send + Sync> {
     type Output = Report;
 
