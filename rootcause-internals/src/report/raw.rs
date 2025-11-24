@@ -319,12 +319,11 @@ impl<'a> RawReportRef<'a> {
     pub fn strong_count(self) -> usize {
         let vtable = self.vtable();
         // SAFETY:
-        // 1. Guaranteed by invariants on this type
-        // 2. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
         //    the `ReportData`.
         unsafe {
             // @add-unsafe-context: ReportData
-            vtable.strong_count(self.ptr)
+            vtable.strong_count(self)
         }
     }
 }

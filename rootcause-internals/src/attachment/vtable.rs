@@ -96,9 +96,10 @@ impl AttachmentVtable {
     ///    [`Box::into_raw`]
     /// 2. This [`AttachmentVtable`] must be a vtable for the attachment type
     ///    stored in the [`AttachmentData`].
-    /// 3. The pointer is not used after calling this method. Storing the
-    ///    pointer in structures that claim ownership of it, such as another
-    ///    `Box` counts as using after calling this method.
+    /// 3. This method drops the [`Box<AttachmentData<A>>`], so the caller must
+    ///    ensure that the pointer has not previously been dropped, that it is
+    ///    able to transfer ownership of the pointer, and that it will not use
+    ///    the pointer after calling this method.
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<AttachmentData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<A>` below.
@@ -206,9 +207,10 @@ impl AttachmentVtable {
 /// 1. The pointer comes from [`Box<AttachmentData<A>>`] via [`Box::into_raw`]
 /// 2. The attachment type `A` matches the actual attachment type stored in the
 ///    [`AttachmentData`]
-/// 3. The pointer is not used after calling this method. Storing the
-///    pointer in structures that claim ownership of it, such as another
-///    `Box` counts as using after calling this method.
+/// 3. This method drops the [`Box<AttachmentData<A>>`], so the caller must
+///    ensure that the pointer has not previously been dropped, that it is able
+///    to transfer ownership of the pointer, and that it will not use the
+///    pointer after calling this method.
 unsafe fn drop<A: 'static>(ptr: NonNull<AttachmentData<Erased>>) {
     let ptr: NonNull<AttachmentData<A>> = ptr.cast();
     let ptr = ptr.as_ptr();

@@ -56,7 +56,7 @@ pub(crate) struct ReportVtable {
     clone_arc: unsafe fn(NonNull<ReportData<Erased>>) -> RawReport,
     /// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to
     /// by this pointer.
-    strong_count: unsafe fn(NonNull<ReportData<Erased>>) -> usize,
+    strong_count: unsafe fn(RawReportRef<'_>) -> usize,
     /// Returns a reference to the source of the error using the `source` method
     /// on the handler.
     source: unsafe fn(RawReportRef<'_>) -> Option<&(dyn core::error::Error + 'static)>,
@@ -114,9 +114,10 @@ impl ReportVtable {
     ///    a pointer via [`triomphe::Arc::into_raw`]
     /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
     ///    the [`ReportData`].
-    /// 3. The pointer is not used after calling this method. Storing the
-    ///    pointer in structures that claim ownership of it, such as another
-    ///    `Arc` counts as using after calling this method.
+    /// 3. This method drops the [`triomphe::Arc<ReportData<C>>`], so the caller
+    ///    must ensure that the pointer has not previously been dropped, that it
+    ///    is able to transfer ownership of the pointer, and that it will not
+    ///    use the pointer after calling this method.
     #[inline]
     pub(super) unsafe fn drop(&self, ptr: NonNull<ReportData<Erased>>) {
         // SAFETY: We know that `self.drop` points to the function `drop::<C>` below.
@@ -165,17 +166,14 @@ impl ReportVtable {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
-    ///    [`triomphe::Arc::into_raw`]
-    /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
-    ///    the [`ReportData`].
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
     #[inline]
-    pub(super) unsafe fn strong_count(&self, ptr: NonNull<ReportData<Erased>>) -> usize {
+    pub(super) unsafe fn strong_count<'a>(&self, ptr: RawReportRef<'a>) -> usize {
         // SAFETY: We know that `self.strong_count` points to the function
         // `strong_count::<C>` below. That function's safety requirements are
         // upheld:
         // 1. Guaranteed by the caller
-        // 2. Guaranteed by the caller
         unsafe {
             // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: strong_count
@@ -304,9 +302,10 @@ impl ReportVtable {
 ///    [`triomphe::Arc::into_raw`]
 /// 2. The context type `C` matches the actual context type stored in the
 ///    [`ReportData`]
-/// 3. The pointer is not used after calling this method. Storing the
-///    pointer in structures that claim ownership of it, such as another
-///    `Arc` counts as using after calling this method.
+/// 3. This method drops the [`triomphe::Arc<ReportData<C>>`], so the caller
+///    must ensure that the pointer has not previously been dropped, that it is
+///    able to transfer ownership of the pointer, and that it will not use the
+///    pointer after calling this method.
 pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
     let ptr: NonNull<ReportData<C>> = ptr.cast();
     let ptr = ptr.as_ptr();
@@ -355,12 +354,9 @@ unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
 ///
 /// The caller must ensure:
 ///
-/// 1. The pointer comes from [`triomphe::Arc<ReportData<C>>`] via
-///    [`triomphe::Arc::into_raw`]
-/// 2. The context type `C` matches the actual context type stored in the
-///    [`ReportData`]
-unsafe fn strong_count<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> usize {
-    let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
+unsafe fn strong_count<'a, C: 'static>(ptr: RawReportRef<'a>) -> usize {
+    let ptr: *const ReportData<C> = ptr.as_ptr().cast::<ReportData<C>>();
 
     // SAFETY: The pointer is valid and came from `Arc::into_raw` with the correct
     // type (guaranteed by the caller), which fulfills the requirements for
