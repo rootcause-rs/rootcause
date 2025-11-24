@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a compatibility module for boxed errors [#70](https://github.com/rootcause-rs/rootcause/pull/70)
+
 ## [0.10.0] - 2025-11-24
 
 ### Fixed
