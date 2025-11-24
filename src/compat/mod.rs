@@ -170,35 +170,26 @@ pub mod eyre;
 /// # Type Parameters
 ///
 /// - `C`: The context type of the wrapped report
-pub struct ReportAsError<C = dyn Any>(Report<C, markers::Cloneable, markers::SendSync>)
-where
-    C: markers::ObjectMarker + ?Sized;
+pub struct ReportAsError<C: ?Sized + 'static = dyn Any>(
+    Report<C, markers::Cloneable, markers::SendSync>,
+);
 
-impl<C> Clone for ReportAsError<C>
-where
-    C: markers::ObjectMarker + ?Sized,
-{
+impl<C: ?Sized> Clone for ReportAsError<C> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<C> core::fmt::Debug for ReportAsError<C>
-where
-    C: markers::ObjectMarker + ?Sized,
-{
+impl<C: ?Sized> core::fmt::Debug for ReportAsError<C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.0, f)
     }
 }
 
-impl<C> core::fmt::Display for ReportAsError<C>
-where
-    C: markers::ObjectMarker + ?Sized,
-{
+impl<C: ?Sized> core::fmt::Display for ReportAsError<C> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Display::fmt(&self.0, f)
     }
 }
 
-impl<C> core::error::Error for ReportAsError<C> where C: markers::ObjectMarker + ?Sized {}
+impl<C: ?Sized> core::error::Error for ReportAsError<C> {}

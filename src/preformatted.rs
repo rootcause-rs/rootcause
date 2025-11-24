@@ -84,7 +84,7 @@ use rootcause_internals::handlers::{
     AttachmentFormattingStyle, AttachmentHandler, ContextFormattingStyle, ContextHandler,
 };
 
-use crate::{ReportRef, markers, report_attachment::ReportAttachmentRef};
+use crate::{ReportRef, report_attachment::ReportAttachmentRef};
 
 /// A context that has been preformatted into `String`s for both
 /// `Display` and `Debug`.
@@ -140,12 +140,7 @@ pub struct PreformattedContext {
 }
 
 impl PreformattedContext {
-    pub(crate) fn new_from_context<C, O, T>(report: ReportRef<'_, C, O, T>) -> Self
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportRefOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
+    pub(crate) fn new_from_context<C: ?Sized, O, T>(report: ReportRef<'_, C, O, T>) -> Self {
         Self {
             original_type_id: report.current_context_type_id(),
             display: format!("{}", report.format_current_context()),
@@ -248,7 +243,7 @@ pub struct PreformattedAttachment {
 impl PreformattedAttachment {
     pub(crate) fn new_from_attachment<A>(attachment: ReportAttachmentRef<'_, A>) -> Self
     where
-        A: markers::ObjectMarker + ?Sized,
+        A: ?Sized,
     {
         Self {
             original_type_id: attachment.inner_type_id(),

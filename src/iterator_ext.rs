@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::{iter::FusedIterator, mem};
 
-use crate::{IntoReport, markers, report_collection::ReportCollection};
+use crate::{IntoReport, report_collection::ReportCollection};
 
 /// Extension methods for iterators over `Result` types to collect errors.
 ///
@@ -108,7 +108,6 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
     ) -> Result<Container, ReportCollection<E::Context, ThreadSafety>>
     where
         Container: FromIterator<A>,
-        ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>;
 
     /// Collects successful values into a `Vec`, or all errors into a
@@ -153,14 +152,12 @@ pub trait IteratorExt<A, E>: Sized + Iterator<Item = Result<A, E>> {
         self,
     ) -> Result<Vec<A>, ReportCollection<E::Context, ThreadSafety>>
     where
-        ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>;
 }
 
-struct IteratorWrapper<'a, Iter, Error, ThreadSafety>
+struct IteratorWrapper<'a, Iter, Error, ThreadSafety: 'static>
 where
     Error: IntoReport<ThreadSafety>,
-    ThreadSafety: markers::ThreadSafetyMarker,
 {
     iter: Iter,
     error_collection: &'a mut Option<ReportCollection<Error::Context, ThreadSafety>>,
@@ -169,7 +166,6 @@ where
 impl<'a, Iter, ThreadSafety, Object, Error> Iterator
     for IteratorWrapper<'a, Iter, Error, ThreadSafety>
 where
-    ThreadSafety: markers::ThreadSafetyMarker,
     Iter: Iterator<Item = Result<Object, Error>>,
     Error: IntoReport<ThreadSafety>,
 {
@@ -209,7 +205,6 @@ where
 impl<'a, Iter, ThreadSafety, Object, Error> FusedIterator
     for IteratorWrapper<'a, Iter, Error, ThreadSafety>
 where
-    ThreadSafety: markers::ThreadSafetyMarker,
     Iter: FusedIterator<Item = Result<Object, Error>>,
     Error: IntoReport<ThreadSafety>,
 {
@@ -225,7 +220,6 @@ where
     ) -> Result<Container, ReportCollection<E::Context, ThreadSafety>>
     where
         Container: FromIterator<A>,
-        ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>,
     {
         let mut error_collection = None;
@@ -245,7 +239,6 @@ where
         mut self,
     ) -> Result<Vec<A>, ReportCollection<E::Context, ThreadSafety>>
     where
-        ThreadSafety: crate::markers::ThreadSafetyMarker,
         E: IntoReport<ThreadSafety>,
     {
         let mut out = Vec::new();

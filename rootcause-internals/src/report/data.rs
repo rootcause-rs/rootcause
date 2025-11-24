@@ -134,6 +134,7 @@ impl<'a> RawReportRef<'a> {
         //    be UB since we don't know the correct type parameter
         let vtable_ptr: *const &'static ReportVtable = unsafe {
             // @add-unsafe-context: ReportData
+            // @add-unsafe-context: crate::util::Erased
             &raw const (*ptr).vtable
         };
 
@@ -249,8 +250,8 @@ impl<'a> RawReportMut<'a> {
     /// The caller must ensure:
     ///
     /// 1. In case there are other references to the same report and they make
-    ///    assumptions about the report children being `Send+Sync`, then those
-    ///    assumptions must be upheld when modifying the children.
+    ///    assumptions about the report attachments being `Send+Sync`, then
+    ///    those assumptions must be upheld when modifying the attachments.
     #[inline]
     pub unsafe fn into_attachments_mut(self) -> &'a mut Vec<RawAttachment> {
         let ptr = self.into_mut_ptr();

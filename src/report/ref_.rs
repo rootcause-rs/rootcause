@@ -5,7 +5,7 @@ use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter,
-    markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
+    markers::{Cloneable, Local, Mutable, SendSync, Uncloneable},
     preformatted::{self, PreformattedAttachment, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
@@ -20,7 +20,7 @@ mod limit_field_access {
 
     use rootcause_internals::{RawReport, RawReportRef};
 
-    use crate::markers::{self, Cloneable, SendSync};
+    use crate::markers::{Cloneable, SendSync};
 
     /// A reference to a [`Report`].
     ///
@@ -78,26 +78,30 @@ mod limit_field_access {
     // 1. The pointee is properly initialized for the entire lifetime `'a`.
     // 2. The pointee is not mutated for the entire lifetime `'a`.
     #[repr(transparent)]
-    pub struct ReportRef<'a, Context = dyn Any, Ownership = Cloneable, ThreadSafety = SendSync>
-    where
-        Context: markers::ObjectMarker + ?Sized,
-        Ownership: markers::ReportRefOwnershipMarker,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportRef<
+        'a,
+        Context: ?Sized + 'static = dyn Any,
+        Ownership: 'static = Cloneable,
+        ThreadSafety: 'static = SendSync,
+    > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized + 'static`, or `dyn
+        ///    Any`.
+        /// 2. `O` must either be `Cloneable` or `Uncloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Cloneable`: All other references to this report are
+        /// 5. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 3. All references to any sub-reports of this report are compatible
+        /// 6. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        /// 7. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
         ///
         /// [`RawReport`]: rootcause_internals::RawReport
@@ -108,27 +112,25 @@ mod limit_field_access {
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<'a, C, O, T> ReportRef<'a, C, O, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportRefOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         /// Creates a new Report from a raw report
         ///
         /// # Safety
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Cloneable` or `Uncloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Cloneable`: All other references to this report are
+        /// 5. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 3. All references to any sub-reports of this report are compatible
+        /// 6. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in the report and
+        /// 7. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
         ///
         /// [`Report`]: crate::Report
@@ -142,6 +144,9 @@ mod limit_field_access {
             // 2. Guaranteed by our caller
             // 3. Guaranteed by our caller
             // 4. Guaranteed by our caller
+            // 5. Guaranteed by our caller
+            // 6. Guaranteed by our caller
+            // 7. Guaranteed by our caller
             Self {
                 raw,
                 _context: PhantomData,
@@ -156,15 +161,18 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts embedded in all of the
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Cloneable` or `Uncloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The contexts embedded in all of the
         ///    [`RawReport`]s in the slice are of type `C`
-        /// 2. If `O = Cloneable`: All other references to these reports are
+        /// 5. If `O = Cloneable`: All other references to these reports are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 3. All references to any sub-reports of these reports are compatible
+        /// 6. All references to any sub-reports of these reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 4. If `T = SendSync`: All contexts and attachments in these reports
+        /// 7. If `T = SendSync`: All contexts and attachments in these reports
         ///    and all sub-reports must be `Send+Sync`
         pub(crate) unsafe fn from_raw_slice(raw: &'a [RawReport]) -> &'a [ReportRef<'a, C, O, T>] {
             let len = raw.len();
@@ -176,6 +184,9 @@ mod limit_field_access {
             // 2. Guaranteed by our caller
             // 3. Guaranteed by our caller
             // 4. Guaranteed by our caller
+            // 5. Guaranteed by our caller
+            // 6. Guaranteed by our caller
+            // 7. Guaranteed by our caller
             let report_ref_ptr = raw_ptr.cast::<ReportRef<'a, C, O, T>>();
 
             // SAFETY:
@@ -212,33 +223,20 @@ mod limit_field_access {
     // 2. This remains true for both the original and the copy
     // 3. This remains true for both the original and the copy
     // 4. This remains true for both the original and the copy
-    impl<'a, C, O, T> Copy for ReportRef<'a, C, O, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportRefOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
-    }
+    // 5. This remains true for both the original and the copy
+    // 6. This remains true for both the original and the copy
+    // 7. This remains true for both the original and the copy
+    impl<'a, C: ?Sized, O, T> Copy for ReportRef<'a, C, O, T> {}
 }
 pub use limit_field_access::ReportRef;
 
-impl<'a, C, O, T> Clone for ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, O, T> Clone for ReportRef<'a, C, O, T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<'a, C, O, T> ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: Sized, O, T> ReportRef<'a, C, O, T> {
     /// Returns a reference to the current context.
     ///
     /// # Examples
@@ -259,12 +257,7 @@ where
     }
 }
 
-impl<'a, C, O, T> ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// Returns a reference to the child reports.
     ///
     /// # Examples
@@ -280,9 +273,12 @@ where
         let raw = self.as_raw_ref().children();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
-        // 2. This is guaranteed by our safety invariants.
-        // 3. This is guaranteed by our safety invariants.
+        // 1. This is guaranteed by our safety invariants.
+        // 2. The invariants of this type guarantee that `T` is either `SendSync` or
+        //    `Local`.
+        // 3. `C=dyn Any`, so this is trivially true.
+        // 4. This is guaranteed by our safety invariants.
+        // 5. This is guaranteed by our safety invariants.
         unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
     }
 
@@ -300,7 +296,9 @@ where
         let raw = self.as_raw_ref().attachments();
 
         // SAFETY:
-        // 1. This is guaranteed by our own safety invariants.
+        // 1. `T` is guaranteed to either be `Local` or `SendSync` by the invariants of
+        //    this type.
+        // 2. This is guaranteed by our own safety invariants.
         unsafe { ReportAttachments::<T>::from_raw_ref(raw) }
     }
 
@@ -337,7 +335,10 @@ where
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. This is guaranteed by our own safety invariants.
         // 3. This is guaranteed by our own safety invariants.
-        // 4. This is guaranteed by our own safety invariants.
+        // 4. `C=dyn Any`, so this is trivially true.
+        // 5. This is guaranteed by our own safety invariants.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. This is guaranteed by our own safety invariants.
         unsafe { ReportRef::<dyn Any, O, T>::from_raw(raw) }
     }
 
@@ -377,6 +378,9 @@ where
         // 2. `O=Uncloneable`, so this is trivially true.
         // 3. This is guaranteed by our own safety invariants.
         // 4. This is guaranteed by our own safety invariants.
+        // 5. `O=Uncloneable`, so this is trivially true.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. This is guaranteed by our own safety invariants.
         unsafe { ReportRef::<C, Uncloneable, T>::from_raw(raw) }
     }
 
@@ -411,8 +415,11 @@ where
         // SAFETY:
         // 1. This is guaranteed by our own safety invariants.
         // 2. This is guaranteed by our own safety invariants.
-        // 3. This is guaranteed by our own safety invariants.
-        // 4. `T=Local`, so this is trivially true.
+        // 3. `T=Local`, so this is trivially true.
+        // 4. This is guaranteed by our own safety invariants.
+        // 5. This is guaranteed by our own safety invariants.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. `T=Local`, so this is trivially true.
         unsafe { ReportRef::<C, O, Local>::from_raw(raw) }
     }
 
@@ -774,11 +781,7 @@ where
     }
 }
 
-impl<'a, O, T> ReportRef<'a, dyn Any, O, T>
-where
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, O, T> ReportRef<'a, dyn Any, O, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise
@@ -798,7 +801,7 @@ where
     #[must_use]
     pub fn downcast_current_context<C>(self) -> Option<&'a C>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let report = self.downcast_report()?;
         Some(report.current_context())
@@ -832,7 +835,7 @@ where
     #[must_use]
     pub unsafe fn downcast_current_context_unchecked<C>(self) -> &'a C
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let raw = self.as_raw_ref();
 
@@ -863,7 +866,7 @@ where
     #[must_use]
     pub fn downcast_report<C>(self) -> Option<ReportRef<'a, C, O, T>>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
@@ -904,24 +907,23 @@ where
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportRef<'a, C, O, T>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let raw = self.as_raw_ref();
 
         // SAFETY:
-        // 1. Guaranteed by the caller.
-        // 2. Guaranteed by our own safety invariants.
-        // 3. Guaranteed by our own safety invariants.
-        // 4. Guaranteed by our own safety invariants.
+        // 1. `C` is bounded by `Sized` in the function signature.
+        // 2. This is guaranteed by our own safety invariants.
+        // 3. This is guaranteed by our own safety invariants.
+        // 4. Guaranteed by the caller.
+        // 5. Guaranteed by our own safety invariants.
+        // 6. Guaranteed by our own safety invariants.
+        // 7. Guaranteed by our own safety invariants.
         unsafe { ReportRef::<C, O, T>::from_raw(raw) }
     }
 }
 
-impl<'a, C, T> ReportRef<'a, C, Cloneable, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> ReportRef<'a, C, Cloneable, T> {
     /// Clones the underlying [`triomphe::Arc`] of the report, returning
     /// a new owned [`Report`] that references the same root node.
     ///
@@ -954,43 +956,32 @@ where
         let cloned_raw = unsafe { raw.clone_arc() };
 
         // SAFETY:
-        // 1. This is guaranteed by our own safety invariants.
+        // 1. Guaranteed by the invariants of this type.
         // 2. `O=Cloneable`, so this is trivially true.
-        // 3. This is guaranteed by our own safety invariants.
+        // 3. Guaranteed by the invariants of this type.
         // 4. This is guaranteed by our own safety invariants.
-        // 5. This is guaranteed by our own safety invariants.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. This is guaranteed by our own safety invariants.
+        // 7. This is guaranteed by our own safety invariants.
+        // 8. This is guaranteed by our own safety invariants.
         unsafe { Report::<C, Cloneable, T>::from_raw(cloned_raw) }
     }
 }
 
-impl<'a, C, T> From<ReportRef<'a, C, Cloneable, T>> for Report<C, Cloneable, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> From<ReportRef<'a, C, Cloneable, T>> for Report<C, Cloneable, T> {
     fn from(report: ReportRef<'a, C, Cloneable, T>) -> Self {
         report.clone_arc()
     }
 }
 
-impl<'a, C, O, T> core::fmt::Display for ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, O, T> core::fmt::Display for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dyn_any().into_uncloneable().into_local();
         crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Display)
     }
 }
 
-impl<'a, C, O, T> core::fmt::Debug for ReportRef<'a, C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportRefOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dyn_any().into_uncloneable().into_local();
         crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Debug)
@@ -1009,9 +1000,6 @@ macro_rules! from_impls {
     ),* $(,)?) => {
         $(
             impl<'a, $($param),*> From<ReportRef<'a, $context1, $ownership1, $thread_safety1>> for ReportRef<'a, $context2, $ownership2, $thread_safety2>
-                where $(
-                    $param: markers::ObjectMarker,
-                )*
             {
                 fn from(report: ReportRef<'a, $context1, $ownership1, $thread_safety1>) -> Self {
                     report

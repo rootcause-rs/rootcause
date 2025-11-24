@@ -118,7 +118,7 @@ use unsize::CoerceUnsize;
 use crate::{
     ReportRef,
     hooks::hook_lock::HookLock,
-    markers::{self, Local, Uncloneable},
+    markers::{Local, Uncloneable},
     preformatted::PreformattedAttachment,
     report_attachment::ReportAttachmentRef,
 };
@@ -358,10 +358,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
 ///     }
 /// }
 /// ```
-pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync
-where
-    A: markers::ObjectMarker,
-{
+pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync {
     /// Formats the attachment using Display formatting.
     ///
     /// This method is called when the attachment needs to be displayed in a
@@ -495,7 +492,6 @@ where
 
 impl<A, H> UntypedAttachmentFormattingOverride for Hook<A, H>
 where
-    A: markers::ObjectMarker,
     H: AttachmentFormattingOverride<A>,
 {
     unsafe fn display(

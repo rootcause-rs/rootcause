@@ -68,7 +68,7 @@ use unsize::CoerceUnsize;
 use crate::{
     ReportRef,
     hooks::hook_lock::HookLock,
-    markers::{self, Local, Uncloneable},
+    markers::{Local, Uncloneable},
     preformatted::PreformattedContext,
 };
 
@@ -224,10 +224,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
 ///     }
 /// }
 /// ```
-pub trait ContextFormattingOverride<C>: 'static + Send + Sync
-where
-    C: markers::ObjectMarker,
-{
+pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     /// Formats the context using Display formatting.
     ///
     /// This method is called when the context needs to be displayed in a
@@ -468,7 +465,7 @@ where
 #[track_caller]
 pub fn register_context_hook<C, H>(hook: H)
 where
-    C: markers::ObjectMarker,
+    C: 'static,
     H: ContextFormattingOverride<C> + Send + Sync + 'static,
 {
     let added_location = Location::caller();

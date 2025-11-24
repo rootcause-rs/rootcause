@@ -74,29 +74,31 @@ mod limit_field_access {
     /// [`SendSync`]: crate::markers::SendSync
     /// [`report!()`]: crate::report!
     #[repr(transparent)]
-    pub struct Report<Context = dyn Any, Ownership = Mutable, ThreadSafety = SendSync>
-    where
-        Context: markers::ObjectMarker + ?Sized,
-        Ownership: markers::ReportOwnershipMarker,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct Report<
+        Context: ?Sized + 'static = dyn Any,
+        Ownership: 'static = Mutable,
+        ThreadSafety: 'static = SendSync,
+    > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Mutable` or `Cloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Mutable`: This is the unique owner of the report. More
+        /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
         ///    `triomphe::Arc` is exactly 1.
-        /// 3. If `O = Cloneable`: All other references to this report are
+        /// 6. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 4. All references to any sub-reports of this report are compatible
+        /// 7. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the report and
+        /// 8. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`.
         raw: RawReport,
         _context: PhantomData<Context>,
@@ -104,30 +106,28 @@ mod limit_field_access {
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<C, O, T> Report<C, O, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        O: markers::ReportOwnershipMarker,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<C: ?Sized, O, T> Report<C, O, T> {
         /// Creates a new [`Report`] from a [`RawReport`]
         ///
         /// # Safety
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The context embedded in the report
+        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `O` must either be `Mutable` or `Cloneable`.
+        /// 3. `T` must either be `SendSync` or `Local`.
+        /// 4. If `C` is a concrete type: The context embedded in the report
         ///    must be of type `C`
-        /// 2. If `O = Mutable`: This is the unique owner of the report. More
+        /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
         ///    `triomphe::Arc` is exactly 1.
-        /// 3. If `O = Cloneable`: All other references to this report are
+        /// 6. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
-        /// 4. All references to any sub-reports of this report are compatible
+        /// 7. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 5. If `T = SendSync`: All contexts and attachments in the report and
+        /// 8. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawReport) -> Self {
@@ -137,6 +137,9 @@ mod limit_field_access {
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
             // 5. Guaranteed by the caller
+            // 6. Guaranteed by the caller
+            // 7. Guaranteed by the caller
+            // 8. Guaranteed by the caller
             Self {
                 raw,
                 _context: PhantomData,
@@ -158,25 +161,24 @@ mod limit_field_access {
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawReportRef<'_> {
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. Trivially upheld, as no mutation occurs
-            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. Upheld as the type parameters do not change.
+            // 4. Trivially upheld, as no mutation occurs
+            // 5. The only way to break this would be to call `RawReportRef::clone_arc`, but
             //    that method has a `safety` requirement that the caller must ensure that no
             //    owners exist which are incompatible with shared ownership. Since `self` is
             //    incompatible with shared ownership when `O=Mutable`, this cannot happen.
-            // 3. Trivially upheld, as no mutation occurs
-            // 4. Upheld, as this does not create any such references.
-            // 5. Trivially upheld, as no mutation occurs
+            // 6. Trivially upheld, as no mutation occurs
+            // 7. Upheld, as this does not create any such references.
+            // 8. Trivially upheld, as no mutation occurs
             let raw = &self.raw;
 
             raw.as_ref()
         }
     }
 
-    impl<C, T> Report<C, markers::Mutable, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<C: ?Sized, T> Report<C, markers::Mutable, T> {
         /// Creates a lifetime-bound [`RawReportMut`] from the inner
         /// [`RawReport`].
         ///
@@ -189,16 +191,19 @@ mod limit_field_access {
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> RawReportMut<'_> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
-            // 1. While mutation of the context is possible through this reference, it is
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. Upheld as the type parameters do not change.
+            // 4. While mutation of the context is possible through this reference, it is
             //    not possible to change the type of the context. Therefore this invariant
             //    is upheld.
-            // 2. The only way to break this would be to call `RawReportRef::clone_arc`, but
+            // 5. The only way to break this would be to call `RawReportRef::clone_arc`, but
             //    that method has a `safety` requirement that the caller must ensure that no
             //    owners exist which are incompatible with shared ownership. Since `self` is
             //    the unique owner, this cannot happen.
-            // 3. `O = Mutable`, so this is trivially upheld.
-            // 4. Upheld, as this does not create any such references.
-            // 5. The caller guarantees that the current report is not modified in an
+            // 6. `O = Mutable`, so this is trivially upheld.
+            // 7. Upheld, as this does not create any such references.
+            // 8. The caller guarantees that the current report is not modified in an
             //    incompatible way and it is not possible to mutate the sub-reports.
             let raw = &mut self.raw;
 
@@ -213,41 +218,7 @@ mod limit_field_access {
 
 pub use limit_field_access::Report;
 
-impl<C, T> Report<C, Mutable, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
-    /// Returns a mutable reference to the report.
-    ///
-    /// # Examples
-    /// ```
-    /// use rootcause::{ReportMut, prelude::*};
-    /// let mut report: Report = report!("error message");
-    /// let report_mut: ReportMut<'_> = report.as_mut();
-    /// ```
-    #[must_use]
-    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
-        // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
-        //    not allowed to mutate the returned raw report in a way that adds
-        //    non-`Send+Sync` objects. However the invariants of the created `ReportMut`
-        //    guarantee that no such mutation can occur.
-        let raw = unsafe { self.as_raw_mut() };
-
-        // SAFETY:
-        // 1. This is guaranteed by the invariants of this type.
-        // 2. This is guaranteed by the invariants of this type.
-        // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
-        // 5. We have a `&mut self`. This means that there are no other borrows active
-        //    to `self`. We also know that this is the unique owner of the report, so
-        //    there are no other references to it through different ownership. This
-        //    means that there are no other references to this report at all, so there
-        //    cannot be any incompatible references.
-        unsafe { ReportMut::from_raw(raw) }
-    }
-
+impl<C: Sized, T> Report<C, Mutable, T> {
     /// Creates a new [`Report`] with the given context.
     ///
     /// This method is generic over the thread safety marker `T`. The context
@@ -279,7 +250,7 @@ where
     #[must_use]
     pub fn new(context: C) -> Self
     where
-        C: core::error::Error + markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T> + core::error::Error,
     {
         Self::new_custom::<handlers::Error>(context)
     }
@@ -306,7 +277,7 @@ where
     #[must_use]
     pub fn new_custom<H>(context: C) -> Self
     where
-        C: markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T>,
         H: ContextHandler<C>,
     {
         Self::from_parts::<H>(context, ReportCollection::new(), ReportAttachments::new())
@@ -335,11 +306,11 @@ where
         attachments: ReportAttachments<T>,
     ) -> Self
     where
-        C: markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T>,
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        T::run_creation_hooks(report.as_mut().into_dyn_any());
+        C::run_creation_hooks(report.as_mut().into_dyn_any());
         report
     }
 
@@ -366,18 +337,23 @@ where
         attachments: ReportAttachments<T>,
     ) -> Self
     where
-        C: markers::ObjectMarkerFor<T> + Sized,
+        C: markers::ObjectMarkerFor<T>,
         H: ContextHandler<C>,
     {
         let raw = RawReport::new::<C, H>(context, children.into_raw(), attachments.into_raw());
 
         // SAFETY:
-        // 1. We just created the report and the `C` does indeed match.
-        // 2. We just created the report and we are the unique owner.
-        // 3. `O=Mutable`, so this is trivially upheld.
-        // 4. This is guaranteed by the invariants of the `ReportCollection` we used to
+        // 1. `C` is bounded by `Sized`, so this is upheld.
+        // 2. `O=Mutable`, so this is trivially upheld.
+        // 3. `C` is bounded by `markers::ObjectMarkerFor<T>` and this can only be
+        //    implemented for `T=Local` and `T=SendSync`, so this is
+        //   upheld.
+        // 4. We just created the report and the `C` does indeed match.
+        // 5. We just created the report and we are the unique owner.
+        // 6. `O=Mutable`, so this is trivially upheld.
+        // 7. This is guaranteed by the invariants of the `ReportCollection` we used to
         //    create the raw report.
-        // 5. If `T=Local`, then this is trivially true. If `T=SendSync`, then we have
+        // 8. If `T=Local`, then this is trivially true. If `T=SendSync`, then we have
         //    `C: ObjectMarkerFor<SendSync>`, so the context is `Send+Sync`.
         //    Additionally the invariants of the `ReportCollection` and
         //    `ReportAttachments` guarantee that the children and attachments are
@@ -388,6 +364,175 @@ where
             // @add-unsafe-context: markers::ObjectMarkerFor
             Report::<C, Mutable, T>::from_raw(raw)
         }
+    }
+
+    /// Decomposes the [`Report`] into its constituent parts.
+    ///
+    /// Returns a tuple containing the children collection, attachments
+    /// collection, and context in that order. This is the inverse operation
+    /// of [`Report::from_parts`] and [`Report::from_parts_unhooked`].
+    ///
+    /// This method can be useful when you need to:
+    /// - Extract and modify individual components of a report
+    /// - Rebuild a report with different components
+    /// - Transfer components between different reports
+    /// - Perform custom processing on specific parts
+    ///
+    /// Note that to exactly reconstruct the original report, you will also need
+    /// to use the same handler as was used for the original report.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments};
+    /// // Create a report with some children and attachments
+    /// let mut report: Report<String> = Report::from_parts::<handlers::Display>(
+    ///     "main error".to_string(),
+    ///     ReportCollection::new(),
+    ///     ReportAttachments::new(),
+    /// );
+    ///
+    /// // Add some content
+    /// let child_report = report!("child error").into_dyn_any().into_cloneable();
+    /// report.children_mut().push(child_report);
+    /// report.attachments_mut().push("debug info".into());
+    ///
+    /// // Decompose into parts
+    /// let (context, children, attachments) = report.into_parts();
+    ///
+    /// assert_eq!(context, "main error");
+    /// assert_eq!(children.len(), 1);
+    /// assert!(attachments.len() >= 1); // "debug info" + potential automatic attachments
+    ///
+    /// // Can rebuild with the same or different parts
+    /// let rebuilt: Report<String> = Report::from_parts::<handlers::Display>(
+    ///     context,
+    ///     children,
+    ///     attachments,
+    /// );
+    /// ```
+    #[must_use]
+    pub fn into_parts(self) -> (C, ReportCollection<dyn Any, T>, ReportAttachments<T>) {
+        let raw = self.into_raw();
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. Since `O=Mutable` and we are consuming `self`, then this is guaranteed to
+        //    be the unique owner of the report.
+        let (context, children, attachments) = unsafe { raw.into_parts() };
+
+        // SAFETY:
+        // 1. `C=dyn Any` for the created collection, so this is trivially true.
+        // 2. The invariants of this type guarantee that `T` is either `Local` or
+        //    `SendSync`.
+        // 3. `C=dyn Any` for the created collection, so this is trivially true.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
+        //    guaranteed by the invariants of this type.
+        let children = unsafe { ReportCollection::<dyn Any, T>::from_raw(children) };
+
+        // SAFETY:
+        // 1. `T` is guaranteed to either be `Local` or `SendSync` by the invariants of
+        //    this type.
+        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
+        //    guaranteed by the invariants of this type.
+        let attachments = unsafe { ReportAttachments::<T>::from_raw(attachments) };
+
+        (context, children, attachments)
+    }
+
+    /// Extracts and returns the context value from the [`Report`].
+    ///
+    /// This is a convenience method that consumes the [`Report`] and returns
+    /// only the context, discarding the children and attachments. It's
+    /// equivalent to calling `report.into_parts().0`.
+    ///
+    /// This method can be useful when:
+    /// - You only need the underlying error or context value
+    /// - Converting from a [`Report`] back to the original error type
+    /// - Extracting context for logging or forwarding to other systems
+    /// - Implementing error conversion traits
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// #[derive(Debug, PartialEq, Clone)]
+    /// struct MyError {
+    ///     message: String,
+    ///     code: u32,
+    /// }
+    ///
+    /// impl std::fmt::Display for MyError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "Error {}: {}", self.code, self.message)
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for MyError {}
+    ///
+    /// // Create a report with a custom error context
+    /// let original_error = MyError {
+    ///     message: "database connection failed".to_string(),
+    ///     code: 500,
+    /// };
+    /// let report: Report<MyError> = report!(original_error.clone());
+    ///
+    /// // Extract just the context, discarding report structure
+    /// let extracted_error = report.into_current_context();
+    /// assert_eq!(extracted_error, original_error);
+    /// assert_eq!(extracted_error.code, 500);
+    /// assert_eq!(extracted_error.message, "database connection failed");
+    /// ```
+    #[must_use]
+    pub fn into_current_context(self) -> C {
+        self.into_parts().0
+    }
+
+    /// Returns a mutable reference to the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::prelude::*;
+    /// let mut report: Report<String> = report!(String::from("An error occurred"));
+    /// let context: &mut String = report.current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    #[must_use]
+    pub fn current_context_mut(&mut self) -> &mut C {
+        self.as_mut().into_current_context_mut()
+    }
+}
+
+impl<C: ?Sized, T> Report<C, Mutable, T> {
+    /// Returns a mutable reference to the report.
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{ReportMut, prelude::*};
+    /// let mut report: Report = report!("error message");
+    /// let report_mut: ReportMut<'_> = report.as_mut();
+    /// ```
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. However the invariants of the created `ReportMut`
+        //    guarantee that no such mutation can occur.
+        let raw = unsafe { self.as_raw_mut() };
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. We have a `&mut self`. This means that there are no other borrows active
+        //    to `self`. We also know that this is the unique owner of the report, so
+        //    there are no other references to it through different ownership. This
+        //    means that there are no other references to this report at all, so there
+        //    cannot be any incompatible references.
+        unsafe { ReportMut::from_raw(raw) }
     }
 
     /// Adds a new attachment to the [`Report`].
@@ -466,148 +611,7 @@ where
     }
 }
 
-impl<C, T> Report<C, Mutable, T>
-where
-    C: markers::ObjectMarker,
-    T: markers::ThreadSafetyMarker,
-{
-    /// Decomposes the [`Report`] into its constituent parts.
-    ///
-    /// Returns a tuple containing the children collection, attachments
-    /// collection, and context in that order. This is the inverse operation
-    /// of [`Report::from_parts`] and [`Report::from_parts_unhooked`].
-    ///
-    /// This method can be useful when you need to:
-    /// - Extract and modify individual components of a report
-    /// - Rebuild a report with different components
-    /// - Transfer components between different reports
-    /// - Perform custom processing on specific parts
-    ///
-    /// Note that to exactly reconstruct the original report, you will also need
-    /// to use the same handler as was used for the original report.
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, report_collection::ReportCollection, report_attachments::ReportAttachments};
-    /// // Create a report with some children and attachments
-    /// let mut report: Report<String> = Report::from_parts::<handlers::Display>(
-    ///     "main error".to_string(),
-    ///     ReportCollection::new(),
-    ///     ReportAttachments::new(),
-    /// );
-    ///
-    /// // Add some content
-    /// let child_report = report!("child error").into_dyn_any().into_cloneable();
-    /// report.children_mut().push(child_report);
-    /// report.attachments_mut().push("debug info".into());
-    ///
-    /// // Decompose into parts
-    /// let (context, children, attachments) = report.into_parts();
-    ///
-    /// assert_eq!(context, "main error");
-    /// assert_eq!(children.len(), 1);
-    /// assert!(attachments.len() >= 1); // "debug info" + potential automatic attachments
-    ///
-    /// // Can rebuild with the same or different parts
-    /// let rebuilt: Report<String> = Report::from_parts::<handlers::Display>(
-    ///     context,
-    ///     children,
-    ///     attachments,
-    /// );
-    /// ```
-    #[must_use]
-    pub fn into_parts(self) -> (C, ReportCollection<dyn Any, T>, ReportAttachments<T>) {
-        let raw = self.into_raw();
-
-        // SAFETY:
-        // 1. This is guaranteed by the invariants of this type.
-        // 2. Since `O=Mutable` and we are consuming `self`, then this is guaranteed to
-        //    be the unique owner of the report.
-        let (context, children, attachments) = unsafe { raw.into_parts() };
-
-        // SAFETY:
-        // 1. `C=dyn Any` for the created collection, so this is trivially true.
-        // 2. This is guaranteed by the invariants of this type.
-        // 3. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
-        //    guaranteed by the invariants of this type.
-        let children = unsafe { ReportCollection::<dyn Any, T>::from_raw(children) };
-
-        // SAFETY:
-        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
-        //    guaranteed by the invariants of this type.
-        let attachments = unsafe { ReportAttachments::<T>::from_raw(attachments) };
-
-        (context, children, attachments)
-    }
-
-    /// Extracts and returns the context value from the [`Report`].
-    ///
-    /// This is a convenience method that consumes the [`Report`] and returns
-    /// only the context, discarding the children and attachments. It's
-    /// equivalent to calling `report.into_parts().0`.
-    ///
-    /// This method can be useful when:
-    /// - You only need the underlying error or context value
-    /// - Converting from a [`Report`] back to the original error type
-    /// - Extracting context for logging or forwarding to other systems
-    /// - Implementing error conversion traits
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// #[derive(Debug, PartialEq, Clone)]
-    /// struct MyError {
-    ///     message: String,
-    ///     code: u32,
-    /// }
-    ///
-    /// impl std::fmt::Display for MyError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         write!(f, "Error {}: {}", self.code, self.message)
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for MyError {}
-    ///
-    /// // Create a report with a custom error context
-    /// let original_error = MyError {
-    ///     message: "database connection failed".to_string(),
-    ///     code: 500,
-    /// };
-    /// let report: Report<MyError> = report!(original_error.clone());
-    ///
-    /// // Extract just the context, discarding report structure
-    /// let extracted_error = report.into_current_context();
-    /// assert_eq!(extracted_error, original_error);
-    /// assert_eq!(extracted_error.code, 500);
-    /// assert_eq!(extracted_error.message, "database connection failed");
-    /// ```
-    #[must_use]
-    pub fn into_current_context(self) -> C {
-        self.into_parts().0
-    }
-
-    /// Returns a mutable reference to the current context.
-    ///
-    /// # Examples
-    /// ```
-    /// use rootcause::prelude::*;
-    /// let mut report: Report<String> = report!(String::from("An error occurred"));
-    /// let context: &mut String = report.current_context_mut();
-    /// context.push_str(" and that's bad");
-    /// ```
-    #[must_use]
-    pub fn current_context_mut(&mut self) -> &mut C {
-        self.as_mut().into_current_context_mut()
-    }
-}
-
-impl<C, O, T> Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, O, T> Report<C, O, T> {
     /// Creates a new [`Report`] with the given context and sets the current
     /// report as a child of the new report.
     ///
@@ -665,7 +669,7 @@ where
         Report::from_parts::<H>(
             context,
             ReportCollection::from([self.into_dyn_any().into_cloneable()]),
-            ReportAttachments::new(),
+            ReportAttachments::<T>::new(),
         )
     }
 
@@ -680,7 +684,7 @@ where
     /// ```
     #[must_use]
     pub fn children(&self) -> &ReportCollection<dyn Any, T> {
-        self.as_ref().children()
+        self.as_uncloneable_ref().children()
     }
 
     /// Returns a reference to the attachments.
@@ -693,7 +697,7 @@ where
     /// ```
     #[must_use]
     pub fn attachments(&self) -> &ReportAttachments<T> {
-        self.as_ref().attachments()
+        self.as_uncloneable_ref().attachments()
     }
 
     /// Changes the context type of the [`Report`] to [`dyn Any`].
@@ -729,8 +733,11 @@ where
         // 1. `C=dyn Any`, so this is trivially true.
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
+        // 4. `C=dyn Any`, so this is trivially true.
         // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::<dyn Any, O, T>::from_raw(raw) }
     }
 
@@ -770,11 +777,17 @@ where
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. This is guaranteed by the invariants of this type.
+        // 1. This is guaranteed by the invariants of `self`.
         // 2. `O=Cloneable`, so this is trivially true.
-        // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
-        // 5. This is guaranteed by the invariants of this type.
+        // 3. This is guaranteed by the invariants of `self`.
+        // 4. This is guaranteed by the invariants of `self`.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. If the ownership of `self` is already `Cloneable`, then this is guaranteed
+        //    by the invariants of `self`. If the ownership of `self` is `Mutable`, then
+        //    the invariants of `self` guarantee that we are the only owner and we are
+        //    consuming `self` in this method, so there are no other owners.
+        // 7. This is guaranteed by the invariants of `self`.
+        // 8. This is guaranteed by the invariants of `self`.
         unsafe { Report::<C, Cloneable, T>::from_raw(raw) }
     }
 
@@ -809,9 +822,12 @@ where
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. This is guaranteed by the invariants of this type.
-        // 3. This is guaranteed by the invariants of this type.
+        // 3. `T=Local`, so this is trivially upheld.
         // 4. This is guaranteed by the invariants of this type.
-        // 5. `T=Local`, so this is trivially true.
+        // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. `T=Local`, so this is trivially true.
         unsafe { Report::<C, O, Local>::from_raw(raw) }
     }
 
@@ -843,15 +859,35 @@ where
 
             // SAFETY:
             // 1. This is guaranteed by the invariants of this type.
-            // 2. We just checked that the strong count is `1`, and we are taking ownership
-            //    of `self`, so we are the unique owner.
-            // 3. `O=Mutable`, so this is trivially upheld.
+            // 2. `O=Mutable`, so this is trivially true.
+            // 3. This is guaranteed by the invariants of this type.
             // 4. This is guaranteed by the invariants of this type.
-            // 5. This is guaranteed by the invariants of this type.
-            let report = unsafe { Report::from_raw(raw) };
+            // 5. We just checked that the strong count is `1`, and we are taking ownership
+            //    of `self`, so we are the unique owner.
+            // 6. `O=Mutable`, so this is trivially upheld.
+            // 7. This is guaranteed by the invariants of this type.
+            // 8. This is guaranteed by the invariants of this type.
+            let report = unsafe { Report::<C, Mutable, T>::from_raw(raw) };
             Ok(report)
         } else {
             Err(self)
+        }
+    }
+
+    pub(crate) fn as_uncloneable_ref(&self) -> ReportRef<'_, C, Uncloneable, T> {
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. `O=Uncloneable`, so this is trivially true.
+        // 3. This is guaranteed by the invariants of this type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. `O=Uncloneable`, so this is trivially true.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        unsafe {
+            // @add-unsafe-context: markers::ReportOwnershipMarker
+            ReportRef::<C, Uncloneable, T>::from_raw(raw)
         }
     }
 
@@ -867,17 +903,26 @@ where
     /// let report_ref: ReportRef<'_, _, Cloneable> = report.as_ref();
     /// ```
     #[must_use]
-    pub fn as_ref(&self) -> ReportRef<'_, C, O::RefMarker, T> {
+    pub fn as_ref(&self) -> ReportRef<'_, C, O::RefMarker, T>
+    where
+        O: markers::ReportOwnershipMarker,
+    {
         let raw = self.as_raw_ref();
 
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. If the ownership of `self` is `Mutable`, then the `O=Uncloneable`, which
         //    means that this is trivially true. On the other hand, if the ownership of
-        //    `self` is `Cloneable`, then the `O=Cloneable`. However in that case, the
-        //    invariants of this type guarantee that all references are compatible.
+        //    `self` is `Cloneable`, then the `O=Cloneable`, which is also trivially
+        //    true.
         // 3. This is guaranteed by the invariants of this type.
         // 4. This is guaranteed by the invariants of this type.
+        // 5. If the ownership of `self` is `Mutable`, then the `O=Uncloneable`, which
+        //    means that this is trivially true. On the other hand, if the ownership of
+        //    `self` is `Cloneable`, then the `O=Cloneable`. However in that case, the
+        //    invariants of this type guarantee that all references are compatible.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
         unsafe {
             // @add-unsafe-context: markers::ReportOwnershipMarker
             ReportRef::<C, O::RefMarker, T>::from_raw(raw)
@@ -936,7 +981,10 @@ where
     /// assert_eq!(all_reports[1], "root error");
     /// assert_eq!(all_reports.len(), 6);
     /// ```
-    pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T> {
+    pub fn iter_reports(&self) -> ReportIter<'_, O::RefMarker, T>
+    where
+        O: markers::ReportOwnershipMarker,
+    {
         self.as_ref().iter_reports()
     }
 
@@ -985,8 +1033,11 @@ where
     /// assert_eq!(sub_reports[1], "context for error 1");
     /// assert_eq!(sub_reports.len(), 5);
     /// ```
-    pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
-        self.as_ref().iter_sub_reports()
+    pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T>
+    where
+        O: markers::ReportOwnershipMarker,
+    {
+        self.as_uncloneable_ref().iter_sub_reports()
     }
 
     /// Creates a new report, which has the same structure as the current
@@ -1009,7 +1060,7 @@ where
     #[track_caller]
     #[must_use]
     pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
-        self.as_ref().preformat()
+        self.as_uncloneable_ref().preformat()
     }
 
     /// Returns the [`TypeId`] of the current context.
@@ -1029,7 +1080,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
-        self.as_ref().current_context_type_id()
+        self.as_uncloneable_ref().current_context_type_id()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.
@@ -1047,7 +1098,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
-        self.as_ref().current_context_handler_type_id()
+        self.as_uncloneable_ref().current_context_handler_type_id()
     }
 
     /// Returns the error source if the context implements [`Error`].
@@ -1075,7 +1126,7 @@ where
     /// ```
     #[must_use]
     pub fn current_context_error_source(&self) -> Option<&(dyn core::error::Error + 'static)> {
-        self.as_ref().current_context_error_source()
+        self.as_uncloneable_ref().current_context_error_source()
     }
 
     /// Formats the current context with hook processing.
@@ -1089,7 +1140,7 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        self.as_ref().format_current_context()
+        self.as_uncloneable_ref().format_current_context()
     }
 
     /// Formats the current context without hook processing.
@@ -1103,7 +1154,7 @@ where
     /// ```
     #[must_use]
     pub fn format_current_context_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        self.as_ref().format_current_context_unhooked()
+        self.as_uncloneable_ref().format_current_context_unhooked()
     }
 
     /// Formats the entire report using a specific report formatting hook.
@@ -1134,7 +1185,7 @@ where
     where
         H: crate::hooks::report_formatting::ReportFormatterHook,
     {
-        self.as_ref().format_with_hook(hook)
+        self.as_uncloneable_ref().format_with_hook(hook)
     }
 
     /// Gets the preferred formatting style for the context with hook
@@ -1162,8 +1213,11 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let report: ReportRef<'_, dyn Any, Uncloneable, Local> =
-            self.as_ref().into_dyn_any().into_uncloneable().into_local();
+        let report: ReportRef<'_, dyn Any, Uncloneable, Local> = self
+            .as_uncloneable_ref()
+            .into_dyn_any()
+            .into_uncloneable()
+            .into_local();
         crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
@@ -1194,7 +1248,7 @@ where
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        self.as_ref()
+        self.as_uncloneable_ref()
             .preferred_context_formatting_style_unhooked(report_formatting_function)
     }
 
@@ -1208,16 +1262,11 @@ where
     /// ```
     #[must_use]
     pub fn strong_count(&self) -> usize {
-        self.as_ref().strong_count()
+        self.as_uncloneable_ref().strong_count()
     }
 }
 
-impl<C, O, T> Report<C, O, T>
-where
-    C: markers::ObjectMarker,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: Sized, O, T> Report<C, O, T> {
     /// Returns a reference to the current context.
     ///
     /// # Examples
@@ -1230,15 +1279,11 @@ where
     /// ```
     #[must_use]
     pub fn current_context(&self) -> &C {
-        self.as_ref().current_context()
+        self.as_uncloneable_ref().current_context()
     }
 }
 
-impl<O, T> Report<dyn Any, O, T>
-where
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<O, T> Report<dyn Any, O, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise
@@ -1257,9 +1302,9 @@ where
     #[must_use]
     pub fn downcast_current_context<C>(&self) -> Option<&C>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
-        self.as_ref().downcast_current_context()
+        self.as_uncloneable_ref().downcast_current_context()
     }
 
     /// Downcasts the current context to a specific type without checking.
@@ -1290,9 +1335,9 @@ where
     #[must_use]
     pub unsafe fn downcast_current_context_unchecked<C>(&self) -> &C
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
-        let report = self.as_ref();
+        let report = self.as_uncloneable_ref();
 
         // SAFETY:
         // 1. Guaranteed by the caller
@@ -1315,7 +1360,7 @@ where
     /// ```
     pub fn downcast_report<C>(self) -> Result<Report<C, O, T>, Self>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
@@ -1356,24 +1401,24 @@ where
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> Report<C, O, T>
     where
-        C: markers::ObjectMarker,
+        C: Sized + 'static,
     {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. Guaranteed by the caller
+        // 1. `C` is bounded by `Sized` in the function signature.
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
-        // 4. This is guaranteed by the invariants of this type.
+        // 4. Guaranteed by the caller
         // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::from_raw(raw) }
     }
 }
 
-impl<C> Report<C, Mutable, SendSync>
-where
-    C: markers::ObjectMarker + Send + Sync,
-{
+impl<C: Sized + Send + Sync> Report<C, Mutable, SendSync> {
     /// Creates a new [`Report`] with [`SendSync`] thread safety.
     ///
     /// This is a convenience method that calls [`Report::new`] with explicit
@@ -1423,10 +1468,7 @@ where
     }
 }
 
-impl<C> Report<C, Mutable, Local>
-where
-    C: markers::ObjectMarker,
-{
+impl<C: Sized> Report<C, Mutable, Local> {
     /// Creates a new [`Report`] with [`Local`] thread safety.
     ///
     /// This is a convenience method that calls [`Report::new`] with explicit
@@ -1479,27 +1521,16 @@ where
 // SAFETY: The `SendSync` marker indicates that all objects in the report are
 // `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
 // itself.
-unsafe impl<C, O> Send for Report<C, O, SendSync>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
-}
+unsafe impl<C: ?Sized, O> Send for Report<C, O, SendSync> {}
 
 // SAFETY: The `SendSync` marker indicates that all objects in the report are
 // `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
 // itself.
-unsafe impl<C, O> Sync for Report<C, O, SendSync>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-{
-}
+unsafe impl<C: ?Sized, O> Sync for Report<C, O, SendSync> {}
 
-impl<C, T> From<C> for Report<C, Mutable, T>
+impl<C: Sized, T> From<C> for Report<C, Mutable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1507,10 +1538,9 @@ where
     }
 }
 
-impl<C, T> From<C> for Report<C, Cloneable, T>
+impl<C: Sized, T> From<C> for Report<C, Cloneable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1518,10 +1548,9 @@ where
     }
 }
 
-impl<C, T> From<C> for Report<dyn Any, Mutable, T>
+impl<C: Sized, T> From<C> for Report<dyn Any, Mutable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1529,10 +1558,9 @@ where
     }
 }
 
-impl<C, T> From<C> for Report<dyn Any, Cloneable, T>
+impl<C: Sized, T> From<C> for Report<dyn Any, Cloneable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
-    T: markers::ThreadSafetyMarker,
 {
     #[track_caller]
     fn from(context: C) -> Self {
@@ -1540,35 +1568,21 @@ where
     }
 }
 
-impl<C, T> Clone for Report<C, Cloneable, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> Clone for Report<C, Cloneable, T> {
     fn clone(&self) -> Self {
         self.as_ref().clone_arc()
     }
 }
 
-impl<C, O, T> core::fmt::Display for Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, O, T> core::fmt::Display for Report<C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.as_ref(), f)
+        core::fmt::Display::fmt(&self.as_uncloneable_ref(), f)
     }
 }
 
-impl<C, O, T> core::fmt::Debug for Report<C, O, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    O: markers::ReportOwnershipMarker,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.as_ref(), f)
+        core::fmt::Debug::fmt(&self.as_uncloneable_ref(), f)
     }
 }
 
@@ -1584,9 +1598,6 @@ macro_rules! from_impls {
     ),* $(,)?) => {
         $(
             impl<$($param),*> From<Report<$context1, $ownership1, $thread_safety1>> for Report<$context2, $ownership2, $thread_safety2>
-                where $(
-                    $param: markers::ObjectMarker,
-                )*
              {
                 #[track_caller]
                 fn from(report: Report<$context1, $ownership1, $thread_safety1>) -> Self {

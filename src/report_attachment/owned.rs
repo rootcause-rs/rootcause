@@ -7,7 +7,7 @@ use rootcause_internals::{
 
 use crate::{
     handlers::{self, AttachmentHandler},
-    markers::{self, Local, ObjectMarker, SendSync},
+    markers::{self, Local, SendSync},
     report_attachment::ReportAttachmentRef,
     util::format_helper,
 };
@@ -19,7 +19,7 @@ mod limit_field_access {
 
     use rootcause_internals::{RawAttachment, RawAttachmentRef};
 
-    use crate::markers::{self, SendSync};
+    use crate::markers::SendSync;
 
     /// An attachment to be attached to a [`Report`](crate::Report).
     ///
@@ -37,45 +37,46 @@ mod limit_field_access {
     /// [`SendSync`]: crate::markers::SendSync
     /// [`Local`]: crate::markers::Local
     #[repr(transparent)]
-    pub struct ReportAttachment<Attachment = dyn Any, ThreadSafety = SendSync>
-    where
-        Attachment: markers::ObjectMarker + ?Sized,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportAttachment<
+        Attachment: ?Sized + 'static = dyn Any,
+        ThreadSafety: 'static = SendSync,
+    > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `A` is a concrete type: The attachment embedded in the
+        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachment`] must be of type `A`.
-        /// 2. If `T = SendSync`: The attachment embedded in the
+        /// 4. If `T = SendSync`: The attachment embedded in the
         ///    [`RawAttachment`] must be `Send + Sync`.
         raw: RawAttachment,
         _attachment: PhantomData<Attachment>,
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<A, T> ReportAttachment<A, T>
-    where
-        A: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<A: ?Sized, T> ReportAttachment<A, T> {
         /// Creates a new Attachment from a raw attachment
         ///
         /// # Safety
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `A` is a concrete type: The attachment embedded in the
+        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 2. `T` must either be `SendSync` or `Local`.
+        /// 3. If `A` is a concrete type: The attachment embedded in the
         ///    [`RawAttachment`] must be of type `A`.
-        /// 2. If `T = SendSync`: The attachment embedded in the
+        /// 4. If `T = SendSync`: The attachment embedded in the
         ///    [`RawAttachment`] must be `Send + Sync`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawAttachment) -> Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by caller
             // 2. Guaranteed by caller
+            // 3. Guaranteed by caller
+            // 4. Guaranteed by caller
             ReportAttachment {
                 raw,
                 _attachment: PhantomData,
@@ -97,8 +98,10 @@ mod limit_field_access {
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. No mutation is possible through the `RawAttachmentRef`
-            // 2. No mutation is possible through the `RawAttachmentRef`
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. No mutation is possible through the `RawAttachmentRef`
+            // 4. No mutation is possible through the `RawAttachmentRef`
             let raw = &self.raw;
 
             raw.as_ref()
@@ -107,11 +110,7 @@ mod limit_field_access {
 }
 pub use limit_field_access::ReportAttachment;
 
-impl<A, T> ReportAttachment<A, T>
-where
-    A: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<A: Sized, T> ReportAttachment<A, T> {
     /// Allocates a new [`ReportAttachment`] with the given attachment as the
     /// data.
     ///
@@ -130,7 +129,7 @@ where
     #[must_use]
     pub fn new(attachment: A) -> Self
     where
-        A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug + Sized,
+        A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
     {
         Self::new_custom::<handlers::Display>(attachment)
     }
@@ -155,15 +154,19 @@ where
     #[must_use]
     pub fn new_custom<H>(attachment: A) -> Self
     where
-        A: markers::ObjectMarkerFor<T> + Sized,
+        A: markers::ObjectMarkerFor<T>,
         H: AttachmentHandler<A>,
     {
         let raw = RawAttachment::new::<A, H>(attachment);
 
         // SAFETY:
-        // 1. We just created the `RawAttachment` and it does indeed have an attachment
+        // 1. `A` is bounded by `Sized` in this impl, so this is trivially true.
+        // 2. `A` is bounded by `markers::ObjectMarkerFor<T>` and this can only be
+        //    implemented for `T=Local` and `T=SendSync`, so this is
+        //   upheld.
+        // 3. We just created the `RawAttachment` and it does indeed have an attachment
         //    of type `A`.
-        // 2. If `T=Local`, then this is trivially true. If `T=SendSync`, then the bound
+        // 4. If `T=Local`, then this is trivially true. If `T=SendSync`, then the bound
         //    `A: ObjectMarkerFor<SendSync>` guarantees that the attachment is
         //    `Send+Sync`.
         unsafe {
@@ -172,6 +175,17 @@ where
         }
     }
 
+    /// Returns a reference to the inner attachment.
+    ///
+    /// This method is only available when the attachment type is a specific
+    /// type, and not `dyn Any`.
+    #[must_use]
+    pub fn inner(&self) -> &A {
+        self.as_ref().inner()
+    }
+}
+
+impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// Changes the inner attachment type of the [`ReportAttachment`] to [`dyn
     /// Any`].
     ///
@@ -195,6 +209,8 @@ where
         // SAFETY:
         // 1. `A=dyn Any`, so this is trivially true.
         // 2. Guaranteed by the invariants of this type.
+        // 3. `A=dyn Any`, so this is trivially true.
+        // 4. Guaranteed by the invariants of this type.
         unsafe { ReportAttachment::<dyn Any, T>::from_raw(raw) }
     }
 
@@ -217,19 +233,9 @@ where
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
         // 2. `T=Local`, so this is trivially true.
+        // 3. Guaranteed by the invariants of this type.
+        // 4. `T=Local`, so this is trivially true.
         unsafe { ReportAttachment::from_raw(raw) }
-    }
-
-    /// Returns a reference to the inner attachment.
-    ///
-    /// This method is only available when the attachment type is a specific
-    /// type, and not `dyn Any`.
-    #[must_use]
-    pub fn inner(&self) -> &A
-    where
-        A: Sized,
-    {
-        self.as_ref().inner()
     }
 
     /// Returns the [`TypeId`] of the inner attachment.
@@ -323,14 +329,12 @@ where
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
+        // 2. Guaranteed by the invariants of this type.
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 }
 
-impl<A> ReportAttachment<A, SendSync>
-where
-    A: markers::ObjectMarker,
-{
+impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     /// Creates a new [`ReportAttachment`] with [`SendSync`] thread safety.
     ///
     /// This is a convenience method that calls [`ReportAttachment::new`] with
@@ -342,7 +346,7 @@ where
     #[must_use]
     pub fn new_sendsync(attachment: A) -> Self
     where
-        A: core::fmt::Display + core::fmt::Debug + Send + Sync,
+        A: core::fmt::Display + core::fmt::Debug,
     {
         Self::new(attachment)
     }
@@ -357,17 +361,13 @@ where
     #[must_use]
     pub fn new_sendsync_custom<H>(attachment: A) -> Self
     where
-        A: Send + Sync + 'static,
         H: AttachmentHandler<A>,
     {
         Self::new_custom::<H>(attachment)
     }
 }
 
-impl<A> ReportAttachment<A, Local>
-where
-    A: markers::ObjectMarker,
-{
+impl<A: Sized> ReportAttachment<A, Local> {
     /// Creates a new [`ReportAttachment`] with [`Local`] thread safety.
     ///
     /// This is a convenience method that calls [`ReportAttachment::new`] with
@@ -399,10 +399,7 @@ where
     }
 }
 
-impl<T> ReportAttachment<dyn Any, T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> ReportAttachment<dyn Any, T> {
     /// Attempts to downcast the inner attachment to a specific type.
     ///
     /// Returns `Some(&A)` if the inner attachment is of type `A`, otherwise
@@ -410,7 +407,7 @@ where
     #[must_use]
     pub fn downcast_inner<A>(&self) -> Option<&A>
     where
-        A: ObjectMarker,
+        A: Sized + 'static,
     {
         self.as_ref().downcast_inner()
     }
@@ -428,7 +425,7 @@ where
     #[must_use]
     pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
     where
-        A: ObjectMarker,
+        A: Sized + 'static,
     {
         let raw = self.as_raw_ref();
 
@@ -444,7 +441,7 @@ where
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
     where
-        A: markers::ObjectMarker,
+        A: Sized + 'static,
     {
         if TypeId::of::<A>() == self.inner_type_id() {
             // SAFETY:
@@ -471,31 +468,31 @@ where
     #[must_use]
     pub unsafe fn downcast_unchecked<A>(self) -> ReportAttachment<A, T>
     where
-        A: markers::ObjectMarker,
+        A: Sized + 'static,
     {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. Guaranteed by the caller
+        // 1. `A` is bounded by `Sized`, so this is trivially true.
         // 2. Guaranteed by the invariants of this type.
-        unsafe { ReportAttachment::from_raw(raw) }
+        // 3. Guaranteed by the caller
+        // 4. Guaranteed by the invariants of this type.
+        unsafe { ReportAttachment::<A, T>::from_raw(raw) }
     }
 }
 
-impl<A, T> From<A> for ReportAttachment<A, T>
+impl<A: Sized, T> From<A> for ReportAttachment<A, T>
 where
     A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
-    T: markers::ThreadSafetyMarker,
 {
     fn from(attachment: A) -> Self {
         ReportAttachment::new_custom::<handlers::Display>(attachment)
     }
 }
 
-impl<A, T> From<A> for ReportAttachment<dyn Any, T>
+impl<A: Sized, T> From<A> for ReportAttachment<dyn Any, T>
 where
     A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
-    T: markers::ThreadSafetyMarker,
 {
     fn from(attachment: A) -> Self {
         ReportAttachment::new_custom::<handlers::Display>(attachment).into_dyn_any()
@@ -505,29 +502,28 @@ where
 // SAFETY: The `SendSync` marker indicates that the inner attachment
 // is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
-unsafe impl<A> Send for ReportAttachment<A, SendSync> where A: markers::ObjectMarker + ?Sized {}
+unsafe impl<A: ?Sized> Send for ReportAttachment<A, SendSync> {}
 
 // SAFETY: The `SendSync` marker indicates that the inner attachment
 // is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
-unsafe impl<A> Sync for ReportAttachment<A, SendSync> where A: markers::ObjectMarker + ?Sized {}
+unsafe impl<A: ?Sized> Sync for ReportAttachment<A, SendSync> {}
+
+impl<A: ?Sized, T> core::marker::Unpin for ReportAttachment<A, T> {}
 
 macro_rules! from_impls {
     ($(
         <
             $($param:ident),*
         >:
-        $context1:ty => $context2:ty,
+        $attachment1:ty => $attachment2:ty,
         $thread_safety1:ty => $thread_safety2:ty,
         [$($op:ident),*]
     ),* $(,)?) => {
         $(
-            impl<$($param),*> From<ReportAttachment<$context1, $thread_safety1>> for ReportAttachment<$context2, $thread_safety2>
-                where $(
-                    $param: markers::ObjectMarker,
-                )*
+            impl<$($param),*> From<ReportAttachment<$attachment1, $thread_safety1>> for ReportAttachment<$attachment2, $thread_safety2>
             {
-                fn from(attachment: ReportAttachment<$context1, $thread_safety1>) -> Self {
+                fn from(attachment: ReportAttachment<$attachment1, $thread_safety1>) -> Self {
                     attachment
                         $(
                             .$op()
@@ -539,10 +535,10 @@ macro_rules! from_impls {
 }
 
 from_impls!(
-    <C>: C => C, SendSync => Local, [into_local],
-    <C>: C => dyn Any, SendSync => SendSync, [into_dyn_any],
-    <C>: C => dyn Any, SendSync => Local, [into_dyn_any, into_local],
-    <C>: C => dyn Any, Local => Local, [into_dyn_any],
+    <A>: A => A, SendSync => Local, [into_local],
+    <A>: A => dyn Any, SendSync => SendSync, [into_dyn_any],
+    <A>: A => dyn Any, SendSync => Local, [into_dyn_any, into_local],
+    <A>: A => dyn Any, Local => Local, [into_dyn_any],
     <>:  dyn Any => dyn Any, SendSync => Local, [into_local],
 );
 

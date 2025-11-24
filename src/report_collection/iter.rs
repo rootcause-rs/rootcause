@@ -1,9 +1,6 @@
 use core::iter::FusedIterator;
 
-use crate::{
-    Report, ReportRef,
-    markers::{self, Cloneable},
-};
+use crate::{Report, ReportRef, markers::Cloneable};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -12,7 +9,7 @@ mod limit_field_access {
 
     use rootcause_internals::RawReport;
 
-    use crate::markers::{self, SendSync};
+    use crate::markers::SendSync;
 
     /// An iterator over references to reports in a [`ReportCollection`].
     ///
@@ -39,49 +36,55 @@ mod limit_field_access {
     #[must_use]
     pub struct ReportCollectionIter<
         'a,
-        Context: markers::ObjectMarker + ?Sized = dyn Any,
-        ThreadSafety: markers::ThreadSafetyMarker = SendSync,
+        Context: ?Sized + 'static = dyn Any,
+        ThreadSafety: 'static = SendSync,
     > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to these report or any sub-reports are compatible
+        /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the
+        /// 5. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         raw: core::slice::Iter<'a, RawReport>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<'a, C, T> ReportCollectionIter<'a, C, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<'a, C: ?Sized, T> ReportCollectionIter<'a, C, T> {
         /// Creates a new `ReportCollectionIter` from an iterator of raw reports
         ///
         /// # Safety
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to these report or any sub-reports are compatible
+        /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the
+        /// 5. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         pub(crate) unsafe fn from_raw(raw: &'a [RawReport]) -> Self {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             Self {
                 raw: raw.iter(),
                 _context: PhantomData,
@@ -92,9 +95,11 @@ mod limit_field_access {
         /// Returns a reference to the underlying raw report iterator
         pub(crate) fn as_raw(&self) -> &core::slice::Iter<'a, RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. No mutation occurs here, so the invariants are preserved
-            // 2. Upheld, as all references created here are compatible
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. No mutation occurs here, so the invariants are preserved
+            // 4. Upheld, as all references created here are compatible
+            // 5. No mutation occurs here, so the invariants are preserved
             &self.raw
         }
 
@@ -113,20 +118,18 @@ mod limit_field_access {
         ///    Sync`.
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut core::slice::Iter<'a, RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. Guaranteed by the caller
-            // 2. Upheld, as all references created here are compatible
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. Guaranteed by the caller
+            // 4. Upheld, as all references created here are compatible
+            // 5. Guaranteed by the caller
             &mut self.raw
         }
     }
 }
 pub use limit_field_access::ReportCollectionIter;
 
-impl<'a, C, T> Iterator for ReportCollectionIter<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> Iterator for ReportCollectionIter<'a, C, T> {
     type Item = ReportRef<'a, C, Cloneable, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -140,9 +143,12 @@ where
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
-        // 2. Guaranteed by the invariants of this type.
+        // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
+        // 5. Guaranteed by the invariants of this type.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
         let raw = unsafe { ReportRef::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
@@ -153,11 +159,7 @@ where
     }
 }
 
-impl<'a, C, T> DoubleEndedIterator for ReportCollectionIter<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> DoubleEndedIterator for ReportCollectionIter<'a, C, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         // SAFETY: We only remove items, we don't mutate them.
         // 1. No mutation that breaks the context-type invariant
@@ -169,31 +171,25 @@ where
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
-        // 2. Guaranteed by the invariants of this type.
+        // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
+        // 5. Guaranteed by the invariants of this type.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
         let raw = unsafe { ReportRef::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
     }
 }
 
-impl<'a, C, T> ExactSizeIterator for ReportCollectionIter<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<'a, C: ?Sized, T> ExactSizeIterator for ReportCollectionIter<'a, C, T> {
     fn len(&self) -> usize {
         self.as_raw().len()
     }
 }
 
-impl<'a, C, T> FusedIterator for ReportCollectionIter<'a, C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
-}
+impl<'a, C: ?Sized, T> FusedIterator for ReportCollectionIter<'a, C, T> {}
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -203,7 +199,7 @@ mod limit_field_access2 {
 
     use rootcause_internals::RawReport;
 
-    use crate::markers::{self, SendSync};
+    use crate::markers::SendSync;
 
     /// An owning iterator over reports in a [`ReportCollection`].
     ///
@@ -231,33 +227,32 @@ mod limit_field_access2 {
     /// [`ReportCollectionIter`]: crate::report_collection::ReportCollectionIter
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     #[must_use]
-    pub struct ReportCollectionIntoIter<Context = dyn Any, ThreadSafety = SendSync>
-    where
-        Context: markers::ObjectMarker + ?Sized,
-        ThreadSafety: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportCollectionIntoIter<
+        Context: ?Sized + 'static = dyn Any,
+        ThreadSafety: 'static = SendSync,
+    > {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to these report or any sub-reports are compatible
+        /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the
+        /// 5. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         raw: alloc::vec::IntoIter<RawReport>,
-        _context: PhantomData<Context>,
+        _context: PhantomData<fn(Context) -> Context>,
         _thread_safety: PhantomData<ThreadSafety>,
     }
 
-    impl<C, T> ReportCollectionIntoIter<C, T>
-    where
-        C: markers::ObjectMarker + ?Sized,
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<C: ?Sized, T> ReportCollectionIntoIter<C, T> {
         /// Creates a new [`ReportCollectionIntoIter`] from a vector of raw
         /// reports
         ///
@@ -265,18 +260,24 @@ mod limit_field_access2 {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 1. Either the collection must be empty, `C` must either be a type
+        ///    bounded by `Sized`, or C must be `dyn Any`.
+        /// 2. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
-        /// 2. All references to these report or any sub-reports are compatible
+        /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
-        /// 3. If `T = SendSync`: All contexts and attachments in the
+        /// 5. If `T = SendSync`: All contexts and attachments in the
         ///    [`RawReport`]s and all sub-reports must be `Send+Sync`.
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
             // SAFETY: We must uphold the safety invariants of this type:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
             // 3. Guaranteed by the caller
+            // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             Self {
                 raw: raw.into_iter(),
                 _context: PhantomData,
@@ -287,10 +288,11 @@ mod limit_field_access2 {
         /// Returns a reference to the underlying raw report iterator
         pub(crate) fn as_raw(&self) -> &alloc::vec::IntoIter<RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. No mutation occurs here, so the invariants are preserved
-            // 2. No mutation occurs here, so the invariants are preserved
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. No mutation occurs here, so the invariants are preserved
-            // 4. Upheld, as it is not possible to turn this into a `Report`, `ReportMut` or
+            // 4. No mutation occurs here, so the invariants are preserved
+            // 5. Upheld, as it is not possible to turn this into a `Report`, `ReportMut` or
             //    `ReportRef` with `T=SendSync`, as that would break the safety invariants
             //    of those types.
             &self.raw
@@ -312,21 +314,18 @@ mod limit_field_access2 {
         #[must_use]
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawReport> {
             // SAFETY: We must uphold the safety invariants of this type:
-            // 1. Guaranteed by the caller
-            // 2. Guaranteed by the caller
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
+            // 5. Guaranteed by the caller
             &mut self.raw
         }
     }
 }
 pub use limit_field_access2::ReportCollectionIntoIter;
 
-impl<C, T> Iterator for ReportCollectionIntoIter<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> Iterator for ReportCollectionIntoIter<C, T> {
     type Item = Report<C, Cloneable, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -343,7 +342,10 @@ where
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
-        // 5. Guaranteed by the invariants of this type.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
+        // 8. Guaranteed by the invariants of this type.
         let raw = unsafe { Report::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
@@ -354,11 +356,7 @@ where
     }
 }
 
-impl<C, T> DoubleEndedIterator for ReportCollectionIntoIter<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> DoubleEndedIterator for ReportCollectionIntoIter<C, T> {
     fn next_back(&mut self) -> Option<Self::Item> {
         // SAFETY: We only remove items, we don't mutate them.
         // 1. No mutation that breaks the context-type invariant
@@ -373,26 +371,20 @@ where
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of this type.
         // 4. Guaranteed by the invariants of this type.
-        // 5. Guaranteed by the invariants of this type.
+        // 5. `O=Cloneable`, so this is trivially true.
+        // 6. Guaranteed by the invariants of this type.
+        // 7. Guaranteed by the invariants of this type.
+        // 8. Guaranteed by the invariants of this type.
         let raw = unsafe { Report::<C, Cloneable, T>::from_raw(item) };
 
         Some(raw)
     }
 }
 
-impl<C, T> ExactSizeIterator for ReportCollectionIntoIter<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
+impl<C: ?Sized, T> ExactSizeIterator for ReportCollectionIntoIter<C, T> {
     fn len(&self) -> usize {
         self.as_raw().len()
     }
 }
 
-impl<C, T> FusedIterator for ReportCollectionIntoIter<C, T>
-where
-    C: markers::ObjectMarker + ?Sized,
-    T: markers::ThreadSafetyMarker,
-{
-}
+impl<C: ?Sized, T> FusedIterator for ReportCollectionIntoIter<C, T> {}

@@ -2,10 +2,7 @@ use core::{any::Any, iter::FusedIterator};
 
 use rootcause_internals::RawAttachment;
 
-use crate::{
-    markers,
-    report_attachment::{ReportAttachment, ReportAttachmentRef},
-};
+use crate::report_attachment::{ReportAttachment, ReportAttachmentRef};
 
 /// An iterator over references to report attachments.
 ///
@@ -49,7 +46,8 @@ impl<'a> Iterator for ReportAttachmentsIter<'a> {
 
         // SAFETY:
         // 1. `A = dyn Any`, so this is trivially satisfied.
-        let attachment = unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) };
+        // 2. `A = dyn Any`, so this is trivially satisfied.
+        let attachment = unsafe { ReportAttachmentRef::<'a, dyn Any>::from_raw(raw) };
 
         Some(attachment)
     }
@@ -65,7 +63,8 @@ impl<'a> DoubleEndedIterator for ReportAttachmentsIter<'a> {
 
         // SAFETY:
         // 1. `A = dyn Any`, so this is trivially satisfied.
-        let attachment = unsafe { ReportAttachmentRef::from_raw(raw) };
+        // 2. `A = dyn Any`, so this is trivially satisfied.
+        let attachment = unsafe { ReportAttachmentRef::<'a, dyn Any>::from_raw(raw) };
 
         Some(attachment)
     }
@@ -85,8 +84,6 @@ mod limit_field_access {
     use core::marker::PhantomData;
 
     use rootcause_internals::RawAttachment;
-
-    use crate::markers;
 
     /// An iterator that consumes report attachments and yields owned values.
     ///
@@ -111,25 +108,21 @@ mod limit_field_access {
     /// let iterator: ReportAttachmentsIntoIter<_> = attachments.into_iter();
     /// ```
     #[must_use]
-    pub struct ReportAttachmentsIntoIter<T>
-    where
-        T: markers::ThreadSafetyMarker,
-    {
+    pub struct ReportAttachmentsIntoIter<T: 'static> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        /// 1. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         raw: alloc::vec::IntoIter<RawAttachment>,
         _thread_safety: PhantomData<T>,
     }
 
-    impl<T> ReportAttachmentsIntoIter<T>
-    where
-        T: markers::ThreadSafetyMarker,
-    {
+    impl<T> ReportAttachmentsIntoIter<T> {
         /// Creates a new [`ReportAttachmentsIntoIter`] from an iterator of raw
         /// attachments
         ///
@@ -137,11 +130,14 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `T = SendSync`: All of the inner attachments must be `Send +
+        /// 1. Either the collection must be empty or `T` must either be
+        ///    `SendSync` or `Local`.
+        /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         pub(crate) unsafe fn from_raw(raw: alloc::vec::IntoIter<RawAttachment>) -> Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
+            // 2. Guaranteed by the caller
             Self {
                 raw,
                 _thread_safety: PhantomData,
@@ -151,7 +147,8 @@ mod limit_field_access {
         /// Provides access to the inner raw iterator
         pub(crate) fn as_raw(&self) -> &alloc::vec::IntoIter<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. No mutation is possible through this reference
+            // 1. Upheld as the type parameters do not change.
+            // 2. No mutation is possible through this reference
             &self.raw
         }
 
@@ -162,26 +159,27 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. If `T = SendSync`: No mutation is performed that invalidates the
-        ///    invariant that all inner attachments are `Send + Sync`.
+        ///    invariant that either all inner attachments are `Send + Sync` or
+        ///    the collection is empty.
         pub(crate) unsafe fn as_raw_mut(&mut self) -> &mut alloc::vec::IntoIter<RawAttachment> {
             // SAFETY: We must uphold the safety invariants of the raw field:
-            // 1. Guaranteed by the caller
+            // 1. Upheld as the type parameters do not change.
+            // 2. Guaranteed by the caller
             &mut self.raw
         }
     }
 }
 pub use limit_field_access::ReportAttachmentsIntoIter;
 
-impl<T> Iterator for ReportAttachmentsIntoIter<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> Iterator for ReportAttachmentsIntoIter<T> {
     type Item = ReportAttachment<dyn Any, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // 1. We do not mutate the iterator or add any additional attachments during
-        //    this call.
+        // SAFETY: We only remove items, we don't mutate them.
+        // 1. If the collection is already empty, this is a no-op and it is still empty
+        //    after. On the other hand, if there are items, we are guaranteed by the
+        //    invariants of this type that all inner attachments are `Send + Sync` if `T
+        //    = SendSync`.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.next()?;
@@ -189,9 +187,11 @@ where
         // SAFETY:
         // 1. `A=dyn Any`, so this is trivially satisfied.
         // 2. Guaranteed by the invariants of this type.
-        let report_attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
+        // 3. `A=dyn Any`, so this is trivially satisfied.
+        // 4. Guaranteed by the invariants of this type.
+        let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
 
-        Some(report_attachment)
+        Some(attachment)
     }
 
     fn size_hint(&self) -> (usize, Option<usize>) {
@@ -199,14 +199,13 @@ where
     }
 }
 
-impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T> {
     fn next_back(&mut self) -> Option<Self::Item> {
-        // SAFETY:
-        // 1. We do not mutate the iterator or add any additional attachments during
-        //    this call.
+        // SAFETY: We only remove items, we don't mutate them.
+        // 1. If the collection is already empty, this is a no-op and it is still empty
+        //    after. On the other hand, if there are items, we are guaranteed by the
+        //    invariants of this type that all inner attachments are `Send + Sync` if `T
+        //    = SendSync`.
         let raw = unsafe { self.as_raw_mut() };
 
         let attachment = raw.next_back()?;
@@ -214,19 +213,18 @@ where
         // SAFETY:
         // 1. `A=dyn Any`, so this is trivially satisfied.
         // 2. Guaranteed by the invariants of this type.
-        let attachment = unsafe { ReportAttachment::from_raw(attachment) };
+        // 3. `A=dyn Any`, so this is trivially satisfied.
+        // 4. Guaranteed by the invariants of this type.
+        let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
 
         Some(attachment)
     }
 }
 
-impl<T> ExactSizeIterator for ReportAttachmentsIntoIter<T>
-where
-    T: markers::ThreadSafetyMarker,
-{
+impl<T> ExactSizeIterator for ReportAttachmentsIntoIter<T> {
     fn len(&self) -> usize {
         self.as_raw().len()
     }
 }
 
-impl<T> FusedIterator for ReportAttachmentsIntoIter<T> where T: markers::ThreadSafetyMarker {}
+impl<T> FusedIterator for ReportAttachmentsIntoIter<T> {}

@@ -79,6 +79,7 @@ impl<'a> RawAttachmentRef<'a> {
         //    would be UB since we don't know the correct type parameter
         let vtable_ptr: *const &'static AttachmentVtable = unsafe {
             // @add-unsafe-context: AttachmentData
+            // @add-unsafe-context: crate::util::Erased
             &raw const (*ptr).vtable
         };
 

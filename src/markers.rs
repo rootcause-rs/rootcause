@@ -3,8 +3,21 @@
 //! This module provides type-level markers that control how reports and
 //! attachments behave with respect to ownership, cloning, and thread safety.
 //! These markers are used as generic parameters in types like [`Report<C, O,
-//! T>`](crate::Report) to enforce compile-time guarantees about how data can be
+//! T>`](crate::Report) to encode compile-time guarantees about how data can be
 //! accessed and shared.
+//!
+//! # Design Philosophy
+//!
+//! The constraints encoded by these markers are enforced at construction time.
+//! It is impossible to construct a [`Report`](crate::Report),
+//! [`ReportRef`], or
+//! [`ReportCollection`] that violates the invariants
+//! associated with its marker types. This means you can trust that a
+//! `Report<_, _, SendSync>` truly is `Send + Sync`, and that a `Report<_,
+//! Mutable>` truly has unique ownership.
+//!
+//! [`ReportRef`]: crate::ReportRef
+//! [`ReportCollection`]: crate::report_collection::ReportCollection
 //!
 //! # Ownership Markers
 //!
@@ -75,14 +88,16 @@
 
 use core::any::Any;
 
-use crate::{ReportMut, ReportRef};
+use crate::ReportMut;
 
 /// Marker type for owned reports with unique ownership.
 ///
-/// This marker is used exclusively with [`Report<C, Mutable,
-/// T>`](crate::Report) (not [`ReportRef`]). It indicates that
-/// the report has unique ownership of its data, which allows mutation
-/// operations but prevents cloning.
+/// This marker is used exclusively with [`Report<C, Mutable, T>`] (not
+/// [`ReportRef`]). It indicates that the report has unique ownership of its
+/// data, which allows mutation operations but prevents cloning.
+///
+/// [`Report<C, Mutable, T>`]: crate::Report
+/// [`ReportRef`]: crate::ReportRef
 ///
 /// # Available Operations
 ///
@@ -358,69 +373,27 @@ mod sealed_report_ownership_marker {
     impl Sealed for Cloneable {}
 }
 
-mod sealed_report_ref_ownership_marker {
-    use super::*;
-
+mod sealed_object_marker {
     pub trait Sealed: 'static {}
 
-    impl Sealed for Cloneable {}
-    impl Sealed for Uncloneable {}
+    impl<C: Sized + 'static> Sealed for C {}
 }
-
-mod sealed_send_sync_marker {
-    use super::*;
-
-    pub trait Sealed: 'static {}
-
-    impl Sealed for SendSync {}
-    impl Sealed for Local {}
-}
-
-mod sealed_context_marker {
-    use super::*;
-
-    pub trait Sealed: 'static {}
-
-    impl<C: 'static> Sealed for C {}
-    impl Sealed for dyn Any {}
-}
-
-/// Marker trait for types that can be used as context or attachment data.
-///
-/// This trait is automatically implemented for all `Sized + 'static` types, and
-/// also for the special type `dyn Any` which is used to represent type-erased
-/// contexts and attachments.
-///
-/// # Type Erasure with `dyn Any`
-///
-/// The `dyn Any` marker is special: it indicates a type-erased value without
-/// actually creating a `Box<dyn Any>` or similar allocation. Converting from a
-/// concrete type to `dyn Any` is a zero-cost operation that doesn't change the
-/// underlying representation.
-///
-/// This is used internally by the [`report!`](crate::report!) macro when you
-/// use the format string syntax:
-///
-/// ```
-/// use rootcause::prelude::*;
-///
-/// // This creates Report<dyn Any> using type erasure
-/// let report: Report<dyn Any> = report!("Error code: {}", 404);
-/// ```
-///
-/// # Implementation
-///
-/// You don't need to implement this trait manually - it's automatically
-/// available for all appropriate types.
-pub trait ObjectMarker: 'static + sealed_context_marker::Sealed {}
-impl<T> ObjectMarker for T where T: 'static {}
-impl ObjectMarker for dyn Any {}
 
 /// Marker trait for ownership semantics of owned reports.
 ///
-/// This trait defines the ownership behavior for [`Report<C, O,
-/// T>`](crate::Report) instances. It's implemented for [`Mutable`] and
-/// [`Cloneable`], which control whether reports can be mutated or cloned.
+/// This trait is implemented for [`Mutable`] and [`Cloneable`], the two
+/// ownership markers that can be used with [`Report<C, O, T>`](crate::Report).
+/// It exists primarily to enable the associated type `RefMarker`, which
+/// determines the ownership marker used when creating a reference to the
+/// report.
+///
+/// # Relationship to Report Construction
+///
+/// While this trait defines the ownership modes, the actual enforcement of
+/// ownership invariants happens at report construction time. It is impossible
+/// to construct a `Report<_, Mutable>` that doesn't have unique ownership, or a
+/// `Report<_, Cloneable>` that hasn't been properly set up for shared
+/// ownership.
 ///
 /// # Ownership Modes
 ///
@@ -457,7 +430,7 @@ pub trait ReportOwnershipMarker: sealed_report_ownership_marker::Sealed {
     /// - For [`Cloneable`]: Returns [`ReportRef<C,
     ///   Cloneable>`](crate::ReportRef) because the underlying report already
     ///   uses shared ownership
-    type RefMarker: ReportRefOwnershipMarker;
+    type RefMarker;
 }
 impl ReportOwnershipMarker for Mutable {
     type RefMarker = Uncloneable;
@@ -466,113 +439,29 @@ impl ReportOwnershipMarker for Cloneable {
     type RefMarker = Cloneable;
 }
 
-/// Marker trait for ownership semantics of report references.
-///
-/// This trait defines the ownership behavior for [`ReportRef<C,
-/// O>`](crate::ReportRef) instances. It's implemented for [`Cloneable`] and
-/// [`Uncloneable`], controlling whether the reference provides the
-/// [`clone_arc`](crate::ReportRef::clone_arc) method to obtain an owned report.
-///
-/// Note that `ReportRef` itself is always `Copy` and `Clone` regardless of this
-/// marker. The ownership marker only controls access to the `clone_arc` method.
-///
-/// # Reference Modes
-///
-/// - [`Cloneable`]: The reference provides
-///   [`clone_arc`](crate::ReportRef::clone_arc) to clone the underlying `Arc`
-///   and get an owned [`Report<C, Cloneable, T>`](crate::Report).
-///
-/// - [`Uncloneable`]: The reference does not provide `clone_arc`. This is used
-///   for references to uniquely-owned reports, preserving the uniqueness
-///   guarantee.
-///
-/// # Implementation
-///
-/// This trait is sealed and cannot be implemented outside of this crate.
-pub trait ReportRefOwnershipMarker: Sized + sealed_report_ref_ownership_marker::Sealed {
-    /// Converts a [`ReportRef`] with [`Cloneable`] ownership to this ownership
-    /// type.
-    ///
-    /// This method mostly exists as a convenience to facilitate conversions
-    /// in generic contexts.
-    ///
-    /// In non-generic code, you can use [`From`]/[`Into`] directly.
-    #[doc(hidden)]
-    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
-        report: ReportRef<'a, dyn Any, Cloneable, T>,
-    ) -> ReportRef<'a, dyn Any, Self, T>;
-}
-impl ReportRefOwnershipMarker for Cloneable {
-    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
-        report: ReportRef<'a, dyn Any, Cloneable, T>,
-    ) -> ReportRef<'a, dyn Any, Self, T> {
-        report
-    }
-}
-impl ReportRefOwnershipMarker for Uncloneable {
-    fn convert_cloneable_report_ref<'a, T: crate::markers::ThreadSafetyMarker>(
-        report: ReportRef<'a, dyn Any, Cloneable, T>,
-    ) -> ReportRef<'a, dyn Any, Self, T> {
-        report.into_uncloneable()
-    }
-}
-
-/// Marker trait for thread-safety semantics of reports.
-///
-/// This trait defines whether a report can cross thread boundaries. It's
-/// implemented for [`SendSync`] and [`Local`], which control the thread-safety
-/// requirements of reports.
-///
-/// # Thread Safety Modes
-///
-/// - [`SendSync`]: Reports (and all their contents) are `Send + Sync`, meaning
-///   they can be safely sent to other threads and shared between threads.
-///
-/// - [`Local`]: Reports contain thread-local data that is not `Send` or `Sync`.
-///   These reports cannot cross thread boundaries.
-///
-/// # Implementation
-///
-/// This trait is sealed and cannot be implemented outside of this crate.
-pub trait ThreadSafetyMarker: Sized + sealed_send_sync_marker::Sealed {
-    /// Runs report creation hooks specific to this thread-safety marker.
-    #[doc(hidden)]
-    #[track_caller]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Self>);
-}
-impl ThreadSafetyMarker for SendSync {
-    #[inline(always)]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Self>) {
-        crate::hooks::report_creation::run_creation_hooks_sendsync(report);
-    }
-}
-impl ThreadSafetyMarker for Local {
-    #[inline(always)]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Self>) {
-        crate::hooks::report_creation::run_creation_hooks_local(report);
-    }
-}
-
 /// Marker trait combining object and thread-safety requirements.
 ///
-/// This trait constrains what types can be used as context or attachment data
-/// based on the thread-safety requirements of the report.
+/// This trait enforces thread-safety constraints for context and attachment
+/// data at report construction time. Reports can only be constructed when their
+/// context and attachments satisfy the requirements of the thread-safety
+/// marker.
 ///
 /// # Implementations
 ///
-/// - For `T = Local`: Implemented for all types that implement
-///   [`ObjectMarker`], regardless of their `Send`/`Sync` status. This allows
-///   using types like `Rc` in local reports.
+/// - For `T = Local`: Implemented for all `Sized + 'static` types, regardless
+///   of their `Send`/`Sync` status. This allows using types like `Rc` in local
+///   reports.
 ///
-/// - For `T = SendSync`: Implemented only for types that implement
-///   [`ObjectMarker`] and are also `Send + Sync`. This ensures thread-safe
-///   reports only contain thread-safe data.
+/// - For `T = SendSync`: Implemented only for `Sized + 'static` types that are
+///   also `Send + Sync`. This ensures thread-safe reports can only be
+///   constructed with thread-safe data.
 ///
-/// # Usage
+/// # Enforcement at Construction
 ///
-/// This trait is used internally by the library to enforce that you can't
-/// accidentally create a supposedly thread-safe report containing
-/// non-thread-safe data:
+/// The key insight is that this trait is used as a bound during report
+/// construction. You cannot create a `Report<C, _, SendSync>` unless `C:
+/// ObjectMarkerFor<SendSync>`, which requires `C: Send + Sync`. This makes it
+/// impossible to accidentally create an invalid report:
 ///
 /// ```compile_fail
 /// use std::rc::Rc;
@@ -593,8 +482,26 @@ impl ThreadSafetyMarker for Local {
 /// let rc_data: Rc<String> = Rc::new("error".to_string());
 /// let report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(rc_data);
 /// ```
-pub trait ObjectMarkerFor<T: ThreadSafetyMarker>: ObjectMarker {}
-impl<T> ObjectMarkerFor<Local> for T where T: ObjectMarker {}
-impl<T> ObjectMarkerFor<SendSync> for T where T: ObjectMarker + Send + Sync {}
-impl ObjectMarkerFor<Local> for dyn Any {}
-impl ObjectMarkerFor<SendSync> for dyn Any {}
+pub trait ObjectMarkerFor<T>: sealed_object_marker::Sealed + Sized + 'static {
+    /// Runs report creation hooks specific to this thread-safety marker.
+    #[doc(hidden)]
+    #[track_caller]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, T>);
+}
+
+impl<O: Sized + 'static> ObjectMarkerFor<Local> for O {
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Local>) {
+        crate::hooks::report_creation::run_creation_hooks_local(report);
+    }
+}
+
+impl<O: Sized + 'static> ObjectMarkerFor<SendSync> for O
+where
+    O: Send + Sync,
+{
+    #[inline(always)]
+    fn run_creation_hooks(report: ReportMut<'_, dyn Any, SendSync>) {
+        crate::hooks::report_creation::run_creation_hooks_sendsync(report);
+    }
+}
