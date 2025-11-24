@@ -69,7 +69,7 @@
 
 use core::any::Any;
 
-use crate::{Report, markers};
+use crate::{Report, ReportRef, markers};
 
 /// A trait for converting external error types into rootcause [`Report`]s.
 ///
@@ -174,28 +174,38 @@ pub mod eyre;
 /// # Type Parameters
 ///
 /// - `C`: The context type of the wrapped report
-pub struct ReportAsError<
-    C: ?Sized + 'static = dyn Any,
-    O: 'static = markers::Mutable,
-    T: 'static = markers::SendSync,
->(pub Report<C, O, T>);
+pub struct ReportAsError<C: ?Sized + 'static = dyn Any, T: 'static = markers::SendSync>(
+    pub Report<C, markers::Cloneable, T>,
+);
 
-impl<C: ?Sized, T: 'static> Clone for ReportAsError<C, markers::Cloneable, T> {
+impl<C: ?Sized, T: 'static> Clone for ReportAsError<C, T> {
     fn clone(&self) -> Self {
         Self(self.0.clone())
     }
 }
 
-impl<C: ?Sized, O, T> core::fmt::Debug for ReportAsError<C, O, T> {
+impl<C: ?Sized, T> core::fmt::Debug for ReportAsError<C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.0, f)
     }
 }
 
-impl<C: ?Sized, O, T> core::fmt::Display for ReportAsError<C, O, T> {
+impl<C: ?Sized, T> core::fmt::Display for ReportAsError<C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Display::fmt(&self.0, f)
     }
 }
 
-impl<C: ?Sized, O, T> core::error::Error for ReportAsError<C, O, T> {}
+impl<C: ?Sized, T> core::error::Error for ReportAsError<C, T> {}
+
+impl<C: ?Sized, O, T> From<Report<C, O, T>> for ReportAsError<C, T> {
+    fn from(value: Report<C, O, T>) -> Self {
+        ReportAsError(value.into_cloneable())
+    }
+}
+
+impl<C: ?Sized, T> From<ReportRef<'_, C, markers::Cloneable, T>> for ReportAsError<C, T> {
+    fn from(value: ReportRef<'_, C, markers::Cloneable, T>) -> Self {
+        ReportAsError(value.clone_arc())
+    }
+}
