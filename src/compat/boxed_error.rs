@@ -20,8 +20,9 @@
 //! objects:
 //!
 //! ```
-//! use rootcause::prelude::*;
 //! use std::error::Error;
+//!
+//! use rootcause::{compat::boxed_error::IntoBoxedError, prelude::*};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(report!("database connection failed"))
@@ -37,8 +38,9 @@
 //! You can also convert individual [`Report`] values:
 //!
 //! ```
-//! use rootcause::prelude::*;
 //! use std::error::Error;
+//!
+//! use rootcause::{compat::boxed_error::IntoBoxedError, prelude::*};
 //!
 //! let report: Report = report!("operation failed").attach("debug info");
 //! let boxed_err: Box<dyn Error + Send + Sync> = report.into_boxed_error();
@@ -57,15 +59,17 @@
 //! constraints of the original report.
 //!
 //! ```
-//! use rootcause::{prelude::*, markers::Local};
 //! use std::{error::Error, rc::Rc};
+//!
+//! use rootcause::{compat::boxed_error::IntoBoxedError, markers::Local, prelude::*};
 //!
 //! // SendSync report becomes Box<dyn Error + Send + Sync>
 //! let send_sync_report: Report = report!("network error");
 //! let send_sync_boxed: Box<dyn Error + Send + Sync> = send_sync_report.into_boxed_error();
 //!
 //! // Local report becomes Box<dyn Error>
-//! let local_report: Report<_, _, Local> = report!("local error").into_local().attach(Rc::new("data"));
+//! let local_report: Report<_, _, Local> =
+//!     report!("local error").into_local().attach(Rc::new("data"));
 //! let local_boxed: Box<dyn Error> = local_report.into_boxed_error();
 //! ```
 //!
@@ -74,8 +78,9 @@
 //! Use the [`IntoRootcause`] trait to convert boxed errors into reports:
 //!
 //! ```
-//! use rootcause::prelude::*;
 //! use std::error::Error;
+//!
+//! use rootcause::prelude::*;
 //!
 //! fn uses_boxed_error() -> Result<String, Box<dyn Error + Send + Sync>> {
 //!     Err("something failed".into())
@@ -93,8 +98,9 @@
 //! The `From` trait is also implemented for direct conversions:
 //!
 //! ```
-//! use rootcause::prelude::*;
 //! use std::error::Error;
+//!
+//! use rootcause::prelude::*;
 //!
 //! let report: Report = report!("failed");
 //! let boxed_err: Box<dyn Error + Send + Sync> = report.into();
@@ -107,14 +113,16 @@
 //! }
 //! ```
 
+use alloc::boxed::Box;
+use core::{any::Any, error::Error};
+
+use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
+
 use super::{IntoRootcause, ReportAsError};
 use crate::{
     Report,
     markers::{self, Local, SendSync},
 };
-use alloc::boxed::Box;
-use core::{any::Any, error::Error};
-use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
 
 /// A custom handler for boxed error trait objects that delegates to the
 /// underlying error's formatting.
@@ -209,8 +217,9 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
 /// ## Converting a Result with SendSync Report
 ///
 /// ```
-/// use rootcause::prelude::*;
 /// use std::error::Error;
+///
+/// use rootcause::{compat::boxed_error::IntoBoxedError, prelude::*};
 ///
 /// fn uses_rootcause() -> Result<i32, Report> {
 ///     Err(report!("failed"))
@@ -225,8 +234,9 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
 /// ## Converting a Local Report
 ///
 /// ```
-/// use rootcause::{prelude::*, markers::Local};
 /// use std::{error::Error, rc::Rc};
+///
+/// use rootcause::{compat::boxed_error::IntoBoxedError, markers::Local, prelude::*};
 ///
 /// let local_report: Report<_, _, Local> = report!("error").into_local().attach(Rc::new("data"));
 /// let boxed_err: Box<dyn Error> = local_report.into_boxed_error();
@@ -240,8 +250,9 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
 /// You can also use the `From` trait for explicit conversions:
 ///
 /// ```
-/// use rootcause::prelude::*;
 /// use std::error::Error;
+///
+/// use rootcause::prelude::*;
 ///
 /// let report: Report = report!("error");
 /// let boxed_err: Box<dyn Error + Send + Sync> = report.into();
@@ -249,10 +260,13 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
 pub trait IntoBoxedError {
     /// The type produced by the conversion.
     ///
-    /// - For [`Report<_, _, SendSync>`]: produces `Box<dyn Error + Send + Sync>`
+    /// - For [`Report<_, _, SendSync>`]: produces `Box<dyn Error + Send +
+    ///   Sync>`
     /// - For [`Report<_, _, Local>`]: produces `Box<dyn Error>`
-    /// - For [`Result<T, Report<_, _, SendSync>>`]: produces `Result<T, Box<dyn Error + Send + Sync>>`
-    /// - For [`Result<T, Report<_, _, Local>>`]: produces `Result<T, Box<dyn Error>>`
+    /// - For [`Result<T, Report<_, _, SendSync>>`]: produces `Result<T, Box<dyn
+    ///   Error + Send + Sync>>`
+    /// - For [`Result<T, Report<_, _, Local>>`]: produces `Result<T, Box<dyn
+    ///   Error>>`
     type Output;
 
     /// Converts this value into a boxed error type.
@@ -267,8 +281,9 @@ pub trait IntoBoxedError {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
     /// use std::error::Error;
+    ///
+    /// use rootcause::{compat::boxed_error::IntoBoxedError, prelude::*};
     ///
     /// // Convert a result
     /// let result: Result<i32, Report> = Ok(42);

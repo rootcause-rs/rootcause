@@ -1,4 +1,7 @@
-//! Bidirectional integration with the [`anyhow`] error handling library.
+//! Bidirectional integration with the [`anyhow`] 1.x error handling library.
+//!
+//! This module specifically supports `anyhow` version 1.x. To enable this
+//! integration, add the `compat-anyhow1` feature flag to your `Cargo.toml`.
 //!
 //! # Overview
 //!
@@ -19,7 +22,7 @@
 //! errors into reports:
 //!
 //! ```
-//! use rootcause::prelude::*;
+//! use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 //!
 //! fn anyhow_function() -> anyhow::Result<String> {
 //!     anyhow::bail!("something went wrong");
@@ -49,7 +52,7 @@
 //! Use the [`IntoAnyhow`] trait to convert reports into anyhow errors:
 //!
 //! ```
-//! use rootcause::prelude::*;
+//! use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(report!("database connection failed"))
@@ -99,7 +102,7 @@
 //!
 //! ```
 //! use anyhow::Context;
-//! use rootcause::{Report, prelude::IntoAnyhow};
+//! use rootcause::{Report, compat::anyhow1::IntoAnyhow};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(rootcause::report!("connection failed"))
@@ -214,7 +217,7 @@ impl<T> IntoRootcause for anyhow::Result<T> {
 /// ## Converting a Result
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 ///
 /// fn uses_rootcause() -> Result<i32, Report> {
 ///     Err(report!("failed"))
@@ -229,7 +232,7 @@ impl<T> IntoRootcause for anyhow::Result<T> {
 /// ## Converting a Report
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 ///
 /// let report = report!("operation failed").attach("debug info");
 /// let anyhow_err: anyhow::Error = report.into_anyhow();
@@ -243,7 +246,7 @@ impl<T> IntoRootcause for anyhow::Result<T> {
 /// You can also use the `From` trait for explicit conversions:
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 ///
 /// let report: Report = report!("error");
 /// let anyhow_err: anyhow::Error = report.into();
@@ -264,7 +267,7 @@ pub trait IntoAnyhow {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
+    /// use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
     ///
     /// // Convert a result
     /// let result: Result<i32, Report> = Ok(42);

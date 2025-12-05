@@ -9,14 +9,16 @@
 //!
 //! # Available Integrations
 //!
-//! - [`anyhow`] - Integration with the `anyhow` error handling library
-//!   (requires the `anyhow` feature flag)
+//! - [`anyhow1`] - Integration with the `anyhow` 1.x error handling library
+//!   (requires the `compat-anyhow1` feature flag)
 //! - [`boxed_error`] - Convert reports to and from boxed error trait objects
 //!   (`Box<dyn Error>` and `Box<dyn Error + Send + Sync>`)
-//! - [`error_stack`] - Integration with the `error-stack` error handling
-//!   library (requires the `error-stack` feature flag)
-//! - [`eyre`] - Integration with the `eyre` error handling library (requires
-//!   the `eyre` feature flag)
+//! - [`error_stack05`] - Integration with the `error-stack` 0.5.x error
+//!   handling library (requires the `compat-error-stack05` feature flag)
+//! - [`error_stack06`] - Integration with the `error-stack` 0.6.x error
+//!   handling library (requires the `compat-error-stack06` feature flag)
+//! - [`eyre06`] - Integration with the `eyre` 0.6.x error handling library
+//!   (requires the `compat-eyre06` feature flag)
 //!
 //! # When to Use Compatibility Modules
 //!
@@ -47,7 +49,7 @@
 //! ```
 //! use rootcause::prelude::*;
 //!
-//! # #[cfg(feature = "anyhow")] {
+//! # #[cfg(feature = "compat-anyhow1")] {
 //! // Call an anyhow-based function from rootcause code
 //! fn legacy_function() -> anyhow::Result<String> {
 //!     anyhow::bail!("something went wrong");
@@ -93,10 +95,12 @@ use crate::{Report, ReportRef, markers};
 ///
 /// This trait is implemented by compatibility modules for specific error
 /// handling libraries:
-/// - [`anyhow`] module provides implementations for [`anyhow::Error`] and
+/// - [`anyhow1`] module provides implementations for [`anyhow::Error`] and
 ///   [`anyhow::Result<T>`]
-/// - [`error_stack`] module provides implementations for
-///   [`error_stack::Report<C>`] and `Result<T, error_stack::Report<C>>`
+/// - [`error_stack05`] and [`error_stack06`] modules provide implementations
+///   for [`error_stack::Report<C>`] and `Result<T, error_stack::Report<C>>`
+/// - [`eyre06`] module provides implementations for [`eyre::Report`] and
+///   [`eyre::Result<T>`]
 ///
 /// [`anyhow::Error`]: ::anyhow::Error
 /// [`anyhow::Result<T>`]: ::anyhow::Result
@@ -107,7 +111,7 @@ use crate::{Report, ReportRef, markers};
 /// ```
 /// use rootcause::prelude::*;
 ///
-/// # #[cfg(feature = "anyhow")] {
+/// # #[cfg(feature = "compat-anyhow1")] {
 /// // Converting an anyhow Result to a rootcause Result
 /// fn uses_anyhow() -> anyhow::Result<i32> {
 ///     Ok(42)
@@ -123,7 +127,7 @@ use crate::{Report, ReportRef, markers};
 /// ```
 /// use rootcause::prelude::*;
 ///
-/// # #[cfg(feature = "anyhow")] {
+/// # #[cfg(feature = "compat-anyhow1")] {
 /// // Converting an individual error
 /// let external_error = anyhow::anyhow!("database connection failed");
 /// let report: Report = external_error.into_rootcause();
@@ -145,19 +149,23 @@ pub trait IntoRootcause {
     fn into_rootcause(self) -> Self::Output;
 }
 
-#[cfg(feature = "anyhow")]
-#[cfg_attr(docsrs, doc(cfg(feature = "anyhow")))]
-pub mod anyhow;
-
 pub mod boxed_error;
 
-#[cfg(feature = "error-stack")]
-#[cfg_attr(docsrs, doc(cfg(feature = "error-stack")))]
-pub mod error_stack;
+#[cfg(feature = "compat-anyhow1")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-anyhow1")))]
+pub mod anyhow1;
 
-#[cfg(feature = "eyre")]
-#[cfg_attr(docsrs, doc(cfg(feature = "eyre")))]
-pub mod eyre;
+#[cfg(feature = "compat-error-stack05")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack05")))]
+pub mod error_stack05;
+
+#[cfg(feature = "compat-error-stack06")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack06")))]
+pub mod error_stack06;
+
+#[cfg(feature = "compat-eyre06")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-eyre06")))]
+pub mod eyre06;
 
 /// A wrapper that adapts a rootcause [`Report`] to implement
 /// [`core::error::Error`].
@@ -168,8 +176,8 @@ pub mod eyre;
 /// and error trait implementations to the underlying report.
 ///
 /// You typically don't need to use this type directly - it's used automatically
-/// by conversion traits like [`anyhow::IntoAnyhow`] and
-/// [`error_stack::IntoErrorStack`].
+/// by conversion traits like [`anyhow1::IntoAnyhow`] and
+/// [`error_stack06::IntoErrorStack`].
 ///
 /// # Type Parameters
 ///

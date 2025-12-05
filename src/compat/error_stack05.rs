@@ -1,10 +1,15 @@
-//! Bidirectional integration with the [`error-stack`] error handling library.
+//! Bidirectional integration with the [`error-stack`] 0.5.x error handling
+//! library.
+//!
+//! This module specifically supports `error-stack` version 0.5.x. To enable
+//! this integration, add the `compat-error-stack05` feature flag to your
+//! `Cargo.toml`.
 //!
 //! # Overview
 //!
 //! This module provides seamless interoperability between rootcause [`Report`]s
-//! and [`error_stack::Report`], supporting conversions in both directions. This
-//! is useful when:
+//! and [`error_stack::Report`], supporting conversions in both directions.
+//! This is useful when:
 //! - Migrating from error-stack to rootcause incrementally
 //! - Working with libraries that use error-stack for error handling
 //! - Integrating rootcause into an existing error-stack-based codebase
@@ -19,6 +24,7 @@
 //! reports into rootcause reports:
 //!
 //! ```
+//! # use error_stack05 as error_stack;
 //! use std::io;
 //!
 //! use rootcause::prelude::*;
@@ -39,6 +45,7 @@
 //! You can also convert individual [`error_stack::Report`] values:
 //!
 //! ```
+//! # use error_stack05 as error_stack;
 //! use rootcause::prelude::*;
 //!
 //! let es_report = error_stack::report!(std::io::Error::from(std::io::ErrorKind::NotFound));
@@ -54,7 +61,8 @@
 //! error-stack reports:
 //!
 //! ```
-//! use rootcause::prelude::*;
+//! # use error_stack05 as error_stack;
+//! use rootcause::{compat::error_stack05::IntoErrorStack, prelude::*};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(report!("database connection failed"))
@@ -71,7 +79,8 @@
 //! You can also convert individual [`Report`] values:
 //!
 //! ```
-//! use rootcause::prelude::*;
+//! # use error_stack05 as error_stack;
+//! use rootcause::{compat::error_stack05::IntoErrorStack, prelude::*};
 //!
 //! let report = report!("operation failed").attach("debug info");
 //! let es_report: error_stack::Report<_> = report.into_error_stack();
@@ -83,6 +92,7 @@
 //! Or using the `From` trait directly:
 //!
 //! ```
+//! # use error_stack05 as error_stack;
 //! use rootcause::prelude::*;
 //!
 //! let report: Report = report!("operation failed");
@@ -95,6 +105,7 @@
 //! The `From` trait also works with the `?` operator for automatic conversion:
 //!
 //! ```
+//! # use error_stack05 as error_stack;
 //! use rootcause::prelude::*;
 //!
 //! fn rootcause_function() -> Result<String, Report> {
@@ -126,6 +137,7 @@
 
 use core::marker::PhantomData;
 
+use error_stack05 as error_stack;
 use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
 
 use crate::{
@@ -134,8 +146,8 @@ use crate::{
     markers::{self, SendSync},
 };
 
-/// A custom handler for [`error_stack::Report`] that delegates to error-stack's
-/// own formatting.
+/// A custom handler for [`error_stack::Report`] that delegates to
+/// error-stack's own formatting.
 ///
 /// This handler ensures that [`error_stack::Report`] objects display
 /// identically whether they're used directly or wrapped in a rootcause
@@ -159,10 +171,10 @@ pub struct ErrorStackHandler<C>(PhantomData<C>);
 
 impl<C> ContextHandler<error_stack::Report<C>> for ErrorStackHandler<C>
 where
-    C: core::error::Error + Send + Sync + 'static,
+    C: error_stack::Context + 'static,
 {
     fn source(value: &error_stack::Report<C>) -> Option<&(dyn core::error::Error + 'static)> {
-        value.current_context().source()
+        value.current_context().__source()
     }
 
     fn display(
@@ -191,7 +203,7 @@ where
 
 impl<C> IntoRootcause for error_stack::Report<C>
 where
-    C: core::error::Error + Send + Sync + 'static,
+    C: error_stack::Context + Send + Sync + 'static,
 {
     type Output = crate::Report<Self>;
 
@@ -202,7 +214,7 @@ where
 
 impl<T, C> IntoRootcause for Result<T, error_stack::Report<C>>
 where
-    C: core::error::Error + Send + Sync + 'static,
+    C: error_stack::Context + 'static,
 {
     type Output = Result<T, Report<error_stack::Report<C>>>;
 
@@ -228,7 +240,8 @@ where
 /// ## Converting a Result
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// # use error_stack05 as error_stack;
+/// use rootcause::{compat::error_stack05::IntoErrorStack, prelude::*};
 ///
 /// fn uses_rootcause() -> Result<i32, Report> {
 ///     Err(report!("failed"))
@@ -243,7 +256,8 @@ where
 /// ## Converting a Report
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// # use error_stack05 as error_stack;
+/// use rootcause::{compat::error_stack05::IntoErrorStack, prelude::*};
 ///
 /// let report = report!("operation failed").attach("debug info");
 /// let es_report: error_stack::Report<_> = report.into_error_stack();
@@ -257,6 +271,7 @@ where
 /// You can also use the `From` trait for explicit conversions:
 ///
 /// ```
+/// # use error_stack05 as error_stack;
 /// use rootcause::prelude::*;
 ///
 /// let report: Report = report!("error");
@@ -290,7 +305,8 @@ pub trait IntoErrorStack<C: ?Sized> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
+    /// # use error_stack05 as error_stack;
+    /// use rootcause::{compat::error_stack05::IntoErrorStack, prelude::*};
     ///
     /// // Convert a result
     /// let result: Result<i32, Report> = Ok(42);

@@ -8,7 +8,7 @@
 //! # Running this Example
 //!
 //! ```bash
-//! cargo run --example eyre_interop --features eyre
+//! cargo run --example eyre_interop --features compat-eyre06
 //! ```
 //!
 //! # Conversion Overview
@@ -25,7 +25,7 @@
 // Import only what we need to avoid conflicting with eyre's WrapErr trait
 use rootcause::{
     Report, bail,
-    compat::{IntoRootcause, eyre::IntoEyre},
+    compat::{IntoRootcause, eyre06::IntoEyre},
 };
 
 // ============================================================================

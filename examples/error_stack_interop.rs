@@ -6,7 +6,7 @@
 //! # Running this Example
 //!
 //! ```bash
-//! cargo run --example error_stack_interop --features error-stack
+//! cargo run --example error_stack_interop --features compat-error-stack06
 //! ```
 //!
 //! # Conversion Overview
@@ -24,7 +24,7 @@
 // Import only what we need to avoid conflicting with error-stack's attach trait
 use rootcause::{
     Report, bail,
-    compat::{IntoRootcause, error_stack::IntoErrorStack},
+    compat::{IntoRootcause, error_stack06::IntoErrorStack},
 };
 
 // ============================================================================

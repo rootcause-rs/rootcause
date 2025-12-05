@@ -16,7 +16,7 @@
 pub mod metrics {
     use std::collections::HashMap;
 
-    use rootcause::prelude::*;
+    use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 
     // Trait still uses anyhow - this is a public API, can't break it yet
     /// Trait for collecting metrics
@@ -79,7 +79,7 @@ pub mod metrics {
 pub mod kv_store {
     use std::collections::HashMap;
 
-    use rootcause::prelude::*;
+    use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};
 
     use super::metrics::Metrics;
 
