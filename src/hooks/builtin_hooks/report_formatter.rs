@@ -6,9 +6,11 @@
 //! reports with hierarchical structures, attachments, and appendices.
 //!
 //! The formatter supports multiple output styles:
-//! - **Unicode with ANSI colors** ([`DefaultReportFormatter::UNICODE_ANSI`]) -
+//! - **Unicode only** ([`DefaultReportFormatter::UNICODE`]) - Unicode box-drawing
+//!   characters without ANSI colors (the default)
+//! - **Unicode with ANSI colors** ([`DefaultReportFormatter::UNICODE_COLORS`]) -
 //!   Rich visual experience for modern terminals
-//! - **ASCII-only** ([`DefaultReportFormatter::ASCII_NO_ANSI`]) - Compatible
+//! - **ASCII-only** ([`DefaultReportFormatter::ASCII`]) - Compatible
 //!   with basic terminals and text-only outputs
 //!
 //! # Usage
@@ -22,11 +24,14 @@
 //!     report_formatting::register_report_formatter_hook,
 //! };
 //!
-//! // Use the default Unicode + ANSI configuration
+//! // Use the default Unicode configuration (no colors)
 //! register_report_formatter_hook(DefaultReportFormatter::default());
 //!
+//! // Or use Unicode with ANSI colors for enhanced visuals
+//! register_report_formatter_hook(DefaultReportFormatter::UNICODE_COLORS);
+//!
 //! // Or use ASCII-only for compatibility
-//! register_report_formatter_hook(DefaultReportFormatter::ASCII_NO_ANSI);
+//! register_report_formatter_hook(DefaultReportFormatter::ASCII);
 //! ```
 //!
 //! # Configuration Structures
@@ -79,7 +84,18 @@ use crate::{
 /// };
 ///
 /// register_report_formatter_hook(DefaultReportFormatter::default());
-/// // Use with report formatting system
+/// // Use with report formatting system (Unicode without colors)
+/// ```
+///
+/// Using Unicode with ANSI colors for enhanced visuals:
+/// ```rust
+/// use rootcause::hooks::{
+///     builtin_hooks::report_formatter::DefaultReportFormatter,
+///     report_formatting::register_report_formatter_hook,
+/// };
+///
+/// register_report_formatter_hook(DefaultReportFormatter::UNICODE_COLORS);
+/// // Use in modern terminals that support ANSI colors
 /// ```
 ///
 /// Using ASCII-only formatting for compatibility:
@@ -89,7 +105,7 @@ use crate::{
 ///     report_formatting::register_report_formatter_hook,
 /// };
 ///
-/// register_report_formatter_hook(DefaultReportFormatter::ASCII_NO_ANSI);
+/// register_report_formatter_hook(DefaultReportFormatter::ASCII);
 /// // Use in environments without Unicode/ANSI support
 /// ```
 pub struct DefaultReportFormatter {
@@ -231,7 +247,7 @@ impl DefaultReportFormatter {
     /// Unicode characters or ANSI color codes, such as basic terminals, log
     /// files, or text-only outputs. Uses simple ASCII box-drawing
     /// alternatives like `|-`, `o`, and `--`.
-    pub const ASCII_NO_ANSI: Self = Self {
+    pub const ASCII: Self = Self {
         report_header: "\n",
         report_line_prefix_always: "",
         appendix_line_prefix_always: "",
@@ -304,12 +320,14 @@ impl DefaultReportFormatter {
         appendices_footer: "----------------------------------------\n",
         no_appendices_footer: "",
     };
+
     /// The default formatter configuration, which is an alias for
-    /// [`UNICODE_ANSI`](Self::UNICODE_ANSI).
+    /// [`UNICODE`](Self::UNICODE).
     ///
-    /// This provides the best visual experience for terminals that support
-    /// Unicode and ANSI colors.
-    pub const DEFAULT: Self = Self::UNICODE_ANSI;
+    /// This provides Unicode box-drawing characters without ANSI colors,
+    /// offering a good balance between visual clarity and compatibility.
+    pub const DEFAULT: Self = Self::UNICODE;
+
     /// A predefined configuration that uses Unicode box-drawing characters with
     /// ANSI color codes.
     ///
@@ -317,7 +335,7 @@ impl DefaultReportFormatter {
     /// box-drawing characters (like `├`, `╰`, `│`) and ANSI color codes for
     /// enhanced readability. Suitable for modern terminals and development
     /// environments.
-    pub const UNICODE_ANSI: Self = Self {
+    pub const UNICODE_COLORS: Self = Self {
         report_header: "\n",
         report_line_prefix_always: " ",
         appendix_line_prefix_always: "",
@@ -386,6 +404,88 @@ impl DefaultReportFormatter {
         report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         appendix_header: LineFormatting::new(" \x1b[4m", "\x1b[0m\n\n"),
+        appendix_body: ItemFormatting::new((" ", "\n"), (" ", "\n"), (" ", "\n"), (" ", "\n")),
+        appendices_footer: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        no_appendices_footer: "",
+    };
+
+    /// A predefined configuration that uses Unicode box-drawing characters
+    /// without ANSI color codes.
+    ///
+    /// This is the default configuration. It provides clear visual hierarchy
+    /// using Unicode box-drawing characters (like `├`, `╰`, `│`) without ANSI
+    /// colors, making it suitable for environments that support Unicode but
+    /// where colored output may not be desired (such as log files or CI
+    /// environments).
+    pub const UNICODE: Self = Self {
+        report_header: "\n",
+        report_line_prefix_always: " ",
+        appendix_line_prefix_always: "",
+        report_node_standalone_formatting: NodeConfig::new(
+            ("● ", "\n"),
+            ("● ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+            "",
+        ),
+        report_node_middle_formatting: NodeConfig::new(
+            ("├─ ● ", "\n"),
+            ("├─ ● ", "\n"),
+            ("│  │ ", "\n"),
+            ("│  │ ", "\n"),
+            "│  ",
+        ),
+        report_node_last_formatting: NodeConfig::new(
+            ("╰─ ● ", "\n"),
+            ("╰─ ● ", "\n"),
+            ("   │ ", "\n"),
+            ("   │ ", "\n"),
+            "   ",
+        ),
+        attachment_inline_formatting_middle: ItemFormatting::new(
+            ("├ ", "\n"),
+            ("├ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+        ),
+        attachment_inline_formatting_last: ItemFormatting::new(
+            ("╰ ", "\n"),
+            ("╰ ", "\n"),
+            ("  ", "\n"),
+            ("  ", "\n"),
+        ),
+        attachment_headered_formatting_middle: NodeConfig::new(
+            ("├ ", "\n"),
+            ("├ ", "\n"),
+            ("│", "\n"),
+            ("│", "\n"),
+            "│ ",
+        ),
+        attachment_headered_formatting_last: NodeConfig::new(
+            ("╰ ", "\n"),
+            ("╰ ", "\n"),
+            (" ", "\n"),
+            (" ", "\n"),
+            "  ",
+        ),
+        attachment_headered_formatting_data: ItemFormatting::new(
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+        ),
+        attachment_headered_data_prefix: None,
+        attachment_headered_data_suffix: Some("╰─\n"),
+        notice_see_also_middle_formatting: LineFormatting::new("├ See ", " below\n"),
+        notice_see_also_last_formatting: LineFormatting::new("╰ See ", " below\n"),
+        notice_opaque_middle_formatting: LineFormatting::new("├ ", "\n"),
+        notice_opaque_last_formatting: LineFormatting::new("╰ ", "\n"),
+        attachment_child_separator: Some("│\n"),
+        child_child_separator: Some("│\n"),
+        report_report_separator: "━━\n",
+        report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        appendix_header: LineFormatting::new(" ", "\n\n"),
         appendix_body: ItemFormatting::new((" ", "\n"), (" ", "\n"), (" ", "\n"), (" ", "\n")),
         appendices_footer: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         no_appendices_footer: "",

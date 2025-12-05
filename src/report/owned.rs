@@ -1177,7 +1177,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// let report = report!("error message");
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = report.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI);
+    /// let formatted = report.format_with_hook(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]

@@ -790,7 +790,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// let report_mut = report.as_mut();
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = report_mut.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI);
+    /// let formatted = report_mut.format_with_hook(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]
