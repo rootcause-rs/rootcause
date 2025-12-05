@@ -6,12 +6,12 @@
 //! reports with hierarchical structures, attachments, and appendices.
 //!
 //! The formatter supports multiple output styles:
-//! - **Unicode only** ([`DefaultReportFormatter::UNICODE`]) - Unicode box-drawing
-//!   characters without ANSI colors (the default)
-//! - **Unicode with ANSI colors** ([`DefaultReportFormatter::UNICODE_COLORS`]) -
-//!   Rich visual experience for modern terminals
-//! - **ASCII-only** ([`DefaultReportFormatter::ASCII`]) - Compatible
-//!   with basic terminals and text-only outputs
+//! - **Unicode only** ([`DefaultReportFormatter::UNICODE`]) - Unicode
+//!   box-drawing characters without ANSI colors (the default)
+//! - **Unicode with ANSI colors** ([`DefaultReportFormatter::UNICODE_COLORS`])
+//!   - Rich visual experience for modern terminals
+//! - **ASCII-only** ([`DefaultReportFormatter::ASCII`]) - Compatible with basic
+//!   terminals and text-only outputs
 //!
 //! # Usage
 //!
@@ -320,95 +320,12 @@ impl DefaultReportFormatter {
         appendices_footer: "----------------------------------------\n",
         no_appendices_footer: "",
     };
-
     /// The default formatter configuration, which is an alias for
     /// [`UNICODE`](Self::UNICODE).
     ///
     /// This provides Unicode box-drawing characters without ANSI colors,
     /// offering a good balance between visual clarity and compatibility.
     pub const DEFAULT: Self = Self::UNICODE;
-
-    /// A predefined configuration that uses Unicode box-drawing characters with
-    /// ANSI color codes.
-    ///
-    /// This configuration provides the richest visual experience with Unicode
-    /// box-drawing characters (like `├`, `╰`, `│`) and ANSI color codes for
-    /// enhanced readability. Suitable for modern terminals and development
-    /// environments.
-    pub const UNICODE_COLORS: Self = Self {
-        report_header: "\n",
-        report_line_prefix_always: " ",
-        appendix_line_prefix_always: "",
-        report_node_standalone_formatting: NodeConfig::new(
-            ("\x1b[97m● \x1b[1m", "\x1b[0m\n"),
-            ("\x1b[97m● \x1b[1m", "\x1b[0m\n"),
-            ("│ \x1b[1;97m", "\x1b[0m\n"),
-            ("│ \x1b[1;97m", "\x1b[0m\n"),
-            "",
-        ),
-        report_node_middle_formatting: NodeConfig::new(
-            ("├─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
-            ("├─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
-            ("│  │ \x1b[1;97m", "\x1b[0m\n"),
-            ("│  │ \x1b[1;97m", "\x1b[0m\n"),
-            "│  ",
-        ),
-        report_node_last_formatting: NodeConfig::new(
-            ("╰─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
-            ("╰─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
-            ("   │ \x1b[1;97m", "\x1b[0m\n"),
-            ("   │ \x1b[1;97m", "\x1b[0m\n"),
-            "   ",
-        ),
-        attachment_inline_formatting_middle: ItemFormatting::new(
-            ("├ ", "\n"),
-            ("├ ", "\n"),
-            ("│ ", "\n"),
-            ("│ ", "\n"),
-        ),
-        attachment_inline_formatting_last: ItemFormatting::new(
-            ("╰ ", "\n"),
-            ("╰ ", "\n"),
-            ("  ", "\n"),
-            ("  ", "\n"),
-        ),
-        attachment_headered_formatting_middle: NodeConfig::new(
-            ("├ \x1b[4m", "\x1b[0m\n"),
-            ("├ \x1b[4m", "\x1b[0m\n"),
-            ("│\x1b[4m", "\x1b[0m\n"),
-            ("│\x1b[4m", "\x1b[0m\n"),
-            "│ ",
-        ),
-        attachment_headered_formatting_last: NodeConfig::new(
-            ("╰ \x1b[4m", "\x1b[0m\n"),
-            ("╰ \x1b[4m", "\x1b[0m\n"),
-            (" \x1b[4m", "\x1b[0m\n"),
-            (" \x1b[4m", "\x1b[0m\n"),
-            "  ",
-        ),
-        attachment_headered_formatting_data: ItemFormatting::new(
-            ("│ ", "\n"),
-            ("│ ", "\n"),
-            ("│ ", "\n"),
-            ("│ ", "\n"),
-        ),
-        attachment_headered_data_prefix: None,
-        attachment_headered_data_suffix: Some("╰─\n"),
-        notice_see_also_middle_formatting: LineFormatting::new("├ See \x1b[4m", "\x1b[0m below\n"),
-        notice_see_also_last_formatting: LineFormatting::new("╰ See \x1b[4m", "\x1b[0m below\n"),
-        notice_opaque_middle_formatting: LineFormatting::new("├ ", "\n"),
-        notice_opaque_last_formatting: LineFormatting::new("╰ ", "\n"),
-        attachment_child_separator: Some("│\n"),
-        child_child_separator: Some("│\n"),
-        report_report_separator: "━━\n",
-        report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
-        appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
-        appendix_header: LineFormatting::new(" \x1b[4m", "\x1b[0m\n\n"),
-        appendix_body: ItemFormatting::new((" ", "\n"), (" ", "\n"), (" ", "\n"), (" ", "\n")),
-        appendices_footer: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
-        no_appendices_footer: "",
-    };
-
     /// A predefined configuration that uses Unicode box-drawing characters
     /// without ANSI color codes.
     ///
@@ -486,6 +403,86 @@ impl DefaultReportFormatter {
         report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         appendix_header: LineFormatting::new(" ", "\n\n"),
+        appendix_body: ItemFormatting::new((" ", "\n"), (" ", "\n"), (" ", "\n"), (" ", "\n")),
+        appendices_footer: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        no_appendices_footer: "",
+    };
+    /// A predefined configuration that uses Unicode box-drawing characters with
+    /// ANSI color codes.
+    ///
+    /// This configuration provides the richest visual experience with Unicode
+    /// box-drawing characters (like `├`, `╰`, `│`) and ANSI color codes for
+    /// enhanced readability. Suitable for modern terminals and development
+    /// environments.
+    pub const UNICODE_COLORS: Self = Self {
+        report_header: "\n",
+        report_line_prefix_always: " ",
+        appendix_line_prefix_always: "",
+        report_node_standalone_formatting: NodeConfig::new(
+            ("\x1b[97m● \x1b[1m", "\x1b[0m\n"),
+            ("\x1b[97m● \x1b[1m", "\x1b[0m\n"),
+            ("│ \x1b[1;97m", "\x1b[0m\n"),
+            ("│ \x1b[1;97m", "\x1b[0m\n"),
+            "",
+        ),
+        report_node_middle_formatting: NodeConfig::new(
+            ("├─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
+            ("├─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
+            ("│  │ \x1b[1;97m", "\x1b[0m\n"),
+            ("│  │ \x1b[1;97m", "\x1b[0m\n"),
+            "│  ",
+        ),
+        report_node_last_formatting: NodeConfig::new(
+            ("╰─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
+            ("╰─ \x1b[97m● \x1b[1m", "\x1b[0m\n"),
+            ("   │ \x1b[1;97m", "\x1b[0m\n"),
+            ("   │ \x1b[1;97m", "\x1b[0m\n"),
+            "   ",
+        ),
+        attachment_inline_formatting_middle: ItemFormatting::new(
+            ("├ ", "\n"),
+            ("├ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+        ),
+        attachment_inline_formatting_last: ItemFormatting::new(
+            ("╰ ", "\n"),
+            ("╰ ", "\n"),
+            ("  ", "\n"),
+            ("  ", "\n"),
+        ),
+        attachment_headered_formatting_middle: NodeConfig::new(
+            ("├ \x1b[4m", "\x1b[0m\n"),
+            ("├ \x1b[4m", "\x1b[0m\n"),
+            ("│\x1b[4m", "\x1b[0m\n"),
+            ("│\x1b[4m", "\x1b[0m\n"),
+            "│ ",
+        ),
+        attachment_headered_formatting_last: NodeConfig::new(
+            ("╰ \x1b[4m", "\x1b[0m\n"),
+            ("╰ \x1b[4m", "\x1b[0m\n"),
+            (" \x1b[4m", "\x1b[0m\n"),
+            (" \x1b[4m", "\x1b[0m\n"),
+            "  ",
+        ),
+        attachment_headered_formatting_data: ItemFormatting::new(
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+        ),
+        attachment_headered_data_prefix: None,
+        attachment_headered_data_suffix: Some("╰─\n"),
+        notice_see_also_middle_formatting: LineFormatting::new("├ See \x1b[4m", "\x1b[0m below\n"),
+        notice_see_also_last_formatting: LineFormatting::new("╰ See \x1b[4m", "\x1b[0m below\n"),
+        notice_opaque_middle_formatting: LineFormatting::new("├ ", "\n"),
+        notice_opaque_last_formatting: LineFormatting::new("╰ ", "\n"),
+        attachment_child_separator: Some("│\n"),
+        child_child_separator: Some("│\n"),
+        report_report_separator: "━━\n",
+        report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
+        appendix_header: LineFormatting::new(" \x1b[4m", "\x1b[0m\n\n"),
         appendix_body: ItemFormatting::new((" ", "\n"), (" ", "\n"), (" ", "\n"), (" ", "\n")),
         appendices_footer: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         no_appendices_footer: "",
