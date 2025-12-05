@@ -5,9 +5,9 @@
 //!
 //! # Built-in Formatters
 //!
-//! By default, rootcause uses [`DefaultReportFormatter::UNICODE_ANSI`], which
-//! provides Unicode box-drawing characters with ANSI color codes for modern
-//! terminals. An ASCII-only variant is also available:
+//! By default, rootcause uses [`DefaultReportFormatter::UNICODE`], which
+//! provides Unicode box-drawing characters without ANSI colors. Other variants
+//! are also available:
 //!
 //! ```rust
 //! use rootcause::{
@@ -19,7 +19,7 @@
 //! };
 //!
 //! // Switch to ASCII-only output globally (affects all reports)
-//! register_report_formatter_hook(DefaultReportFormatter::ASCII_NO_ANSI);
+//! register_report_formatter_hook(DefaultReportFormatter::ASCII);
 //!
 //! let report = report!("database connection failed");
 //! println!("{}", report);
@@ -41,7 +41,7 @@
 //! // This uses ASCII-only for this specific report
 //! println!(
 //!     "{}",
-//!     report.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI)
+//!     report.format_with_hook(&DefaultReportFormatter::ASCII)
 //! );
 //! ```
 //!
@@ -63,7 +63,7 @@
 //! [`Display`]: core::fmt::Display
 //! [`Debug`]: core::fmt::Debug
 //! [`Report::format_with_hook`]: crate::Report::format_with_hook
-//! [`DefaultReportFormatter::UNICODE_ANSI`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter::UNICODE_ANSI
+//! [`DefaultReportFormatter::UNICODE`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter::UNICODE
 
 use core::{any::Any, fmt};
 

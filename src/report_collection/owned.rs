@@ -532,7 +532,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// collection.push(report!("Error 2").into_cloneable());
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = collection.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI);
+    /// let formatted = collection.format_with_hook(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]

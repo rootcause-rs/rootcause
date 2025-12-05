@@ -686,7 +686,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// let report_ref = report.as_ref();
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = report_ref.format_with_hook(&DefaultReportFormatter::ASCII_NO_ANSI);
+    /// let formatted = report_ref.format_with_hook(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]
