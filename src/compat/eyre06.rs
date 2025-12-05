@@ -1,4 +1,7 @@
-//! Bidirectional integration with the [`eyre`] error handling library.
+//! Bidirectional integration with the [`eyre`] 0.6.x error handling library.
+//!
+//! This module specifically supports `eyre` version 0.6.x. To enable this
+//! integration, add the `compat-eyre06` feature flag to your `Cargo.toml`.
 //!
 //! # Overview
 //!
@@ -49,7 +52,7 @@
 //! Use the [`IntoEyre`] trait to convert reports into eyre reports:
 //!
 //! ```
-//! use rootcause::prelude::*;
+//! use rootcause::{compat::eyre06::IntoEyre, prelude::*};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(report!("database connection failed"))
@@ -99,7 +102,7 @@
 //!
 //! ```
 //! use eyre::WrapErr;
-//! use rootcause::{Report, prelude::IntoEyre};
+//! use rootcause::{Report, compat::eyre06::IntoEyre};
 //!
 //! fn rootcause_function() -> Result<String, Report> {
 //!     Err(rootcause::report!("connection failed"))
@@ -214,7 +217,7 @@ impl<T> IntoRootcause for eyre::Result<T> {
 /// ## Converting a Result
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// use rootcause::{compat::eyre06::IntoEyre, prelude::*};
 ///
 /// fn uses_rootcause() -> Result<i32, Report> {
 ///     Err(report!("failed"))
@@ -229,7 +232,7 @@ impl<T> IntoRootcause for eyre::Result<T> {
 /// ## Converting a Report
 ///
 /// ```
-/// use rootcause::prelude::*;
+/// use rootcause::{compat::eyre06::IntoEyre, prelude::*};
 ///
 /// let report = report!("operation failed").attach("debug info");
 /// let eyre_err: eyre::Report = report.into_eyre();
@@ -264,7 +267,7 @@ pub trait IntoEyre {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::prelude::*;
+    /// use rootcause::{compat::eyre06::IntoEyre, prelude::*};
     ///
     /// // Convert a result
     /// let result: Result<i32, Report> = Ok(42);

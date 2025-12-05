@@ -7,7 +7,7 @@
 //! # Running this Example
 //!
 //! ```bash
-//! cargo run --example anyhow_interop --features anyhow
+//! cargo run --example anyhow_interop --features compat-anyhow1
 //! ```
 //!
 //! # Conversion Overview
@@ -24,7 +24,7 @@
 // Import only what we need to avoid conflicting with anyhow's Context trait
 use rootcause::{
     Report, bail,
-    compat::{IntoRootcause, anyhow::IntoAnyhow},
+    compat::{IntoRootcause, anyhow1::IntoAnyhow},
 };
 
 // ============================================================================

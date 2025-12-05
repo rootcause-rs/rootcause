@@ -10,6 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Add a compatibility module for boxed errors [#70](https://github.com/rootcause-rs/rootcause/pull/70)
+- Add a compatibility module for error-stack v0.5 [#75](https://github.com/rootcause-rs/rootcause/pull/75)
+
+### Changed
+
+- The default report formatter no longer uses ANSI colors [#74](https://github.com/rootcause-rs/rootcause/pull/74)
+- Re-organize the compatibility modules [#75](https://github.com/rootcause-rs/rootcause/pull/75)
 
 ## [0.10.0] - 2025-11-24
 

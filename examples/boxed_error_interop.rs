@@ -13,7 +13,8 @@
 //! # Conversion Overview
 //!
 //! ## From Boxed Errors to Rootcause
-//! - `.into_rootcause()` - Convert `Result<T, Box<dyn Error>>` or `Box<dyn Error>`
+//! - `.into_rootcause()` - Convert `Result<T, Box<dyn Error>>` or `Box<dyn
+//!   Error>`
 //!
 //! ## From Rootcause to Boxed Errors
 //! - `.into_boxed_error()` - Convert `Result<T, Report>` or `Report`
@@ -25,13 +26,14 @@
 //! - `SendSync` reports → `Box<dyn Error + Send + Sync>`
 //! - `Local` reports → `Box<dyn Error>`
 
+use std::{error::Error, rc::Rc};
+
 use rootcause::{
     Report, bail,
-    compat::IntoRootcause,
+    compat::{IntoRootcause, boxed_error::IntoBoxedError},
     markers::{Local, SendSync},
     prelude::*,
 };
-use std::{error::Error, rc::Rc};
 
 // ============================================================================
 // Example 1: Calling boxed error code from rootcause
@@ -85,7 +87,8 @@ fn some_local_rootcause_function()
 }
 
 fn boxed_error_calls_rootcause() -> Result<(), Box<dyn Error + Send + Sync>> {
-    // Use .into_boxed_error() to convert Result<T, Report> to Result<T, Box<dyn Error + Send + Sync>>
+    // Use .into_boxed_error() to convert Result<T, Report> to
+    // Result<T, Box<dyn Error + Send + Sync>>
     let _value = some_rootcause_function().into_boxed_error()?;
 
     println!("Got rootcause value");
