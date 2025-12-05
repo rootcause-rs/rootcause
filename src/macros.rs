@@ -11,7 +11,7 @@
 /// When the first argument is a string literal, the macro works like
 /// [`format!()`], creating a report with a formatted string as context:
 ///
-/// ```rust
+/// ```
 /// use rootcause::prelude::*;
 ///
 /// let report: Report = report!("File not found");
@@ -26,7 +26,7 @@
 ///
 /// When given any other expression, the macro creates a report from that value:
 ///
-/// ```rust
+/// ```
 /// use rootcause::prelude::*;
 /// # use std::io;
 ///

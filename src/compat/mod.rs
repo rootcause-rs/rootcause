@@ -147,6 +147,16 @@ pub trait IntoRootcause {
     /// - For error types: wraps the error in a [`Report`]
     /// - For `Result` types: converts the error variant while preserving the
     ///   success value
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::compat::IntoRootcause;
+    ///
+    /// let boxed: Box<dyn std::error::Error + Send + Sync> =
+    ///     Box::new(std::io::Error::from(std::io::ErrorKind::NotFound));
+    /// let report: rootcause::Report = boxed.into_rootcause();
+    /// ```
     fn into_rootcause(self) -> Self::Output;
 }
 
@@ -183,6 +193,18 @@ pub mod eyre06;
 /// # Type Parameters
 ///
 /// - `C`: The context type of the wrapped report
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::{Report, compat::ReportAsError};
+///
+/// fn requires_error_trait(err: impl std::error::Error) {}
+///
+/// let report = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
+/// let as_error = ReportAsError(report.into_cloneable());
+/// requires_error_trait(as_error);
+/// ```
 pub struct ReportAsError<C: ?Sized + 'static = Dynamic, T: 'static = markers::SendSync>(
     pub Report<C, markers::Cloneable, T>,
 );

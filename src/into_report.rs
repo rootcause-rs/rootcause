@@ -44,7 +44,7 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// Direct usage is possible, though the alternatives above are often more
 /// ergonomic:
 ///
-/// ```rust
+/// ```
 /// use std::io;
 ///
 /// use rootcause::{IntoReport, prelude::*};
@@ -140,7 +140,7 @@ where
 /// Direct usage is possible, though the alternatives above are often more
 /// ergonomic:
 ///
-/// ```rust
+/// ```
 /// use std::io;
 ///
 /// use rootcause::{IntoReportCollection, prelude::*, report_collection::ReportCollection};

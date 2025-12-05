@@ -509,7 +509,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct LibError;
@@ -561,7 +561,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct LibError;
@@ -624,7 +624,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::{preformatted::PreformattedContext, prelude::*};
     /// # #[derive(Debug)]
     /// struct MyError {
@@ -845,7 +845,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::{ReportConversion, markers::Mutable, prelude::*};
     /// # #[derive(Debug)]
     /// enum AppError { Parse }

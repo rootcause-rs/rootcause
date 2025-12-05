@@ -38,7 +38,7 @@
 //!
 //! ## Quick Example
 //!
-//! ```rust
+//! ```
 //! use rootcause::prelude::{Report, ResultExt};
 //!
 //! fn read_config(path: &str) -> Result<String, Report> {
@@ -116,7 +116,7 @@
 //!
 //! **Most common usage:**
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! // Just use Report - works like anyhow::Error
 //! fn might_fail() -> Result<(), Report> {
@@ -126,7 +126,7 @@
 //!
 //! **For type safety:**
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! #[derive(Debug)]
 //! struct MyError;
@@ -174,7 +174,7 @@
 //!
 //! [`Dynamic`]: crate::markers::Dynamic
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! // Can return any error type
 //! fn might_fail() -> Result<(), Report> {
@@ -187,7 +187,7 @@
 //! The root error must be `YourErrorType`, but child errors can be anything.
 //! Callers can use `.current_context()` to pattern match on the typed error.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! #[derive(Debug)]
 //! struct ConfigError {/* ... */}
@@ -221,7 +221,7 @@
 //! `Arc`), but the top-level [`Report`] doesn't implement `Clone`. Start here,
 //! then convert to [`Cloneable`] if you need to clone the entire tree.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! let mut report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let report = report.attach("debug info"); // ✅ Can mutate root
@@ -233,7 +233,7 @@
 //! The [`Report`] can be cloned cheaply (via `Arc`), but can't be mutated. Use
 //! when you need to pass the same error to multiple places.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let cloneable = report.into_cloneable();
@@ -257,7 +257,7 @@
 //! The [`Report`] and all its contents are `Send + Sync`. Most types (String,
 //! Vec, primitives) are already `Send + Sync`, so this just works.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable, markers::SendSync> = report!("error".to_string());
 //!
@@ -273,7 +273,7 @@
 //! Use when your error contains thread-local data like `Rc`, raw pointers, or
 //! other `!Send` types.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! use std::rc::Rc;
 //!
@@ -374,8 +374,8 @@ pub use self::{
 
 /// A [`Result`](core::result::Result) type alias where the error is [`Report`].
 ///
-/// This is a convenient shorthand for functions that return errors as [`Report`].
-/// The context type defaults to [`Dynamic`].
+/// This is a convenient shorthand for functions that return errors as
+/// [`Report`]. The context type defaults to [`Dynamic`].
 ///
 /// # Examples
 ///
