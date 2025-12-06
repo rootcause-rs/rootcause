@@ -16,7 +16,7 @@ members = ["rootcause-internals"]
 [features]
 default = []
 std = []
-backtrace = ["dep:backtrace", "dep:regex", "std"]
+backtrace = ["dep:backtrace", "dep:regex", "std", "dep:unicode-ident"]
 
 # Compatibility traits
 compat-anyhow1 = ["dep:anyhow"]
@@ -44,6 +44,7 @@ error-stack = { version = "0.6.0", default-features = false, optional = true }
 error-stack05 = { package = "error-stack", version = "0.5.0", default-features = false, optional = true }
 eyre = { version = "0.6.12", default-features = false, optional = true }
 regex = { version = "1.12.2", default-features = false, optional = true }
+unicode-ident = { version = "1.0.22", optional = true }
 
 # Internal dependencies
 rootcause-internals = { path = "rootcause-internals", version = "=0.11.0" }

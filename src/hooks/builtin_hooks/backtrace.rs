@@ -6,7 +6,7 @@
 
 use alloc::borrow::Cow;
 use core::{fmt, panic::Location};
-use std::{path::PathBuf, sync::OnceLock};
+use std::sync::OnceLock;
 
 use backtrace::BytesOrWideString;
 use rootcause_internals::handlers::{
@@ -59,7 +59,7 @@ pub struct Frame {
 #[derive(Debug)]
 pub struct FramePath {
     /// The raw file path from the debug information.
-    pub raw_path: PathBuf,
+    pub raw_path: String,
     /// The crate name if detected from the path.
     pub crate_name: Option<Cow<'static, str>>,
     /// Common path prefix information for shortening display.
@@ -81,16 +81,61 @@ pub struct FramePrefix {
 #[derive(Copy, Clone)]
 pub struct BacktraceHandler<const SHOW_FULL_PATH: bool>;
 
+fn get_function_name(s: &str) -> &str {
+    let mut word_start = 0usize;
+    let mut word_end = 0usize;
+    let mut angle_nesting_level = 0u64;
+    let mut curly_nesting_level = 0u64;
+    let mut potential_function_arrow = false;
+    let mut inside_word = false;
+
+    for (i, c) in s.char_indices() {
+        if curly_nesting_level == 0 && angle_nesting_level == 0 {
+            if !inside_word && unicode_ident::is_xid_start(c) {
+                word_start = i;
+                inside_word = true;
+            } else if inside_word && !unicode_ident::is_xid_continue(c) {
+                word_end = i;
+                inside_word = false;
+            }
+        }
+
+        let was_potential_function_arrow = potential_function_arrow;
+        potential_function_arrow = c == '-';
+
+        if c == '<' {
+            angle_nesting_level = angle_nesting_level.saturating_add(1);
+        } else if c == '>' && !was_potential_function_arrow {
+            angle_nesting_level = angle_nesting_level.saturating_sub(1);
+        } else if c == '{' {
+            curly_nesting_level = curly_nesting_level.saturating_add(1);
+            if !inside_word && curly_nesting_level == 1 && angle_nesting_level == 0 {
+                word_start = i;
+                inside_word = true;
+            }
+        } else if c == '}' {
+            curly_nesting_level = curly_nesting_level.saturating_sub(1);
+            if inside_word && curly_nesting_level == 0 {
+                word_end = i + 1;
+                inside_word = false;
+            }
+        }
+    }
+
+    if word_start < word_end {
+        &s[word_start..word_end]
+    } else {
+        &s[word_start..]
+    }
+}
+
 impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandler<SHOW_FULL_PATH> {
     fn display(value: &Backtrace, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         const MAX_UNWRAPPED_SYM_LENGTH: usize = 25;
         let mut max_seen_length = 0;
         for entry in &value.entries {
             if let BacktraceEntry::Frame(frame) = entry {
-                let sym = frame
-                    .sym_demangled
-                    .rsplit_once("::")
-                    .map_or(frame.sym_demangled.as_str(), |(_, sym)| sym);
+                let sym = get_function_name(&frame.sym_demangled);
                 if sym.len() <= MAX_UNWRAPPED_SYM_LENGTH && sym.len() > max_seen_length {
                     max_seen_length = sym.len();
                 }
@@ -110,10 +155,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                     continue;
                 }
                 BacktraceEntry::Frame(frame) => {
-                    let sym = frame
-                        .sym_demangled
-                        .rsplit_once("::")
-                        .map_or(frame.sym_demangled.as_str(), |(_, sym)| sym);
+                    let sym = get_function_name(&frame.sym_demangled);
 
                     if sym.len() <= MAX_UNWRAPPED_SYM_LENGTH {
                         write!(f, "{:<max_seen_length$} - ", sym)?;
@@ -123,11 +165,11 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
 
                     if let Some(path) = &frame.frame_path {
                         if SHOW_FULL_PATH {
-                            write!(f, "{}", path.raw_path.display())?;
+                            write!(f, "{}", path.raw_path)?;
                         } else if let Some(split_path) = &path.split_path {
                             write!(f, "[..]/{}", split_path.suffix)?;
                         } else {
-                            write!(f, "{}", path.raw_path.display())?;
+                            write!(f, "{}", path.raw_path)?;
                         }
 
                         if let Some(lineno) = frame.lineno {
@@ -417,10 +459,24 @@ impl Backtrace {
         while let Some(last) = entries.last() {
             match last {
                 BacktraceEntry::Frame(frame) => {
+                    let mut skip = false;
                     if let Some(frame_path) = &frame.frame_path
                         && let Some(crate_name) = &frame_path.crate_name
                         && filter.skipped_final_crates.contains(&&**crate_name)
                     {
+                        skip = true;
+                    } else if frame.sym_demangled == "__libc_start_call_main"
+                        || frame.sym_demangled == "__libc_start_main_impl"
+                    {
+                        skip = true;
+                    } else if let Some(frame_path) = &frame.frame_path
+                        && frame.sym_demangled == "_start"
+                        && frame_path.raw_path.contains("zig/libc/glibc")
+                    {
+                        skip = true;
+                    }
+
+                    if skip {
                         total_omitted_frames += 1;
                         entries.pop();
                     } else {
@@ -470,7 +526,7 @@ impl FramePath {
         let path_str = path.to_string();
 
         if let Some(captures) = std_regex.captures(&path_str) {
-            let raw_path = path.into_path_buf();
+            let raw_path = path.to_str_lossy().into_owned();
             let crate_capture = captures.get(1).unwrap();
             let split = crate_capture.start();
             let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
@@ -485,7 +541,7 @@ impl FramePath {
                 crate_name: Some(crate_capture.as_str().to_string().into()),
             }
         } else if let Some(captures) = registry_regex.captures(&path_str) {
-            let raw_path = path.into_path_buf();
+            let raw_path = path.to_str_lossy().into_owned();
             let crate_capture = captures.get(1).unwrap();
             let split = crate_capture.start();
             let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
@@ -503,7 +559,7 @@ impl FramePath {
             ROOTCAUSE_MATCHER
             && path_str.starts_with(rootcause_matcher_prefix)
         {
-            let raw_path = path.into_path_buf();
+            let raw_path = path.to_str_lossy().into_owned();
             let (prefix, suffix) = (
                 &path_str[..rootcause_splitter_prefix_len],
                 &path_str[rootcause_splitter_prefix_len + 1..],
@@ -518,7 +574,7 @@ impl FramePath {
                 crate_name: Some(Cow::Borrowed("rootcause")),
             }
         } else {
-            let raw_path = path.into_path_buf();
+            let raw_path = path.to_str_lossy().into_owned();
             Self {
                 raw_path,
                 crate_name: None,
