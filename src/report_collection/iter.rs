@@ -5,11 +5,11 @@ use crate::{Report, ReportRef, markers::Cloneable};
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access {
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::RawReport;
 
-    use crate::markers::SendSync;
+    use crate::markers::{Dynamic, SendSync};
 
     /// An iterator over references to reports in a [`ReportCollection`].
     ///
@@ -36,7 +36,7 @@ mod limit_field_access {
     #[must_use]
     pub struct ReportCollectionIter<
         'a,
-        Context: ?Sized + 'static = dyn Any,
+        Context: ?Sized + 'static = Dynamic,
         ThreadSafety: 'static = SendSync,
     > {
         /// # Safety
@@ -45,10 +45,10 @@ mod limit_field_access {
         /// as this struct exists:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 3. If `C` is a `Sized` type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -68,10 +68,10 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 3. If `C` is a `Sized` type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -109,7 +109,7 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: No mutation is performed that would
+        /// 1. If `C` is a `Sized` type: No mutation is performed that would
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 2. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
@@ -197,11 +197,11 @@ impl<'a, C: ?Sized, T> Unpin for ReportCollectionIter<'a, C, T> {}
 /// an unsafe field and remove this module.
 mod limit_field_access2 {
     use alloc::vec::Vec;
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::RawReport;
 
-    use crate::markers::SendSync;
+    use crate::markers::{Dynamic, SendSync};
 
     /// An owning iterator over reports in a [`ReportCollection`].
     ///
@@ -230,7 +230,7 @@ mod limit_field_access2 {
     /// [`ReportCollection`]: crate::report_collection::ReportCollection
     #[must_use]
     pub struct ReportCollectionIntoIter<
-        Context: ?Sized + 'static = dyn Any,
+        Context: ?Sized + 'static = Dynamic,
         ThreadSafety: 'static = SendSync,
     > {
         /// # Safety
@@ -239,10 +239,10 @@ mod limit_field_access2 {
         /// as this struct exists:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 3. If `C` is a `Sized` type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -263,10 +263,10 @@ mod limit_field_access2 {
         /// The caller must ensure:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts of the [`RawReport`]s are
+        /// 3. If `C` is a `Sized` type: The contexts of the [`RawReport`]s are
         ///    all of type `C`.
         /// 4. All references to these report or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -306,7 +306,7 @@ mod limit_field_access2 {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If `C` is a concrete type: No mutation is performed that would
+        /// 1. If `C` is a `Sized` type: No mutation is performed that would
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 2. No mutation is performed that would invalidate the shared
         ///    ownership invariant.

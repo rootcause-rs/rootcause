@@ -106,7 +106,7 @@ fn complex_operation_with_retries() -> Result<String, Report> {
             Ok(data) => return Ok(data),
             Err(err) => {
                 if attempt == MAX_RETRIES {
-                    return Err(err.context("All retry attempts exhausted").into_dyn_any());
+                    return Err(err.context("All retry attempts exhausted").into_dynamic());
                 }
             }
         }
@@ -230,7 +230,7 @@ fn main() {
             println!("• This enables analytics, monitoring, and intelligent handling");
             println!("\nThis is what makes rootcause errors \"inspectable\"!");
             println!("\nNote: For type-safe access without downcasting, use Report<NetworkError>");
-            println!("instead of Report<dyn Any>. See typed_reports.rs for examples.");
+            println!("instead of Report<Dynamic>. See typed_reports.rs for examples.");
         }
     }
 }

@@ -34,15 +34,12 @@
 //! - **[`handlers`]**: Built-in error handlers for common scenarios
 //! - **[`markers`]**: Type markers for controlling report behavior
 //! - **[`report_attachment!`]**: Macro for attaching contextual data
-//! - **[`Any`]**: Re-exported from `core::any` for dynamic typing
 //!
 //! # When to Use the Prelude
 //!
 //! Use the prelude when you need standard error handling functionality without
 //! writing multiple import statements. For more specialized needs, import
 //! specific items directly from their respective modules.
-
-pub use core::any::Any;
 
 pub use crate::{
     Report, bail, compat::IntoRootcause, handlers, iterator_ext::IteratorExt, markers, report,

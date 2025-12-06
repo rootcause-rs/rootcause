@@ -1,4 +1,4 @@
-use core::any::{Any, TypeId};
+use core::any::TypeId;
 
 use rootcause_internals::{
     RawReport,
@@ -8,7 +8,7 @@ use rootcause_internals::{
 use crate::{
     ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
-    markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
+    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
@@ -18,11 +18,11 @@ use crate::{
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access {
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::{RawReport, RawReportMut, RawReportRef};
 
-    use crate::markers::{self, Mutable, SendSync};
+    use crate::markers::{self, Dynamic, Mutable, SendSync};
 
     /// An error report that contains a context, child reports, and attachments.
     ///
@@ -35,7 +35,7 @@ mod limit_field_access {
     /// [`Report`] has three type parameters that control its behavior:
     ///
     /// - **Context (`C`)**: The type of the root error or context (defaults to
-    ///   `dyn Any`)
+    ///   [`Dynamic`])
     /// - **Ownership (`O`)**: Controls whether the report can be cloned
     ///   - [`Mutable`]: Unique ownership, can modify but cannot clone (default)
     ///   - [`Cloneable`]: Shared ownership via [`Arc`], can clone but cannot
@@ -75,7 +75,7 @@ mod limit_field_access {
     /// [`report!()`]: crate::report!
     #[repr(transparent)]
     pub struct Report<
-        Context: ?Sized + 'static = dyn Any,
+        Context: ?Sized + 'static = Dynamic,
         Ownership: 'static = Mutable,
         ThreadSafety: 'static = SendSync,
     > {
@@ -84,10 +84,10 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `O` must either be `Mutable` or `Cloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a concrete type: The context embedded in the report
+        /// 4. If `C` is a `Sized` type: The context embedded in the report
         ///    must be of type `C`
         /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
@@ -113,10 +113,10 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `O` must either be `Mutable` or `Cloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a concrete type: The context embedded in the report
+        /// 4. If `C` is a `Sized` type: The context embedded in the report
         ///    must be of type `C`
         /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
@@ -302,7 +302,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     #[must_use]
     pub fn from_parts<H>(
         context: C,
-        children: ReportCollection<dyn Any, T>,
+        children: ReportCollection<Dynamic, T>,
         attachments: ReportAttachments<T>,
     ) -> Self
     where
@@ -310,7 +310,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         H: ContextHandler<C>,
     {
         let mut report: Self = Self::from_parts_unhooked::<H>(context, children, attachments);
-        C::run_creation_hooks(report.as_mut().into_dyn_any());
+        C::run_creation_hooks(report.as_mut().into_dynamic());
         report
     }
 
@@ -333,7 +333,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     #[must_use]
     pub fn from_parts_unhooked<H>(
         context: C,
-        children: ReportCollection<dyn Any, T>,
+        children: ReportCollection<Dynamic, T>,
         attachments: ReportAttachments<T>,
     ) -> Self
     where
@@ -392,7 +392,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// );
     ///
     /// // Add some content
-    /// let child_report = report!("child error").into_dyn_any().into_cloneable();
+    /// let child_report = report!("child error").into_dynamic().into_cloneable();
     /// report.children_mut().push(child_report);
     /// report.attachments_mut().push("debug info".into());
     ///
@@ -411,7 +411,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// );
     /// ```
     #[must_use]
-    pub fn into_parts(self) -> (C, ReportCollection<dyn Any, T>, ReportAttachments<T>) {
+    pub fn into_parts(self) -> (C, ReportCollection<Dynamic, T>, ReportAttachments<T>) {
         let raw = self.into_raw();
 
         // SAFETY:
@@ -421,14 +421,14 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         let (context, children, attachments) = unsafe { raw.into_parts() };
 
         // SAFETY:
-        // 1. `C=dyn Any` for the created collection, so this is trivially true.
+        // 1. `C=Dynamic` for the created collection, so this is trivially true.
         // 2. The invariants of this type guarantee that `T` is either `Local` or
         //    `SendSync`.
-        // 3. `C=dyn Any` for the created collection, so this is trivially true.
+        // 3. `C=Dynamic` for the created collection, so this is trivially true.
         // 4. This is guaranteed by the invariants of this type.
         // 5. If `T=Local`, then this is trivially true. If `T=SendSync`, then this is
         //    guaranteed by the invariants of this type.
-        let children = unsafe { ReportCollection::<dyn Any, T>::from_raw(children) };
+        let children = unsafe { ReportCollection::<Dynamic, T>::from_raw(children) };
 
         // SAFETY:
         // 1. `T` is guaranteed to either be `Local` or `SendSync` by the invariants of
@@ -555,7 +555,7 @@ impl<C: ?Sized, T> Report<C, Mutable, T> {
         A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
     {
         self.attachments_mut()
-            .push(ReportAttachment::new(attachment).into_dyn_any());
+            .push(ReportAttachment::new(attachment).into_dynamic());
         self
     }
 
@@ -580,7 +580,7 @@ impl<C: ?Sized, T> Report<C, Mutable, T> {
         H: handlers::AttachmentHandler<A>,
     {
         self.attachments_mut()
-            .push(ReportAttachment::new_custom::<H>(attachment).into_dyn_any());
+            .push(ReportAttachment::new_custom::<H>(attachment).into_dynamic());
         self
     }
 
@@ -593,7 +593,7 @@ impl<C: ?Sized, T> Report<C, Mutable, T> {
     /// let children_mut: &mut ReportCollection = report.children_mut();
     /// ```
     #[must_use]
-    pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
+    pub fn children_mut(&mut self) -> &mut ReportCollection<Dynamic, T> {
         self.as_mut().into_children_mut()
     }
 
@@ -668,7 +668,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     {
         Report::from_parts::<H>(
             context,
-            ReportCollection::from([self.into_dyn_any().into_cloneable()]),
+            ReportCollection::from([self.into_dynamic().into_cloneable()]),
             ReportAttachments::<T>::new(),
         )
     }
@@ -683,7 +683,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
     #[must_use]
-    pub fn children(&self) -> &ReportCollection<dyn Any, T> {
+    pub fn children(&self) -> &ReportCollection<Dynamic, T> {
         self.as_uncloneable_ref().children()
     }
 
@@ -700,11 +700,11 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         self.as_uncloneable_ref().attachments()
     }
 
-    /// Changes the context type of the [`Report`] to [`dyn Any`].
+    /// Changes the context type of the [`Report`] to [`Dynamic`].
     ///
     /// Calling this method is equivalent to calling `report.into()`, however
     /// this method has been restricted to only change the context mode to
-    /// `dyn Any`.
+    /// [`Dynamic`].
     ///
     /// This method can be useful to help with type inference or to improve code
     /// readability, as it more clearly communicates intent.
@@ -718,27 +718,26 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::prelude::*;
-    /// # use core::any::Any;
+    /// # use rootcause::{prelude::*, markers::Dynamic};
     /// # struct MyError;
     /// # let my_error = MyError;
     /// let report: Report<MyError> = report!(my_error);
-    /// let dyn_report: Report<dyn Any> = report.into_dyn_any();
+    /// let dyn_report: Report<Dynamic> = report.into_dynamic();
     /// ```
     #[must_use]
-    pub fn into_dyn_any(self) -> Report<dyn Any, O, T> {
+    pub fn into_dynamic(self) -> Report<Dynamic, O, T> {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. `C=Dynamic`, so this is trivially true.
         // 2. This is guaranteed by the invariants of this type.
         // 3. This is guaranteed by the invariants of this type.
-        // 4. `C=dyn Any`, so this is trivially true.
+        // 4. `C=Dynamic`, so this is trivially true.
         // 5. This is guaranteed by the invariants of this type.
         // 6. This is guaranteed by the invariants of this type.
         // 7. This is guaranteed by the invariants of this type.
         // 8. This is guaranteed by the invariants of this type.
-        unsafe { Report::<dyn Any, O, T>::from_raw(raw) }
+        unsafe { Report::<Dynamic, O, T>::from_raw(raw) }
     }
 
     /// Changes the ownership of the [`Report`] to [`Cloneable`].
@@ -961,8 +960,8 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
-    /// root.children_mut().push(with_context1.into_dyn_any().into_cloneable());
-    /// root.children_mut().push(with_context2.into_dyn_any().into_cloneable());
+    /// root.children_mut().push(with_context1.into_dynamic().into_cloneable());
+    /// root.children_mut().push(with_context2.into_dynamic().into_cloneable());
     ///
     /// // At this point our report tree looks like this:
     /// // - context for root error
@@ -1009,7 +1008,6 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::Cloneable};
-    /// # use core::any::Any;
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -1020,8 +1018,8 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
-    /// root.children_mut().push(with_context1.into_dyn_any().into_cloneable());
-    /// root.children_mut().push(with_context2.into_dyn_any().into_cloneable());
+    /// root.children_mut().push(with_context1.into_dynamic().into_cloneable());
+    /// root.children_mut().push(with_context2.into_dynamic().into_cloneable());
     ///
     /// let sub_reports: Vec<String> = root
     ///     .iter_sub_reports()  // Note: using iter_sub_reports, not iter_reports
@@ -1049,7 +1047,6 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
-    /// # use core::any::Any;
     /// # #[derive(Default)]
     /// # struct NonSendSyncError(core::cell::Cell<()>);
     /// # let non_send_sync_error = NonSendSyncError::default();
@@ -1067,14 +1064,14 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use rootcause::{prelude::*, markers::Dynamic};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let type_id = report.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     ///
-    /// let report: Report<dyn Any> = report.into_dyn_any();
+    /// let report: Report<Dynamic> = report.into_dynamic();
     /// let type_id = report.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     /// ```
@@ -1108,7 +1105,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use core::any::TypeId;
     /// let report: Report = report!("error message");
     /// let source: Option<&dyn core::error::Error> = report.current_context_error_source();
     /// assert!(source.is_none()); // The context does not implement Error, so no source
@@ -1213,9 +1210,9 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let report: ReportRef<'_, dyn Any, Uncloneable, Local> = self
+        let report: ReportRef<'_, Dynamic, Uncloneable, Local> = self
             .as_uncloneable_ref()
-            .into_dyn_any()
+            .into_dynamic()
             .into_uncloneable()
             .into_local();
         crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
@@ -1283,7 +1280,7 @@ impl<C: Sized, O, T> Report<C, O, T> {
     }
 }
 
-impl<O, T> Report<dyn Any, O, T> {
+impl<O, T> Report<Dynamic, O, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise
@@ -1291,11 +1288,10 @@ impl<O, T> Report<dyn Any, O, T> {
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::prelude::*;
-    /// # use core::any::Any;
+    /// # use rootcause::{prelude::*, markers::Dynamic};
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let dyn_report: Report<dyn Any> = report.into_dyn_any();
+    /// let dyn_report: Report<Dynamic> = report.into_dynamic();
     /// let context: Option<&MyError> = dyn_report.downcast_current_context();
     /// assert!(context.is_some());
     /// ```
@@ -1321,10 +1317,10 @@ impl<O, T> Report<dyn Any, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let dyn_report: Report = report.into_dyn_any();
+    /// let dyn_report: Report = report.into_dynamic();
     ///
     /// // Verify the type first
     /// if dyn_report.current_context_type_id() == TypeId::of::<MyError>() {
@@ -1354,7 +1350,7 @@ impl<O, T> Report<dyn Any, O, T> {
     /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let dyn_report: Report = report.into_dyn_any();
+    /// let dyn_report: Report = report.into_dynamic();
     /// let downcasted: Result<Report<MyError>, _> = dyn_report.downcast_report();
     /// assert!(downcasted.is_ok());
     /// ```
@@ -1387,10 +1383,10 @@ impl<O, T> Report<dyn Any, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let dyn_report: Report = report.into_dyn_any();
+    /// let dyn_report: Report = report.into_dynamic();
     ///
     /// // Verify the type first
     /// if dyn_report.current_context_type_id() == TypeId::of::<MyError>() {
@@ -1548,23 +1544,23 @@ where
     }
 }
 
-impl<C: Sized, T> From<C> for Report<dyn Any, Mutable, T>
+impl<C: Sized, T> From<C> for Report<Dynamic, Mutable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
 {
     #[track_caller]
     fn from(context: C) -> Self {
-        Report::new(context).into_dyn_any()
+        Report::new(context).into_dynamic()
     }
 }
 
-impl<C: Sized, T> From<C> for Report<dyn Any, Cloneable, T>
+impl<C: Sized, T> From<C> for Report<Dynamic, Cloneable, T>
 where
     C: markers::ObjectMarkerFor<T> + core::error::Error,
 {
     #[track_caller]
     fn from(context: C) -> Self {
-        Report::new(context).into_dyn_any().into_cloneable()
+        Report::new(context).into_dynamic().into_cloneable()
     }
 }
 
@@ -1617,20 +1613,20 @@ from_impls!(
     <C>: C => C, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
     <C>: C => C, Mutable => Cloneable, Local => Local, [into_cloneable],
     <C>: C => C, Cloneable => Cloneable, SendSync => Local, [into_local],
-    <C>: C => dyn Any, Mutable => Mutable, SendSync => SendSync, [into_dyn_any],
-    <C>: C => dyn Any, Mutable => Mutable, SendSync => Local, [into_dyn_any, into_local],
-    <C>: C => dyn Any, Mutable => Mutable, Local => Local, [into_dyn_any],
-    <C>: C => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
-    <C>: C => dyn Any, Mutable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
-    <C>: C => dyn Any, Mutable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
-    <C>: C => dyn Any, Cloneable => Cloneable, SendSync => SendSync, [into_dyn_any, into_cloneable],
-    <C>: C => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_dyn_any, into_cloneable, into_local],
-    <C>: C => dyn Any, Cloneable => Cloneable, Local => Local, [into_dyn_any, into_cloneable],
-    <>:  dyn Any => dyn Any, Mutable => Mutable, SendSync => Local, [into_local],
-    <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
-    <>:  dyn Any => dyn Any, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
-    <>:  dyn Any => dyn Any, Mutable => Cloneable, Local => Local, [into_cloneable],
-    <>:  dyn Any => dyn Any, Cloneable => Cloneable, SendSync => Local, [into_local],
+    <C>: C => Dynamic, Mutable => Mutable, SendSync => SendSync, [into_dynamic],
+    <C>: C => Dynamic, Mutable => Mutable, SendSync => Local, [into_dynamic, into_local],
+    <C>: C => Dynamic, Mutable => Mutable, Local => Local, [into_dynamic],
+    <C>: C => Dynamic, Mutable => Cloneable, SendSync => SendSync, [into_dynamic, into_cloneable],
+    <C>: C => Dynamic, Mutable => Cloneable, SendSync => Local, [into_dynamic, into_cloneable, into_local],
+    <C>: C => Dynamic, Mutable => Cloneable, Local => Local, [into_dynamic, into_cloneable],
+    <C>: C => Dynamic, Cloneable => Cloneable, SendSync => SendSync, [into_dynamic, into_cloneable],
+    <C>: C => Dynamic, Cloneable => Cloneable, SendSync => Local, [into_dynamic, into_cloneable, into_local],
+    <C>: C => Dynamic, Cloneable => Cloneable, Local => Local, [into_dynamic, into_cloneable],
+    <>:  Dynamic => Dynamic, Mutable => Mutable, SendSync => Local, [into_local],
+    <>:  Dynamic => Dynamic, Mutable => Cloneable, SendSync => SendSync, [into_cloneable],
+    <>:  Dynamic => Dynamic, Mutable => Cloneable, SendSync => Local, [into_cloneable, into_local],
+    <>:  Dynamic => Dynamic, Mutable => Cloneable, Local => Local, [into_cloneable],
+    <>:  Dynamic => Dynamic, Cloneable => Cloneable, SendSync => Local, [into_local],
 );
 
 #[cfg(test)]
@@ -1651,8 +1647,8 @@ mod tests {
         static_assertions::assert_impl_all!(Report<String, Cloneable, SendSync>: Send, Sync);
         static_assertions::assert_impl_all!(Report<NonSend, Mutable, SendSync>: Send, Sync); // This still makes sense, since you won't actually be able to construct this report
         static_assertions::assert_impl_all!(Report<NonSend, Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_impl_all!(Report<dyn Any, Mutable, SendSync>: Send, Sync);
-        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_all!(Report<Dynamic, Mutable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_all!(Report<Dynamic, Cloneable, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(Report<(), Mutable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(Report<(), Cloneable, Local>: Send, Sync);
@@ -1660,8 +1656,8 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<String, Cloneable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(Report<NonSend, Mutable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(Report<NonSend, Cloneable, Local>: Send, Sync);
-        static_assertions::assert_not_impl_any!(Report<dyn Any, Mutable, Local>: Send, Sync);
-        static_assertions::assert_not_impl_any!(Report<dyn Any, Cloneable, Local>: Send, Sync);
+        static_assertions::assert_not_impl_any!(Report<Dynamic, Mutable, Local>: Send, Sync);
+        static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, Local>: Send, Sync);
     }
 
     #[test]
@@ -1672,8 +1668,8 @@ mod tests {
         static_assertions::assert_impl_all!(Report<String, Cloneable, SendSync>: Unpin);
         static_assertions::assert_impl_all!(Report<NonSend, Mutable, SendSync>: Unpin); // This still makes sense, since you won't actually be able to construct this report
         static_assertions::assert_impl_all!(Report<NonSend, Cloneable, SendSync>: Unpin);
-        static_assertions::assert_impl_all!(Report<dyn Any, Mutable, SendSync>: Unpin);
-        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<Dynamic, Mutable, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(Report<Dynamic, Cloneable, SendSync>: Unpin);
 
         static_assertions::assert_impl_all!(Report<(), Mutable, Local>: Unpin);
         static_assertions::assert_impl_all!(Report<(), Cloneable, Local>: Unpin);
@@ -1681,8 +1677,8 @@ mod tests {
         static_assertions::assert_impl_all!(Report<String, Cloneable, Local>: Unpin);
         static_assertions::assert_impl_all!(Report<NonSend, Mutable, Local>: Unpin);
         static_assertions::assert_impl_all!(Report<NonSend, Cloneable, Local>: Unpin);
-        static_assertions::assert_impl_all!(Report<dyn Any, Mutable, Local>: Unpin);
-        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<Dynamic, Mutable, Local>: Unpin);
+        static_assertions::assert_impl_all!(Report<Dynamic, Cloneable, Local>: Unpin);
     }
 
     #[test]
@@ -1693,8 +1689,8 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<String, Mutable, Local>: Copy, Clone);
         static_assertions::assert_not_impl_any!(Report<NonSend, Mutable, SendSync>: Copy, Clone);
         static_assertions::assert_not_impl_any!(Report<NonSend, Mutable, Local>: Copy, Clone);
-        static_assertions::assert_not_impl_any!(Report<dyn Any, Mutable, SendSync>: Copy, Clone);
-        static_assertions::assert_not_impl_any!(Report<dyn Any, Mutable, Local>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(Report<Dynamic, Mutable, SendSync>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(Report<Dynamic, Mutable, Local>: Copy, Clone);
 
         static_assertions::assert_impl_all!(Report<(), Cloneable, SendSync>: Clone);
         static_assertions::assert_impl_all!(Report<(), Cloneable, Local>: Clone);
@@ -1702,8 +1698,8 @@ mod tests {
         static_assertions::assert_impl_all!(Report<String, Cloneable, Local>: Clone);
         static_assertions::assert_impl_all!(Report<NonSend, Cloneable, SendSync>: Clone);
         static_assertions::assert_impl_all!(Report<NonSend, Cloneable, Local>: Clone);
-        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, SendSync>: Clone);
-        static_assertions::assert_impl_all!(Report<dyn Any, Cloneable, Local>: Clone);
+        static_assertions::assert_impl_all!(Report<Dynamic, Cloneable, SendSync>: Clone);
+        static_assertions::assert_impl_all!(Report<Dynamic, Cloneable, Local>: Clone);
 
         static_assertions::assert_not_impl_any!(Report<(), Cloneable, SendSync>: Copy);
         static_assertions::assert_not_impl_any!(Report<(), Cloneable, Local>: Copy);
@@ -1711,7 +1707,7 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<String, Cloneable, Local>: Copy);
         static_assertions::assert_not_impl_any!(Report<NonSend, Cloneable, SendSync>: Copy);
         static_assertions::assert_not_impl_any!(Report<NonSend, Cloneable, Local>: Copy);
-        static_assertions::assert_not_impl_any!(Report<dyn Any, Cloneable, SendSync>: Copy);
-        static_assertions::assert_not_impl_any!(Report<dyn Any, Cloneable, Local>: Copy);
+        static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, SendSync>: Copy);
+        static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, Local>: Copy);
     }
 }

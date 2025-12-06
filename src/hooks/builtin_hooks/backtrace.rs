@@ -13,7 +13,10 @@ use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
 };
 
-use crate::{hooks::report_creation::ReportCreationHook, report_attachment::ReportAttachment};
+use crate::{
+    hooks::report_creation::ReportCreationHook, markers::Dynamic,
+    report_attachment::ReportAttachment,
+};
 
 /// Stack backtrace information.
 ///
@@ -293,10 +296,7 @@ impl Default for BacktraceFilter {
 }
 
 impl ReportCreationHook for BacktraceCollector {
-    fn on_local_creation(
-        &self,
-        mut report: crate::ReportMut<'_, dyn core::any::Any, crate::markers::Local>,
-    ) {
+    fn on_local_creation(&self, mut report: crate::ReportMut<'_, Dynamic, crate::markers::Local>) {
         let do_capture =
             self.capture_backtrace_for_reports_with_children || report.children().is_empty();
         if do_capture && let Some(backtrace) = Backtrace::capture(&self.filter) {
@@ -305,13 +305,13 @@ impl ReportCreationHook for BacktraceCollector {
             } else {
                 ReportAttachment::new_custom::<BacktraceHandler<false>>(backtrace)
             };
-            report.attachments_mut().push(attachment.into_dyn_any());
+            report.attachments_mut().push(attachment.into_dynamic());
         }
     }
 
     fn on_sendsync_creation(
         &self,
-        mut report: crate::ReportMut<'_, dyn core::any::Any, crate::markers::SendSync>,
+        mut report: crate::ReportMut<'_, Dynamic, crate::markers::SendSync>,
     ) {
         let do_capture =
             self.capture_backtrace_for_reports_with_children || report.children().is_empty();
@@ -321,7 +321,7 @@ impl ReportCreationHook for BacktraceCollector {
             } else {
                 ReportAttachment::new_custom::<BacktraceHandler<false>>(backtrace)
             };
-            report.attachments_mut().push(attachment.into_dyn_any());
+            report.attachments_mut().push(attachment.into_dynamic());
         }
     }
 }

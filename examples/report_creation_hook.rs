@@ -18,7 +18,7 @@ use rootcause::{
         AttachmentCollectorHook, ReportCreationHook, register_attachment_collector_hook,
         register_report_creation_hook,
     },
-    markers::{Local, SendSync},
+    markers::{Dynamic, Local, SendSync},
     prelude::*,
 };
 
@@ -73,7 +73,7 @@ impl core::fmt::Debug for RetryHint {
 struct RetryHintHook;
 
 impl ReportCreationHook for RetryHintHook {
-    fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
+    fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
         // Inspect the error to see if it's a transient network error
         if let Some(io_error) = report.downcast_current_context::<std::io::Error>() {
             let hint = match io_error.kind() {
@@ -96,7 +96,7 @@ impl ReportCreationHook for RetryHintHook {
         }
     }
 
-    fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
+    fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
         // Same logic for SendSync errors
         if let Some(io_error) = report.downcast_current_context::<std::io::Error>() {
             let hint = match io_error.kind() {
@@ -129,7 +129,7 @@ fn simulate_api_request(request_id: u64) -> Result<String, Report> {
         std::io::ErrorKind::ConnectionRefused,
         "Failed to connect to API",
     ))
-    .into_dyn_any())
+    .into_dynamic())
 }
 
 fn file_operation(exists: bool) -> Result<(), Report> {
@@ -139,13 +139,13 @@ fn file_operation(exists: bool) -> Result<(), Report> {
             std::io::ErrorKind::PermissionDenied,
             "Access denied to file",
         ))
-        .into_dyn_any())
+        .into_dynamic())
     } else {
         Err(report!(std::io::Error::new(
             std::io::ErrorKind::NotFound,
             "File not found",
         ))
-        .into_dyn_any())
+        .into_dynamic())
     }
 }
 

@@ -65,7 +65,7 @@
 //! [`Report::format_with_hook`]: crate::Report::format_with_hook
 //! [`DefaultReportFormatter::UNICODE`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter::UNICODE
 
-use core::{any::Any, fmt};
+use core::fmt;
 
 use rootcause_internals::handlers::FormattingFunction;
 use triomphe::Arc;
@@ -74,7 +74,7 @@ use unsize::CoerceUnsize;
 use crate::{
     ReportRef,
     hooks::{builtin_hooks::report_formatter::DefaultReportFormatter, hook_lock::HookLock},
-    markers::{Local, Uncloneable},
+    markers::{Dynamic, Local, Uncloneable},
 };
 
 type Hook = Arc<dyn ReportFormatterHook>;
@@ -96,14 +96,14 @@ static HOOK: HookLock<Hook> = HookLock::new();
 /// use rootcause::{
 ///     ReportRef,
 ///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-///     markers::{Local, Uncloneable},
+///     markers::{Dynamic, Local, Uncloneable},
 ///     prelude::*,
 /// };
 ///
 /// struct SimpleFormatter;
 ///
 /// fn format_indented(
-///     report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+///     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
 ///     indentation: usize,
 ///     formatter: &mut fmt::Formatter<'_>,
 /// ) -> fmt::Result {
@@ -121,7 +121,7 @@ static HOOK: HookLock<Hook> = HookLock::new();
 /// impl ReportFormatterHook for SimpleFormatter {
 ///     fn format_reports(
 ///         &self,
-///         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
 ///         formatter: &mut fmt::Formatter<'_>,
 ///         _function: rootcause::handlers::FormattingFunction,
 ///     ) -> std::fmt::Result {
@@ -145,7 +145,7 @@ pub trait ReportFormatterHook: 'static + Send + Sync {
     /// together.
     fn format_reports(
         &self,
-        reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+        reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
         formatter: &mut fmt::Formatter<'_>,
         report_formatting_function: FormattingFunction,
     ) -> fmt::Result;
@@ -159,7 +159,7 @@ pub trait ReportFormatterHook: 'static + Send + Sync {
     /// collections.
     fn format_report(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
         report_formatting_function: FormattingFunction,
     ) -> fmt::Result {
@@ -168,7 +168,7 @@ pub trait ReportFormatterHook: 'static + Send + Sync {
 }
 
 pub(crate) fn format_report(
-    report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+    report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
@@ -180,7 +180,7 @@ pub(crate) fn format_report(
 }
 
 pub(crate) fn format_reports(
-    reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+    reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
     formatter: &mut fmt::Formatter<'_>,
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
@@ -211,13 +211,13 @@ pub(crate) fn format_reports(
 /// use rootcause::{
 ///     ReportRef,
 ///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-///     markers::{Local, Uncloneable},
+///     markers::{Dynamic, Local, Uncloneable},
 ///     prelude::*,
 /// };
 ///
 /// struct JsonFormatter;
 ///
-/// fn to_json(report: ReportRef<'_, dyn Any, Uncloneable, Local>) -> serde_json::Value {
+/// fn to_json(report: ReportRef<'_, Dynamic, Uncloneable, Local>) -> serde_json::Value {
 ///     let mut obj = serde_json::Map::new();
 ///     obj.insert(
 ///         "message".to_string(),
@@ -235,7 +235,7 @@ pub(crate) fn format_reports(
 /// impl ReportFormatterHook for JsonFormatter {
 ///     fn format_reports(
 ///         &self,
-///         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
 ///         formatter: &mut fmt::Formatter<'_>,
 ///         _function: rootcause::handlers::FormattingFunction,
 ///     ) -> std::fmt::Result {
@@ -254,7 +254,7 @@ pub(crate) fn format_reports(
 /// use rootcause::{
 ///     ReportRef,
 ///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-///     markers::{Local, Uncloneable},
+///     markers::{Dynamic, Local, Uncloneable},
 ///     prelude::*,
 /// };
 ///
@@ -262,7 +262,7 @@ pub(crate) fn format_reports(
 /// impl ReportFormatterHook for FirstFormatter {
 ///     fn format_reports(
 ///         &self,
-///         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
 ///         formatter: &mut std::fmt::Formatter<'_>,
 ///         _function: rootcause::handlers::FormattingFunction,
 ///     ) -> std::fmt::Result {
@@ -274,7 +274,7 @@ pub(crate) fn format_reports(
 /// impl ReportFormatterHook for SecondFormatter {
 ///     fn format_reports(
 ///         &self,
-///         reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
 ///         formatter: &mut std::fmt::Formatter<'_>,
 ///         _function: rootcause::handlers::FormattingFunction,
 ///     ) -> std::fmt::Result {

@@ -86,9 +86,12 @@
 //! // local_report cannot be sent to another thread - won't compile
 //! ```
 
-use core::any::Any;
-
 use crate::ReportMut;
+
+/// LOL
+pub struct Dynamic {
+    _phantom_unsized: [()],
+}
 
 /// Marker type for owned reports with unique ownership.
 ///
@@ -486,12 +489,12 @@ pub trait ObjectMarkerFor<T>: sealed_object_marker::Sealed + Sized + 'static {
     /// Runs report creation hooks specific to this thread-safety marker.
     #[doc(hidden)]
     #[track_caller]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, T>);
+    fn run_creation_hooks(report: ReportMut<'_, Dynamic, T>);
 }
 
 impl<O: Sized + 'static> ObjectMarkerFor<Local> for O {
     #[inline(always)]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Local>) {
+    fn run_creation_hooks(report: ReportMut<'_, Dynamic, Local>) {
         crate::hooks::report_creation::run_creation_hooks_local(report);
     }
 }
@@ -501,7 +504,7 @@ where
     O: Send + Sync,
 {
     #[inline(always)]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, SendSync>) {
+    fn run_creation_hooks(report: ReportMut<'_, Dynamic, SendSync>) {
         crate::hooks::report_creation::run_creation_hooks_sendsync(report);
     }
 }

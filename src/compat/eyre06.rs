@@ -188,7 +188,7 @@ impl IntoRootcause for eyre::Report {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<EyreHandler>(self).into_dyn_any()
+        Report::new_custom::<EyreHandler>(self).into_dynamic()
     }
 }
 
@@ -299,6 +299,6 @@ impl<T, C: ?Sized, O> IntoEyre for Result<T, Report<C, O>> {
 
 impl<C: ?Sized, O> From<Report<C, O, markers::SendSync>> for eyre::Report {
     fn from(report: Report<C, O, markers::SendSync>) -> Self {
-        eyre::Report::new(ReportAsError(report.into_dyn_any().into_cloneable()))
+        eyre::Report::new(ReportAsError(report.into_dynamic().into_cloneable()))
     }
 }

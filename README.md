@@ -206,11 +206,11 @@ fn process_with_retry(id: u32) -> Result<Data, Report> {
             match report.current_context() {
                 DatabaseError::ConnectionLost | DatabaseError::QueryTimeout => {
                     // Retry transient errors
-                    query_database(id).map_err(|e| e.into_dyn_any())
+                    query_database(id).map_err(|e| e.into_dynamic())
                 }
                 DatabaseError::ConstraintViolation { .. } => {
                     // Don't retry permanent errors
-                    Err(report.into_dyn_any())
+                    Err(report.into_dynamic())
                 }
             }
         }

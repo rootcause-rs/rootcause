@@ -19,7 +19,7 @@ use rootcause::{
         attachment::{AttachmentFormattingOverride, register_attachment_hook},
         context::{ContextFormattingOverride, register_context_hook},
     },
-    markers::{Local, Uncloneable},
+    markers::{Dynamic, Local, Uncloneable},
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
@@ -54,7 +54,7 @@ struct DatabaseQueryFormatter;
 impl AttachmentFormattingOverride<DatabaseQuery> for DatabaseQueryFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,
+        _attachment: ReportAttachmentRef<'_, Dynamic>,
         _report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
@@ -89,7 +89,7 @@ struct ActionRequiredFormatter;
 impl AttachmentFormattingOverride<ActionRequired> for ActionRequiredFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, dyn core::any::Any>,
+        _attachment: ReportAttachmentRef<'_, Dynamic>,
         _report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
@@ -163,7 +163,7 @@ fn demo_context_formatting() -> Result<(), Report> {
         fields: vec![("email", "invalid format"), ("age", "must be positive")],
     };
 
-    Err(report!(validation).into_dyn_any())
+    Err(report!(validation).into_dynamic())
 }
 
 fn main() {

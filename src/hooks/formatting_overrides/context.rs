@@ -54,11 +54,7 @@
 //! ```
 
 use alloc::fmt;
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-    panic::Location,
-};
+use core::{any::TypeId, marker::PhantomData, panic::Location};
 
 use hashbrown::HashMap;
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
@@ -68,7 +64,7 @@ use unsize::CoerceUnsize;
 use crate::{
     ReportRef,
     hooks::hook_lock::HookLock,
-    markers::{Local, Uncloneable},
+    markers::{Dynamic, Local, Uncloneable},
     preformatted::PreformattedContext,
 };
 
@@ -134,7 +130,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
     ///    H>` this is implemented for.
     unsafe fn display(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
@@ -148,7 +144,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
     ///    H>` this is implemented for.
     unsafe fn debug(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
 
@@ -166,7 +162,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
 
     fn preferred_context_formatting_style(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle;
 }
@@ -337,7 +333,7 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     ///
     /// # Arguments
     ///
-    /// * `report` - Reference to the report (as `dyn Any` as it can be either a
+    /// * `report` - Reference to the report (as [`Dynamic`] as it can be either a
     ///   `C` or a [`PreformattedContext`])
     /// * `report_formatting_function` - Whether the overall report uses Display
     ///   or Debug formatting
@@ -348,7 +344,7 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     /// approach
     fn preferred_context_formatting_style(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         report.preferred_context_formatting_style_unhooked(report_formatting_function)
@@ -362,7 +358,7 @@ where
 {
     unsafe fn display(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         // SAFETY:
@@ -373,7 +369,7 @@ where
 
     unsafe fn debug(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
         // SAFETY:
@@ -400,7 +396,7 @@ where
 
     fn preferred_context_formatting_style(
         &self,
-        report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         self.hook
@@ -495,7 +491,7 @@ where
 }
 
 pub(crate) fn display_context(
-    report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+    report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
     if let Some(report) = report.downcast_report::<PreformattedContext>()
@@ -520,7 +516,7 @@ pub(crate) fn display_context(
 }
 
 pub(crate) fn debug_context(
-    report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+    report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
     if let Some(report) = report.downcast_report::<PreformattedContext>()
@@ -553,7 +549,7 @@ pub(crate) fn debug_context(
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug
 pub(crate) fn get_preferred_context_formatting_style(
-    report: ReportRef<'_, dyn Any, Uncloneable, Local>,
+    report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     report_formatting_function: FormattingFunction,
 ) -> ContextFormattingStyle {
     if let Some(current_context) = report.downcast_current_context::<PreformattedContext>()

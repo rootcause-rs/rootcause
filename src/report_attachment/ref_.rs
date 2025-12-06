@@ -1,23 +1,25 @@
 use alloc::fmt;
-use core::any::{Any, TypeId};
+use core::any::TypeId;
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::util::format_helper;
+use crate::{markers::Dynamic, util::format_helper};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access {
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::RawAttachmentRef;
+
+    use crate::markers::Dynamic;
 
     /// A reference to a [`ReportAttachment`].
     ///
     /// # Examples
     /// ```
-    /// # use core::any::Any;
     /// use rootcause::{
+    ///     markers::Dynamic,
     ///     prelude::*,
     ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
     /// };
@@ -26,22 +28,22 @@ mod limit_field_access {
     /// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
     ///
     /// let mut report = report!("An error occurred");
-    /// report.attachments_mut().push(attachment.into_dyn_any());
+    /// report.attachments_mut().push(attachment.into_dynamic());
     ///
     /// // You can also get an attachment reference through the attachments on a report
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = report.attachments().get(0).unwrap();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = report.attachments().get(0).unwrap();
     /// ```
     ///
     /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
     #[repr(transparent)]
-    pub struct ReportAttachmentRef<'a, Attachment: ?Sized + 'static = dyn Any> {
+    pub struct ReportAttachmentRef<'a, Attachment: ?Sized + 'static = Dynamic> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
-        /// 2. If `A` is a concrete type: The attachment embedded in the
+        /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
+        /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         raw: RawAttachmentRef<'a>,
         _attachment: PhantomData<Attachment>,
@@ -54,8 +56,8 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
-        /// 2. If `A` is a concrete type: The attachment embedded in the
+        /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
+        /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
@@ -133,17 +135,17 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ///
     /// # Examples
     /// ```
-    /// # use core::any::Any;
     /// use std::any::TypeId;
     ///
     /// use rootcause::{
+    ///     markers::Dynamic,
     ///     prelude::*,
     ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
     /// assert_eq!(attachment_ref.inner_type_id(), TypeId::of::<&str>());
     /// ```
     #[must_use]
@@ -205,7 +207,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
     #[must_use]
     pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'a, dyn Any> = self.into_dyn_any();
+        let attachment: ReportAttachmentRef<'a, Dynamic> = self.into_dynamic();
         format_helper(
             attachment,
             |attachment, formatter| {
@@ -222,11 +224,11 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     }
 
     /// Changes the inner attachment type of the [`ReportAttachmentRef`] to
-    /// [`dyn Any`].
+    /// [`Dynamic`].
     ///
     /// Calling this method is equivalent to calling `attachment.into()`,
     /// however this method has been restricted to only change the
-    /// attachment type to `dyn Any`.
+    /// attachment type to [`Dynamic`].
     ///
     /// This method can be useful to help with type inference or to improve code
     /// readability, as it more clearly communicates intent.
@@ -238,13 +240,13 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachmentRef::downcast_attachment`].
     #[must_use]
-    pub fn into_dyn_any(self) -> ReportAttachmentRef<'a, dyn Any> {
+    pub fn into_dynamic(self) -> ReportAttachmentRef<'a, Dynamic> {
         let raw = self.as_raw_ref();
 
         // SAFETY:
-        // 1. `A=dyn Any`, so this is trivially satisfied
-        // 2. `A=dyn Any`, so this is trivially satisfied
-        unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) }
+        // 1. `A=Dynamic`, so this is trivially satisfied
+        // 2. `A=Dynamic`, so this is trivially satisfied
+        unsafe { ReportAttachmentRef::<Dynamic>::from_raw(raw) }
     }
 
     /// Returns the preferred formatting style for this attachment with
@@ -269,7 +271,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         crate::hooks::formatting_overrides::attachment::get_preferred_formatting_style(
-            self.into_dyn_any(),
+            self.into_dynamic(),
             report_formatting_function,
         )
     }
@@ -301,27 +303,27 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     }
 }
 
-impl<'a> ReportAttachmentRef<'a, dyn Any> {
+impl<'a> ReportAttachmentRef<'a, Dynamic> {
     /// Attempts to downcast the attachment reference to a different type `A`.
     ///
     /// This method performs a safe type cast, returning [`Some`] if the
     /// attachment actually contains data of type `A`, or [`None`] if the
     /// types don't match.
     ///
-    /// This method is most useful when going from a `dyn Any` to a concrete
+    /// This method is most useful when going from a [`Dynamic`] to a concrete
     /// `A`.
     ///
     /// # Examples
     /// ```
-    /// # use core::any::Any;
     /// use rootcause::{
+    ///     markers::Dynamic,
     ///     prelude::*,
     ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
     ///
     /// // Try to downcast to the correct type
     /// let typed_ref: Option<ReportAttachmentRef<'_, &str>> = attachment_ref.downcast_attachment();
@@ -364,15 +366,15 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     ///
     /// # Examples
     /// ```
-    /// # use core::any::Any;
     /// use rootcause::{
+    ///     markers::Dynamic,
     ///     prelude::*,
     ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
     ///
     /// // SAFETY: We know the attachment contains &str data
     /// let typed_ref: ReportAttachmentRef<'_, &str> =
@@ -402,15 +404,15 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     ///
     /// # Examples
     /// ```
-    /// # use core::any::Any;
     /// use rootcause::{
+    ///     markers::Dynamic,
     ///     prelude::*,
     ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
     ///
     /// // Try to downcast to the correct type
     /// let data: Option<&&str> = attachment_ref.downcast_inner();
@@ -444,15 +446,15 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
     ///
     /// # Examples
     /// ```
-    /// # use core::any::Any;
     /// use rootcause::{
+    ///     markers::Dynamic,
     ///     prelude::*,
     ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<dyn Any> = attachment.into_dyn_any();
-    /// let attachment_ref: ReportAttachmentRef<'_, dyn Any> = attachment.as_ref();
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
     ///
     /// // SAFETY: We know the attachment contains &str data
     /// let data: &&str = unsafe { attachment_ref.downcast_inner_unchecked() };
@@ -473,23 +475,23 @@ impl<'a> ReportAttachmentRef<'a, dyn Any> {
 
 impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentRef<'a, A> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let report: ReportAttachmentRef<'_, dyn Any> = self.into_dyn_any();
+        let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
         crate::hooks::formatting_overrides::attachment::display_attachment(report, None, formatter)
     }
 }
 
 impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentRef<'a, A> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let report: ReportAttachmentRef<'_, dyn Any> = self.into_dyn_any();
+        let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
         crate::hooks::formatting_overrides::attachment::debug_attachment(report, None, formatter)
     }
 }
 
 impl<'a, A: ?Sized> Unpin for ReportAttachmentRef<'a, A> {}
 
-impl<'a, A: Sized> From<ReportAttachmentRef<'a, A>> for ReportAttachmentRef<'a, dyn Any> {
+impl<'a, A: Sized> From<ReportAttachmentRef<'a, A>> for ReportAttachmentRef<'a, Dynamic> {
     fn from(value: ReportAttachmentRef<'a, A>) -> Self {
-        value.into_dyn_any()
+        value.into_dynamic()
     }
 }
 
@@ -508,7 +510,7 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, ()>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, String>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, NonSend>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, dyn Any>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, Dynamic>: Send, Sync);
     }
 
     #[test]
@@ -516,7 +518,7 @@ mod tests {
         static_assertions::assert_impl_all!(ReportAttachmentRef<'static, ()>: Unpin);
         static_assertions::assert_impl_all!(ReportAttachmentRef<'static, String>: Unpin);
         static_assertions::assert_impl_all!(ReportAttachmentRef<'static, NonSend>: Unpin);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, dyn Any>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, Dynamic>: Unpin);
     }
 
     #[test]
@@ -524,6 +526,6 @@ mod tests {
         static_assertions::assert_impl_all!(ReportAttachmentRef<'static, ()>: Copy, Clone);
         static_assertions::assert_impl_all!(ReportAttachmentRef<'static, String>: Copy, Clone);
         static_assertions::assert_impl_all!(ReportAttachmentRef<'static, NonSend>: Copy, Clone);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, dyn Any>: Copy, Clone);
+        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, Dynamic>: Copy, Clone);
     }
 }

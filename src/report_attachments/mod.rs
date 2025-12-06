@@ -6,9 +6,10 @@
 //!
 //! # Overview
 //!
-//! The [`ReportAttachments`] type is similar to a `Vec<ReportAttachment<dyn
-//! Any, T>>` but provides a more convenient API for working with collections of
-//! type-erased attachments. It includes methods for:
+//! The [`ReportAttachments`] type is similar to a
+//! `Vec<ReportAttachment<Dynamic, T>>` but provides a more convenient API for
+//! working with collections of type-erased attachments. It includes methods
+//! for:
 //!
 //! - Adding and removing attachments with [`push`] and [`pop`]
 //! - Iterating over attachments with [`iter`]
@@ -20,8 +21,8 @@
 //! use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
 //!
 //! let mut attachments = ReportAttachments::new_sendsync();
-//! attachments.push(ReportAttachment::new("debug info").into_dyn_any());
-//! attachments.push(ReportAttachment::new(42).into_dyn_any());
+//! attachments.push(ReportAttachment::new("debug info").into_dynamic());
+//! attachments.push(ReportAttachment::new(42).into_dynamic());
 //!
 //! assert_eq!(attachments.len(), 2);
 //!
