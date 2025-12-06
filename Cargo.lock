@@ -259,6 +259,7 @@ dependencies = [
  "static_assertions",
  "thiserror",
  "triomphe",
+ "unicode-ident",
  "unsize",
 ]
 
