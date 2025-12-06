@@ -43,7 +43,8 @@
 //!
 //! Both types have the same generic parameters:
 //!
-//! - **Attachment type**: Can be a concrete type or [`Dynamic`] for type erasure
+//! - **Attachment type**: Can be a concrete type or [`Dynamic`] for type
+//!   erasure
 //! - **Thread safety**: [`SendSync`] (default) for thread-safe attachments, or
 //!   [`Local`] for single-threaded use
 //!
@@ -85,8 +86,8 @@
 //!
 //! # Type Erasure and Downcasting
 //!
-//! Attachments support type erasure through [`Dynamic`], allowing collections of
-//! different attachment types. You can downcast back to concrete types when
+//! Attachments support type erasure through [`Dynamic`], allowing collections
+//! of different attachment types. You can downcast back to concrete types when
 //! needed:
 //!
 //! [`Dynamic`]: crate::markers::Dynamic

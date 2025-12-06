@@ -87,8 +87,8 @@ mod limit_field_access {
         /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `O` must either be `Mutable` or `Cloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a `Sized` type: The context embedded in the report
-        ///    must be of type `C`
+        /// 4. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
         ///    `triomphe::Arc` is exactly 1.
@@ -116,8 +116,8 @@ mod limit_field_access {
         /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `O` must either be `Mutable` or `Cloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a `Sized` type: The context embedded in the report
-        ///    must be of type `C`
+        /// 4. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
         ///    `triomphe::Arc` is exactly 1.

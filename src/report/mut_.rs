@@ -87,11 +87,10 @@ mod limit_field_access {
         /// as this struct exists and must be continue to be upheld as
         /// long as the inner `RawReportMut` exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or
-        ///    `Dynamic`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `C` is a `Sized` type: The context embedded in the report
-        ///    must be of type `C`
+        /// 3. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
         /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -112,11 +111,10 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or
-        ///    `Dynamic`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `C` is a `Sized` type: The context embedded in the report
-        ///    must be of type `C`
+        /// 3. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
         /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with

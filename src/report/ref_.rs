@@ -93,8 +93,8 @@ mod limit_field_access {
         ///    `Dynamic`.
         /// 2. `O` must either be `Cloneable` or `Uncloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a `Sized` type: The context embedded in the report
-        ///    must be of type `C`
+        /// 4. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 5. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.
@@ -122,8 +122,8 @@ mod limit_field_access {
         /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `O` must either be `Cloneable` or `Uncloneable`.
         /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a `Sized` type: The context embedded in the report
-        ///    must be of type `C`
+        /// 4. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 5. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
         ///    references with an assumption that the strong_count is `1`.

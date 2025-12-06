@@ -473,8 +473,8 @@ pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync {
     ///
     /// # Arguments
     ///
-    /// * `attachment` - Reference to the attachment (as [`Dynamic`] as it can be
-    ///   either `A` or a [`PreformattedAttachment`])
+    /// * `attachment` - Reference to the attachment (as [`Dynamic`] as it can
+    ///   be either `A` or a [`PreformattedAttachment`])
     /// * `report_formatting_function` - Whether the overall report uses Display
     ///   or Debug formatting
     fn preferred_formatting_style(

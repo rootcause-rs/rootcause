@@ -333,8 +333,8 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     ///
     /// # Arguments
     ///
-    /// * `report` - Reference to the report (as [`Dynamic`] as it can be either a
-    ///   `C` or a [`PreformattedContext`])
+    /// * `report` - Reference to the report (as [`Dynamic`] as it can be either
+    ///   a `C` or a [`PreformattedContext`])
     /// * `report_formatting_function` - Whether the overall report uses Display
     ///   or Debug formatting
     ///

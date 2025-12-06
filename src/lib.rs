@@ -155,9 +155,9 @@
 //! **`Report<Dynamic>`** (or just [`Report`]) — Flexible, like [`anyhow`]
 //!
 //! Can hold any error type at the root. The `?` operator automatically converts
-//! any error into a [`Report`]. Note: [`Dynamic`] is just a marker signaling that
-//! the actual type is unknown. No actual instance of [`Dynamic`] is stored. Converting
-//! between typed and dynamic reports is zero-cost.
+//! any error into a [`Report`]. Note: [`Dynamic`] is just a marker signaling
+//! that the actual type is unknown. No actual instance of [`Dynamic`] is
+//! stored. Converting between typed and dynamic reports is zero-cost.
 //!
 //! [`Dynamic`]: crate::markers::Dynamic
 //!
