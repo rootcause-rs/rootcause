@@ -108,7 +108,7 @@ mod limit_field_access {
     /// let iterator: ReportAttachmentsIntoIter<_> = attachments.into_iter();
     /// ```
     #[must_use]
-    pub struct ReportAttachmentsIntoIter<T: 'static> {
+    pub struct ReportAttachmentsIntoIter<ThreadMarker: 'static> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
@@ -119,7 +119,7 @@ mod limit_field_access {
         /// 2. If `T = SendSync`: All of the inner attachments must be `Send +
         ///    Sync`.
         raw: alloc::vec::IntoIter<RawAttachment>,
-        _thread_safety: PhantomData<T>,
+        _thread_safety: PhantomData<ThreadMarker>,
     }
 
     impl<T> ReportAttachmentsIntoIter<T> {

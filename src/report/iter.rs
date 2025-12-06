@@ -1,7 +1,7 @@
 use alloc::vec::Vec;
 use core::{any::Any, iter::FusedIterator, marker::PhantomData};
 
-use crate::{ReportRef, markers::Cloneable};
+use crate::ReportRef;
 
 /// An iterator over a report and all its descendant reports in depth-first
 /// order.
@@ -28,26 +28,30 @@ impl<'a, O, T> ReportIter<'a, O, T> {
     }
 }
 
-impl<'a, O, T> Iterator for ReportIter<'a, O, T>
-where
-    ReportRef<'a, dyn Any, Cloneable, T>: Into<ReportRef<'a, dyn Any, O, T>>,
-{
+impl<'a, O, T> Iterator for ReportIter<'a, O, T> {
     type Item = ReportRef<'a, dyn Any, O, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let cur = self.stack.pop()?;
-        let new_children = cur.children().iter().map(|c| c.into()).rev();
+        let cur: ReportRef<'a, dyn Any, O, T> = self.stack.pop()?;
+
+        let new_children = cur
+            .children()
+            .iter()
+            .map(|child_report| {
+                // SAFETY:
+                // 1. At this point we have an instance of a `ReportRef<'a, dyn Any, O, T>` in
+                //    scope.  This means we can invoke the safety invariants of that ReportRef.
+                //    One of the safety invariants of that `ReportRef` is that `O` must either
+                //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
+                //    calling `ReportRef::from_cloneable` using that same `O`.
+                unsafe { ReportRef::<dyn Any, O, T>::from_cloneable(child_report) }
+            })
+            .rev();
         self.stack.extend(new_children);
         Some(cur)
     }
 }
 
-impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> where
-    ReportRef<'a, dyn Any, Cloneable, T>: Into<ReportRef<'a, dyn Any, O, T>>
-{
-}
+impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> {}
 
-impl<'a, O, T> Unpin for ReportIter<'a, O, T> where
-    ReportRef<'a, dyn Any, Cloneable, T>: Into<ReportRef<'a, dyn Any, O, T>>
-{
-}
+impl<'a, O, T> Unpin for ReportIter<'a, O, T> {}

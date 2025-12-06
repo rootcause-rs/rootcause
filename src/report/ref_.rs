@@ -258,6 +258,32 @@ impl<'a, C: Sized, O, T> ReportRef<'a, C, O, T> {
 }
 
 impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
+    /// Maps a Cloneable report reference to a report reference with any
+    /// ownership
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. `O` must either be `Cloneable` or `Uncloneable`.
+    pub(crate) unsafe fn from_cloneable(
+        report: ReportRef<'a, C, Cloneable, T>,
+    ) -> ReportRef<'a, C, O, T> {
+        let raw = report.as_raw_ref();
+
+        // SAFETY:
+        // 1. This is guaranteed by the safety invariants of the argument
+        // 2. This is guaranteed by the caller
+        // 3. This is guaranteed by the safety invariants of the argument
+        // 4. This is guaranteed by the safety invariants of the argument
+        // 5. If `O = Cloneable`: This is guaranteed by the safety invariants of the
+        //    argument. If `O = Uncloneable`: This is trivially true. The caller
+        //    guarantees that these are the only possibilities.
+        // 6. This is guaranteed by the safety invariants of the argument
+        // 7. This is guaranteed by the safety invariants of the argument
+        unsafe { ReportRef::<'a, C, O, T>::from_raw(raw) }
+    }
+
     /// Returns a reference to the child reports.
     ///
     /// # Examples
@@ -866,7 +892,7 @@ impl<'a, O, T> ReportRef<'a, dyn Any, O, T> {
     #[must_use]
     pub fn downcast_report<C>(self) -> Option<ReportRef<'a, C, O, T>>
     where
-        C: Sized + 'static,
+        C: Sized,
     {
         if TypeId::of::<C>() == self.current_context_type_id() {
             // SAFETY:
@@ -907,7 +933,7 @@ impl<'a, O, T> ReportRef<'a, dyn Any, O, T> {
     #[must_use]
     pub unsafe fn downcast_report_unchecked<C>(self) -> ReportRef<'a, C, O, T>
     where
-        C: Sized + 'static,
+        C: Sized,
     {
         let raw = self.as_raw_ref();
 
