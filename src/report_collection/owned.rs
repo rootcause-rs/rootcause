@@ -847,7 +847,7 @@ where
     }
 }
 
-impl<C: Sized + 'static, O, T> FromIterator<Report<C, O, T>> for ReportCollection<dyn Any, T>
+impl<C: Sized, O, T> FromIterator<Report<C, O, T>> for ReportCollection<dyn Any, T>
 where
     O: markers::ReportOwnershipMarker,
 {
@@ -866,7 +866,7 @@ impl<'a, C: ?Sized, T> FromIterator<ReportRef<'a, C, Cloneable, T>> for ReportCo
     }
 }
 
-impl<'a, C: Sized + 'static, T> FromIterator<ReportRef<'a, C, Cloneable, T>>
+impl<'a, C: Sized, T> FromIterator<ReportRef<'a, C, Cloneable, T>>
     for ReportCollection<dyn Any, T>
 {
     fn from_iter<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(iter: I) -> Self {
