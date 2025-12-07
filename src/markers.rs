@@ -110,10 +110,8 @@ use crate::ReportMut;
 /// `Dynamic` is used as the context type parameter in
 /// [`Report<Dynamic, O, T>`](crate::Report) to indicate that the actual error
 /// type at the root is not known at compile time. This is the default behavior
-/// and is similar to [`anyhow::Error`](https://docs.rs/anyhow) - any error type
+/// and is similar to [`anyhow::Error`] - any error type
 /// can be stored and the `?` operator works automatically.
-///
-/// [`anyhow::Error`]: https://docs.rs/anyhow
 ///
 /// # Key Properties
 ///
