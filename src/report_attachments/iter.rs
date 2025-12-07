@@ -50,7 +50,10 @@ impl<'a> Iterator for ReportAttachmentsIter<'a> {
         // SAFETY:
         // 1. `A = Dynamic`, so this is trivially satisfied.
         // 2. `A = Dynamic`, so this is trivially satisfied.
-        let attachment = unsafe { ReportAttachmentRef::<'a, Dynamic>::from_raw(raw) };
+        let attachment = unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentRef::<'a, Dynamic>::from_raw(raw)
+        };
 
         Some(attachment)
     }
@@ -67,7 +70,10 @@ impl<'a> DoubleEndedIterator for ReportAttachmentsIter<'a> {
         // SAFETY:
         // 1. `A = Dynamic`, so this is trivially satisfied.
         // 2. `A = Dynamic`, so this is trivially satisfied.
-        let attachment = unsafe { ReportAttachmentRef::<'a, Dynamic>::from_raw(raw) };
+        let attachment = unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentRef::<'a, Dynamic>::from_raw(raw)
+        };
 
         Some(attachment)
     }

@@ -443,7 +443,10 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         // 5. This is guaranteed by the invariants of this type.
         // 6. This is guaranteed by the invariants of this type.
         // 7. This is guaranteed by the invariants of this type.
-        unsafe { ReportMut::<Dynamic, T>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportMut::<Dynamic, T>::from_raw(raw)
+        }
     }
 
     /// Returns an immutable reference to the report.

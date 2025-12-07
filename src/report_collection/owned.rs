@@ -52,7 +52,7 @@ mod limit_field_access {
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 5. If `T = SendSync`: All contexts and attachments in all of the
-        ///    report and all sub-reports must be `Send+Sync`
+        ///    reports and all sub-reports must be `Send+Sync`
         raw: Vec<RawReport>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
@@ -166,6 +166,7 @@ mod limit_field_access {
             unsafe { &mut *raw_ptr }
         }
 
+        /// Consumes the [`ReportCollection`] and returns the inner raw reports
         #[must_use]
         pub(crate) fn into_raw(self) -> Vec<RawReport> {
             // SAFETY: We are destroying `self`, so we no longer
@@ -173,6 +174,7 @@ mod limit_field_access {
             self.raw
         }
 
+        /// Provides access to the inner raw reports vector
         #[must_use]
         pub(crate) fn as_raw(&self) -> &Vec<RawReport> {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -457,8 +459,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 4. If `C` is a `Sized` type: Guaranteed by the invariants of the collection.
         // 5. Guaranteed by the invariants of the collection.
         // 6. Guaranteed by the invariants of the collection.
-        // 7. If `T = SendSync`: All contexts and attachments in the report and all
-        //    sub-reports must be `Send+Sync`
+        // 7. If `T = SendSync`: Guaranteed by the invariants of the collection.
         let report = unsafe { ReportRef::<C, Cloneable, T>::from_raw(raw) };
 
         Some(report)
@@ -606,7 +607,10 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 3. `C=Dynamic`, so this is trivially true.
         // 4. The invariants of the collection guarantee this.
         // 5. The invariants of the collection guarantee this.
-        unsafe { ReportCollection::<Dynamic, T>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportCollection::<Dynamic, T>::from_raw(raw)
+        }
     }
 
     /// Returns a reference to the collection with type-erased contexts via
@@ -621,7 +625,10 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 3. `C=Dynamic`, so this is trivially true.
         // 4. The invariants of the collection guarantee this.
         // 5. The invariants of the collection guarantee this.
-        unsafe { ReportCollection::<Dynamic, T>::from_raw_ref(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportCollection::<Dynamic, T>::from_raw_ref(raw)
+        }
     }
 
     /// Converts the collection to use [`Local`] thread safety semantics.

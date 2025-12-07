@@ -55,6 +55,8 @@ pub struct RawAttachment {
     ///    for some `A` using `Box::into_raw`.
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
+    /// 3. The pointee is properly initialized for the entire lifetime of this
+    ///    object, except during the execution of the `Drop` implementation.
     ptr: NonNull<AttachmentData<Erased>>,
 }
 
@@ -100,7 +102,9 @@ impl core::ops::Drop for RawAttachment {
         //    `RawAttachment::new`)
         // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
         //    data in the `AttachmentData`.
-        // 3. The pointer is not used after this call (we're in the drop function)
+        // 3. The pointer is initialized and has not been previously free as guaranteed
+        //    by the invariants on this type. We are correctly transferring ownership here
+        //    and the pointer is not used afterwards, as we are in the drop function.
         unsafe {
             // @add-unsafe-context: AttachmentData
             vtable.drop(self.ptr);

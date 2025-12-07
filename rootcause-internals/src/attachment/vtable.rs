@@ -108,7 +108,6 @@ impl AttachmentVtable {
         // 2. Guaranteed by the caller
         // 3. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: drop
             (self.drop)(ptr);
         }
@@ -135,7 +134,6 @@ impl AttachmentVtable {
         // `display::<A, H>` below. That function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: display
             (self.display)(ptr, formatter)
         }
@@ -162,7 +160,6 @@ impl AttachmentVtable {
         // `debug::<A, H>` below. That function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: debug
             (self.debug)(ptr, formatter)
         }
@@ -191,7 +188,6 @@ impl AttachmentVtable {
         // function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: preferred_formatting_style
             (self.preferred_formatting_style)(ptr, report_formatting_function)
         }

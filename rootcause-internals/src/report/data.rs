@@ -160,6 +160,7 @@ impl<'a> RawReportRef<'a> {
         //    be UB since we don't know the correct type parameter
         let children_ptr: *const Vec<RawReport> = unsafe {
             // @add-unsafe-context: ReportData
+            // @add-unsafe-context: crate::util::Erased
             &raw const (*ptr).children
         };
 
@@ -184,6 +185,7 @@ impl<'a> RawReportRef<'a> {
         //    be UB since we don't know the correct type parameter
         let attachments_ptr: *const Vec<RawAttachment> = unsafe {
             // @add-unsafe-context: ReportData
+            // @add-unsafe-context: crate::util::Erased
             &raw const (*ptr).attachments
         };
 
@@ -233,6 +235,7 @@ impl<'a> RawReportMut<'a> {
         //    be UB since we don't know the correct type parameter
         let children_ptr: *mut Vec<RawReport> = unsafe {
             // @add-unsafe-context: ReportData
+            // @add-unsafe-context: crate::util::Erased
             &raw mut (*ptr).children
         };
 
@@ -265,6 +268,7 @@ impl<'a> RawReportMut<'a> {
         //    be UB since we don't know the correct type parameter
         let attachments_ptr: *mut Vec<RawAttachment> = unsafe {
             // @add-unsafe-context: ReportData
+            // @add-unsafe-context: crate::util::Erased
             &raw mut (*ptr).attachments
         };
 

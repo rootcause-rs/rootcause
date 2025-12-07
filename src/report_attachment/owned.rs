@@ -211,7 +211,10 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         // 2. Guaranteed by the invariants of this type.
         // 3. `A=Dynamic`, so this is trivially true.
         // 4. Guaranteed by the invariants of this type.
-        unsafe { ReportAttachment::<Dynamic, T>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachment::<Dynamic, T>::from_raw(raw)
+        }
     }
 
     /// Changes the thread safety mode of the [`ReportAttachment`] to [`Local`].
