@@ -11,15 +11,15 @@
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::{
-//!         builtin_hooks::report_formatter::DefaultReportFormatter,
-//!         report_formatting::register_report_formatter_hook,
-//!     },
+//!     hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter},
 //!     prelude::*,
 //! };
 //!
 //! // Switch to ASCII-only output globally (affects all reports)
-//! register_report_formatter_hook(DefaultReportFormatter::ASCII);
+//! Hooks::new()
+//!     .with_report_formatter(DefaultReportFormatter::ASCII)
+//!     .install()
+//!     .expect("failed to install hooks");
 //!
 //! let report = report!("database connection failed");
 //! println!("{}", report);
@@ -54,7 +54,7 @@
 //! # Custom Formatters
 //!
 //! For complete control over report formatting, you can implement the
-//! [`ReportFormatterHook`] trait. See the trait documentation for details and
+//! [`ReportFormatter`] trait. See the trait documentation for details and
 //! examples of implementing custom formatters.
 //!
 //! The [`DefaultReportFormatter`] source code also serves as a comprehensive
@@ -68,18 +68,12 @@
 use core::fmt;
 
 use rootcause_internals::handlers::FormattingFunction;
-use triomphe::Arc;
-use unsize::CoerceUnsize;
 
 use crate::{
     ReportRef,
-    hooks::{builtin_hooks::report_formatter::DefaultReportFormatter, hook_lock::HookLock},
+    hooks::{HookData, builtin_hooks::report_formatter::DefaultReportFormatter},
     markers::{Dynamic, Local, Uncloneable},
 };
-
-type Hook = Arc<dyn ReportFormatterHook>;
-
-static HOOK: HookLock<Hook> = HookLock::new();
 
 /// A hook for customizing how reports are formatted and displayed.
 ///
@@ -95,11 +89,12 @@ static HOOK: HookLock<Hook> = HookLock::new();
 ///
 /// use rootcause::{
 ///     ReportRef,
-///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
+///     hooks::{Hooks, report_formatting::ReportFormatter},
 ///     markers::{Dynamic, Local, Uncloneable},
 ///     prelude::*,
 /// };
 ///
+/// #[derive(Debug)]
 /// struct SimpleFormatter;
 ///
 /// fn format_indented(
@@ -118,7 +113,7 @@ static HOOK: HookLock<Hook> = HookLock::new();
 ///     Ok(())
 /// }
 ///
-/// impl ReportFormatterHook for SimpleFormatter {
+/// impl ReportFormatter for SimpleFormatter {
 ///     fn format_reports(
 ///         &self,
 ///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
@@ -135,9 +130,12 @@ static HOOK: HookLock<Hook> = HookLock::new();
 ///     }
 /// }
 ///
-/// register_report_formatter_hook(SimpleFormatter);
+/// Hooks::new()
+///     .with_report_formatter(SimpleFormatter)
+///     .install()
+///     .expect("failed to install hooks");
 /// ```
-pub trait ReportFormatterHook: 'static + Send + Sync {
+pub trait ReportFormatter: 'static + Send + Sync + fmt::Debug {
     /// Format multiple reports in a collection.
     ///
     /// This is the primary method that controls how reports are displayed. This
@@ -153,7 +151,7 @@ pub trait ReportFormatterHook: 'static + Send + Sync {
     /// Format a single report.
     ///
     /// This method provides a default implementation that calls
-    /// [`format_reports`](ReportFormatterHook::format_reports) with a
+    /// [`format_reports`](ReportFormatter::format_reports) with a
     /// single-element slice. You typically don't need to override this
     /// unless you want different behavior for single reports vs. report
     /// collections.
@@ -172,11 +170,13 @@ pub(crate) fn format_report(
     formatter: &mut fmt::Formatter<'_>,
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
-    let hook = HOOK.read().get().cloned();
-    let hook = hook
-        .as_deref()
-        .unwrap_or(const { &DefaultReportFormatter::DEFAULT });
-    hook.format_report(report, formatter, report_formatting_function)
+    if let Some(hook_data) = HookData::fetch()
+        && let Some(hook) = &hook_data.report_formatting
+    {
+        hook.format_report(report, formatter, report_formatting_function)
+    } else {
+        DefaultReportFormatter::DEFAULT.format_report(report, formatter, report_formatting_function)
+    }
 }
 
 pub(crate) fn format_reports(
@@ -184,113 +184,15 @@ pub(crate) fn format_reports(
     formatter: &mut fmt::Formatter<'_>,
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
-    let hook = HOOK.read().get().cloned();
-    let hook = hook
-        .as_deref()
-        .unwrap_or(const { &DefaultReportFormatter::DEFAULT });
-    hook.format_reports(reports, formatter, report_formatting_function)
-}
-
-/// Registers a global report formatter hook.
-///
-/// This function replaces any previously registered report formatter hook with
-/// the provided one. Only one report formatter hook can be active at a time,
-/// so registering a new hook will override the previous one.
-///
-/// The hook will be used to format all reports created after registration.
-/// If no custom hook is registered, the default [`DefaultReportFormatter`] is
-/// used.
-///
-/// # Examples
-///
-/// ## Registering a Custom Formatter
-///
-/// ```rust
-/// use std::fmt;
-///
-/// use rootcause::{
-///     ReportRef,
-///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-///     markers::{Dynamic, Local, Uncloneable},
-///     prelude::*,
-/// };
-///
-/// struct JsonFormatter;
-///
-/// fn to_json(report: ReportRef<'_, Dynamic, Uncloneable, Local>) -> serde_json::Value {
-///     let mut obj = serde_json::Map::new();
-///     obj.insert(
-///         "message".to_string(),
-///         serde_json::Value::String(report.format_current_context_unhooked().to_string()),
-///     );
-///     // TODO: Also add the attachments
-///     let mut causes = vec![];
-///     for subreport in report.children() {
-///         causes.push(to_json(subreport.into_uncloneable()));
-///     }
-///     obj.insert("causes".to_string(), serde_json::Value::Array(causes));
-///     serde_json::Value::Object(obj)
-/// }
-///
-/// impl ReportFormatterHook for JsonFormatter {
-///     fn format_reports(
-///         &self,
-///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
-///         formatter: &mut fmt::Formatter<'_>,
-///         _function: rootcause::handlers::FormattingFunction,
-///     ) -> std::fmt::Result {
-///         let causes = reports.iter().map(|&report| to_json(report)).collect();
-///         let json = serde_json::Value::Array(causes);
-///         write!(formatter, "{}", json)
-///     }
-/// }
-///
-/// register_report_formatter_hook(JsonFormatter);
-/// ```
-///
-/// ## Replacing an Existing Formatter
-///
-/// ```rust
-/// use rootcause::{
-///     ReportRef,
-///     hooks::report_formatting::{ReportFormatterHook, register_report_formatter_hook},
-///     markers::{Dynamic, Local, Uncloneable},
-///     prelude::*,
-/// };
-///
-/// struct FirstFormatter;
-/// impl ReportFormatterHook for FirstFormatter {
-///     fn format_reports(
-///         &self,
-///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
-///         formatter: &mut std::fmt::Formatter<'_>,
-///         _function: rootcause::handlers::FormattingFunction,
-///     ) -> std::fmt::Result {
-///         write!(formatter, "First formatter")
-///     }
-/// }
-///
-/// struct SecondFormatter;
-/// impl ReportFormatterHook for SecondFormatter {
-///     fn format_reports(
-///         &self,
-///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
-///         formatter: &mut std::fmt::Formatter<'_>,
-///         _function: rootcause::handlers::FormattingFunction,
-///     ) -> std::fmt::Result {
-///         write!(formatter, "Second formatter")
-///     }
-/// }
-///
-/// // Register first formatter
-/// register_report_formatter_hook(FirstFormatter);
-///
-/// // This replaces the first formatter - only SecondFormatter will be used
-/// register_report_formatter_hook(SecondFormatter);
-/// ```
-///
-/// [`DefaultReportFormatter`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter
-pub fn register_report_formatter_hook(hook: impl ReportFormatterHook) {
-    *HOOK.write().get() =
-        Some(Arc::new(hook).unsize(unsize::Coercion!(to dyn ReportFormatterHook)));
+    if let Some(hook_data) = HookData::fetch()
+        && let Some(hook) = &hook_data.report_formatting
+    {
+        hook.format_reports(reports, formatter, report_formatting_function)
+    } else {
+        DefaultReportFormatter::DEFAULT.format_reports(
+            reports,
+            formatter,
+            report_formatting_function,
+        )
+    }
 }

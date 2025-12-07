@@ -26,12 +26,12 @@
 //!
 //! To customize report formatting, you can either install
 //! the built-in formatter with different options, or create your own custom
-//! formatter by implementing the [`ReportFormatterHook`] trait and then
-//! registering it via [`register_report_formatter_hook`].
+//! formatter by implementing the [`ReportFormatter`] trait and then
+//! installing it via [`Hooks::with_report_formatter`].
 //!
 //! [`DefaultReportFormatter`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter
-//! [`ReportFormatterHook`]: crate::hooks::report_formatting::ReportFormatterHook
-//! [`register_report_formatter_hook`]: crate::hooks::report_formatting::register_report_formatter_hook
+//! [`ReportFormatter`]: crate::hooks::report_formatting::ReportFormatter
+//! [`Hooks::with_report_formatter`]: crate::hooks::Hooks::with_report_formatter
 
 #[cfg(feature = "backtrace")]
 #[cfg_attr(docsrs, doc(cfg(feature = "backtrace")))]

@@ -14,9 +14,9 @@ use std::sync::atomic::{AtomicU64, Ordering};
 
 use rootcause::{
     ReportMut,
-    hooks::report_creation::{
-        AttachmentCollectorHook, ReportCreationHook, register_attachment_collector_hook,
-        register_report_creation_hook,
+    hooks::{
+        Hooks,
+        report_creation::{AttachmentCollector, ReportCreationHook},
     },
     markers::{Dynamic, Local, SendSync},
     prelude::*,
@@ -41,7 +41,7 @@ impl core::fmt::Display for RequestId {
 /// This is called for EVERY report created - use for lightweight data
 struct RequestIdCollector;
 
-impl AttachmentCollectorHook<RequestId> for RequestIdCollector {
+impl AttachmentCollector<RequestId> for RequestIdCollector {
     type Handler = handlers::Display;
 
     fn collect(&self) -> RequestId {
@@ -152,8 +152,11 @@ fn file_operation(exists: bool) -> Result<(), Report> {
 fn main() {
     println!("Example 1: AttachmentCollectorHook - automatic request tracking\n");
 
-    // Register the request ID collector
-    register_attachment_collector_hook(RequestIdCollector);
+    // Install the request ID collector hook
+    Hooks::new()
+        .with_attachment_collector(RequestIdCollector)
+        .install()
+        .expect("failed to install hooks");
 
     println!("Making first API request...");
     match simulate_api_request(1001) {
@@ -175,8 +178,10 @@ fn main() {
 
     println!("\nExample 2: ReportCreationHook - conditional retry hints\n");
 
-    // Register retry hint hook
-    register_report_creation_hook(RetryHintHook);
+    // Install retry hint hook (replaces previous hooks)
+    Hooks::new()
+        .with_report_creation_hook(RetryHintHook)
+        .replace();
 
     println!("Attempting transient network error...");
     match simulate_api_request(1003) {

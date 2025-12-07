@@ -15,9 +15,9 @@
 use rootcause::{
     ReportRef,
     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
-    hooks::formatting_overrides::{
-        attachment::{AttachmentFormattingOverride, register_attachment_hook},
-        context::{ContextFormattingOverride, register_context_hook},
+    hooks::{
+        Hooks, formatting_overrides::attachment::AttachmentFormattingOverride,
+        formatting_overrides::context::ContextFormattingOverride,
     },
     markers::{Dynamic, Local, Uncloneable},
     prelude::*,
@@ -167,10 +167,13 @@ fn demo_context_formatting() -> Result<(), Report> {
 }
 
 fn main() {
-    // Register formatting hooks
-    register_attachment_hook::<DatabaseQuery, _>(DatabaseQueryFormatter);
-    register_attachment_hook::<ActionRequired, _>(ActionRequiredFormatter);
-    register_context_hook::<ValidationError, _>(ValidationErrorFormatter);
+    // Install formatting hooks
+    Hooks::new()
+        .with_attachment_override::<DatabaseQuery, _>(DatabaseQueryFormatter)
+        .with_attachment_override::<ActionRequired, _>(ActionRequiredFormatter)
+        .with_context_override::<ValidationError, _>(ValidationErrorFormatter)
+        .install()
+        .expect("failed to install hooks");
 
     println!("Example 1: Attachment placement (Appendix)\n");
     match demo_attachment_placement() {

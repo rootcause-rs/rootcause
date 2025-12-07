@@ -6,7 +6,7 @@
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, AttachmentHandler};
 
-use crate::hooks::report_creation::AttachmentCollectorHook;
+use crate::hooks::report_creation::AttachmentCollector;
 
 /// Source code location information.
 ///
@@ -19,6 +19,21 @@ pub struct Location {
     pub file: &'static str,
     /// The line number where the report was created.
     pub line: u32,
+}
+
+impl Location {
+    /// Capture the caller's source code location.
+    ///
+    /// This function uses Rust's built-in `core::panic::Location::caller()` to
+    /// obtain the file and line number of the code that invoked it.
+    #[track_caller]
+    pub const fn caller() -> Self {
+        let location = core::panic::Location::caller();
+        Location {
+            file: location.file(),
+            line: location.line(),
+        }
+    }
 }
 
 /// Handler for formatting [`Location`] attachments.
@@ -59,25 +74,21 @@ impl AttachmentHandler<Location> for LocationHandler {
 /// ## Example
 ///
 /// ```rust
-/// use rootcause::hooks::{
-///     builtin_hooks::location::LocationCollector,
-///     report_creation::register_attachment_collector_hook,
-/// };
+/// use rootcause::hooks::{Hooks, builtin_hooks::location::LocationHook};
 ///
-/// // Register to automatically collect location for all reports
-/// register_attachment_collector_hook(LocationCollector);
+/// // Install hooks with location collector
+/// Hooks::new()
+///     .with_attachment_collector(LocationHook)
+///     .install()
+///     .ok();
 /// ```
 #[derive(Copy, Clone)]
-pub struct LocationCollector;
+pub struct LocationHook;
 
-impl AttachmentCollectorHook<Location> for LocationCollector {
+impl AttachmentCollector<Location> for LocationHook {
     type Handler = LocationHandler;
 
     fn collect(&self) -> Location {
-        let location = core::panic::Location::caller();
-        Location {
-            file: location.file(),
-            line: location.line(),
-        }
+        Location::caller()
     }
 }

@@ -16,22 +16,28 @@
 //! # Usage
 //!
 //! This formatter is the one used by default when no other formatter is
-//! registered. It is also possible to explicitly register it:
+//! installed. It is also possible to explicitly install it:
 //!
 //! ```rust
-//! use rootcause::hooks::{
-//!     builtin_hooks::report_formatter::DefaultReportFormatter,
-//!     report_formatting::register_report_formatter_hook,
-//! };
+//! use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 //!
 //! // Use the default Unicode configuration (no colors)
-//! register_report_formatter_hook(DefaultReportFormatter::default());
+//! Hooks::new()
+//!     .with_report_formatter(DefaultReportFormatter::default())
+//!     .install()
+//!     .ok();
 //!
 //! // Or use Unicode with ANSI colors for enhanced visuals
-//! register_report_formatter_hook(DefaultReportFormatter::UNICODE_COLORS);
+//! Hooks::new()
+//!     .with_report_formatter(DefaultReportFormatter::UNICODE_COLORS)
+//!     .install()
+//!     .ok();
 //!
 //! // Or use ASCII-only for compatibility
-//! register_report_formatter_hook(DefaultReportFormatter::ASCII);
+//! Hooks::new()
+//!     .with_report_formatter(DefaultReportFormatter::ASCII)
+//!     .install()
+//!     .ok();
 //! ```
 //!
 //! # Configuration Structures
@@ -58,7 +64,7 @@ use rootcause_internals::handlers::{
 
 use crate::{
     ReportRef,
-    hooks::report_formatting::ReportFormatterHook,
+    hooks::report_formatting::ReportFormatter,
     markers::{Dynamic, Local, Uncloneable},
     report_attachment::ReportAttachmentRef,
 };
@@ -75,36 +81,37 @@ use crate::{
 ///
 /// Basic usage with default formatting:
 /// ```rust
-/// use rootcause::hooks::{
-///     builtin_hooks::report_formatter::DefaultReportFormatter,
-///     report_formatting::register_report_formatter_hook,
-/// };
+/// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
-/// register_report_formatter_hook(DefaultReportFormatter::default());
+/// Hooks::new()
+///     .with_report_formatter(DefaultReportFormatter::default())
+///     .install()
+///     .ok();
 /// // Use with report formatting system (Unicode without colors)
 /// ```
 ///
 /// Using Unicode with ANSI colors for enhanced visuals:
 /// ```rust
-/// use rootcause::hooks::{
-///     builtin_hooks::report_formatter::DefaultReportFormatter,
-///     report_formatting::register_report_formatter_hook,
-/// };
+/// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
-/// register_report_formatter_hook(DefaultReportFormatter::UNICODE_COLORS);
+/// Hooks::new()
+///     .with_report_formatter(DefaultReportFormatter::UNICODE_COLORS)
+///     .install()
+///     .ok();
 /// // Use in modern terminals that support ANSI colors
 /// ```
 ///
 /// Using ASCII-only formatting for compatibility:
 /// ```rust
-/// use rootcause::hooks::{
-///     builtin_hooks::report_formatter::DefaultReportFormatter,
-///     report_formatting::register_report_formatter_hook,
-/// };
+/// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
-/// register_report_formatter_hook(DefaultReportFormatter::ASCII);
+/// Hooks::new()
+///     .with_report_formatter(DefaultReportFormatter::ASCII)
+///     .install()
+///     .ok();
 /// // Use in environments without Unicode/ANSI support
 /// ```
+#[derive(Debug)]
 pub struct DefaultReportFormatter {
     /// Header text displayed at the beginning of report output
     pub report_header: &'static str,
@@ -515,7 +522,7 @@ impl Default for DefaultReportFormatter {
 /// let formatting = LineFormatting::new("\x1b[31m● ", "\x1b[0m\n");
 /// // This will format lines as: "\x1b[31m● content\x1b[0m\n" (red bullet)
 /// ```
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct LineFormatting {
     /// Text prefix prepended to the beginning of each line
     pub prefix: &'static str,
@@ -563,7 +570,7 @@ impl LineFormatting {
 ///     ("└ ", "\n"), // last line:   "└ last line\n"
 /// );
 /// ```
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct ItemFormatting {
     /// Formatting applied when the item consists of only one line
     pub standalone_line: LineFormatting,
@@ -638,7 +645,7 @@ impl ItemFormatting {
 ///     "   ",         // prefix for child content
 /// );
 /// ```
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct NodeConfig {
     /// Formatting configuration for the node's header content
     pub header: ItemFormatting,
@@ -703,7 +710,7 @@ struct DefaultFormatterState<'a, 'b> {
     report_formatting_function: FormattingFunction,
 }
 
-impl ReportFormatterHook for DefaultReportFormatter {
+impl ReportFormatter for DefaultReportFormatter {
     fn format_reports(
         &self,
         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],

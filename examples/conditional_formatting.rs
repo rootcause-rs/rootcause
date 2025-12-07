@@ -11,9 +11,7 @@
 use std::env;
 
 use rootcause::{
-    hooks::formatting_overrides::attachment::{
-        AttachmentFormattingOverride, register_attachment_hook,
-    },
+    hooks::{Hooks, formatting_overrides::attachment::AttachmentFormattingOverride},
     markers::Dynamic,
     prelude::*,
     report_attachment::ReportAttachmentRef,
@@ -173,9 +171,12 @@ fn main() {
     println!("Running in: {} mode", env);
     println!("(Set APP_ENV=production to see different behavior)\n");
 
-    // Register conditional formatting hooks
-    register_attachment_hook::<ApiCredentials, _>(CredentialsFormatter);
-    register_attachment_hook::<DebugSnapshot, _>(DebugSnapshotFormatter);
+    // Install conditional formatting hooks
+    Hooks::new()
+        .with_attachment_override::<ApiCredentials, _>(CredentialsFormatter)
+        .with_attachment_override::<DebugSnapshot, _>(DebugSnapshotFormatter)
+        .install()
+        .expect("failed to install hooks");
 
     println!("Example 1: Conditionally hide sensitive data\n");
     match authenticate_api() {

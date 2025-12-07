@@ -544,7 +544,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     #[must_use]
     pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
     where
-        H: crate::hooks::report_formatting::ReportFormatterHook,
+        H: crate::hooks::report_formatting::ReportFormatter,
     {
         let raw = self.as_raw();
 

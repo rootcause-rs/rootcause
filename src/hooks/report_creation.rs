@@ -1,9 +1,9 @@
 //! Report creation hooks for automatic report modification.
 //!
-//! This module provides a system for registering hooks that are automatically
-//! executed when reports are created. These hooks can add additional context
-//! or attachments to reports automatically, without requiring manual
-//! intervention from the code creating the report.
+//! This module provides a system for hooks that are automatically executed when
+//! reports are created. These hooks can add additional context or attachments
+//! to reports automatically, without requiring manual intervention from the
+//! code creating the report.
 //!
 //! # Hook Types
 //!
@@ -12,8 +12,8 @@
 //! 1. [`ReportCreationHook`]: General hooks that get access to the entire
 //!    report during creation and can perform arbitrary operations.
 //!
-//! 2. [`AttachmentCollectorHook`]: Specialized hooks that collect specific
-//!    types of data and automatically attach them to reports.
+//! 2. [`AttachmentCollector`]: Specialized hooks that collect specific types of
+//!    data and automatically attach them to reports.
 //!
 //! Internally the attachment collector hooks are converted to report creation
 //! hooks and registered using the same system. They exist to provide a simpler
@@ -21,12 +21,12 @@
 //!
 //! # Examples
 //!
-//! ## Registering a Custom Report Creation Hook
+//! ## Installing a Custom Report Creation Hook
 //!
 //! ```rust
 //! use rootcause::{
 //!     ReportMut,
-//!     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
+//!     hooks::{Hooks, report_creation::ReportCreationHook},
 //!     markers::{Dynamic, Local, SendSync},
 //!     prelude::*,
 //! };
@@ -47,15 +47,18 @@
 //!     }
 //! }
 //!
-//! // Register the hook
-//! register_report_creation_hook(MyHook);
+//! // Install the hook globally
+//! Hooks::new()
+//!     .with_report_creation_hook(MyHook)
+//!     .install()
+//!     .expect("failed to install hooks");
 //! ```
 //!
-//! ## Registering an Attachment Collector Hook
+//! ## Installing an Attachment Collector Hook
 //!
 //! ```rust
 //! use rootcause::{
-//!     hooks::report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
+//!     hooks::{Hooks, report_creation::AttachmentCollector},
 //!     prelude::*,
 //! };
 //!
@@ -70,34 +73,40 @@
 //!     }
 //! }
 //!
-//! impl AttachmentCollectorHook<u32> for ProcessIdCollector {
+//! impl AttachmentCollector<ProcessId> for ProcessIdCollector {
 //!     type Handler = handlers::Display;
 //!
-//!     fn collect(&self) -> u32 {
-//!         std::process::id()
+//!     fn collect(&self) -> ProcessId {
+//!         ProcessId(std::process::id())
 //!     }
 //! }
 //!
-//! // Register the collector
-//! register_attachment_collector_hook(ProcessIdCollector);
+//! // Install the collector globally
+//! Hooks::new()
+//!     .with_attachment_collector(ProcessIdCollector)
+//!     .install()
+//!     .expect("failed to install hooks");
 //! ```
 //!
 //! ## Using a Closure as an Attachment Collector
 //!
 //! ```rust
-//! use rootcause::hooks::report_creation::register_attachment_collector_hook;
+//! use rootcause::hooks::Hooks;
 //!
-//! // Register a simple closure that collects the current timestamp
-//! register_attachment_collector_hook(|| {
-//!     std::time::SystemTime::now()
-//!         .duration_since(std::time::UNIX_EPOCH)
-//!         .unwrap()
-//!         .as_secs()
-//! });
+//! // Install a simple closure that collects the current timestamp
+//! Hooks::new()
+//!     .with_attachment_collector(|| {
+//!         std::time::SystemTime::now()
+//!             .duration_since(std::time::UNIX_EPOCH)
+//!             .unwrap()
+//!             .as_secs()
+//!     })
+//!     .install()
+//!     .expect("failed to install hooks");
 //! ```
 
-use alloc::{boxed::Box, vec::Vec};
-use core::{fmt, panic::Location};
+use alloc::boxed::Box;
+use core::fmt;
 
 use rootcause_internals::handlers::AttachmentHandler;
 
@@ -106,21 +115,21 @@ use crate::hooks::builtin_hooks::backtrace::BacktraceCollector;
 use crate::{
     ReportMut, handlers,
     hooks::{
-        builtin_hooks::location::{LocationCollector, LocationHandler},
-        hook_lock::{HookLock, HookLockReadGuard},
+        HookData,
+        builtin_hooks::location::{Location, LocationHandler},
     },
     markers::{Dynamic, Local, SendSync},
     report_attachment::ReportAttachment,
 };
 
-type HookSet = Vec<Box<dyn UntypedReportCreationHook>>;
-
-static HOOKS: HookLock<HookSet> = HookLock::new();
-
-trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
+pub(crate) trait UntypedReportCreationHook:
+    'static + Send + Sync + core::fmt::Debug
+{
     #[track_caller]
+    /// TODO
     fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>);
     #[track_caller]
+    /// TODO
     fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
@@ -132,7 +141,7 @@ trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
 /// logging, or performing other side effects.
 ///
 /// If you only need to add attachments, then consider using an
-/// [`AttachmentCollectorHook`] instead, as it gives you an easier to use API
+/// [`AttachmentCollector`] instead, as it gives you an easier to use API
 /// for this use case.
 ///
 /// # Examples
@@ -140,7 +149,7 @@ trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
 /// ```rust
 /// use rootcause::{
 ///     ReportMut,
-///     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
+///     hooks::{Hooks, report_creation::ReportCreationHook},
 ///     markers::{Dynamic, Local, SendSync},
 ///     prelude::*,
 /// };
@@ -161,8 +170,11 @@ trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
 ///     }
 /// }
 ///
-/// // Register the hook to activate it
-/// register_report_creation_hook(LoggingHook);
+/// // Install the hook globally
+/// Hooks::new()
+///     .with_report_creation_hook(LoggingHook)
+///     .install()
+///     .expect("failed to install hooks");
 /// ```
 pub trait ReportCreationHook: 'static + Send + Sync {
     /// Called when a [`Local`] report is created.
@@ -174,25 +186,17 @@ pub trait ReportCreationHook: 'static + Send + Sync {
     fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
-#[track_caller]
-fn creation_hook_to_untyped<H>(hook: H) -> Box<dyn UntypedReportCreationHook>
+pub(crate) fn creation_hook_to_untyped<H>(hook: H) -> Box<dyn UntypedReportCreationHook>
 where
     H: ReportCreationHook + Send + Sync + 'static,
 {
     struct Hook<H> {
         hook: H,
-        added_at: &'static Location<'static>,
     }
 
-    impl<H> core::fmt::Display for Hook<H> {
+    impl<H> core::fmt::Debug for Hook<H> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "Report creation hook {} registered at {}:{}",
-                core::any::type_name::<H>(),
-                self.added_at.file(),
-                self.added_at.line()
-            )
+            write!(f, "CreationHook<{}>", core::any::type_name::<H>(),)
         }
     }
 
@@ -209,43 +213,36 @@ where
         }
     }
 
-    let hook: Hook<H> = Hook {
-        hook,
-        added_at: Location::caller(),
-    };
+    let hook: Hook<H> = Hook { hook };
     Box::new(hook)
 }
 
-#[track_caller]
-fn attachment_hook_to_untyped<A, H, C>(collector: C) -> Box<dyn UntypedReportCreationHook>
+pub(crate) fn attachment_hook_to_untyped<A, H, C>(
+    collector: C,
+) -> Box<dyn UntypedReportCreationHook>
 where
     A: 'static + Send + Sync,
     H: AttachmentHandler<A>,
-    C: AttachmentCollectorHook<A> + Send + Sync + 'static,
+    C: AttachmentCollector<A> + Send + Sync + 'static,
 {
-    struct Hook<A, H, C>
-    where
-        A: 'static,
-        H: 'static,
-    {
-        collector: C,
-        added_at: &'static Location<'static>,
+    struct Hook<A, Handler, Collector> {
+        collector: Collector,
         _handled_type: core::marker::PhantomData<fn(A) -> A>,
-        _handler: core::marker::PhantomData<fn(H) -> H>,
+        _handler: core::marker::PhantomData<fn(Handler) -> Handler>,
     }
 
-    impl<A, H, C> UntypedReportCreationHook for Hook<A, H, C>
+    impl<A, Handler, Collector> UntypedReportCreationHook for Hook<A, Handler, Collector>
     where
         A: 'static + Send + Sync,
-        H: AttachmentHandler<A>,
-        C: AttachmentCollectorHook<A> + Send + Sync,
+        Handler: AttachmentHandler<A>,
+        Collector: AttachmentCollector<A> + Send + Sync,
     {
         #[track_caller]
         fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
             let attachment = self.collector.collect();
             report
                 .attachments_mut()
-                .push(ReportAttachment::new_local_custom::<H>(attachment).into_dynamic());
+                .push(ReportAttachment::new_local_custom::<Handler>(attachment).into_dynamic());
         }
 
         #[track_caller]
@@ -253,112 +250,29 @@ where
             let attachment = self.collector.collect();
             report
                 .attachments_mut()
-                .push(ReportAttachment::new_sendsync_custom::<H>(attachment).into_dynamic());
+                .push(ReportAttachment::new_sendsync_custom::<Handler>(attachment).into_dynamic());
         }
     }
-    impl<A, H, C> core::fmt::Display for Hook<A, H, C> {
+    impl<A, Handler, Collector> core::fmt::Debug for Hook<A, Handler, Collector> {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             write!(
                 f,
-                "Attachment collector hook {} for attachment type {} with handler {} registered at {}:{}",
-                core::any::type_name::<C>(),
+                "AttachmentCollector<{}, {}, {}>",
                 core::any::type_name::<A>(),
-                core::any::type_name::<H>(),
-                self.added_at.file(),
-                self.added_at.line()
+                core::any::type_name::<Handler>(),
+                core::any::type_name::<Collector>(),
             )
         }
     }
 
     let hook = Hook {
         collector,
-        added_at: core::panic::Location::caller(),
         _handled_type: core::marker::PhantomData,
         _handler: core::marker::PhantomData,
     };
     let hook: Box<Hook<A, H, C>> = Box::new(hook);
 
     hook
-}
-
-#[track_caller]
-fn default_hooks() -> HookSet {
-    #[allow(unused_mut)]
-    let mut hooks = alloc::vec![attachment_hook_to_untyped::<_, LocationHandler, _>(
-        LocationCollector,
-    )];
-
-    #[cfg(feature = "backtrace")]
-    hooks.push(creation_hook_to_untyped(BacktraceCollector::new_from_env()));
-
-    hooks
-}
-
-/// Registers a report creation hook that will be called whenever a report is
-/// created.
-///
-/// Once registered, the hook will be automatically invoked for every report
-/// that gets created in the application.
-///
-/// # Registration Order
-///
-/// Hooks are called in the order they were registered. Earlier registered hooks
-/// will execute before later ones.
-///
-/// # Performance Considerations
-///
-/// Registered hooks will be called for *every* report creation, so they should
-/// be designed to be fast. Heavy operations in hooks can significantly impact
-/// the performance of error reporting throughout the application.
-///
-/// # Examples
-///
-/// ```rust
-/// use rootcause::{
-///     ReportMut,
-///     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
-///     markers::{Dynamic, Local, SendSync},
-///     prelude::*,
-///     report_attachment::ReportAttachment,
-/// };
-///
-/// struct CountingHook {
-///     counter: std::sync::atomic::AtomicUsize,
-/// }
-///
-/// impl ReportCreationHook for CountingHook {
-///     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
-///         let count = self
-///             .counter
-///             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-///         let attachment = report_attachment!("Report #{}", count);
-///         report.attachments_mut().push(attachment.into());
-///     }
-///
-///     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
-///         let count = self
-///             .counter
-///             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
-///         let attachment = report_attachment!("Report #{}", count);
-///         report.attachments_mut().push(attachment.into());
-///     }
-/// }
-///
-/// // Register the hook - it will now be called for all future reports
-/// register_report_creation_hook(CountingHook {
-///     counter: std::sync::atomic::AtomicUsize::new(0),
-/// });
-/// ```
-#[track_caller]
-pub fn register_report_creation_hook<H>(hook: H)
-where
-    H: ReportCreationHook + Send + Sync + 'static,
-{
-    HOOKS
-        .write()
-        .get()
-        .get_or_insert_with(default_hooks)
-        .push(creation_hook_to_untyped(hook));
 }
 
 /// A hook that collects data to be automatically attached to reports when they
@@ -379,10 +293,13 @@ where
 /// [`Debug`]: core::fmt::Debug
 ///
 /// ```rust
-/// use rootcause::hooks::report_creation::register_attachment_collector_hook;
+/// use rootcause::hooks::Hooks;
 ///
-/// // This closure automatically implements AttachmentCollectorHook<String>
-/// register_attachment_collector_hook(|| "timestamp".to_string());
+/// // This closure automatically implements AttachmentCollector<String>
+/// Hooks::new()
+///     .with_attachment_collector(|| "timestamp".to_string())
+///     .install()
+///     .expect("failed to install hooks");
 /// ```
 ///
 /// # Examples
@@ -391,13 +308,13 @@ where
 ///
 /// ```rust
 /// use rootcause::{
-///     hooks::report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
+///     hooks::{Hooks, report_creation::AttachmentCollector},
 ///     prelude::*,
 /// };
 ///
 /// struct SystemInfoCollector;
 ///
-/// impl AttachmentCollectorHook<String> for SystemInfoCollector {
+/// impl AttachmentCollector<String> for SystemInfoCollector {
 ///     type Handler = handlers::Display;
 ///
 ///     fn collect(&self) -> String {
@@ -409,23 +326,29 @@ where
 ///     }
 /// }
 ///
-/// // Register the collector
-/// register_attachment_collector_hook(SystemInfoCollector);
+/// // Install the collector globally
+/// Hooks::new()
+///     .with_attachment_collector(SystemInfoCollector)
+///     .install()
+///     .expect("failed to install hooks");
 /// ```
 ///
 /// ## Using a Closure
 ///
 /// ```rust
-/// use rootcause::hooks::report_creation::register_attachment_collector_hook;
+/// use rootcause::hooks::Hooks;
 ///
-/// // Register a closure that collects the current working directory
-/// register_attachment_collector_hook(|| {
-///     std::env::current_dir()
-///         .map(|p| p.display().to_string())
-///         .unwrap_or_else(|_| "unknown".to_string())
-/// });
+/// // Install a closure that collects the current working directory
+/// Hooks::new()
+///     .with_attachment_collector(|| {
+///         std::env::current_dir()
+///             .map(|p| p.display().to_string())
+///             .unwrap_or_else(|_| "unknown".to_string())
+///     })
+///     .install()
+///     .expect("failed to install hooks");
 /// ```
-pub trait AttachmentCollectorHook<A>: 'static + Send + Sync {
+pub trait AttachmentCollector<A>: 'static + Send + Sync {
     /// The handler type used to format the collected data.
     type Handler: AttachmentHandler<A>;
 
@@ -438,7 +361,7 @@ pub trait AttachmentCollectorHook<A>: 'static + Send + Sync {
     fn collect(&self) -> A;
 }
 
-impl<A, F> AttachmentCollectorHook<A> for F
+impl<A, F> AttachmentCollector<A> for F
 where
     A: 'static + core::fmt::Display + core::fmt::Debug,
     F: 'static + Send + Sync + Fn() -> A,
@@ -451,108 +374,30 @@ where
     }
 }
 
-/// Registers an attachment collector hook that will automatically collect and
-/// attach data to reports.
-///
-/// Once registered, the collector will be automatically invoked for every
-/// report that gets created. The collected data will be formatted using the
-/// collector's associated handler and attached to the report.
-///
-/// Note that internally this function converts the attachment collector into
-/// a report creation hook and registers it using the same system as
-/// [`register_report_creation_hook`].
-///
-/// # Registration Order
-///
-/// Attachment collectors are called in the order they were registered, after
-/// any general report creation hooks have been executed.
-///
-/// # Performance Considerations
-///
-/// Registered collectors will be called for *every* report creation, so they
-/// should be designed to be fast. Heavy operations in collectors can
-/// significantly impact the performance of error reporting throughout the
-/// application.
-///
-/// # Examples
-///
-/// ## Registering a Custom Collector
-///
-/// ```rust
-/// use rootcause::{
-///     hooks::report_creation::{AttachmentCollectorHook, register_attachment_collector_hook},
-///     prelude::*,
-/// };
-///
-/// struct MemoryUsageCollector;
-/// #[derive(Debug)]
-/// struct MemoryInfo {
-///     used_mb: u64,
-/// }
-///
-/// impl AttachmentCollectorHook<MemoryInfo> for MemoryUsageCollector {
-///     type Handler = handlers::Debug;
-///
-///     fn collect(&self) -> MemoryInfo {
-///         // This is a simplified example - in practice you'd use a proper method
-///         // to get memory usage information
-///         MemoryInfo { used_mb: 45 }
-///     }
-/// }
-///
-/// // Register the collector - it will now collect memory info for all reports
-/// register_attachment_collector_hook(MemoryUsageCollector);
-/// ```
-///
-/// ## Registering a Closure Collector
-///
-/// ```rust
-/// use rootcause::hooks::report_creation::register_attachment_collector_hook;
-///
-/// // Register a simple closure that collects the current thread ID as a string
-/// register_attachment_collector_hook(|| {
-///     format!("Created on thread_id={:?}", std::thread::current().id())
-/// });
-/// ```
-#[track_caller]
-pub fn register_attachment_collector_hook<A, C>(collector: C)
-where
-    A: 'static + Send + Sync,
-    C: AttachmentCollectorHook<A> + Send + Sync + 'static,
-{
-    HOOKS
-        .write()
-        .get()
-        .get_or_insert_with(default_hooks)
-        .push(attachment_hook_to_untyped::<A, C::Handler, C>(collector));
-}
-
-#[track_caller]
-fn get_hooks() -> HookLockReadGuard<HookSet> {
-    let read_guard = HOOKS.read();
-    if read_guard.get().is_some() {
-        read_guard
-    } else {
-        core::mem::drop(read_guard);
-        HOOKS.write().get().get_or_insert_with(default_hooks);
-        HOOKS.read()
-    }
-}
-
 #[track_caller]
 pub(crate) fn run_creation_hooks_local(mut report: ReportMut<'_, Dynamic, Local>) {
-    if let Some(hooks) = get_hooks().get() {
-        for hook in hooks {
+    if let Some(hook_data) = HookData::fetch() {
+        for hook in &hook_data.report_creation {
             hook.on_local_creation(report.as_mut());
         }
+    } else {
+        report.attachments_mut().push(
+            ReportAttachment::new_local_custom::<LocationHandler>(Location::caller())
+                .into_dynamic(),
+        );
     }
 }
 
 #[track_caller]
 pub(crate) fn run_creation_hooks_sendsync(mut report: ReportMut<'_, Dynamic, SendSync>) {
-    if let Some(hooks) = get_hooks().get() {
-        for hook in hooks {
+    if let Some(hook_data) = HookData::fetch() {
+        for hook in &hook_data.report_creation {
             hook.on_sendsync_creation(report.as_mut());
         }
+    } else {
+        report.attachments_mut().push(
+            ReportAttachment::new_sendsync_custom::<LocationHandler>(Location::caller())
+                .into_dynamic(),
+        );
     }
 }

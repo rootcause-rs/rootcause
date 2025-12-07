@@ -718,7 +718,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with_hook<H: crate::hooks::report_formatting::ReportFormatterHook>(
+    pub fn format_with_hook<H: crate::hooks::report_formatting::ReportFormatter>(
         self,
         hook: &H,
     ) -> impl core::fmt::Display + core::fmt::Debug {
