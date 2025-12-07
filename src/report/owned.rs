@@ -368,8 +368,8 @@ impl<C: Sized, T> Report<C, Mutable, T> {
 
     /// Decomposes the [`Report`] into its constituent parts.
     ///
-    /// Returns a tuple containing the children collection, attachments
-    /// collection, and context in that order. This is the inverse operation
+    /// Returns a tuple containing the context, the children collection and the
+    /// attachments collection in that order. This is the inverse operation
     /// of [`Report::from_parts`] and [`Report::from_parts_unhooked`].
     ///
     /// This method can be useful when you need to:
@@ -417,7 +417,9 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. Since `O=Mutable` and we are consuming `self`, then this is guaranteed to
-        //    be the unique owner of the report.
+        //    be the unique owner of the report. We also no that there are no other references
+        //    such as `ReportRef` or `ReportMut` active, as those would require a borrow
+        //    of `self`.
         let (context, children, attachments) = unsafe { raw.into_parts() };
 
         // SAFETY:
@@ -737,7 +739,10 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         // 6. This is guaranteed by the invariants of this type.
         // 7. This is guaranteed by the invariants of this type.
         // 8. This is guaranteed by the invariants of this type.
-        unsafe { Report::<Dynamic, O, T>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            Report::<Dynamic, O, T>::from_raw(raw)
+        }
     }
 
     /// Changes the ownership of the [`Report`] to [`Cloneable`].

@@ -44,7 +44,10 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T> {
                 //    One of the safety invariants of that `ReportRef` is that `O` must either
                 //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
                 //    calling `ReportRef::from_cloneable` using that same `O`.
-                unsafe { ReportRef::<Dynamic, O, T>::from_cloneable(child_report) }
+                unsafe {
+                    // @add-unsafe-context: Dynamic
+                    ReportRef::<Dynamic, O, T>::from_cloneable(child_report)
+                }
             })
             .rev();
         self.stack.extend(new_children);

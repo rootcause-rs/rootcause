@@ -246,7 +246,10 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         // SAFETY:
         // 1. `A=Dynamic`, so this is trivially satisfied
         // 2. `A=Dynamic`, so this is trivially satisfied
-        unsafe { ReportAttachmentRef::<Dynamic>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentRef::<Dynamic>::from_raw(raw)
+        }
     }
 
     /// Returns the preferred formatting style for this attachment with

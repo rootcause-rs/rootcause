@@ -126,7 +126,6 @@ impl ReportVtable {
         // 2. Guaranteed by the caller
         // 3. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: drop
             (self.drop)(ptr);
         }
@@ -140,9 +139,11 @@ impl ReportVtable {
     ///
     /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into
     ///    a pointer via [`triomphe::Arc::into_raw`]
-    /// 2. This [`ReportVtable`] must be a vtable for the context type stored in
+    /// 2. The pointer has full provenance over the `Arc` (i.e., it was not
+    ///    derived from a `&T` reference)
+    /// 3. This [`ReportVtable`] must be a vtable for the context type stored in
     ///    the [`ReportData`].
-    /// 3. All other references to this report are compatible with shared
+    /// 4. All other references to this report are compatible with shared
     ///    ownership. Specifically none of them assume that the strong_count is
     ///    `1`.
     #[inline]
@@ -152,8 +153,8 @@ impl ReportVtable {
         // 1. Guaranteed by the caller
         // 2. Guaranteed by the caller
         // 3. Guaranteed by the caller
+        // 4. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: clone_arc
             (self.clone_arc)(ptr)
         }
@@ -175,7 +176,6 @@ impl ReportVtable {
         // upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: strong_count
             (self.strong_count)(ptr)
         }
@@ -201,7 +201,6 @@ impl ReportVtable {
         // below. That function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: source
             (self.source)(ptr)
         }
@@ -228,7 +227,6 @@ impl ReportVtable {
         // below. That function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: display
             (self.display)(ptr, formatter)
         }
@@ -255,7 +253,6 @@ impl ReportVtable {
         // below. That function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: debug
             (self.debug)(ptr, formatter)
         }
@@ -284,7 +281,6 @@ impl ReportVtable {
         // That function's safety requirements are upheld:
         // 1. Guaranteed by the caller
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: preferred_context_formatting_style
             (self.preferred_context_formatting_style)(ptr, report_formatting_function)
         }
@@ -328,16 +324,20 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
 ///
 /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into a
 ///    pointer via [`triomphe::Arc::into_raw`]
-/// 2. The context type `C` matches the actual context type stored in the
+/// 2. The pointer has full provenance over the `Arc` (i.e., it was not
+///    derived from a `&T` reference)
+/// 3. The context type `C` matches the actual context type stored in the
 ///    [`ReportData`]
-/// 3. All other references to this report are compatible with shared ownership.
+/// 4. All other references to this report are compatible with shared ownership.
 ///    Specifically none of them assume that the strong_count is `1`.
 unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 
-    // SAFETY: The pointer is valid and came from `Arc::into_raw` with the correct
-    // type (guaranteed by the caller), which fulfills the requirements for
-    // `ArcBorrow::from_ptr`.
+    // SAFETY:
+    // - The pointer is valid and came from `Arc::into_raw` with the correct
+    //   type (guaranteed by the caller)
+    // - The pointer has full provenance over the `Arc` (i.e., it was not derived from a
+    //   `&T` reference) (guaranteed by the caller)
     let arc_borrow = unsafe {
         // @add-unsafe-context: ReportData
         triomphe::ArcBorrow::from_ptr(ptr)

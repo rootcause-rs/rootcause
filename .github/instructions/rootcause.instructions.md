@@ -109,7 +109,7 @@ fn check_invariants(&self) -> bool { /* ... */ }
 - **Use intra-doc links for modules**: [`crate::handlers`]
 - **Use full paths for external crates**: [`std::error::Error`]
 - **Especially important for internal references**: Always use [`ReportRef`], [`ReportMut`], [`Cloneable`], etc. rather than plain backticks
-- **Exception for well-known standard library types**: Don't use intra-doc links for `dyn Any`, `String`, `Vec`, or other ubiquitous standard library types that serve as markers or are universally understood. Plain backticks are sufficient (e.g., `dyn Any` for type erasure).
+- **Exception for well-known standard library types**: Don't use intra-doc links for `String`, `Vec`, or other ubiquitous standard library types.
 - **Rationale**: Intra-doc links enable IDE navigation and rustdoc verification of link validity
 
 ## Example Standards
@@ -146,7 +146,7 @@ fn check_invariants(&self) -> bool { /* ... */ }
 /// use rootcause::prelude::*;
 ///
 /// let error_code = 404;
-/// let report: Report<dyn Any> = report!("Error {}: Not found", error_code);
+/// let report: Report = report!("Error {}: Not found", error_code);
 /// println!("{}", report);
 /// ```
 ///
@@ -163,13 +163,13 @@ pub fn new(context: C) -> Report<C, Mutable, SendSync> {
 
 The `report!()` macro has two forms and should be used appropriately:
 
-**Format string form** (returns `Report<dyn Any, Mutable, SendSync>`):
+**Format string form** (returns `Report<Dynamic, Mutable, SendSync>`):
 
 ```rust
 use rootcause::prelude::*;
 
 let error_code = 500;
-let report: Report<dyn Any> = report!("Server error: {}", error_code);
+let report: Report = report!("Server error: {}", error_code);
 ```
 
 **Expression form** (returns `Report<C, Mutable, T>` where `C` and `T` are inferred):
@@ -186,14 +186,14 @@ let report: Report<MyError> = report!(custom_error);
 - **Context type (`C`)**: Include when it helps understanding (e.g., `Report<MyError>`, `Report<&str>`)
 - **Ownership marker**: Usually omit `Mutable` unless comparing with `Cloneable`
 - **Thread safety marker**: Usually omit `SendSync` unless comparing with `Local` or when `Local` is used
-- **`dyn Any`**: Include when demonstrating type erasure or when the dynamic nature is important
+- **`Dynamic`**: Usually omit (it's the default) unless explicitly demonstrating type erasure or comparing with typed reports
 
 **Good examples:**
 
 ```rust
-let report: Report<dyn Any> = report!("error message");
+let report: Report = report!("error message");
 let report: Report<MyError, Cloneable> = report!(my_error).into_cloneable();
-let report: Report<dyn Any, Mutable, Local> = report!(non_send_error).into_local();
+let report: Report<Dynamic, Mutable, Local> = report!(non_send_error).into_local();
 ```
 
 **Avoid unless necessary:**

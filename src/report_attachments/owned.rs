@@ -524,7 +524,7 @@ impl<T> IntoIterator for ReportAttachments<T> {
     type IntoIter = ReportAttachmentsIntoIter<T>;
     type Item = ReportAttachment<Dynamic, T>;
 
-    fn into_iter(self) -> Self::IntoIter {
+    fn into_iter(self) -> ReportAttachmentsIntoIter<T> {
         let raw = self.into_raw().into_iter();
 
         // SAFETY:
@@ -538,7 +538,7 @@ impl<'a, T> IntoIterator for &'a ReportAttachments<T> {
     type IntoIter = ReportAttachmentsIter<'a>;
     type Item = ReportAttachmentRef<'a, Dynamic>;
 
-    fn into_iter(self) -> Self::IntoIter {
+    fn into_iter(self) -> ReportAttachmentsIter<'a> {
         self.iter()
     }
 }

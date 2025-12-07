@@ -63,7 +63,9 @@ pub struct RawReport {
     /// 1. The pointer must have been created from a
     ///    `triomphe::Arc<ReportData<C>>` for some `C` using
     ///    `triomphe::Arc::into_raw`.
-    /// 2. The pointer will point to the same `ReportData<C>` for the entire
+    /// 2. The pointer retains full provenance over the `Arc` for the entire
+    ///    lifetime of this object (i.e., it was not derived from a `&T`)
+    /// 3. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
 }
@@ -178,7 +180,9 @@ pub struct RawReportRef<'a> {
     /// 1. The pointer must have been created from a
     ///    `triomphe::Arc<ReportData<C>>` for some `C` using
     ///    `triomphe::Arc::into_raw`.
-    /// 2. The pointer will point to the same `ReportData<C>` for the entire
+    /// 2. The pointer retains full provenance over the `Arc` for the entire
+    ///    lifetime of this object (i.e., it was not derived from a `&T`)
+    /// 3. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
     ptr: NonNull<ReportData<Erased>>,
 
@@ -305,9 +309,10 @@ impl<'a> RawReportRef<'a> {
         let vtable = self.vtable();
         // SAFETY:
         // 1. Guaranteed by invariants on this type
-        // 2. Guaranteed by the fact that `ReportData` can only be constructed by
-        //    `ReportData::new`
-        // 3. Guaranteed by the caller
+        // 2. Guaranteed by invariants on this type
+        // 3. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
+        // 4. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: ReportData
             vtable.clone_arc(self.ptr)

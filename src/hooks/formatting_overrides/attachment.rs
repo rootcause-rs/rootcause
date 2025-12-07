@@ -627,7 +627,6 @@ pub(crate) fn display_attachment(
         //    Therefore the type `A` stored in the attachment matches the `A` from type
         //    `Hook<A, H>`.
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
             // @add-unsafe-context: UntypedAttachmentFormattingOverride
             hook.display(attachment, attachment_parent, formatter)
@@ -653,7 +652,6 @@ pub(crate) fn debug_attachment(
         //    Therefore the type `A` stored in the attachment matches the `A` from type
         //    `Hook<A, H>`.
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
             // @add-unsafe-context: UntypedAttachmentFormattingOverride
             hook.debug(attachment, attachment_parent, formatter)

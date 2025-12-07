@@ -505,7 +505,6 @@ pub(crate) fn display_context(
         //    Therefore the type `C` stored in the context matches the `C` from type
         //    `Hook<C, H>`.
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
             // @add-unsafe-context: UntypedContextFormattingOverride
             hook.display(report, formatter)
@@ -530,7 +529,6 @@ pub(crate) fn debug_context(
         //    Therefore the type `C` stored in the context matches the `C` from type
         //    `Hook<C, H>`.
         unsafe {
-            // See https://github.com/rootcause-rs/rootcause-unsafe-analysis for details
             // @add-unsafe-context: get_hook
             // @add-unsafe-context: UntypedContextFormattingOverride
             hook.debug(report, formatter)

@@ -364,7 +364,10 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         // 5. This is guaranteed by our own safety invariants.
         // 6. This is guaranteed by our own safety invariants.
         // 7. This is guaranteed by our own safety invariants.
-        unsafe { ReportRef::<Dynamic, O, T>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportRef::<Dynamic, O, T>::from_raw(raw)
+        }
     }
 
     /// Changes the ownership mode of the [`ReportRef`] to [`Uncloneable`].
