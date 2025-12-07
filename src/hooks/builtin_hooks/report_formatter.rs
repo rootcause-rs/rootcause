@@ -49,10 +49,7 @@ use alloc::{
     string::{String, ToString},
     vec::Vec,
 };
-use core::{
-    any::Any,
-    fmt::{self, Formatter, Write},
-};
+use core::fmt::{self, Formatter, Write};
 
 use indexmap::IndexMap;
 use rootcause_internals::handlers::{
@@ -62,7 +59,7 @@ use rootcause_internals::handlers::{
 use crate::{
     ReportRef,
     hooks::report_formatting::ReportFormatterHook,
-    markers::{Local, Uncloneable},
+    markers::{Dynamic, Local, Uncloneable},
     report_attachment::ReportAttachmentRef,
 };
 
@@ -694,7 +691,7 @@ impl NodeConfig {
 }
 type Appendices<'a> = IndexMap<
     &'static str,
-    Vec<(ReportAttachmentRef<'a, dyn Any>, FormattingFunction)>,
+    Vec<(ReportAttachmentRef<'a, Dynamic>, FormattingFunction)>,
     rustc_hash::FxBuildHasher,
 >;
 
@@ -709,7 +706,7 @@ struct DefaultFormatterState<'a, 'b> {
 impl ReportFormatterHook for DefaultReportFormatter {
     fn format_reports(
         &self,
-        reports: &[ReportRef<'_, dyn Any, Uncloneable, Local>],
+        reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
         formatter: &mut fmt::Formatter<'_>,
         report_formatting_function: FormattingFunction,
     ) -> fmt::Result {
@@ -720,7 +717,7 @@ impl ReportFormatterHook for DefaultReportFormatter {
 }
 
 type TmpValueBuffer = String;
-type TmpAttachmentsBuffer<'a> = Vec<(AttachmentFormattingStyle, ReportAttachmentRef<'a, dyn Any>)>;
+type TmpAttachmentsBuffer<'a> = Vec<(AttachmentFormattingStyle, ReportAttachmentRef<'a, Dynamic>)>;
 
 impl<'a, 'b> DefaultFormatterState<'a, 'b> {
     fn new(
@@ -803,7 +800,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
 
     fn format_reports(
         &mut self,
-        reports: &[ReportRef<'a, dyn Any, Uncloneable, Local>],
+        reports: &[ReportRef<'a, Dynamic, Uncloneable, Local>],
     ) -> fmt::Result {
         let mut tmp_value_buffer = TmpValueBuffer::default();
         let mut tmp_attachments_buffer = TmpAttachmentsBuffer::default();
@@ -833,7 +830,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         &mut self,
         tmp_value_buffer: &mut TmpValueBuffer,
         tmp_attachments_buffer: &mut TmpAttachmentsBuffer<'a>,
-        report: ReportRef<'a, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'a, Dynamic, Uncloneable, Local>,
         is_first_child: bool,
         is_last_child: bool,
     ) -> fmt::Result {
@@ -862,7 +859,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         &mut self,
         tmp_value_buffer: &mut TmpValueBuffer,
         tmp_attachments_buffer: &mut TmpAttachmentsBuffer<'a>,
-        report: ReportRef<'a, dyn Any, Uncloneable, Local>,
+        report: ReportRef<'a, Dynamic, Uncloneable, Local>,
     ) -> fmt::Result {
         let has_children = !report.children().is_empty();
         let has_attachments = !report.attachments().is_empty();
@@ -954,7 +951,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         &mut self,
         tmp_value_buffer: &mut TmpValueBuffer,
         attachment_formatting_style: AttachmentFormattingStyle,
-        attachment: ReportAttachmentRef<'a, dyn Any>,
+        attachment: ReportAttachmentRef<'a, Dynamic>,
         is_last: bool,
     ) -> fmt::Result {
         match attachment_formatting_style.placement {

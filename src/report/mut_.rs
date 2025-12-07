@@ -1,10 +1,10 @@
-use core::any::{Any, TypeId};
+use core::any::TypeId;
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter, ReportRef,
-    markers::{Cloneable, Local, Mutable, SendSync, Uncloneable},
+    markers::{Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -14,11 +14,11 @@ use crate::{
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access {
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::{RawReportMut, RawReportRef};
 
-    use crate::markers::SendSync;
+    use crate::markers::{Dynamic, SendSync};
 
     /// A mutable reference to a [`Report`].
     ///
@@ -80,18 +80,17 @@ mod limit_field_access {
     //    borrow checker will ensure that original longer lifetime is not used while the shorter
     //    lifetime exists.
     #[repr(transparent)]
-    pub struct ReportMut<'a, Context: ?Sized + 'static = dyn Any, ThreadSafety: 'static = SendSync> {
+    pub struct ReportMut<'a, Context: ?Sized + 'static = Dynamic, ThreadSafety: 'static = SendSync> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists and must be continue to be upheld as
         /// long as the inner `RawReportMut` exists:
         ///
-        /// 1. `C` must either be a concrete type bounded by `Sized`, or `dyn
-        ///    Any`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The context embedded in the report
-        ///    must be of type `C`
+        /// 3. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
         /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -112,11 +111,10 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `C` must either be a concrete type bounded by `Sized`, or `dyn
-        ///    Any`.
+        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The context embedded in the report
-        ///    must be of type `C`
+        /// 3. If `C` is a `Sized` type: The context embedded in the report must
+        ///    be of type `C`
         /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
         /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -269,7 +267,7 @@ impl<'a, C: Sized, T> ReportMut<'a, C, T> {
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
-        // 1. We know that `C` is a concrete type, so this is guaranteed by the
+        // 1. We know that `C` is a `Sized` type, so this is guaranteed by the
         //    invariants of this type.
         unsafe { raw.into_context_downcast_unchecked() }
     }
@@ -287,7 +285,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// assert_eq!(children.len(), 0); // The report has just been created, so it has no children
     /// ```
     #[must_use]
-    pub fn children(&self) -> &ReportCollection<dyn Any, T> {
+    pub fn children(&self) -> &ReportCollection<Dynamic, T> {
         self.as_ref().children()
     }
 
@@ -301,7 +299,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// let children_mut: &mut ReportCollection = report_mut.children_mut();
     /// ```
     #[must_use]
-    pub fn children_mut(&mut self) -> &mut ReportCollection<dyn Any, T> {
+    pub fn children_mut(&mut self) -> &mut ReportCollection<Dynamic, T> {
         self.as_mut().into_children_mut()
     }
 
@@ -316,7 +314,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// let children_mut: &mut ReportCollection = report_mut.into_children_mut();
     /// ```
     #[must_use]
-    pub fn into_children_mut(self) -> &'a mut ReportCollection<dyn Any, T> {
+    pub fn into_children_mut(self) -> &'a mut ReportCollection<Dynamic, T> {
         // SAFETY:
         // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
         //    not allowed to mutate the returned raw report in a way that adds
@@ -335,10 +333,10 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         // 1. Guaranteed by the invariants of this type.
         // 2. The invariants of this type guarantee that `T` is either `Local` or
         //    `SendSync`.
-        // 3. `C=dyn Any`, so this is trivially true
+        // 3. `C=Dynamic`, so this is trivially true
         // 4. Guaranteed by the invariants of this type.
         // 5. Guaranteed by the invariants of this type.
-        unsafe { ReportCollection::<dyn Any, T>::from_raw_mut(raw_children) }
+        unsafe { ReportCollection::<Dynamic, T>::from_raw_mut(raw_children) }
     }
 
     /// Returns an immutable reference to the attachments.
@@ -403,11 +401,11 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         unsafe { ReportAttachments::from_raw_mut(raw) }
     }
 
-    /// Changes the context type of the [`ReportMut`] to [`dyn Any`].
+    /// Changes the context type of the [`ReportMut`] to [`Dynamic`].
     ///
     /// Calling this method is equivalent to calling `report.into()`, however
     /// this method has been restricted to only change the context mode to
-    /// `dyn Any`.
+    /// [`Dynamic`].
     ///
     /// This method can be useful to help with type inference or to improve code
     /// readability, as it more clearly communicates intent.
@@ -421,15 +419,14 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut};
-    /// # use core::any::Any;
+    /// # use rootcause::{prelude::*, ReportMut, markers::Dynamic};
     /// # struct MyError;
     /// # let mut report = report!(MyError);
     /// let report: ReportMut<'_, MyError> = report.as_mut();
-    /// let local_report: ReportMut<'_, dyn Any> = report.into_dyn_any();
+    /// let local_report: ReportMut<'_, Dynamic> = report.into_dynamic();
     /// ```
     #[must_use]
-    pub fn into_dyn_any(self) -> ReportMut<'a, dyn Any, T> {
+    pub fn into_dynamic(self) -> ReportMut<'a, Dynamic, T> {
         // SAFETY:
         // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
         //    not allowed to mutate the returned raw report in a way that adds
@@ -439,14 +436,14 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         let raw = unsafe { self.into_raw_mut() };
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. `C=Dynamic`, so this is trivially true.
         // 2. This is guaranteed by the invariants of this type.
-        // 3. `C=dyn Any`, so this is trivially true.
+        // 3. `C=Dynamic`, so this is trivially true.
         // 4. This is guaranteed by the invariants of this type.
         // 5. This is guaranteed by the invariants of this type.
         // 6. This is guaranteed by the invariants of this type.
         // 7. This is guaranteed by the invariants of this type.
-        unsafe { ReportMut::<dyn Any, T>::from_raw(raw) }
+        unsafe { ReportMut::<Dynamic, T>::from_raw(raw) }
     }
 
     /// Returns an immutable reference to the report.
@@ -534,7 +531,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. This is guaranteed by the invariants of this type.
-        // 3. If `C` is a concrete type: This is guaranteed by the invariants of this
+        // 3. If `C` is a `Sized` type: This is guaranteed by the invariants of this
         //    type.
         // 4. This is guaranteed by the invariants of this type.
         // 5. This is guaranteed by the invariants of this type.
@@ -574,9 +571,9 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
     /// root.children_mut()
-    ///     .push(with_context1.into_dyn_any().into_cloneable());
+    ///     .push(with_context1.into_dynamic().into_cloneable());
     /// root.children_mut()
-    ///     .push(with_context2.into_dyn_any().into_cloneable());
+    ///     .push(with_context2.into_dynamic().into_cloneable());
     ///
     /// let root_mut: ReportMut<'_, &'static str> = root.as_mut();
     ///
@@ -613,7 +610,6 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, ReportMut};
-    /// # use core::any::Any;
     /// // Create base reports
     /// let error1: Report = report!("error 1");
     /// let error2: Report = report!("error 2");
@@ -625,9 +621,9 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// // Create root that contains both context nodes as children
     /// let mut root = report!("root error").context("context for root error");
     /// root.children_mut()
-    ///     .push(with_context1.into_dyn_any().into_cloneable());
+    ///     .push(with_context1.into_dynamic().into_cloneable());
     /// root.children_mut()
-    ///     .push(with_context2.into_dyn_any().into_cloneable());
+    ///     .push(with_context2.into_dynamic().into_cloneable());
     ///
     /// let root_mut: ReportMut<'_, &'static str> = root.as_mut();
     ///
@@ -673,15 +669,15 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     ///
     /// # Examples
     /// ```
-    /// # use rootcause::{prelude::*, ReportMut};
-    /// # use core::any::{Any, TypeId};
+    /// # use rootcause::{prelude::*, ReportMut, markers::Dynamic};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// # let mut report = report!(MyError);
     /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
     /// let type_id = report_mut.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     ///
-    /// let report_mut: ReportMut<'_, dyn Any> = report_mut.into_dyn_any();
+    /// let report_mut: ReportMut<'_, Dynamic> = report_mut.into_dynamic();
     /// let type_id = report_mut.current_context_type_id();
     /// assert_eq!(type_id, TypeId::of::<MyError>());
     /// ```
@@ -738,7 +734,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// ```
     #[must_use]
     pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
+        let report = self.as_ref().into_dynamic().into_uncloneable().into_local();
         format_helper(
             report,
             |report, formatter| {
@@ -826,7 +822,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let report = self.as_ref().into_dyn_any().into_uncloneable().into_local();
+        let report = self.as_ref().into_dynamic().into_uncloneable().into_local();
         crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
@@ -877,7 +873,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     }
 }
 
-impl<'a, T> ReportMut<'a, dyn Any, T> {
+impl<'a, T> ReportMut<'a, Dynamic, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
     /// Returns `Some(&C)` if the current context is of type `C`, otherwise
@@ -888,7 +884,7 @@ impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut dyn_report: Report = report.into_dynamic();
     /// let mut_report = dyn_report.as_mut();
     /// let context: Option<&MyError> = mut_report.downcast_current_context();
     /// assert!(context.is_some());
@@ -911,7 +907,7 @@ impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut dyn_report: Report = report.into_dynamic();
     /// let mut mut_report = dyn_report.as_mut();
     /// let context: Option<&mut MyError> = mut_report.downcast_current_context_mut();
     /// assert!(context.is_some());
@@ -939,10 +935,10 @@ impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut dyn_report: Report = report.into_dynamic();
     /// let mut_report = dyn_report.as_mut();
     ///
     /// // Verify the type first
@@ -977,10 +973,10 @@ impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut dyn_report: Report = report.into_dynamic();
     /// let mut mut_report = dyn_report.as_mut();
     ///
     /// // Verify the type first
@@ -1012,12 +1008,12 @@ impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// # use rootcause::prelude::*;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut dyn_report: Report = report.into_dynamic();
     /// let mut_report = dyn_report.as_mut();
     /// let downcasted: Result<_, _> = mut_report.downcast_report::<MyError>();
     /// assert!(downcasted.is_ok());
     /// ```
-    pub fn downcast_report<C>(self) -> Result<ReportMut<'a, C, T>, ReportMut<'a, dyn Any, T>>
+    pub fn downcast_report<C>(self) -> Result<ReportMut<'a, C, T>, ReportMut<'a, Dynamic, T>>
     where
         C: Sized + 'static,
     {
@@ -1046,10 +1042,10 @@ impl<'a, T> ReportMut<'a, dyn Any, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::{Any, TypeId};
+    /// # use core::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
-    /// let mut dyn_report: Report = report.into_dyn_any();
+    /// let mut dyn_report: Report = report.into_dynamic();
     /// let mut_report = dyn_report.as_mut();
     ///
     /// // Verify the type first
@@ -1098,15 +1094,15 @@ impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
 
 impl<'a, C: ?Sized, T> Unpin for ReportMut<'a, C, T> {}
 
-impl<'a, C: Sized> From<ReportMut<'a, C, SendSync>> for ReportMut<'a, dyn Any, SendSync> {
+impl<'a, C: Sized> From<ReportMut<'a, C, SendSync>> for ReportMut<'a, Dynamic, SendSync> {
     fn from(report: ReportMut<'a, C, SendSync>) -> Self {
-        report.into_dyn_any()
+        report.into_dynamic()
     }
 }
 
-impl<'a, C: Sized> From<ReportMut<'a, C, Local>> for ReportMut<'a, dyn Any, Local> {
+impl<'a, C: Sized> From<ReportMut<'a, C, Local>> for ReportMut<'a, Dynamic, Local> {
     fn from(report: ReportMut<'a, C, Local>) -> Self {
-        report.into_dyn_any()
+        report.into_dynamic()
     }
 }
 
@@ -1125,12 +1121,12 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportMut<'static, (), SendSync>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, String, SendSync>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, dyn Any, SendSync>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportMut<'static, (), Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, String, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, Local>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, dyn Any, Local>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, Local>: Send, Sync);
     }
 
     #[test]
@@ -1138,12 +1134,12 @@ mod tests {
         static_assertions::assert_impl_all!(ReportMut<'static, (), SendSync>: Unpin);
         static_assertions::assert_impl_all!(ReportMut<'static, String, SendSync>: Unpin);
         static_assertions::assert_impl_all!(ReportMut<'static, NonSend, SendSync>: Unpin);
-        static_assertions::assert_impl_all!(ReportMut<'static, dyn Any, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, Dynamic, SendSync>: Unpin);
 
         static_assertions::assert_impl_all!(ReportMut<'static, (), Local>: Unpin);
         static_assertions::assert_impl_all!(ReportMut<'static, String, Local>: Unpin);
         static_assertions::assert_impl_all!(ReportMut<'static, NonSend, Local>: Unpin);
-        static_assertions::assert_impl_all!(ReportMut<'static, dyn Any, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportMut<'static, Dynamic, Local>: Unpin);
     }
 
     #[test]
@@ -1154,7 +1150,7 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportMut<'static, String, Local>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, SendSync>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, Local>: Copy, Clone);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, dyn Any, SendSync>: Copy, Clone);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, dyn Any, Local>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, SendSync>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, Local>: Copy, Clone);
     }
 }

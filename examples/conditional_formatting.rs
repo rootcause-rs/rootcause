@@ -14,6 +14,7 @@ use rootcause::{
     hooks::formatting_overrides::attachment::{
         AttachmentFormattingOverride, register_attachment_hook,
     },
+    markers::Dynamic,
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
@@ -46,7 +47,7 @@ struct CredentialsFormatter;
 impl AttachmentFormattingOverride<ApiCredentials> for CredentialsFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
+        _attachment: ReportAttachmentRef<'_, Dynamic>,
         _report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> rootcause::handlers::AttachmentFormattingStyle {
         use rootcause::handlers::{
@@ -100,7 +101,7 @@ struct DebugSnapshotFormatter;
 impl AttachmentFormattingOverride<DebugSnapshot> for DebugSnapshotFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, dyn std::any::Any>,
+        _attachment: ReportAttachmentRef<'_, Dynamic>,
         _report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> rootcause::handlers::AttachmentFormattingStyle {
         use rootcause::handlers::{
@@ -148,7 +149,7 @@ fn authenticate_api() -> Result<(), Report> {
         "API authentication failed",
     ))
     .attach(creds)
-    .into_dyn_any())
+    .into_dynamic())
 }
 
 fn process_request() -> Result<(), Report> {
@@ -162,7 +163,7 @@ fn process_request() -> Result<(), Report> {
     Err(report!("Request processing failed")
         .attach("Processing step: validation")
         .attach(snapshot)
-        .into_dyn_any())
+        .into_dynamic())
 }
 
 fn main() {

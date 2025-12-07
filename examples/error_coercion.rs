@@ -8,8 +8,8 @@
 //!
 //! Key insight: The `?` operator automatically converts between error types:
 //! - `C` → `Report<C>`
-//! - `C` → `Report<dyn Any>`
-//! - `Report<C>` → `Report<dyn Any>`
+//! - `C` → `Report<Dynamic>`
+//! - `Report<C>` → `Report<Dynamic>`
 //!
 //! This lets you freely mix error types and let `?` handle conversions.
 
@@ -56,20 +56,20 @@ fn parse_typed_example(input: &str) -> Result<u32, Report<ParseError>> {
     Ok(value)
 }
 
-// Example 2: Dynamic errors - Report<dyn Any> accepts any error type
+// Example 2: Dynamic errors - Report<Dynamic> accepts any error type
 
-/// Functions returning Report<dyn Any> can freely mix different error types.
+/// Functions returning Report<Dynamic> can freely mix different error types.
 fn mixed_errors_example(path: &str) -> Result<u32, Report> {
-    // io::Error → ? converts to Report<dyn Any>
+    // io::Error → ? converts to Report<Dynamic>
     let contents = fs::read_to_string(path)?;
 
-    // Report<io::Error> → ? coerces to Report<dyn Any>
+    // Report<io::Error> → ? coerces to Report<Dynamic>
     let _metadata = fs::metadata(path).attach(format!("Path: {path}"))?;
 
-    // Report<ParseError> → ? coerces to Report<dyn Any>
+    // Report<ParseError> → ? coerces to Report<Dynamic>
     let value = parse_typed_example(&contents)?;
 
-    // Report<&str> → ? coerces to Report<dyn Any>
+    // Report<&str> → ? coerces to Report<Dynamic>
     if value == 0 {
         Err(report!("Invalid value").attach("Value must be non-zero"))?;
     }
@@ -79,15 +79,15 @@ fn mixed_errors_example(path: &str) -> Result<u32, Report> {
 
 // Example 3: Coercion chains
 
-/// Multiple layers of different error types all coerce to Report<dyn Any>.
+/// Multiple layers of different error types all coerce to Report<Dynamic>.
 fn coercion_chain(path: &str) -> Result<String, Report> {
-    // io::Error → Report<dyn Any>
+    // io::Error → Report<Dynamic>
     let raw_data = fs::read_to_string(path).attach(format!("Reading file: {path}"))?;
 
-    // Report<ParseError> → Report<dyn Any>
+    // Report<ParseError> → Report<Dynamic>
     let number = parse_typed_example(&raw_data).context("Failed to parse configuration")?;
 
-    // Report<String> → Report<dyn Any>
+    // Report<String> → Report<Dynamic>
     if number > 100 {
         Err(report!("Value too large: {number}").attach("Maximum allowed value: 100"))?;
     }
@@ -111,9 +111,9 @@ fn save_config(value: u32, path: &str) -> Result<(), Report> {
 
 /// Realistic pattern: validation uses typed errors, I/O uses dynamic errors.
 fn process_and_save(input: &str, output: &str) -> Result<(), Report> {
-    let value = parse_typed_example(input)?; // Report<ParseError> → Report<dyn Any>
-    validate_config(value)?; // Report<ParseError> → Report<dyn Any>
-    save_config(value, output)?; // Report<dyn Any> → Report<dyn Any>
+    let value = parse_typed_example(input)?; // Report<ParseError> → Report<Dynamic>
+    validate_config(value)?; // Report<ParseError> → Report<Dynamic>
+    save_config(value, output)?; // Report<Dynamic> → Report<Dynamic>
     Ok(())
 }
 
@@ -132,7 +132,7 @@ fn main() {
         println!("{e}\n");
     }
 
-    println!("Example 2: Report<dyn Any> accepts any error type");
+    println!("Example 2: Report<Dynamic> accepts any error type");
     if let Err(e) = mixed_errors_example("/nonexistent/config.txt") {
         println!("{e}\n");
     }

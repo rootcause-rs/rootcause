@@ -31,7 +31,7 @@ use std::{error::Error, rc::Rc};
 use rootcause::{
     Report, bail,
     compat::{IntoRootcause, boxed_error::IntoBoxedError},
-    markers::{Local, SendSync},
+    markers::{Dynamic, Local, SendSync},
     prelude::*,
 };
 
@@ -77,8 +77,7 @@ fn some_rootcause_function() -> Result<String, Report> {
     bail!("validation failed");
 }
 
-fn some_local_rootcause_function()
--> Result<String, Report<dyn core::any::Any, markers::Mutable, Local>> {
+fn some_local_rootcause_function() -> Result<String, Report<Dynamic, markers::Mutable, Local>> {
     let local_data = Rc::new("sensitive data");
     let report = report!("local validation failed")
         .into_local()

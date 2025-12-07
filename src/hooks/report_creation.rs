@@ -27,20 +27,20 @@
 //! use rootcause::{
 //!     ReportMut,
 //!     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
-//!     markers::{Local, SendSync},
+//!     markers::{Dynamic, Local, SendSync},
 //!     prelude::*,
 //! };
 //!
 //! struct MyHook;
 //!
 //! impl ReportCreationHook for MyHook {
-//!     fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
+//!     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
 //!         // Add custom logic for local reports
 //!         let attachment = report_attachment!("Custom local context");
 //!         report.attachments_mut().push(attachment.into());
 //!     }
 //!
-//!     fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
+//!     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
 //!         // Add custom logic for send+sync reports
 //!         let attachment = report_attachment!("Custom sendsync context");
 //!         report.attachments_mut().push(attachment.into());
@@ -97,7 +97,7 @@
 //! ```
 
 use alloc::{boxed::Box, vec::Vec};
-use core::{any::Any, fmt, panic::Location};
+use core::{fmt, panic::Location};
 
 use rootcause_internals::handlers::AttachmentHandler;
 
@@ -109,7 +109,7 @@ use crate::{
         builtin_hooks::location::{LocationCollector, LocationHandler},
         hook_lock::{HookLock, HookLockReadGuard},
     },
-    markers::{Local, SendSync},
+    markers::{Dynamic, Local, SendSync},
     report_attachment::ReportAttachment,
 };
 
@@ -119,9 +119,9 @@ static HOOKS: HookLock<HookSet> = HookLock::new();
 
 trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
     #[track_caller]
-    fn on_local_creation(&self, report: ReportMut<'_, dyn Any, Local>);
+    fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>);
     #[track_caller]
-    fn on_sendsync_creation(&self, report: ReportMut<'_, dyn Any, SendSync>);
+    fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
 /// A hook that is called whenever a report is created.
@@ -141,20 +141,20 @@ trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
 /// use rootcause::{
 ///     ReportMut,
 ///     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
-///     markers::{Local, SendSync},
+///     markers::{Dynamic, Local, SendSync},
 ///     prelude::*,
 /// };
 ///
 /// struct LoggingHook;
 ///
 /// impl ReportCreationHook for LoggingHook {
-///     fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
+///     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
 ///         println!("Local report created: {}", report);
 ///         let attachment = report_attachment!("Logged by LoggingHook");
 ///         report.attachments_mut().push(attachment.into());
 ///     }
 ///
-///     fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
+///     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
 ///         println!("SendSync report created: {}", report);
 ///         let attachment = report_attachment!("Logged by LoggingHook");
 ///         report.attachments_mut().push(attachment.into());
@@ -167,11 +167,11 @@ trait UntypedReportCreationHook: 'static + Send + Sync + core::fmt::Display {
 pub trait ReportCreationHook: 'static + Send + Sync {
     /// Called when a [`Local`] report is created.
     #[track_caller]
-    fn on_local_creation(&self, report: ReportMut<'_, dyn Any, Local>);
+    fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>);
 
     /// Called when a [`SendSync`] report is created.
     #[track_caller]
-    fn on_sendsync_creation(&self, report: ReportMut<'_, dyn Any, SendSync>);
+    fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
 #[track_caller]
@@ -200,11 +200,11 @@ where
     where
         H: ReportCreationHook,
     {
-        fn on_local_creation(&self, report: ReportMut<'_, dyn Any, Local>) {
+        fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>) {
             self.hook.on_local_creation(report);
         }
 
-        fn on_sendsync_creation(&self, report: ReportMut<'_, dyn Any, SendSync>) {
+        fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>) {
             self.hook.on_sendsync_creation(report);
         }
     }
@@ -241,19 +241,19 @@ where
         C: AttachmentCollectorHook<A> + Send + Sync,
     {
         #[track_caller]
-        fn on_local_creation(&self, mut report: ReportMut<'_, dyn Any, Local>) {
+        fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
             let attachment = self.collector.collect();
             report
                 .attachments_mut()
-                .push(ReportAttachment::new_local_custom::<H>(attachment).into_dyn_any());
+                .push(ReportAttachment::new_local_custom::<H>(attachment).into_dynamic());
         }
 
         #[track_caller]
-        fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn Any, SendSync>) {
+        fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
             let attachment = self.collector.collect();
             report
                 .attachments_mut()
-                .push(ReportAttachment::new_sendsync_custom::<H>(attachment).into_dyn_any());
+                .push(ReportAttachment::new_sendsync_custom::<H>(attachment).into_dynamic());
         }
     }
     impl<A, H, C> core::fmt::Display for Hook<A, H, C> {
@@ -317,7 +317,7 @@ fn default_hooks() -> HookSet {
 /// use rootcause::{
 ///     ReportMut,
 ///     hooks::report_creation::{ReportCreationHook, register_report_creation_hook},
-///     markers::{Local, SendSync},
+///     markers::{Dynamic, Local, SendSync},
 ///     prelude::*,
 ///     report_attachment::ReportAttachment,
 /// };
@@ -327,7 +327,7 @@ fn default_hooks() -> HookSet {
 /// }
 ///
 /// impl ReportCreationHook for CountingHook {
-///     fn on_local_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, Local>) {
+///     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
 ///         let count = self
 ///             .counter
 ///             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -335,7 +335,7 @@ fn default_hooks() -> HookSet {
 ///         report.attachments_mut().push(attachment.into());
 ///     }
 ///
-///     fn on_sendsync_creation(&self, mut report: ReportMut<'_, dyn std::any::Any, SendSync>) {
+///     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
 ///         let count = self
 ///             .counter
 ///             .fetch_add(1, std::sync::atomic::Ordering::Relaxed);
@@ -540,7 +540,7 @@ fn get_hooks() -> HookLockReadGuard<HookSet> {
 }
 
 #[track_caller]
-pub(crate) fn run_creation_hooks_local(mut report: ReportMut<'_, dyn Any, Local>) {
+pub(crate) fn run_creation_hooks_local(mut report: ReportMut<'_, Dynamic, Local>) {
     if let Some(hooks) = get_hooks().get() {
         for hook in hooks {
             hook.on_local_creation(report.as_mut());
@@ -549,7 +549,7 @@ pub(crate) fn run_creation_hooks_local(mut report: ReportMut<'_, dyn Any, Local>
 }
 
 #[track_caller]
-pub(crate) fn run_creation_hooks_sendsync(mut report: ReportMut<'_, dyn Any, SendSync>) {
+pub(crate) fn run_creation_hooks_sendsync(mut report: ReportMut<'_, Dynamic, SendSync>) {
     if let Some(hooks) = get_hooks().get() {
         for hook in hooks {
             hook.on_sendsync_creation(report.as_mut());

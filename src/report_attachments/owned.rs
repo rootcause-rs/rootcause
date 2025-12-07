@@ -1,8 +1,7 @@
 use alloc::vec::Vec;
-use core::any::Any;
 
 use crate::{
-    markers::{Local, SendSync},
+    markers::{Dynamic, Local, SendSync},
     report_attachment::{ReportAttachment, ReportAttachmentRef},
     report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
 };
@@ -23,7 +22,7 @@ mod limit_field_access {
     /// can be added to a report.
     ///
     /// You can think of a [`ReportAttachments<T>`] as a wrapper around a
-    /// `Vec<ReportAttachment<dyn Any, T>>`, however, it has a slightly
+    /// `Vec<ReportAttachment<Dynamic, T>>`, however, it has a slightly
     /// different API:
     /// - It has convenience methods to convert between different thread safety
     ///   markers such as [`into_local`](Self::into_local).
@@ -189,7 +188,7 @@ impl<T> ReportAttachments<T> {
     /// Appends an attachment to the end of the collection.
     ///
     /// This method takes ownership of the attachment and adds it to the
-    /// collection. The attachment must be type-erased to `dyn Any` to be
+    /// collection. The attachment must be type-erased to [`Dynamic`] to be
     /// stored in the collection alongside other attachments of potentially
     /// different types.
     ///
@@ -199,12 +198,12 @@ impl<T> ReportAttachments<T> {
     /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
-    /// let attachment = ReportAttachment::new("debug info").into_dyn_any();
+    /// let attachment = ReportAttachment::new("debug info").into_dynamic();
     ///
     /// attachments.push(attachment);
     /// assert_eq!(attachments.len(), 1);
     /// ```
-    pub fn push(&mut self, attachment: ReportAttachment<dyn Any, T>) {
+    pub fn push(&mut self, attachment: ReportAttachment<Dynamic, T>) {
         // SAFETY:
         // 1. From the invariants of the `ReportAttachment` we know that `T` is either
         //    `Local` or `SendSync`.
@@ -229,8 +228,8 @@ impl<T> ReportAttachments<T> {
     /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("first").into_dyn_any());
-    /// attachments.push(ReportAttachment::new("second").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("first").into_dynamic());
+    /// attachments.push(ReportAttachment::new("second").into_dynamic());
     ///
     /// assert_eq!(attachments.len(), 2);
     /// let last = attachments.pop().unwrap();
@@ -239,7 +238,7 @@ impl<T> ReportAttachments<T> {
     /// // Verify it was the last one added
     /// assert_eq!(last.inner_type_id(), std::any::TypeId::of::<&str>());
     /// ```
-    pub fn pop(&mut self) -> Option<ReportAttachment<dyn Any, T>> {
+    pub fn pop(&mut self) -> Option<ReportAttachment<Dynamic, T>> {
         // SAFETY:
         // 1. We are only popping from the collection. If this was non-empty, then we
         //    already know that `T` is either `Local` or `SendSync`, and if it was
@@ -250,13 +249,13 @@ impl<T> ReportAttachments<T> {
         let attachment = raw.pop()?;
 
         // SAFETY:
-        // 1. `A=dyn Any`, so this is trivially true.
+        // 1. `A=Dynamic`, so this is trivially true.
         // 2. Guaranteed by the invariants of this type.
-        // 3. `A=dyn Any`, so this is trivially true.
+        // 3. `A=Dynamic`, so this is trivially true.
         // 4. If `T=Local`, then this is trivially true. If `T=SendSync`, then the
         //    safety requirement is upheld because the collection invariant guarantees
         //    this.
-        let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
+        let attachment = unsafe { ReportAttachment::<Dynamic, T>::from_raw(attachment) };
 
         Some(attachment)
     }
@@ -271,8 +270,8 @@ impl<T> ReportAttachments<T> {
     /// let mut attachments = ReportAttachments::new_sendsync();
     /// assert_eq!(attachments.len(), 0);
     ///
-    /// attachments.push(ReportAttachment::new("info").into_dyn_any());
-    /// attachments.push(ReportAttachment::new(42).into_dyn_any());
+    /// attachments.push(ReportAttachment::new("info").into_dynamic());
+    /// attachments.push(ReportAttachment::new(42).into_dynamic());
     /// assert_eq!(attachments.len(), 2);
     /// ```
     #[must_use]
@@ -290,8 +289,8 @@ impl<T> ReportAttachments<T> {
     /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("first").into_dyn_any());
-    /// attachments.push(ReportAttachment::new("second").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("first").into_dynamic());
+    /// attachments.push(ReportAttachment::new("second").into_dynamic());
     ///
     /// let first = attachments.get(0).unwrap();
     /// assert_eq!(first.inner_type_id(), std::any::TypeId::of::<&str>());
@@ -299,13 +298,13 @@ impl<T> ReportAttachments<T> {
     /// assert!(attachments.get(10).is_none());
     /// ```
     #[must_use]
-    pub fn get(&self, index: usize) -> Option<ReportAttachmentRef<'_, dyn Any>> {
+    pub fn get(&self, index: usize) -> Option<ReportAttachmentRef<'_, Dynamic>> {
         let raw = self.as_raw().get(index)?.as_ref();
 
         // SAFETY:
-        // 1. `A=dyn Any`, so this is trivially true.
-        // 2. `A=dyn Any`, so this is trivially true.
-        let attachment = unsafe { ReportAttachmentRef::<dyn Any>::from_raw(raw) };
+        // 1. `A=Dynamic`, so this is trivially true.
+        // 2. `A=Dynamic`, so this is trivially true.
+        let attachment = unsafe { ReportAttachmentRef::<Dynamic>::from_raw(raw) };
 
         Some(attachment)
     }
@@ -320,7 +319,7 @@ impl<T> ReportAttachments<T> {
     /// let mut attachments = ReportAttachments::new_sendsync();
     /// assert!(attachments.is_empty());
     ///
-    /// attachments.push(ReportAttachment::new("info").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("info").into_dynamic());
     /// assert!(!attachments.is_empty());
     /// ```
     #[must_use]
@@ -341,8 +340,8 @@ impl<T> ReportAttachments<T> {
     /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("first").into_dyn_any());
-    /// attachments.push(ReportAttachment::new("second").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("first").into_dynamic());
+    /// attachments.push(ReportAttachment::new("second").into_dynamic());
     ///
     /// for attachment in attachments.iter() {
     ///     println!("Attachment type: {:?}", attachment.inner_type_id());
@@ -371,7 +370,7 @@ impl<T> ReportAttachments<T> {
     /// };
     ///
     /// let mut attachments: ReportAttachments<SendSync> = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("info").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("info").into_dynamic());
     ///
     /// let local_attachments: ReportAttachments<Local> = attachments.into_local();
     /// assert_eq!(local_attachments.len(), 1);
@@ -404,7 +403,7 @@ impl<T> ReportAttachments<T> {
     /// };
     ///
     /// let mut attachments: ReportAttachments<SendSync> = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("info").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("info").into_dynamic());
     ///
     /// let local_view: &ReportAttachments<Local> = attachments.as_local();
     /// assert_eq!(local_view.len(), 1);
@@ -438,7 +437,7 @@ impl ReportAttachments<SendSync> {
     /// };
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("thread-safe attachment").into_dyn_any());
+    /// attachments.push(ReportAttachment::new("thread-safe attachment").into_dynamic());
     /// assert_eq!(attachments.len(), 1);
     /// ```
     #[must_use]
@@ -467,7 +466,7 @@ impl ReportAttachments<Local> {
     ///
     /// let mut attachments = ReportAttachments::new_local();
     /// // Rc is not Send+Sync, but can be stored in a Local collection
-    /// let rc_attachment = ReportAttachment::new(Rc::new("local-only")).into_dyn_any();
+    /// let rc_attachment = ReportAttachment::new(Rc::new("local-only")).into_dynamic();
     /// attachments.push(rc_attachment);
     /// assert_eq!(attachments.len(), 1);
     /// ```
@@ -523,7 +522,7 @@ unsafe impl Sync for ReportAttachments<SendSync> {}
 
 impl<T> IntoIterator for ReportAttachments<T> {
     type IntoIter = ReportAttachmentsIntoIter<T>;
-    type Item = ReportAttachment<dyn Any, T>;
+    type Item = ReportAttachment<Dynamic, T>;
 
     fn into_iter(self) -> Self::IntoIter {
         let raw = self.into_raw().into_iter();
@@ -537,7 +536,7 @@ impl<T> IntoIterator for ReportAttachments<T> {
 
 impl<'a, T> IntoIterator for &'a ReportAttachments<T> {
     type IntoIter = ReportAttachmentsIter<'a>;
-    type Item = ReportAttachmentRef<'a, dyn Any>;
+    type Item = ReportAttachmentRef<'a, Dynamic>;
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
@@ -547,7 +546,7 @@ impl<'a, T> IntoIterator for &'a ReportAttachments<T> {
 impl<A: ?Sized, T> Extend<ReportAttachment<A, T>> for ReportAttachments<T> {
     fn extend<I: IntoIterator<Item = ReportAttachment<A, T>>>(&mut self, iter: I) {
         for report in iter {
-            self.push(report.into_dyn_any());
+            self.push(report.into_dynamic());
         }
     }
 }

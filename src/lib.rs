@@ -148,16 +148,18 @@
 //!
 //! ### Context Type: Typed vs Dynamic Errors
 //!
-//! **Use `Report<dyn Any>`** (or just [`Report`]) when errors just need to
+//! **Use `Report<Dynamic>`** (or just [`Report`]) when errors just need to
 //! propagate. **Use `Report<YourErrorType>`** when callers need to pattern
 //! match on specific error variants.
 //!
-//! **`Report<dyn Any>`** (or just [`Report`]) — Flexible, like [`anyhow`]
+//! **`Report<Dynamic>`** (or just [`Report`]) — Flexible, like [`anyhow`]
 //!
 //! Can hold any error type at the root. The `?` operator automatically converts
-//! any error into a [`Report`]. Note: `dyn Any` is just a marker - no actual
-//! trait object is stored. Converting between typed and dynamic reports is
-//! zero-cost.
+//! any error into a [`Report`]. Note: [`Dynamic`] is just a marker signaling
+//! that the actual type is unknown. No actual instance of [`Dynamic`] is
+//! stored. Converting between typed and dynamic reports is zero-cost.
+//!
+//! [`Dynamic`]: crate::markers::Dynamic
 //!
 //! ```rust
 //! # use rootcause::prelude::*;
@@ -275,8 +277,9 @@
 //! specific methods (implemented using [`From`]) to help with type inference
 //! and to more clearly communicate intent:
 //!
-//! - [`Report::into_dyn_any`] converts from `Report<C, *, *>` to `Report<dyn
-//!   Any, *, *>`. See [`examples/error_coercion.rs`] for usage patterns.
+//! - [`Report::into_dynamic`] converts from `Report<C, *, *>` to
+//!   `Report<Dynamic, *, *>`. See [`examples/error_coercion.rs`] for usage
+//!   patterns.
 //! - [`Report::into_cloneable`] converts from `Report<*, Mutable, *>` to
 //!   `Report<*, Cloneable, *>`. See [`examples/retry_with_collection.rs`] for
 //!   storing multiple errors.
@@ -286,7 +289,7 @@
 //! On the other hand, it is generally harder to convert to an element further
 //! up the list. Here are some of the ways to do it:
 //!
-//! - From `Report<dyn Any, *, *>` to `Report<SomeContextType, *, *>`:
+//! - From `Report<Dynamic, *, *>` to `Report<SomeContextType, *, *>`:
 //!   - You can check if the type of the root node matches a specific type by
 //!     using [`Report::downcast_report`]. This will return either the requested
 //!     report type or the original report depending on whether the types match.
@@ -360,9 +363,13 @@ pub mod __private {
     #[doc(hidden)]
     pub use alloc::format;
     #[doc(hidden)]
-    pub use core::{any::Any, format_args, result::Result::Err};
+    pub use core::{format_args, result::Result::Err};
 
-    use crate::{Report, handlers, markers, report_attachment::ReportAttachment};
+    use crate::{
+        Report, handlers,
+        markers::{self, Dynamic},
+        report_attachment::ReportAttachment,
+    };
 
     #[doc(hidden)]
     #[inline]
@@ -371,11 +378,11 @@ pub mod __private {
     #[track_caller]
     pub fn format_report(
         args: fmt::Arguments<'_>,
-    ) -> Report<dyn Any, markers::Mutable, markers::SendSync> {
+    ) -> Report<Dynamic, markers::Mutable, markers::SendSync> {
         if let Some(message) = args.as_str() {
-            Report::new_sendsync_custom::<handlers::Display>(message).into_dyn_any()
+            Report::new_sendsync_custom::<handlers::Display>(message).into_dynamic()
         } else {
-            Report::new_sendsync_custom::<handlers::Display>(fmt::format(args)).into_dyn_any()
+            Report::new_sendsync_custom::<handlers::Display>(fmt::format(args)).into_dynamic()
         }
     }
 
@@ -386,12 +393,12 @@ pub mod __private {
     #[track_caller]
     pub fn format_report_attachment(
         args: fmt::Arguments<'_>,
-    ) -> ReportAttachment<dyn Any, markers::SendSync> {
+    ) -> ReportAttachment<Dynamic, markers::SendSync> {
         if let Some(message) = args.as_str() {
-            ReportAttachment::new_sendsync_custom::<handlers::Display>(message).into_dyn_any()
+            ReportAttachment::new_sendsync_custom::<handlers::Display>(message).into_dynamic()
         } else {
             ReportAttachment::new_sendsync_custom::<handlers::Display>(fmt::format(args))
-                .into_dyn_any()
+                .into_dynamic()
         }
     }
 

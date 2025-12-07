@@ -70,7 +70,7 @@ fn handle_request_with_retry(path: &str) -> Result<String, Report> {
                 println!("5xx error detected - retry logic would run here");
             }
 
-            Err(error.context("Request handling failed").into_dyn_any())
+            Err(error.context("Request handling failed").into_dynamic())
         }
     }
 }

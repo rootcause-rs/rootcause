@@ -188,7 +188,7 @@ impl IntoRootcause for anyhow::Error {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<AnyhowHandler>(self).into_dyn_any()
+        Report::new_custom::<AnyhowHandler>(self).into_dynamic()
     }
 }
 
@@ -299,6 +299,6 @@ impl<T, C: ?Sized, O> IntoAnyhow for Result<T, Report<C, O>> {
 
 impl<C: ?Sized, O> From<Report<C, O, markers::SendSync>> for anyhow::Error {
     fn from(report: Report<C, O, markers::SendSync>) -> Self {
-        anyhow::Error::new(ReportAsError(report.into_dyn_any().into_cloneable()))
+        anyhow::Error::new(ReportAsError(report.into_dynamic().into_cloneable()))
     }
 }

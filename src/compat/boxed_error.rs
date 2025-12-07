@@ -114,14 +114,14 @@
 //! ```
 
 use alloc::boxed::Box;
-use core::{any::Any, error::Error};
+use core::error::Error;
 
 use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
 
 use super::{IntoRootcause, ReportAsError};
 use crate::{
     Report,
-    markers::{self, Local, SendSync},
+    markers::{self, Dynamic, Local, SendSync},
 };
 
 /// A custom handler for boxed error trait objects that delegates to the
@@ -301,7 +301,7 @@ impl<C: ?Sized, O> IntoBoxedError for Report<C, O, SendSync> {
     type Output = Box<dyn Error + Send + Sync>;
 
     fn into_boxed_error(self) -> Self::Output {
-        Box::new(ReportAsError(self.into_dyn_any().into_cloneable()))
+        Box::new(ReportAsError(self.into_dynamic().into_cloneable()))
     }
 }
 
@@ -309,7 +309,7 @@ impl<C: ?Sized, O> IntoBoxedError for Report<C, O, Local> {
     type Output = Box<dyn Error>;
 
     fn into_boxed_error(self) -> Self::Output {
-        Box::new(ReportAsError(self.into_dyn_any().into_cloneable()))
+        Box::new(ReportAsError(self.into_dynamic().into_cloneable()))
     }
 }
 
@@ -346,16 +346,16 @@ impl IntoRootcause for Box<dyn Error + Send + Sync> {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<BoxedErrorHandler>(self).into_dyn_any()
+        Report::new_custom::<BoxedErrorHandler>(self).into_dynamic()
     }
 }
 
 impl IntoRootcause for Box<dyn Error> {
-    type Output = Report<dyn Any, markers::Mutable, Local>;
+    type Output = Report<Dynamic, markers::Mutable, Local>;
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<BoxedErrorHandler>(self).into_dyn_any()
+        Report::new_custom::<BoxedErrorHandler>(self).into_dynamic()
     }
 }
 
@@ -369,7 +369,7 @@ impl<T> IntoRootcause for Result<T, Box<dyn Error + Send + Sync>> {
 }
 
 impl<T> IntoRootcause for Result<T, Box<dyn Error>> {
-    type Output = Result<T, Report<dyn Any, markers::Mutable, Local>>;
+    type Output = Result<T, Report<Dynamic, markers::Mutable, Local>>;
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {

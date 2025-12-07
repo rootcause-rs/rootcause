@@ -1,11 +1,10 @@
 use alloc::vec::Vec;
-use core::any::Any;
 
 use rootcause_internals::handlers::{ContextHandler, FormattingFunction};
 
 use crate::{
     Report, ReportRef, handlers,
-    markers::{self, Cloneable, Local, Mutable, SendSync, Uncloneable},
+    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     report_attachments::ReportAttachments,
     report_collection::{ReportCollectionIntoIter, ReportCollectionIter},
 };
@@ -14,11 +13,11 @@ use crate::{
 /// an unsafe field and remove this module.
 mod limit_field_access {
     use alloc::vec::Vec;
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::RawReport;
 
-    use crate::markers::SendSync;
+    use crate::markers::{Dynamic, SendSync};
 
     /// A collection of reports.
     ///
@@ -29,13 +28,13 @@ mod limit_field_access {
     ///   [`context_custom`](Self::context_custom) to create new reports with
     ///   the collection as children.
     /// - It has convenience methods to convert between different context and
-    ///   thread safety markers such as [`into_dyn_any`](Self::into_dyn_any) and
+    ///   thread safety markers such as [`into_dynamic`](Self::into_dynamic) and
     ///   [`into_local`](Self::into_local).
     /// - It is also possible to convert between different context and thread
     ///   safety markers using the [`From`] and [`Into`] traits.
     #[repr(transparent)]
     pub struct ReportCollection<
-        Context: ?Sized + 'static = dyn Any,
+        Context: ?Sized + 'static = Dynamic,
         ThreadSafety: 'static = SendSync,
     > {
         /// # Safety
@@ -44,10 +43,10 @@ mod limit_field_access {
         /// as this struct exists:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts contained in all of the
+        /// 3. If `C` is a `Sized` type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -67,10 +66,10 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts contained in all of the
+        /// 3. If `C` is a `Sized` type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -100,10 +99,10 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts contained in all of the
+        /// 3. If `C` is a `Sized` type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -137,10 +136,10 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. Either the collection must be empty, `C` must either be a type
-        ///    bounded by `Sized`, or C must be `dyn Any`.
+        ///    bounded by `Sized`, or C must be `Dynamic`.
         /// 2. Either the collection must be empty or `T` must either be
         ///    `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: The contexts contained in all of the
+        /// 3. If `C` is a `Sized` type: The contexts contained in all of the
         ///    reports in the `Vec` are of type `C`.
         /// 4. All references to these reports or any sub-reports are compatible
         ///    with shared ownership. Specifically there are no references with
@@ -192,10 +191,10 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. If the collection is mutated so that is becomes non-empty, then
-        ///    `C` must either be a type bounded by `Sized`, or be `dyn Any`.
+        ///    `C` must either be a type bounded by `Sized`, or be `Dynamic`.
         /// 2. If the collection is mutated so that is becomes non-empty, then
         ///    `T` must be either be `SendSync` or `Local`.
-        /// 3. If `C` is a concrete type: No mutation is performed that would
+        /// 3. If `C` is a `Sized` type: No mutation is performed that would
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 4. No mutation is performed that would invalidate the shared
         ///    ownership invariant.
@@ -348,7 +347,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 1. Guaranteed by the invariants of the collection.
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of the collection.
-        // 4. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 4. If `C` is a `Sized` type: Guaranteed by the invariants of the collection.
         // 5. `O=Cloneable`, so this is trivially true.
         // 6. Guaranteed by the invariants of the collection.
         // 7. Guaranteed by the invariants of the collection.
@@ -385,10 +384,13 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// # Examples
     ///
     /// ```
-    /// # use core::any::Any;
-    /// use rootcause::{markers::SendSync, report, report_collection::ReportCollection};
+    /// use rootcause::{
+    ///     markers::{Dynamic, SendSync},
+    ///     report,
+    ///     report_collection::ReportCollection,
+    /// };
     ///
-    /// let collection = ReportCollection::<dyn Any, SendSync>::with_capacity(5);
+    /// let collection = ReportCollection::<Dynamic, SendSync>::with_capacity(5);
     /// assert!(collection.capacity() <= 5);
     /// ```
     pub fn capacity(&self) -> usize {
@@ -403,10 +405,13 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// # Examples
     ///
     /// ```
-    /// # use core::any::Any;
-    /// use rootcause::{markers::SendSync, report, report_collection::ReportCollection};
+    /// use rootcause::{
+    ///     markers::{Dynamic, SendSync},
+    ///     report,
+    ///     report_collection::ReportCollection,
+    /// };
     ///
-    /// let mut collection = ReportCollection::<dyn Any, SendSync>::new();
+    /// let mut collection = ReportCollection::<Dynamic, SendSync>::new();
     /// collection.reserve(10);
     /// assert!(collection.capacity() >= 10);
     /// ```
@@ -449,7 +454,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 1. Guaranteed by the invariants of the collection.
         // 2. `O=Cloneable`, so this is trivially true.
         // 3. Guaranteed by the invariants of the collection.
-        // 4. If `C` is a concrete type: Guaranteed by the invariants of the collection.
+        // 4. If `C` is a `Sized` type: Guaranteed by the invariants of the collection.
         // 5. Guaranteed by the invariants of the collection.
         // 6. Guaranteed by the invariants of the collection.
         // 7. If `T = SendSync`: All contexts and attachments in the report and all
@@ -543,17 +548,17 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. `C=Dynamic`, so this is trivially true.
         // 2. `O=Uncloneable`, so this is trivially true.
         // 3. `T=Local`, so this is trivially true.
-        // 4. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 4. For the called method we set `C=Dynamic`, so this is trivially true.
         // 5. For the called method we set `O=Uncloneable`, so this is trivially true.
         // 6. Guaranteed by the invariants of the collection.
         // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
-            ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw)
+            ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
         crate::util::format_helper(
@@ -567,12 +572,12 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         )
     }
 
-    /// Converts the collection to use type-erased contexts via `dyn Any`.
+    /// Converts the collection to use type-erased contexts via [`Dynamic`].
     ///
     /// This performs type erasure on the context type parameter, allowing
     /// collections with different concrete context types to be stored
-    /// together or passed to functions that accept `ReportCollection<dyn
-    /// Any, T>`.
+    /// together or passed to functions that accept `ReportCollection<Dynamic,
+    /// T>`.
     ///
     /// This method does not actually modify the collection in any way. It only
     /// has the effect of "forgetting" that the context actually has the
@@ -583,42 +588,40 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// # Examples
     ///
     /// ```
-    /// use std::any::Any;
+    /// use rootcause::{markers::Dynamic, report, report_collection::ReportCollection};
     ///
-    /// use rootcause::{report, report_collection::ReportCollection};
-    ///
-    /// let mut collection: ReportCollection<dyn Any> = ReportCollection::new();
+    /// let mut collection: ReportCollection<Dynamic> = ReportCollection::new();
     /// collection.push(report!("String error").into_cloneable());
     ///
-    /// let erased: ReportCollection<dyn Any> = collection.into_dyn_any();
+    /// let erased: ReportCollection<Dynamic> = collection.into_dynamic();
     /// assert_eq!(erased.len(), 1);
     /// ```
     #[must_use]
-    pub fn into_dyn_any(self) -> ReportCollection<dyn Any, T> {
+    pub fn into_dynamic(self) -> ReportCollection<Dynamic, T> {
         let raw = self.into_raw();
 
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. `C=dyn Any`, so this is trivially true.
+        // 3. `C=Dynamic`, so this is trivially true.
         // 4. The invariants of the collection guarantee this.
         // 5. The invariants of the collection guarantee this.
-        unsafe { ReportCollection::<dyn Any, T>::from_raw(raw) }
+        unsafe { ReportCollection::<Dynamic, T>::from_raw(raw) }
     }
 
     /// Returns a reference to the collection with type-erased contexts via
-    /// `dyn Any`.
+    /// [`Dynamic`].
     #[must_use]
-    pub fn as_dyn_any(&self) -> &ReportCollection<dyn Any, T> {
+    pub fn as_dynamic(&self) -> &ReportCollection<Dynamic, T> {
         let raw = self.as_raw();
 
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
         // 2. The invariants of the collection guarantee this.
-        // 3. `C=dyn Any`, so this is trivially true.
+        // 3. `C=Dynamic`, so this is trivially true.
         // 4. The invariants of the collection guarantee this.
         // 5. The invariants of the collection guarantee this.
-        unsafe { ReportCollection::<dyn Any, T>::from_raw_ref(raw) }
+        unsafe { ReportCollection::<Dynamic, T>::from_raw_ref(raw) }
     }
 
     /// Converts the collection to use [`Local`] thread safety semantics.
@@ -637,12 +640,16 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{report_collection::ReportCollection, markers::Local, report};
+    /// use rootcause::{
+    ///     markers::{Dynamic, Local},
+    ///     report,
+    ///     report_collection::ReportCollection,
+    /// };
     ///
-    /// let mut collection: ReportCollection<dyn std::any::Any> = ReportCollection::new(); // defaults to SendSync
+    /// let mut collection: ReportCollection<Dynamic> = ReportCollection::new(); // defaults to SendSync
     /// collection.push(report!("An error").into_cloneable());
     ///
-    /// let local_collection: ReportCollection<dyn std::any::Any, Local> = collection.into_local();
+    /// let local_collection: ReportCollection<Dynamic, Local> = collection.into_local();
     /// assert_eq!(local_collection.len(), 1);
     /// ```
     #[must_use]
@@ -731,7 +738,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         D: markers::ObjectMarkerFor<T>,
         H: ContextHandler<D>,
     {
-        Report::from_parts::<H>(context, self.into_dyn_any(), ReportAttachments::new())
+        Report::from_parts::<H>(context, self.into_dynamic(), ReportAttachments::new())
     }
 }
 
@@ -803,7 +810,7 @@ where
     }
 }
 
-impl<C: Sized, O, T> Extend<Report<C, O, T>> for ReportCollection<dyn Any, T>
+impl<C: Sized, O, T> Extend<Report<C, O, T>> for ReportCollection<Dynamic, T>
 where
     O: markers::ReportOwnershipMarker,
 {
@@ -811,7 +818,7 @@ where
         let iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
         for report in iter {
-            self.push(report.into_dyn_any().into_cloneable());
+            self.push(report.into_dynamic().into_cloneable());
         }
     }
 }
@@ -826,12 +833,12 @@ impl<'a, C: ?Sized, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollecti
     }
 }
 
-impl<'a, C: Sized, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollection<dyn Any, T> {
+impl<'a, C: Sized, T> Extend<ReportRef<'a, C, Cloneable, T>> for ReportCollection<Dynamic, T> {
     fn extend<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(&mut self, iter: I) {
         let iter = iter.into_iter();
         self.reserve(iter.size_hint().0);
         for report in iter {
-            self.push(report.clone_arc().into_dyn_any());
+            self.push(report.clone_arc().into_dynamic());
         }
     }
 }
@@ -847,7 +854,7 @@ where
     }
 }
 
-impl<C: Sized, O, T> FromIterator<Report<C, O, T>> for ReportCollection<dyn Any, T>
+impl<C: Sized, O, T> FromIterator<Report<C, O, T>> for ReportCollection<Dynamic, T>
 where
     O: markers::ReportOwnershipMarker,
 {
@@ -867,7 +874,7 @@ impl<'a, C: ?Sized, T> FromIterator<ReportRef<'a, C, Cloneable, T>> for ReportCo
 }
 
 impl<'a, C: Sized, T> FromIterator<ReportRef<'a, C, Cloneable, T>>
-    for ReportCollection<dyn Any, T>
+    for ReportCollection<Dynamic, T>
 {
     fn from_iter<I: IntoIterator<Item = ReportRef<'a, C, Cloneable, T>>>(iter: I) -> Self {
         let mut siblings = ReportCollection::new();
@@ -881,17 +888,17 @@ impl<C: ?Sized, T> core::fmt::Display for ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. `C=Dynamic`, so this is trivially true.
         // 2. `O=Uncloneable`, so this is trivially true.
         // 3. `T=Local`, so this is trivially true.
-        // 4. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 4. For the called method we set `C=Dynamic`, so this is trivially true.
         // 5. For the called method we set `O=Uncloneable`, so this is trivially true.
         // 6. Guaranteed by the invariants of the collection.
         // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
-            ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw)
+            ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
         crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Display)
@@ -903,17 +910,17 @@ impl<C: ?Sized, T> core::fmt::Debug for ReportCollection<C, T> {
         let raw = self.as_raw();
 
         // SAFETY:
-        // 1. `C=dyn Any`, so this is trivially true.
+        // 1. `C=Dynamic`, so this is trivially true.
         // 2. `O=Uncloneable`, so this is trivially true.
         // 3. `T=Local`, so this is trivially true.
-        // 4. For the called method we set `C=dyn Any`, so this is trivially true.
+        // 4. For the called method we set `C=Dynamic`, so this is trivially true.
         // 5. For the called method we set `O=Uncloneable`, so this is trivially true.
         // 6. Guaranteed by the invariants of the collection.
         // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
-            ReportRef::<dyn Any, Uncloneable, Local>::from_raw_slice(raw)
+            ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
         crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Debug)
@@ -945,10 +952,10 @@ macro_rules! from_impls {
 
 from_impls! {
     <C>: C => C, SendSync => Local, [into_local],
-    <C>: C => dyn Any, SendSync => SendSync, [into_dyn_any],
-    <C>: C => dyn Any, SendSync => Local, [into_dyn_any, into_local],
-    <C>: C => dyn Any, Local => Local, [into_dyn_any],
-    <>: dyn Any => dyn Any, SendSync => Local, [into_local],
+    <C>: C => Dynamic, SendSync => SendSync, [into_dynamic],
+    <C>: C => Dynamic, SendSync => Local, [into_dynamic, into_local],
+    <C>: C => Dynamic, Local => Local, [into_dynamic],
+    <>: Dynamic => Dynamic, SendSync => Local, [into_local],
 }
 
 impl<C: ?Sized, T> From<Vec<Report<C, Cloneable, T>>> for ReportCollection<C, T> {
@@ -1020,12 +1027,12 @@ mod tests {
         static_assertions::assert_impl_all!(ReportCollection<(), SendSync>: Send, Sync);
         static_assertions::assert_impl_all!(ReportCollection<String, SendSync>: Send, Sync);
         static_assertions::assert_impl_all!(ReportCollection<NonSend, SendSync>: Send, Sync); // This still makes sense, since you won't actually be able to construct this report
-        static_assertions::assert_impl_all!(ReportCollection<dyn Any, SendSync>: Send, Sync);
+        static_assertions::assert_impl_all!(ReportCollection<Dynamic, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportCollection<(), Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportCollection<String, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportCollection<NonSend, Local>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportCollection<dyn Any, Local>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportCollection<Dynamic, Local>: Send, Sync);
     }
 
     #[test]
@@ -1033,12 +1040,12 @@ mod tests {
         static_assertions::assert_impl_all!(ReportCollection<(), SendSync>: Unpin);
         static_assertions::assert_impl_all!(ReportCollection<String, SendSync>: Unpin);
         static_assertions::assert_impl_all!(ReportCollection<NonSend, SendSync>: Unpin); // This still makes sense, since you won't actually be able to construct this report
-        static_assertions::assert_impl_all!(ReportCollection<dyn Any, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<Dynamic, SendSync>: Unpin);
 
         static_assertions::assert_impl_all!(ReportCollection<(), Local>: Unpin);
         static_assertions::assert_impl_all!(ReportCollection<String, Local>: Unpin);
         static_assertions::assert_impl_all!(ReportCollection<NonSend, Local>: Unpin);
-        static_assertions::assert_impl_all!(ReportCollection<dyn Any, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportCollection<Dynamic, Local>: Unpin);
     }
 
     #[test]
@@ -1046,21 +1053,21 @@ mod tests {
         static_assertions::assert_impl_all!(ReportCollection<(), SendSync>: Clone);
         static_assertions::assert_impl_all!(ReportCollection<String, SendSync>: Clone);
         static_assertions::assert_impl_all!(ReportCollection<NonSend, SendSync>: Clone); // This still makes sense, since you won't actually be able to construct this report
-        static_assertions::assert_impl_all!(ReportCollection<dyn Any, SendSync>: Clone);
+        static_assertions::assert_impl_all!(ReportCollection<Dynamic, SendSync>: Clone);
 
         static_assertions::assert_impl_all!(ReportCollection<(), Local>: Clone);
         static_assertions::assert_impl_all!(ReportCollection<String, Local>: Clone);
         static_assertions::assert_impl_all!(ReportCollection<NonSend, Local>: Clone);
-        static_assertions::assert_impl_all!(ReportCollection<dyn Any, Local>: Clone);
+        static_assertions::assert_impl_all!(ReportCollection<Dynamic, Local>: Clone);
 
         static_assertions::assert_not_impl_any!(ReportCollection<(), SendSync>: Copy);
         static_assertions::assert_not_impl_any!(ReportCollection<String, SendSync>: Copy);
         static_assertions::assert_not_impl_any!(ReportCollection<NonSend, SendSync>: Copy); // This still makes sense, since you won't actually be able to construct this report_collection collection
-        static_assertions::assert_not_impl_any!(ReportCollection<dyn Any, SendSync>: Copy);
+        static_assertions::assert_not_impl_any!(ReportCollection<Dynamic, SendSync>: Copy);
 
         static_assertions::assert_not_impl_any!(ReportCollection<(), Local>: Copy);
         static_assertions::assert_not_impl_any!(ReportCollection<String, Local>: Copy);
         static_assertions::assert_not_impl_any!(ReportCollection<NonSend, Local>: Copy);
-        static_assertions::assert_not_impl_any!(ReportCollection<dyn Any, Local>: Copy);
+        static_assertions::assert_not_impl_any!(ReportCollection<Dynamic, Local>: Copy);
     }
 }

@@ -2,7 +2,7 @@
 //!
 //! **Run this example:** `cargo run --example typed_reports`
 //!
-//! By default, rootcause uses `Report<dyn Any>` which can hold any error type.
+//! By default, rootcause uses `Report<Dynamic>` which can hold any error type.
 //! This is perfect when you just need errors to propagate. But sometimes you
 //! want callers to be able to pattern match and handle specific errors
 //! programmatically - that's when you use `Report<YourError>`.
@@ -28,7 +28,7 @@
 //! ## Key Concepts
 //!
 //! - `Report<C>` preserves type information for pattern matching
-//! - `Report<dyn Any>` type-erases for flexibility with multiple error types
+//! - `Report<Dynamic>` type-erases for flexibility with multiple error types
 //! - The `?` operator automatically converts between them
 //! - Use `.current_context()` to access the typed error for pattern matching
 //!
@@ -106,7 +106,7 @@ fn query_user_with_retry(user_id: u32) -> Result<String, Report> {
                     // to pattern match anymore - the retry logic already handled it
                     return Err(report
                         .context(format!("Failed to query user after {attempt} attempts"))
-                        .into_dyn_any());
+                        .into_dynamic());
                 }
             }
         }
@@ -120,9 +120,9 @@ fn library_function_example() -> Result<(), Report<DatabaseError>> {
     Ok(())
 }
 
-/// Applications use Report<dyn Any> to handle diverse error types uniformly.
+/// Applications use Report<Dynamic> to handle diverse error types uniformly.
 fn application_function_example() -> Result<(), Report> {
-    // ? automatically converts Report<DatabaseError> to Report<dyn Any>
+    // ? automatically converts Report<DatabaseError> to Report<Dynamic>
     library_function_example()?;
     Ok(())
 }

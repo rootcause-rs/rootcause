@@ -17,11 +17,11 @@
 //! the [`report_attachment!`] macro:
 //!
 //! ```
-//! use rootcause::{prelude::*, report_attachment::ReportAttachment};
+//! use rootcause::{markers::Dynamic, prelude::*, report_attachment::ReportAttachment};
 //!
 //! // Create a simple string attachment
 //! let attachment: ReportAttachment<&str> = ReportAttachment::new("Additional information");
-//! let attachment: ReportAttachment<dyn Any> = report_attachment!("Additional information");
+//! let attachment: ReportAttachment<Dynamic> = report_attachment!("Additional information");
 //!
 //! // Create an attachment from a custom type using Debug formatting
 //! #[derive(Debug, Clone)]
@@ -43,7 +43,8 @@
 //!
 //! Both types have the same generic parameters:
 //!
-//! - **Attachment type**: Can be a concrete type or `dyn Any` for type erasure
+//! - **Attachment type**: Can be a concrete type or [`Dynamic`] for type
+//!   erasure
 //! - **Thread safety**: [`SendSync`] (default) for thread-safe attachments, or
 //!   [`Local`] for single-threaded use
 //!
@@ -76,7 +77,7 @@
 //!
 //! let attachment = ReportAttachment::new("Important context");
 //! let mut report = report!("An error occurred");
-//! report.attachments_mut().push(attachment.into_dyn_any());
+//! report.attachments_mut().push(attachment.into_dynamic());
 //!
 //! // Access the attachment through a reference
 //! let attachment_ref = report.attachments().get(0).unwrap();
@@ -85,17 +86,19 @@
 //!
 //! # Type Erasure and Downcasting
 //!
-//! Attachments support type erasure through `dyn Any`, allowing collections of
-//! different attachment types. You can downcast back to concrete types when
+//! Attachments support type erasure through [`Dynamic`], allowing collections
+//! of different attachment types. You can downcast back to concrete types when
 //! needed:
 //!
-//! ```
-//! use std::any::{Any, TypeId};
+//! [`Dynamic`]: crate::markers::Dynamic
 //!
-//! use rootcause::{prelude::*, report_attachment::ReportAttachment};
+//! ```
+//! use std::any::TypeId;
+//!
+//! use rootcause::{markers::Dynamic, prelude::*, report_attachment::ReportAttachment};
 //!
 //! let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-//! let erased: ReportAttachment<dyn Any> = attachment.into_dyn_any();
+//! let erased: ReportAttachment<Dynamic> = attachment.into_dynamic();
 //!
 //! // Check the type at runtime
 //! assert_eq!(erased.inner_type_id(), TypeId::of::<&str>());
@@ -112,7 +115,6 @@
 //! the [`Debug`] handler or create your own:
 //!
 //! ```
-//! # use core::any::Any;
 //! use rootcause::{prelude::*, report_attachment::ReportAttachment};
 //!
 //! #[derive(Debug)]

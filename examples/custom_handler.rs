@@ -63,7 +63,7 @@ fn parse_protocol_message() -> Result<String, Report> {
     ))
     .attach("Received data:")
     .attach_custom::<Hexdump, _>(corrupt_data)
-    .into_dyn_any())
+    .into_dynamic())
 }
 
 // Example 2: Custom context handler for structured errors
@@ -123,7 +123,7 @@ fn validate_user_input() -> Result<(), Report> {
     Err(
         report!(io::Error::new(io::ErrorKind::InvalidInput, "Bad request"))
             .context_custom::<ValidationList, _>(validation_error)
-            .into_dyn_any(),
+            .into_dynamic(),
     )
 }
 

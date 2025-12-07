@@ -1,8 +1,11 @@
-use core::{any::Any, iter::FusedIterator};
+use core::iter::FusedIterator;
 
 use rootcause_internals::RawAttachment;
 
-use crate::report_attachment::{ReportAttachment, ReportAttachmentRef};
+use crate::{
+    markers::Dynamic,
+    report_attachment::{ReportAttachment, ReportAttachmentRef},
+};
 
 /// An iterator over references to report attachments.
 ///
@@ -21,8 +24,8 @@ use crate::report_attachment::{ReportAttachment, ReportAttachmentRef};
 /// };
 ///
 /// let mut attachments = ReportAttachments::new_sendsync();
-/// attachments.push(ReportAttachment::new("debug info").into_dyn_any());
-/// attachments.push(ReportAttachment::new(42).into_dyn_any());
+/// attachments.push(ReportAttachment::new("debug info").into_dynamic());
+/// attachments.push(ReportAttachment::new(42).into_dynamic());
 ///
 /// let iterator: ReportAttachmentsIter<'_> = attachments.iter();
 /// ```
@@ -39,15 +42,15 @@ impl<'a> ReportAttachmentsIter<'a> {
 }
 
 impl<'a> Iterator for ReportAttachmentsIter<'a> {
-    type Item = ReportAttachmentRef<'a, dyn Any>;
+    type Item = ReportAttachmentRef<'a, Dynamic>;
 
     fn next(&mut self) -> Option<Self::Item> {
         let raw = self.raw.next()?.as_ref();
 
         // SAFETY:
-        // 1. `A = dyn Any`, so this is trivially satisfied.
-        // 2. `A = dyn Any`, so this is trivially satisfied.
-        let attachment = unsafe { ReportAttachmentRef::<'a, dyn Any>::from_raw(raw) };
+        // 1. `A = Dynamic`, so this is trivially satisfied.
+        // 2. `A = Dynamic`, so this is trivially satisfied.
+        let attachment = unsafe { ReportAttachmentRef::<'a, Dynamic>::from_raw(raw) };
 
         Some(attachment)
     }
@@ -62,9 +65,9 @@ impl<'a> DoubleEndedIterator for ReportAttachmentsIter<'a> {
         let raw = self.raw.next_back()?.as_ref();
 
         // SAFETY:
-        // 1. `A = dyn Any`, so this is trivially satisfied.
-        // 2. `A = dyn Any`, so this is trivially satisfied.
-        let attachment = unsafe { ReportAttachmentRef::<'a, dyn Any>::from_raw(raw) };
+        // 1. `A = Dynamic`, so this is trivially satisfied.
+        // 2. `A = Dynamic`, so this is trivially satisfied.
+        let attachment = unsafe { ReportAttachmentRef::<'a, Dynamic>::from_raw(raw) };
 
         Some(attachment)
     }
@@ -102,8 +105,8 @@ mod limit_field_access {
     /// };
     ///
     /// let mut attachments = ReportAttachments::new_sendsync();
-    /// attachments.push(ReportAttachment::new("debug info").into_dyn_any());
-    /// attachments.push(ReportAttachment::new(42).into_dyn_any());
+    /// attachments.push(ReportAttachment::new("debug info").into_dynamic());
+    /// attachments.push(ReportAttachment::new(42).into_dynamic());
     ///
     /// let iterator: ReportAttachmentsIntoIter<_> = attachments.into_iter();
     /// ```
@@ -172,7 +175,7 @@ mod limit_field_access {
 pub use limit_field_access::ReportAttachmentsIntoIter;
 
 impl<T> Iterator for ReportAttachmentsIntoIter<T> {
-    type Item = ReportAttachment<dyn Any, T>;
+    type Item = ReportAttachment<Dynamic, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
         // SAFETY: We only remove items, we don't mutate them.
@@ -185,11 +188,11 @@ impl<T> Iterator for ReportAttachmentsIntoIter<T> {
         let attachment = raw.next()?;
 
         // SAFETY:
-        // 1. `A=dyn Any`, so this is trivially satisfied.
+        // 1. `A=Dynamic`, so this is trivially satisfied.
         // 2. Guaranteed by the invariants of this type.
-        // 3. `A=dyn Any`, so this is trivially satisfied.
+        // 3. `A=Dynamic`, so this is trivially satisfied.
         // 4. Guaranteed by the invariants of this type.
-        let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
+        let attachment = unsafe { ReportAttachment::<Dynamic, T>::from_raw(attachment) };
 
         Some(attachment)
     }
@@ -211,11 +214,11 @@ impl<T> DoubleEndedIterator for ReportAttachmentsIntoIter<T> {
         let attachment = raw.next_back()?;
 
         // SAFETY:
-        // 1. `A=dyn Any`, so this is trivially satisfied.
+        // 1. `A=Dynamic`, so this is trivially satisfied.
         // 2. Guaranteed by the invariants of this type.
-        // 3. `A=dyn Any`, so this is trivially satisfied.
+        // 3. `A=Dynamic`, so this is trivially satisfied.
         // 4. Guaranteed by the invariants of this type.
-        let attachment = unsafe { ReportAttachment::<dyn Any, T>::from_raw(attachment) };
+        let attachment = unsafe { ReportAttachment::<Dynamic, T>::from_raw(attachment) };
 
         Some(attachment)
     }

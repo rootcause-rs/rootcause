@@ -18,7 +18,7 @@
 /// let report: Report = report!("Failed to open {}", "config.toml");
 /// ```
 ///
-/// The resulting report has type `Report<dyn Any, Mutable, SendSync>`. The
+/// The resulting report has type `Report<Dynamic, Mutable, SendSync>`. The
 /// context is typically a `String`, but when there are no format arguments, it
 /// may be optimized to a `&'static str`.
 ///
@@ -49,22 +49,20 @@
 /// ## Basic String Reports
 ///
 /// ```
-/// use std::{
-///     any::{Any, TypeId},
-///     rc::Rc,
-/// };
+/// use std::{any::TypeId, rc::Rc};
 ///
 /// use rootcause::prelude::*;
 ///
 /// // Static string (no formatting)
-/// let report: Report<dyn Any, markers::Mutable, markers::SendSync> = report!("Something broke");
+/// let report: Report<markers::Dynamic, markers::Mutable, markers::SendSync> =
+///     report!("Something broke");
 /// assert_eq!(
 ///     report.current_context_type_id(),
 ///     TypeId::of::<&'static str>()
 /// );
 ///
 /// // Formatted string
-/// let report: Report<dyn Any, markers::Mutable, markers::SendSync> =
+/// let report: Report<markers::Dynamic, markers::Mutable, markers::SendSync> =
 ///     report!("Something broke hard: {}", "it was bad");
 /// assert_eq!(report.current_context_type_id(), TypeId::of::<String>());
 /// assert_eq!(
@@ -136,7 +134,7 @@ macro_rules! report {
             $crate::markers::SendSync
         >::new_custom::<$crate::handlers::Display>(
             $crate::__private::format!($fmt, $($arg)*)
-        ).into_dyn_any()
+        ).into_dynamic()
     };
 }
 
@@ -160,12 +158,12 @@ macro_rules! report {
 /// ## String Attachments
 ///
 /// ```
-/// use std::any::{Any, TypeId};
+/// use std::any::TypeId;
 ///
 /// use rootcause::{prelude::*, report_attachment, report_attachment::ReportAttachment};
 ///
 /// // Static string
-/// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
+/// let attachment: ReportAttachment<markers::Dynamic, markers::SendSync> =
 ///     report_attachment!("Additional context");
 /// assert_eq!(attachment.inner_type_id(), TypeId::of::<&'static str>());
 /// assert_eq!(
@@ -174,7 +172,7 @@ macro_rules! report {
 /// );
 ///
 /// // Formatted string
-/// let attachment: ReportAttachment<dyn Any, markers::SendSync> =
+/// let attachment: ReportAttachment<markers::Dynamic, markers::SendSync> =
 ///     report_attachment!("Error occurred at line: {}", 42);
 /// assert_eq!(attachment.inner_type_id(), TypeId::of::<String>());
 /// assert_eq!(
@@ -248,7 +246,7 @@ macro_rules! report_attachment {
             $crate::markers::SendSync
         >::new_custom::<$crate::handlers::Display>(
             $crate::__private::format!($fmt, $($arg)*)
-        ).into_dyn_any()
+        ).into_dynamic()
     };
 }
 

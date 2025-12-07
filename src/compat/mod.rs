@@ -69,9 +69,10 @@
 //! See the individual module documentation for detailed integration guides and
 //! migration strategies.
 
-use core::any::Any;
-
-use crate::{Report, ReportRef, markers};
+use crate::{
+    Report, ReportRef,
+    markers::{self, Dynamic},
+};
 
 /// A trait for converting external error types into rootcause [`Report`]s.
 ///
@@ -182,7 +183,7 @@ pub mod eyre06;
 /// # Type Parameters
 ///
 /// - `C`: The context type of the wrapped report
-pub struct ReportAsError<C: ?Sized + 'static = dyn Any, T: 'static = markers::SendSync>(
+pub struct ReportAsError<C: ?Sized + 'static = Dynamic, T: 'static = markers::SendSync>(
     pub Report<C, markers::Cloneable, T>,
 );
 

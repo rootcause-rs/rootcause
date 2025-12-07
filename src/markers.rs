@@ -19,6 +19,23 @@
 //! [`ReportRef`]: crate::ReportRef
 //! [`ReportCollection`]: crate::report_collection::ReportCollection
 //!
+//! # Context Marker
+//!
+//! The context marker is the first type parameter (`C`) in [`Report<C, O,
+//! T>`](crate::Report) and determines what type of error is stored at the root:
+//!
+//! - [`Dynamic`]: Type-erased context - the root error can be any type (like
+//!   [`anyhow::Error`]). This is the default when you write just [`Report`].
+//! - Any concrete type: Typed context - the root error must be that specific
+//!   type (like [`error-stack`]).
+//!
+//! See the [`Dynamic`] documentation for a detailed comparison and usage
+//! examples.
+//!
+//! [`anyhow::Error`]: https://docs.rs/anyhow
+//! [`error-stack`]: https://docs.rs/error-stack
+//! [`Report`]: crate::Report
+//!
 //! # Ownership Markers
 //!
 //! Ownership markers control whether reports and report references can be
@@ -86,9 +103,140 @@
 //! // local_report cannot be sent to another thread - won't compile
 //! ```
 
-use core::any::Any;
-
 use crate::ReportMut;
+
+/// Marker type for reports with dynamic (type-erased) context.
+///
+/// `Dynamic` is used as the context type parameter in
+/// [`Report<Dynamic, O, T>`](crate::Report) to indicate that the actual error
+/// type at the root is not known at compile time. This is the default behavior
+/// and is similar to [`anyhow::Error`] - any error type
+/// can be stored and the `?` operator works automatically.
+///
+/// # Key Properties
+///
+/// - **Zero-cost type erasure**: No actual instance of `Dynamic` is ever
+///   stored. It's purely a marker type used at the type level.
+/// - **Automatic conversions**: The `?` operator automatically converts any
+///   error type into `Report<Dynamic>`.
+/// - **Flexible propagation**: When you just need errors to propagate upward
+///   with context, `Dynamic` is the right choice.
+///
+/// # When to Use Dynamic
+///
+/// Use `Report<Dynamic>` (or just [`Report`](crate::Report), which defaults to
+/// `Dynamic`) when:
+/// - You're propagating errors upward and don't need to pattern match on
+///   specific error types
+/// - You want the flexibility to return different error types from the same
+///   function
+/// - You're building applications where error handling is about logging and
+///   displaying, not recovery
+///
+/// Use `Report<YourErrorType>` instead when:
+/// - Callers need to pattern match on specific error variants for recovery
+/// - You want compile-time guarantees about which errors a function can return
+/// - You're building libraries with well-defined error types
+///
+/// See [`examples/typed_reports.rs`] for when typed errors are appropriate.
+///
+/// [`examples/typed_reports.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/typed_reports.rs
+///
+/// # Examples
+///
+/// ## Basic Usage
+///
+/// ```
+/// use rootcause::prelude::*;
+///
+/// // Report<Dynamic> is the default - these are equivalent:
+/// fn might_fail() -> Result<(), Report> {
+///     // Can return any error type via ?
+///     std::fs::read_to_string("/nonexistent")?;
+///     Ok(())
+/// }
+///
+/// fn might_fail_explicit() -> Result<(), Report<markers::Dynamic>> {
+///     std::fs::read_to_string("/nonexistent")?;
+///     Ok(())
+/// }
+/// ```
+///
+/// ## Mixing Error Types
+///
+/// ```
+/// use std::{fs, io};
+///
+/// use rootcause::prelude::*;
+///
+/// #[derive(Debug)]
+/// struct ConfigError(String);
+/// impl std::fmt::Display for ConfigError {
+///     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+///         write!(f, "Config error: {}", self.0)
+///     }
+/// }
+/// impl std::error::Error for ConfigError {}
+///
+/// fn load_and_parse(path: &str) -> Result<u32, Report> {
+///     // io::Error from fs operations
+///     let contents = fs::read_to_string(path)?;
+///
+///     // Custom ConfigError
+///     if contents.is_empty() {
+///         Err(ConfigError("empty file".into()))?;
+///     }
+///
+///     // ParseIntError from parse
+///     let value: u32 = contents.trim().parse()?;
+///
+///     Ok(value)
+/// }
+/// ```
+///
+/// ## Converting Between Typed and Dynamic
+///
+/// ```
+/// use rootcause::prelude::*;
+///
+/// #[derive(Debug)]
+/// struct MyError;
+/// impl std::fmt::Display for MyError {
+///     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+///         write!(f, "MyError")
+///     }
+/// }
+/// impl std::error::Error for MyError {}
+///
+/// fn typed_error() -> Result<(), Report<MyError>> {
+///     Err(report!(MyError))
+/// }
+///
+/// fn dynamic_error() -> Result<(), Report> {
+///     // Typed report automatically coerces to dynamic via ?
+///     typed_error()?;
+///     Ok(())
+/// }
+///
+/// // Or convert explicitly:
+/// fn explicit_conversion() -> Result<(), Report> {
+///     let typed: Report<MyError> = report!(MyError);
+///     let dynamic: Report = typed.into_dynamic();
+///     Err(dynamic)
+/// }
+/// ```
+///
+/// See [`examples/error_coercion.rs`] for a complete guide to type conversions.
+///
+/// [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
+pub struct Dynamic {
+    /// This field ensures `Dynamic` is an unsized type.
+    ///
+    /// Since the `Dynamic` type itself is never instantiated, the choice
+    /// of an unsized type here is purely to enforce that property at the type
+    /// level.
+    _phantom_unsized: [()],
+}
 
 /// Marker type for owned reports with unique ownership.
 ///
@@ -486,12 +634,12 @@ pub trait ObjectMarkerFor<T>: sealed_object_marker::Sealed + Sized + 'static {
     /// Runs report creation hooks specific to this thread-safety marker.
     #[doc(hidden)]
     #[track_caller]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, T>);
+    fn run_creation_hooks(report: ReportMut<'_, Dynamic, T>);
 }
 
 impl<O: Sized + 'static> ObjectMarkerFor<Local> for O {
     #[inline(always)]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, Local>) {
+    fn run_creation_hooks(report: ReportMut<'_, Dynamic, Local>) {
         crate::hooks::report_creation::run_creation_hooks_local(report);
     }
 }
@@ -501,7 +649,7 @@ where
     O: Send + Sync,
 {
     #[inline(always)]
-    fn run_creation_hooks(report: ReportMut<'_, dyn Any, SendSync>) {
+    fn run_creation_hooks(report: ReportMut<'_, Dynamic, SendSync>) {
         crate::hooks::report_creation::run_creation_hooks_sendsync(report);
     }
 }

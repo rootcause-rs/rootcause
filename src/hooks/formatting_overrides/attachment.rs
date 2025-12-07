@@ -18,13 +18,14 @@
 //! # Example: Displaying an Attachment with Custom Formatting
 //!
 //! ```rust
-//! use core::{any::Any, fmt};
+//! use core::fmt;
 //!
 //! use rootcause::{
 //!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
 //!     hooks::formatting_overrides::attachment::{
 //!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
 //!     },
+//!     markers::Dynamic,
 //!     report_attachment::ReportAttachmentRef,
 //! };
 //!
@@ -48,7 +49,7 @@
 //!
 //!     fn preferred_formatting_style(
 //!         &self,
-//!         _attachment: ReportAttachmentRef<'_, dyn Any>,
+//!         _attachment: ReportAttachmentRef<'_, Dynamic>,
 //!         _report_formatting_function: FormattingFunction,
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
@@ -71,13 +72,12 @@
 //! setting their placement to `Hidden`:
 //!
 //! ```rust
-//! use core::any::Any;
-//!
 //! use rootcause::{
 //!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
 //!     hooks::formatting_overrides::attachment::{
 //!         AttachmentFormattingOverride, register_attachment_hook,
 //!     },
+//!     markers::Dynamic,
 //!     report_attachment::ReportAttachmentRef,
 //! };
 //!
@@ -88,7 +88,7 @@
 //! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook {
 //!     fn preferred_formatting_style(
 //!         &self,
-//!         _attachment: ReportAttachmentRef<'_, dyn Any>,
+//!         _attachment: ReportAttachmentRef<'_, Dynamic>,
 //!         _report_formatting_function: FormattingFunction,
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
@@ -104,11 +104,7 @@
 //! ```
 
 use alloc::fmt;
-use core::{
-    any::{Any, TypeId},
-    marker::PhantomData,
-    panic::Location,
-};
+use core::{any::TypeId, marker::PhantomData, panic::Location};
 
 use hashbrown::HashMap;
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
@@ -118,7 +114,7 @@ use unsize::CoerceUnsize;
 use crate::{
     ReportRef,
     hooks::hook_lock::HookLock,
-    markers::{Local, Uncloneable},
+    markers::{Dynamic, Local, Uncloneable},
     preformatted::PreformattedAttachment,
     report_attachment::ReportAttachmentRef,
 };
@@ -250,7 +246,7 @@ where
 #[derive(Copy, Clone, Debug)]
 pub struct AttachmentParent<'a> {
     /// Reference to the report that contains this attachment
-    pub report: ReportRef<'a, dyn Any, Uncloneable, Local>,
+    pub report: ReportRef<'a, Dynamic, Uncloneable, Local>,
     /// Index of this attachment within the parent report's attachment list
     pub attachment_index: usize,
 }
@@ -269,7 +265,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
     ///    `Hook<A, H>` this is implemented for.
     unsafe fn display(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
@@ -284,7 +280,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
     ///    `Hook<A, H>` this is implemented for.
     unsafe fn debug(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result;
@@ -305,7 +301,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
 
     fn preferred_formatting_style(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle;
 }
@@ -477,13 +473,13 @@ pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync {
     ///
     /// # Arguments
     ///
-    /// * `attachment` - Reference to the attachment (as `dyn Any` as it can be
-    ///   either `A` or a [`PreformattedAttachment`])
+    /// * `attachment` - Reference to the attachment (as [`Dynamic`] as it can
+    ///   be either `A` or a [`PreformattedAttachment`])
     /// * `report_formatting_function` - Whether the overall report uses Display
     ///   or Debug formatting
     fn preferred_formatting_style(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         attachment.preferred_formatting_style_unhooked(report_formatting_function)
@@ -496,7 +492,7 @@ where
 {
     unsafe fn display(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
@@ -508,7 +504,7 @@ where
 
     unsafe fn debug(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
@@ -540,7 +536,7 @@ where
 
     fn preferred_formatting_style(
         &self,
-        attachment: ReportAttachmentRef<'_, dyn Any>,
+        attachment: ReportAttachmentRef<'_, Dynamic>,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         self.hook
@@ -616,7 +612,7 @@ where
 }
 
 pub(crate) fn display_attachment(
-    attachment: ReportAttachmentRef<'_, dyn Any>,
+    attachment: ReportAttachmentRef<'_, Dynamic>,
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
@@ -642,7 +638,7 @@ pub(crate) fn display_attachment(
 }
 
 pub(crate) fn debug_attachment(
-    attachment: ReportAttachmentRef<'_, dyn Any>,
+    attachment: ReportAttachmentRef<'_, Dynamic>,
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
@@ -668,7 +664,7 @@ pub(crate) fn debug_attachment(
 }
 
 pub(crate) fn get_preferred_formatting_style(
-    attachment: ReportAttachmentRef<'_, dyn Any>,
+    attachment: ReportAttachmentRef<'_, Dynamic>,
     report_formatting_function: FormattingFunction,
 ) -> AttachmentFormattingStyle {
     if let Some(inner) = attachment.downcast_inner::<PreformattedAttachment>()

@@ -1,4 +1,4 @@
-use core::any::{Any, TypeId};
+use core::any::TypeId;
 
 use rootcause_internals::{
     RawAttachment,
@@ -7,7 +7,7 @@ use rootcause_internals::{
 
 use crate::{
     handlers::{self, AttachmentHandler},
-    markers::{self, Local, SendSync},
+    markers::{self, Dynamic, Local, SendSync},
     report_attachment::ReportAttachmentRef,
     util::format_helper,
 };
@@ -15,11 +15,11 @@ use crate::{
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
 mod limit_field_access {
-    use core::{any::Any, marker::PhantomData};
+    use core::marker::PhantomData;
 
     use rootcause_internals::{RawAttachment, RawAttachmentRef};
 
-    use crate::markers::SendSync;
+    use crate::markers::{Dynamic, SendSync};
 
     /// An attachment to be attached to a [`Report`](crate::Report).
     ///
@@ -30,7 +30,7 @@ mod limit_field_access {
     ///
     /// # Type Parameters
     /// - `Attachment`: The type of the attachment. This can either be a
-    ///   concrete type, or `dyn Any`.
+    ///   concrete type, or [`Dynamic`].
     /// - `ThreadSafety`: The thread safety marker for the attachment. This can
     ///   either be [`SendSync`] or [`Local`].
     ///
@@ -38,7 +38,7 @@ mod limit_field_access {
     /// [`Local`]: crate::markers::Local
     #[repr(transparent)]
     pub struct ReportAttachment<
-        Attachment: ?Sized + 'static = dyn Any,
+        Attachment: ?Sized + 'static = Dynamic,
         ThreadSafety: 'static = SendSync,
     > {
         /// # Safety
@@ -46,9 +46,9 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `A` is a concrete type: The attachment embedded in the
+        /// 3. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachment`] must be of type `A`.
         /// 4. If `T = SendSync`: The attachment embedded in the
         ///    [`RawAttachment`] must be `Send + Sync`.
@@ -64,9 +64,9 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `A` must either be a type bounded by `Sized`, or `dyn Any`.
+        /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `A` is a concrete type: The attachment embedded in the
+        /// 3. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachment`] must be of type `A`.
         /// 4. If `T = SendSync`: The attachment embedded in the
         ///    [`RawAttachment`] must be `Send + Sync`.
@@ -124,7 +124,7 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     ///
     /// let attachment = ReportAttachment::new("This is an attachment");
     /// let mut report = report!("An error occurred");
-    /// report.attachments_mut().push(attachment.into_dyn_any());
+    /// report.attachments_mut().push(attachment.into_dynamic());
     /// ```
     #[must_use]
     pub fn new(attachment: A) -> Self
@@ -149,7 +149,7 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     ///     data: "Important data".to_string(),
     /// });
     /// let mut report = report!("An error occurred");
-    /// report.attachments_mut().push(attachment.into_dyn_any());
+    /// report.attachments_mut().push(attachment.into_dynamic());
     /// ```
     #[must_use]
     pub fn new_custom<H>(attachment: A) -> Self
@@ -178,7 +178,7 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     /// Returns a reference to the inner attachment.
     ///
     /// This method is only available when the attachment type is a specific
-    /// type, and not `dyn Any`.
+    /// type, and not [`Dynamic`].
     #[must_use]
     pub fn inner(&self) -> &A {
         self.as_ref().inner()
@@ -186,12 +186,12 @@ impl<A: Sized, T> ReportAttachment<A, T> {
 }
 
 impl<A: ?Sized, T> ReportAttachment<A, T> {
-    /// Changes the inner attachment type of the [`ReportAttachment`] to [`dyn
-    /// Any`].
+    /// Changes the inner attachment type of the [`ReportAttachment`] to
+    /// [`Dynamic`]
     ///
     /// Calling this method is equivalent to calling `attachment.into()`,
     /// however this method has been restricted to only change the
-    /// attachment type to `dyn Any`.
+    /// attachment type to [`Dynamic`].
     ///
     /// This method can be useful to help with type inference or to improve code
     /// readability, as it more clearly communicates intent.
@@ -203,15 +203,15 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachment::downcast_attachment`].
     #[must_use]
-    pub fn into_dyn_any(self) -> ReportAttachment<dyn Any, T> {
+    pub fn into_dynamic(self) -> ReportAttachment<Dynamic, T> {
         let raw = self.into_raw();
 
         // SAFETY:
-        // 1. `A=dyn Any`, so this is trivially true.
+        // 1. `A=Dynamic`, so this is trivially true.
         // 2. Guaranteed by the invariants of this type.
-        // 3. `A=dyn Any`, so this is trivially true.
+        // 3. `A=Dynamic`, so this is trivially true.
         // 4. Guaranteed by the invariants of this type.
-        unsafe { ReportAttachment::<dyn Any, T>::from_raw(raw) }
+        unsafe { ReportAttachment::<Dynamic, T>::from_raw(raw) }
     }
 
     /// Changes the thread safety mode of the [`ReportAttachment`] to [`Local`].
@@ -254,7 +254,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// Formats the attachment with hook processing.
     #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'_, dyn Any> = self.as_ref().into_dyn_any();
+        let attachment: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
         format_helper(
             attachment,
             |attachment, formatter| {
@@ -297,7 +297,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         crate::hooks::formatting_overrides::attachment::get_preferred_formatting_style(
-            self.as_ref().into_dyn_any(),
+            self.as_ref().into_dynamic(),
             report_formatting_function,
         )
     }
@@ -399,7 +399,7 @@ impl<A: Sized> ReportAttachment<A, Local> {
     }
 }
 
-impl<T> ReportAttachment<dyn Any, T> {
+impl<T> ReportAttachment<Dynamic, T> {
     /// Attempts to downcast the inner attachment to a specific type.
     ///
     /// Returns `Some(&A)` if the inner attachment is of type `A`, otherwise
@@ -490,12 +490,12 @@ where
     }
 }
 
-impl<A: Sized, T> From<A> for ReportAttachment<dyn Any, T>
+impl<A: Sized, T> From<A> for ReportAttachment<Dynamic, T>
 where
     A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
 {
     fn from(attachment: A) -> Self {
-        ReportAttachment::new_custom::<handlers::Display>(attachment).into_dyn_any()
+        ReportAttachment::new_custom::<handlers::Display>(attachment).into_dynamic()
     }
 }
 
@@ -536,10 +536,10 @@ macro_rules! from_impls {
 
 from_impls!(
     <A>: A => A, SendSync => Local, [into_local],
-    <A>: A => dyn Any, SendSync => SendSync, [into_dyn_any],
-    <A>: A => dyn Any, SendSync => Local, [into_dyn_any, into_local],
-    <A>: A => dyn Any, Local => Local, [into_dyn_any],
-    <>:  dyn Any => dyn Any, SendSync => Local, [into_local],
+    <A>: A => Dynamic, SendSync => SendSync, [into_dynamic],
+    <A>: A => Dynamic, SendSync => Local, [into_dynamic, into_local],
+    <A>: A => Dynamic, Local => Local, [into_dynamic],
+    <>:  Dynamic => Dynamic, SendSync => Local, [into_local],
 );
 
 #[cfg(test)]
@@ -557,12 +557,12 @@ mod tests {
         static_assertions::assert_impl_all!(ReportAttachment<(), SendSync>: Send, Sync);
         static_assertions::assert_impl_all!(ReportAttachment<String, SendSync>: Send, Sync);
         static_assertions::assert_impl_all!(ReportAttachment<NonSend, SendSync>: Send, Sync);
-        static_assertions::assert_impl_all!(ReportAttachment<dyn Any, SendSync>: Send, Sync);
+        static_assertions::assert_impl_all!(ReportAttachment<Dynamic, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportAttachment<(), Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachment<String, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportAttachment<NonSend, Local>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportAttachment<dyn Any, Local>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportAttachment<Dynamic, Local>: Send, Sync);
     }
 
     #[test]
@@ -570,12 +570,12 @@ mod tests {
         static_assertions::assert_impl_all!(ReportAttachment<(), SendSync>: Unpin);
         static_assertions::assert_impl_all!(ReportAttachment<String, SendSync>: Unpin);
         static_assertions::assert_impl_all!(ReportAttachment<NonSend, SendSync>: Unpin);
-        static_assertions::assert_impl_all!(ReportAttachment<dyn Any, SendSync>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<Dynamic, SendSync>: Unpin);
 
         static_assertions::assert_impl_all!(ReportAttachment<(), Local>: Unpin);
         static_assertions::assert_impl_all!(ReportAttachment<String, Local>: Unpin);
         static_assertions::assert_impl_all!(ReportAttachment<NonSend, Local>: Unpin);
-        static_assertions::assert_impl_all!(ReportAttachment<dyn Any, Local>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachment<Dynamic, Local>: Unpin);
     }
 
     #[test]
@@ -583,11 +583,11 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportAttachment<(), SendSync>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportAttachment<String, SendSync>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportAttachment<NonSend, SendSync>: Copy, Clone);
-        static_assertions::assert_not_impl_any!(ReportAttachment<dyn Any, SendSync>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportAttachment<Dynamic, SendSync>: Copy, Clone);
 
         static_assertions::assert_not_impl_any!(ReportAttachment<(), Local>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportAttachment<String, Local>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportAttachment<NonSend, Local>: Copy, Clone);
-        static_assertions::assert_not_impl_any!(ReportAttachment<dyn Any, Local>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportAttachment<Dynamic, Local>: Copy, Clone);
     }
 }

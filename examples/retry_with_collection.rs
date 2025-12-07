@@ -39,7 +39,7 @@ fn fetch_document(_url: &str) -> Result<Vec<u8>, Report> {
     static COUNTER: AtomicUsize = AtomicUsize::new(0);
     let index = COUNTER.fetch_add(1, Ordering::Relaxed) % ERRORS.len();
 
-    Err(report!(ERRORS[index]))? // HttpError → Report<HttpError> → Report<dyn Any>
+    Err(report!(ERRORS[index]))? // HttpError → Report<HttpError> → Report<Dynamic>
 }
 
 // Retry logic that preserves all failure information

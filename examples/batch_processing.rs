@@ -34,7 +34,7 @@ fn process_all_files(files: &[&str]) -> Result<Vec<String>, Report> {
         .map_err(|errors| {
             errors
                 .context("Failed to process one or more files")
-                .into_dyn_any()
+                .into_dynamic()
         })
 }
 
@@ -52,7 +52,7 @@ fn process_batch_with_context(items: &[&str], batch_id: u32) -> Result<Vec<Strin
         .map_err(|errors| {
             errors
                 .context(format!("Batch {batch_id} processing failed"))
-                .into_dyn_any()
+                .into_dynamic()
         })
 }
 
@@ -76,7 +76,7 @@ fn process_with_partial_results(files: &[&str]) -> (Vec<String>, Option<Report>)
                     successes.len(),
                     files.len()
                 ))
-                .into_dyn_any(),
+                .into_dynamic(),
         )
     } else {
         None
@@ -95,7 +95,7 @@ fn process_selected_files(files: &[&str]) -> Result<Vec<String>, Report> {
         .map_err(|errors| {
             errors
                 .context("Failed to process selected files")
-                .into_dyn_any()
+                .into_dynamic()
         })
 }
 
