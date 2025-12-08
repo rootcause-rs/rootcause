@@ -417,9 +417,9 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. Since `O=Mutable` and we are consuming `self`, then this is guaranteed to
-        //    be the unique owner of the report. We also no that there are no other references
-        //    such as `ReportRef` or `ReportMut` active, as those would require a borrow
-        //    of `self`.
+        //    be the unique owner of the report. We also no that there are no other
+        //    references such as `ReportRef` or `ReportMut` active, as those would
+        //    require a borrow of `self`.
         let (context, children, attachments) = unsafe { raw.into_parts() };
 
         // SAFETY:
@@ -1179,15 +1179,15 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// let report = report!("error message");
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = report.format_with_hook(&DefaultReportFormatter::ASCII);
+    /// let formatted = report.format_with(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
+    pub fn format_with<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
     where
-        H: crate::hooks::report_formatting::ReportFormatterHook,
+        H: crate::hooks::report_formatter::ReportFormatter,
     {
-        self.as_uncloneable_ref().format_with_hook(hook)
+        self.as_uncloneable_ref().format_with(hook)
     }
 
     /// Gets the preferred formatting style for the context with hook
@@ -1220,7 +1220,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
             .into_dynamic()
             .into_uncloneable()
             .into_local();
-        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
+        crate::hooks::context_formatter::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
         )

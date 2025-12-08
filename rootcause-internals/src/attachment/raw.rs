@@ -77,7 +77,10 @@ impl RawAttachment {
         let ptr: *mut AttachmentData<Erased> = ptr.cast::<AttachmentData<Erased>>();
 
         // SAFETY: `Box::into_raw` returns a non-null pointer
-        let ptr: NonNull<AttachmentData<Erased>> = unsafe { NonNull::new_unchecked(ptr) };
+        let ptr: NonNull<AttachmentData<Erased>> = unsafe {
+            // @add-unsafe-context: Erased
+            NonNull::new_unchecked(ptr)
+        };
 
         Self { ptr }
     }
@@ -103,8 +106,9 @@ impl core::ops::Drop for RawAttachment {
         // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
         //    data in the `AttachmentData`.
         // 3. The pointer is initialized and has not been previously free as guaranteed
-        //    by the invariants on this type. We are correctly transferring ownership here
-        //    and the pointer is not used afterwards, as we are in the drop function.
+        //    by the invariants on this type. We are correctly transferring ownership
+        //    here and the pointer is not used afterwards, as we are in the drop
+        //    function.
         unsafe {
             // @add-unsafe-context: AttachmentData
             vtable.drop(self.ptr);

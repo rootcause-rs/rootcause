@@ -1,29 +1,39 @@
-//! Attachment formatting override system for customizing how error report
-//! attachments are displayed.
+//! Attachment formatting hooks for customizing how attached data is displayed.
 //!
-//! This module provides a hook system that allows customization of how
-//! attachments are formatted in error reports. By registering hooks for
-//! specific attachment types, you can override the default Display and Debug
-//! formatting behavior to provide more context-aware or specialized formatting.
+//! This module lets you control how individual pieces of attached data appear
+//! in error reports. Use this to:
+//! - Format data nicely (timestamps, file sizes, structured data)
+//! - Control where data appears (inline vs appendix)
+//! - Set priority (which attachments show first)
+//! - Hide noisy or sensitive information
+//!
+//! **Note:** Hooks format a type globally across ALL errors. To control
+//! formatting for a single attachment, use [`attach_custom()`] with a handler
+//! instead.
+//!
+//! [`attach_custom()`]: crate::Report::attach_custom
+//!
+//! By installing hooks for specific types, you can customize how attachments
+//! are formatted and where they appear in reports.
 //!
 //! # Key Components
 //!
-//! - [`AttachmentFormattingOverride`] - Trait for implementing custom
-//!   attachment formatting
+//! - [`AttachmentFormatterHook`] - Trait for implementing custom attachment
+//!   formatting
 //! - [`AttachmentParent`] - Context about the report containing an attachment
-//! - [`register_attachment_hook`] - Function to register formatting overrides
-//!   for specific types
-//! - [`debug_attachment_hooks`] - Utility to inspect registered hooks
 //!
-//! # Example: Displaying an Attachment with Custom Formatting
+//! # Examples
+//!
+//! ## Custom Formatting
 //!
 //! ```rust
 //! use core::fmt;
 //!
 //! use rootcause::{
 //!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
-//!     hooks::formatting_overrides::attachment::{
-//!         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
+//!     hooks::{
+//!         Hooks,
+//!         attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
 //!     },
 //!     markers::Dynamic,
 //!     report_attachment::ReportAttachmentRef,
@@ -36,7 +46,7 @@
 //!
 //! struct ApiInformationFormatter;
 //!
-//! impl AttachmentFormattingOverride<ApiInformation> for ApiInformationFormatter {
+//! impl AttachmentFormatterHook<ApiInformation> for ApiInformationFormatter {
 //!     fn display(
 //!         &self,
 //!         attachment: ReportAttachmentRef<'_, ApiInformation>,
@@ -62,30 +72,69 @@
 //!     }
 //! }
 //!
-//! // Register the custom formatter
-//! register_attachment_hook(ApiInformationFormatter);
+//! // Install the custom formatter globally
+//! Hooks::new()
+//!     .attachment_formatter::<ApiInformation, _>(ApiInformationFormatter)
+//!     .install()
+//!     .expect("failed to install hooks");
 //! ```
 //!
-//! # Example: Hiding Attachments
+//! ## Controlling Placement and Priority
 //!
-//! You can also use formatting overrides to conditionally hide attachments by
-//! setting their placement to `Hidden`:
+//! Control where attachments appear and in what order:
 //!
 //! ```rust
 //! use rootcause::{
 //!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
-//!     hooks::formatting_overrides::attachment::{
-//!         AttachmentFormattingOverride, register_attachment_hook,
-//!     },
+//!     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
 //!     markers::Dynamic,
 //!     report_attachment::ReportAttachmentRef,
 //! };
 //!
-//! struct SensitiveData(String);
+//! struct LogEntry(String);
 //!
-//! struct SilenceAttachmentHook;
+//! struct LogFormatter;
 //!
-//! impl<A: 'static> AttachmentFormattingOverride<A> for SilenceAttachmentHook {
+//! impl AttachmentFormatterHook<LogEntry> for LogFormatter {
+//!     fn preferred_formatting_style(
+//!         &self,
+//!         _attachment: ReportAttachmentRef<'_, Dynamic>,
+//!         _report_formatting_function: FormattingFunction,
+//!     ) -> AttachmentFormattingStyle {
+//!         AttachmentFormattingStyle {
+//!             // Put logs in appendix to reduce noise in main error
+//!             placement: AttachmentFormattingPlacement::Appendix {
+//!                 appendix_name: "Log Entries",
+//!             },
+//!             function: FormattingFunction::Display,
+//!             priority: 10, // Lower priority than important data
+//!         }
+//!     }
+//! }
+//!
+//! Hooks::new()
+//!     .attachment_formatter::<LogEntry, _>(LogFormatter)
+//!     .install()
+//!     .expect("failed to install hooks");
+//! ```
+//!
+//! ## Hiding Attachments
+//!
+//! Hide noisy or unnecessary information by setting placement to `Hidden`:
+//!
+//! ```rust
+//! use rootcause::{
+//!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
+//!     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
+//!     markers::Dynamic,
+//!     report_attachment::ReportAttachmentRef,
+//! };
+//!
+//! struct DebugInfo(String);
+//!
+//! struct HideDebugInfo;
+//!
+//! impl AttachmentFormatterHook<DebugInfo> for HideDebugInfo {
 //!     fn preferred_formatting_style(
 //!         &self,
 //!         _attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -99,48 +148,69 @@
 //!     }
 //! }
 //!
-//! // Register the silencing hook to suppress sensitive data in error reports
-//! register_attachment_hook::<SensitiveData, _>(SilenceAttachmentHook);
+//! // Install hook to suppress debug info in production reports
+//! Hooks::new()
+//!     .attachment_formatter::<DebugInfo, _>(HideDebugInfo)
+//!     .install()
+//!     .expect("failed to install hooks");
 //! ```
+//!
+//! **Note:** Attachment formatter hooks provide explicit control over what
+//! appears in reports. For sensitive data, you can also use custom handlers
+//! (see [`attach_custom()`]) or [`crate::handlers::Debug`] which shows
+//! "Context of type..." by default to avoid exposing debug data.
+//!
+//! [`attach_custom()`]: crate::Report::attach_custom
 
-use alloc::fmt;
-use core::{any::TypeId, marker::PhantomData, panic::Location};
+use alloc::{boxed::Box, fmt};
+use core::{any::TypeId, marker::PhantomData};
 
 use hashbrown::HashMap;
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
-use triomphe::Arc;
-use unsize::CoerceUnsize;
 
 use crate::{
     ReportRef,
-    hooks::hook_lock::HookLock,
+    hooks::HookData,
     markers::{Dynamic, Local, Uncloneable},
     preformatted::PreformattedAttachment,
     report_attachment::ReportAttachmentRef,
 };
 
 #[derive(Default)]
-struct HookMap {
+pub(crate) struct HookMap {
     /// # Safety Invariant
     ///
     /// The hook stored under `TypeId::of::<A>()` is guaranteed to be an
     /// instance of the type `Hook<A, H>`.
-    map: HashMap<TypeId, Arc<dyn UntypedAttachmentFormattingOverride>, rustc_hash::FxBuildHasher>,
+    map: HashMap<TypeId, Box<dyn StoredHook>, rustc_hash::FxBuildHasher>,
+}
+
+impl core::fmt::Debug for HookMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.map.values().fmt(f)
+    }
 }
 
 impl HookMap {
-    /// Retrieves the formatting override hook for the specified attachment
+    /// Retrieves the formatter hook for the specified attachment
     /// type.
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
     /// where `TypeId::of::<A>() == type_id`.
-    fn get(&self, type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverride>> {
-        self.map.get(&type_id).cloned()
+    fn get(&self, type_id: TypeId) -> Option<&dyn StoredHook> {
+        Some(&**self.map.get(&type_id)?)
     }
 
-    fn insert<A, H: AttachmentFormattingOverride<A>>(&mut self, hook: Hook<A, H>) {
-        let hook: Arc<Hook<A, H>> = Arc::new(hook);
-        let hook = hook.unsize(unsize::Coercion!(to dyn UntypedAttachmentFormattingOverride));
+    pub(crate) fn insert<A, H>(&mut self, hook: H)
+    where
+        A: Sized + 'static,
+        H: AttachmentFormatterHook<A>,
+    {
+        let hook: Hook<A, H> = Hook {
+            hook,
+            _hooked_type: PhantomData,
+        };
+        let hook: Box<Hook<A, H>> = Box::new(hook);
         // We must uphold the safety invariant of HookMap.
         //
         // The safety invariant requires that the hook stored under
@@ -150,32 +220,6 @@ impl HookMap {
         // so the invariant is upheld.
         self.map.insert(TypeId::of::<A>(), hook);
     }
-
-    fn values(&self) -> impl Iterator<Item = &dyn core::fmt::Display> {
-        self.map
-            .values()
-            .map(|hook| hook.as_ref() as &dyn core::fmt::Display)
-    }
-}
-
-/// Global registry of attachment formatting override hooks.
-///
-/// # Safety invariant
-///
-/// This registry can only contain hooks of type `Hook<A, H>`, where
-/// `TypeId::of::<A>()` is the key used to store the hook in the [`HashMap`].
-///
-/// This invariant is guaranteed by the [`register_attachment_hook`] function.
-static HOOKS: HookLock<HookMap> = HookLock::new();
-
-/// Retrieves the formatting override hook for the specified attachment type.
-///
-/// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
-/// where `TypeId::of::<A>() == type_id`.
-fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedAttachmentFormattingOverride>> {
-    // We use the safety invariant of the global HOOKS registry here, which
-    // guarantees that the hook is of the correct type.
-    HOOKS.read().get()?.get(type_id)
 }
 
 struct Hook<A, H>
@@ -183,22 +227,19 @@ where
     A: 'static,
 {
     hook: H,
-    added_at: &'static Location<'static>,
     _hooked_type: PhantomData<fn(A) -> A>,
 }
 
-impl<A, H> core::fmt::Display for Hook<A, H>
+impl<A, H> core::fmt::Debug for Hook<A, H>
 where
     A: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Attachment hook {} for attachment type {} registered at {}:{}",
-            core::any::type_name::<H>(),
+            "AttachmentFormattingHook<{}, {}>",
             core::any::type_name::<A>(),
-            self.added_at.file(),
-            self.added_at.line()
+            core::any::type_name::<H>(),
         )
     }
 }
@@ -217,13 +258,13 @@ where
 /// use core::fmt;
 ///
 /// use rootcause::{
-///     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, AttachmentParent},
+///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
 ///     report_attachment::ReportAttachmentRef,
 /// };
 ///
 /// struct MyFormatter;
 ///
-/// impl AttachmentFormattingOverride<String> for MyFormatter {
+/// impl AttachmentFormatterHook<String> for MyFormatter {
 ///     fn display(
 ///         &self,
 ///         attachment: ReportAttachmentRef<'_, String>,
@@ -251,10 +292,10 @@ pub struct AttachmentParent<'a> {
     pub attachment_index: usize,
 }
 
-/// Trait for untyped attachment formatting overrides.
+/// Trait for untyped attachment formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<A, H>`].
-trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Display {
+trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the attachment using Display formatting.
     ///
     /// # Safety
@@ -321,7 +362,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
 /// # Default Implementations
 ///
 /// All methods have default implementations that delegate to the unhooked
-/// formatting, so you only need to override the methods for the formatting you
+/// formatting, so you only need to implement the methods for the formatting you
 /// want to customize.
 ///
 /// # Examples
@@ -331,7 +372,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
 /// use core::fmt;
 ///
 /// use rootcause::{
-///     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, AttachmentParent},
+///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
 ///     report_attachment::ReportAttachmentRef,
 /// };
 ///
@@ -342,7 +383,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
 ///
 /// struct MyDataFormatter;
 ///
-/// impl AttachmentFormattingOverride<MyData> for MyDataFormatter {
+/// impl AttachmentFormatterHook<MyData> for MyDataFormatter {
 ///     fn display(
 ///         &self,
 ///         attachment: ReportAttachmentRef<'_, MyData>,
@@ -354,7 +395,7 @@ trait UntypedAttachmentFormattingOverride: 'static + Send + Sync + core::fmt::Di
 ///     }
 /// }
 /// ```
-pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync {
+pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// Formats the attachment using Display formatting.
     ///
     /// This method is called when the attachment needs to be displayed in a
@@ -373,14 +414,14 @@ pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync {
     /// use core::fmt;
     ///
     /// use rootcause::{
-    ///     hooks::formatting_overrides::attachment::{AttachmentFormattingOverride, AttachmentParent},
+    ///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
     ///     report_attachment::ReportAttachmentRef,
     /// };
     ///
     /// struct ErrorCode(u32);
     /// struct ErrorCodeFormatter;
     ///
-    /// impl AttachmentFormattingOverride<ErrorCode> for ErrorCodeFormatter {
+    /// impl AttachmentFormatterHook<ErrorCode> for ErrorCodeFormatter {
     ///     fn display(
     ///         &self,
     ///         attachment: ReportAttachmentRef<'_, ErrorCode>,
@@ -486,9 +527,9 @@ pub trait AttachmentFormattingOverride<A>: 'static + Send + Sync {
     }
 }
 
-impl<A, H> UntypedAttachmentFormattingOverride for Hook<A, H>
+impl<A, H> StoredHook for Hook<A, H>
 where
-    H: AttachmentFormattingOverride<A>,
+    H: AttachmentFormatterHook<A>,
 {
     unsafe fn display(
         &self,
@@ -544,96 +585,35 @@ where
     }
 }
 
-/// Registers a formatting override hook for attachments of type `A`.
-///
-/// This function allows you to customize how attachments of a specific type are
-/// formatted in error reports. Once registered, the hook will be called
-/// whenever an attachment of type `A` needs to be formatted.
-///
-/// The registration includes location tracking for debugging purposes, so you
-/// can identify where hooks were registered using [`debug_attachment_hooks`].
-///
-/// # Type Parameters
-///
-/// * `A` - The type of attachment this hook will handle
-/// * `H` - The type of the formatting override hook
-///
-/// # Arguments
-///
-/// * `hook` - An implementation of [`AttachmentFormattingOverride<A>`]
-///
-/// # Examples
-///
-/// ```rust
-/// use core::fmt;
-///
-/// use rootcause::{
-///     hooks::formatting_overrides::attachment::{
-///         AttachmentFormattingOverride, AttachmentParent, register_attachment_hook,
-///     },
-///     report_attachment::ReportAttachmentRef,
-/// };
-///
-/// struct ApiError {
-///     code: u32,
-///     message: String,
-/// }
-///
-/// struct ApiErrorFormatter;
-///
-/// impl AttachmentFormattingOverride<ApiError> for ApiErrorFormatter {
-///     fn display(
-///         &self,
-///         attachment: ReportAttachmentRef<'_, ApiError>,
-///         _parent: Option<AttachmentParent<'_>>,
-///         f: &mut fmt::Formatter<'_>,
-///     ) -> fmt::Result {
-///         let err = attachment.inner();
-///         write!(f, "API Error {}: {}", err.code, err.message)
-///     }
-/// }
-///
-/// register_attachment_hook::<ApiError, _>(ApiErrorFormatter);
-/// ```
-#[track_caller]
-pub fn register_attachment_hook<A, H>(hook: H)
-where
-    A: 'static,
-    H: AttachmentFormattingOverride<A> + Send + Sync + 'static,
-{
-    let added_location = Location::caller();
-    let hook: Hook<A, H> = Hook {
-        hook,
-        added_at: added_location,
-        _hooked_type: PhantomData,
-    };
-
-    HOOKS.write().get().get_or_insert_default().insert(hook);
-}
-
 pub(crate) fn display_attachment(
     attachment: ReportAttachmentRef<'_, Dynamic>,
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
-        && let Some(hook) = get_hook(attachment.inner().original_type_id())
-    {
-        hook.display_preformatted(attachment, attachment_parent, formatter)
-    } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
-        // SAFETY:
-        // 1. The call to `get_hook` guarantees that the returned hook is of type
-        //    `Hook<A, H>`, and `TypeId::of<A>() == attachment.inner_type_id()`.
-        //    Therefore the type `A` stored in the attachment matches the `A` from type
-        //    `Hook<A, H>`.
-        unsafe {
-            // @add-unsafe-context: get_hook
-            // @add-unsafe-context: UntypedAttachmentFormattingOverride
-            hook.display(attachment, attachment_parent, formatter)
+    if let Some(hook_data) = HookData::fetch() {
+        if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
+            && let Some(hook) = hook_data
+                .attachment_formatters
+                .get(attachment.inner().original_type_id())
+        {
+            return hook.display_preformatted(attachment, attachment_parent, formatter);
         }
-    } else {
-        fmt::Display::fmt(&attachment.format_inner_unhooked(), formatter)
+
+        if let Some(hook) = hook_data
+            .attachment_formatters
+            .get(attachment.inner_type_id())
+        {
+            // SAFETY:
+            // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
+            //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
+            //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
+            unsafe {
+                // @add-unsafe-context: UntypedAttachmentFormatterHook
+                return hook.display(attachment, attachment_parent, formatter);
+            }
+        }
     }
+    fmt::Display::fmt(&attachment.format_inner_unhooked(), formatter)
 }
 
 pub(crate) fn debug_attachment(
@@ -641,73 +621,51 @@ pub(crate) fn debug_attachment(
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
-        && let Some(hook) = get_hook(attachment.inner().original_type_id())
-    {
-        hook.debug_preformatted(attachment, attachment_parent, formatter)
-    } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
-        // SAFETY:
-        // 1. The call to `get_hook` guarantees that the returned hook is of type
-        //    `Hook<A, H>`, and `TypeId::of<A>() == attachment.inner_type_id()`.
-        //    Therefore the type `A` stored in the attachment matches the `A` from type
-        //    `Hook<A, H>`.
-        unsafe {
-            // @add-unsafe-context: get_hook
-            // @add-unsafe-context: UntypedAttachmentFormattingOverride
-            hook.debug(attachment, attachment_parent, formatter)
+    if let Some(hook_data) = HookData::fetch() {
+        if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
+            && let Some(hook) = hook_data
+                .attachment_formatters
+                .get(attachment.inner().original_type_id())
+        {
+            return hook.debug_preformatted(attachment, attachment_parent, formatter);
         }
-    } else {
-        fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
+
+        if let Some(hook) = hook_data
+            .attachment_formatters
+            .get(attachment.inner_type_id())
+        {
+            // SAFETY:
+            // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
+            //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
+            //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
+            unsafe {
+                // @add-unsafe-context: UntypedAttachmentFormatterHook
+                return hook.debug(attachment, attachment_parent, formatter);
+            }
+        }
     }
+    fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
 }
 
 pub(crate) fn get_preferred_formatting_style(
     attachment: ReportAttachmentRef<'_, Dynamic>,
     report_formatting_function: FormattingFunction,
 ) -> AttachmentFormattingStyle {
-    if let Some(inner) = attachment.downcast_inner::<PreformattedAttachment>()
-        && let Some(hook) = get_hook(inner.original_type_id())
-    {
-        hook.preferred_formatting_style(attachment, report_formatting_function)
-    } else if let Some(hook) = get_hook(attachment.inner_type_id()) {
-        hook.preferred_formatting_style(attachment, report_formatting_function)
-    } else {
-        attachment.preferred_formatting_style_unhooked(report_formatting_function)
-    }
-}
+    if let Some(hook_data) = HookData::fetch() {
+        if let Some(inner) = attachment.downcast_inner::<PreformattedAttachment>()
+            && let Some(hook) = hook_data
+                .attachment_formatters
+                .get(inner.original_type_id())
+        {
+            return hook.preferred_formatting_style(attachment, report_formatting_function);
+        }
 
-/// Calls a function for each registered attachment formatting hook for
-/// debugging purposes.
-///
-/// This utility function allows you to inspect all currently registered
-/// attachment formatting hooks. Each hook provides information about the hook
-/// type, the attachment type it handles, and where it was registered.
-///
-/// # Arguments
-///
-/// * `f` - A function that will be called once for each registered hook with a
-///   displayable representation of the hook information
-///
-/// # Warning
-///
-/// This function will lock the internal hook registry for reading, so it can
-/// potentially cause deadlocks if [`register_attachment_hook`] is called while
-/// the function is executing.
-///
-/// # Examples
-///
-/// ```rust
-/// use rootcause::hooks::formatting_overrides::attachment::debug_attachment_hooks;
-///
-/// // Print all registered attachment hooks
-/// debug_attachment_hooks(|hook| {
-///     println!("Registered hook: {}", hook);
-/// });
-/// ```
-pub fn debug_attachment_hooks(mut f: impl FnMut(&dyn core::fmt::Display)) {
-    if let Some(hooks) = HOOKS.read().get() {
-        for hook in hooks.values() {
-            f(hook);
+        if let Some(hook) = hook_data
+            .attachment_formatters
+            .get(attachment.inner_type_id())
+        {
+            return hook.preferred_formatting_style(attachment, report_formatting_function);
         }
     }
+    attachment.preferred_formatting_style_unhooked(report_formatting_function)
 }

@@ -261,14 +261,10 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         format_helper(
             attachment,
             |attachment, formatter| {
-                crate::hooks::formatting_overrides::attachment::display_attachment(
-                    attachment, None, formatter,
-                )
+                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
             },
             |attachment, formatter| {
-                crate::hooks::formatting_overrides::attachment::debug_attachment(
-                    attachment, None, formatter,
-                )
+                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
             },
         )
     }
@@ -299,7 +295,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::formatting_overrides::attachment::get_preferred_formatting_style(
+        crate::hooks::attachment_formatter::get_preferred_formatting_style(
             self.as_ref().into_dynamic(),
             report_formatting_function,
         )

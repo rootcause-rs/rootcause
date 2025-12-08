@@ -211,14 +211,10 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         format_helper(
             attachment,
             |attachment, formatter| {
-                crate::hooks::formatting_overrides::attachment::display_attachment(
-                    attachment, None, formatter,
-                )
+                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
             },
             |attachment, formatter| {
-                crate::hooks::formatting_overrides::attachment::debug_attachment(
-                    attachment, None, formatter,
-                )
+                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
             },
         )
     }
@@ -273,7 +269,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::formatting_overrides::attachment::get_preferred_formatting_style(
+        crate::hooks::attachment_formatter::get_preferred_formatting_style(
             self.into_dynamic(),
             report_formatting_function,
         )
@@ -479,14 +475,14 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
 impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentRef<'a, A> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
-        crate::hooks::formatting_overrides::attachment::display_attachment(report, None, formatter)
+        crate::hooks::attachment_formatter::display_attachment(report, None, formatter)
     }
 }
 
 impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentRef<'a, A> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
         let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
-        crate::hooks::formatting_overrides::attachment::debug_attachment(report, None, formatter)
+        crate::hooks::attachment_formatter::debug_attachment(report, None, formatter)
     }
 }
 

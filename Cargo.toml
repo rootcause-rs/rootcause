@@ -28,11 +28,7 @@ compat-eyre06 = ["dep:eyre"]
 hashbrown = { version = "0.16.0", default-features = false }
 indexmap = { version = "2.12.0", default-features = false }
 rustc-hash = { version = "2.1.1", default-features = false }
-spin = { version = "0.10.0", default-features = false, features = ["rwlock"] }
-triomphe = { version = "0.1.15", default-features = false, features = [
-  "unsize",
-] }
-unsize = { version = "1.1.0", default-features = false }
+triomphe = { version = "0.1.15", default-features = false }
 
 # Optional dependencies
 anyhow = { version = "1.0.100", default-features = false, optional = true }

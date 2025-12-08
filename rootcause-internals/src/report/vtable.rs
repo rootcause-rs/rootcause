@@ -324,8 +324,8 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
 ///
 /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into a
 ///    pointer via [`triomphe::Arc::into_raw`]
-/// 2. The pointer has full provenance over the `Arc` (i.e., it was not
-///    derived from a `&T` reference)
+/// 2. The pointer has full provenance over the `Arc` (i.e., it was not derived
+///    from a `&T` reference)
 /// 3. The context type `C` matches the actual context type stored in the
 ///    [`ReportData`]
 /// 4. All other references to this report are compatible with shared ownership.
@@ -334,10 +334,10 @@ unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 
     // SAFETY:
-    // - The pointer is valid and came from `Arc::into_raw` with the correct
-    //   type (guaranteed by the caller)
-    // - The pointer has full provenance over the `Arc` (i.e., it was not derived from a
-    //   `&T` reference) (guaranteed by the caller)
+    // - The pointer is valid and came from `Arc::into_raw` with the correct type
+    //   (guaranteed by the caller)
+    // - The pointer has full provenance over the `Arc` (i.e., it was not derived
+    //   from a `&T` reference) (guaranteed by the caller)
     let arc_borrow = unsafe {
         // @add-unsafe-context: ReportData
         triomphe::ArcBorrow::from_ptr(ptr)

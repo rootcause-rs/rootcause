@@ -104,12 +104,15 @@ fn check_invariants(&self) -> bool { /* ... */ }
 
 ### Code References
 
-- **Use intra-doc links for types**: [`Report`], [`Error`] (not `Report` or `Error`)
-- **Use intra-doc links for methods**: [`Report::new`], [`into_dyn_any`] (not `into_dyn_any()`)
+- **Use intra-doc links for types**: [`Report`], [`Error`] (not plain `Report` or `Error`)
+- **Use intra-doc links for methods**: [`Report::new`], [`into_dyn_any`] or [`into_dyn_any()`]
 - **Use intra-doc links for modules**: [`crate::handlers`]
 - **Use full paths for external crates**: [`std::error::Error`]
 - **Especially important for internal references**: Always use [`ReportRef`], [`ReportMut`], [`Cloneable`], etc. rather than plain backticks
 - **Exception for well-known standard library types**: Don't use intra-doc links for `String`, `Vec`, or other ubiquitous standard library types.
+
+**Link syntax variants**: When linking, prefer keeping the identifier itself in backticks (e.g., [`Debug`] rather than [Debug handler] with reference-style links), unless the prose-style version flows significantly better in context.
+
 - **Rationale**: Intra-doc links enable IDE navigation and rustdoc verification of link validity
 
 ## Example Standards

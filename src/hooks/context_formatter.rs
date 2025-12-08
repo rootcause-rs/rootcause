@@ -1,28 +1,35 @@
-//! Context formatting override system for customizing how error report contexts
-//! are displayed.
+//! Context formatting hooks for customizing how error messages are displayed.
 //!
-//! This module provides a hook system that allows customization of how contexts
-//! (the main error types) are formatted in error reports. By registering hooks
-//! for specific context types, you can override the default Display and Debug
-//! formatting behavior to provide more detailed, context-aware, or
-//! domain-specific formatting.
+//! Control how the main error type in each report appears:
+//! - Custom error descriptions for your types
+//! - Better Display output for Debug-only types
+//! - Simplify noisy or complex error messages
+//! - Hide sensitive details while keeping useful information
+//!
+//! By installing hooks for specific error types, you can customize how they
+//! appear in reports without changing the error type itself.
+//!
+//! > **Note:** Hooks format a type globally across ALL errors. To control
+//! > formatting for a single context, use [`context_custom()`] with a handler
+//! > instead (see `examples/custom_handler.rs`).
+//!
+//! [`context_custom()`]: crate::Report::context_custom
 //!
 //! # Key Components
 //!
-//! - [`ContextFormattingOverride`] - Trait for implementing custom context
+//! - [`ContextFormatterHook`] - Trait for implementing custom context
 //!   formatting
-//! - [`register_context_hook`] - Function to register formatting overrides for
-//!   specific types
-//! - [`debug_context_hooks`] - Utility to inspect registered hooks
 //!
-//! # Example
+//! # Examples
+//!
+//! ## Custom formatting for your own types
 //!
 //! ```rust
 //! use core::fmt;
 //!
 //! use rootcause::{
 //!     ReportRef,
-//!     hooks::formatting_overrides::context::{ContextFormattingOverride, register_context_hook},
+//!     hooks::{Hooks, context_formatter::ContextFormatterHook},
 //!     markers::{Local, Uncloneable},
 //! };
 //!
@@ -34,7 +41,7 @@
 //!
 //! struct DatabaseErrorFormatter;
 //!
-//! impl ContextFormattingOverride<DatabaseError> for DatabaseErrorFormatter {
+//! impl ContextFormatterHook<DatabaseError> for DatabaseErrorFormatter {
 //!     fn display(
 //!         &self,
 //!         report: ReportRef<'_, DatabaseError, Uncloneable, Local>,
@@ -49,46 +56,189 @@
 //!     }
 //! }
 //!
-//! // Register the custom formatter
-//! register_context_hook::<DatabaseError, _>(DatabaseErrorFormatter);
+//! // Install the custom formatter globally
+//! Hooks::new()
+//!     .context_formatter::<DatabaseError, _>(DatabaseErrorFormatter)
+//!     .install()
+//!     .expect("failed to install hooks");
+//! ```
+//!
+//! ## Simplifying complex or Debug-only types
+//!
+//! When using types that only implement [`Debug`](core::fmt::Debug) (not
+//! [`Display`](core::fmt::Display)), reports show "Context of type `TypeName`"
+//! by default (see [`crate::handlers::Debug`]). Use a context formatter to
+//! provide simplified, user-friendly output:
+//!
+//! ```rust
+//! use core::fmt;
+//!
+//! use rootcause::{
+//!     ReportRef,
+//!     hooks::{Hooks, context_formatter::ContextFormatterHook},
+//!     markers::{Local, Uncloneable},
+//!     prelude::*,
+//! };
+//!
+//! // External type you can't modify (only has Debug, not Display)
+//! #[derive(Debug)]
+//! struct InternalState {
+//!     connection_count: usize,
+//!     pending_requests: usize,
+//! }
+//!
+//! struct InternalStateFormatter;
+//!
+//! impl ContextFormatterHook<InternalState> for InternalStateFormatter {
+//!     fn display(
+//!         &self,
+//!         report: ReportRef<'_, InternalState, Uncloneable, Local>,
+//!         f: &mut fmt::Formatter<'_>,
+//!     ) -> fmt::Result {
+//!         let state = report.current_context();
+//!         write!(
+//!             f,
+//!             "System overloaded: {} connections, {} pending",
+//!             state.connection_count, state.pending_requests
+//!         )
+//!     }
+//! }
+//!
+//! // Without this hook, would show "Context of type `InternalState`"
+//! Hooks::new()
+//!     .context_formatter::<InternalState, _>(InternalStateFormatter)
+//!     .install()
+//!     .expect("failed to install hooks");
 //! ```
 
-use alloc::fmt;
-use core::{any::TypeId, marker::PhantomData, panic::Location};
+use alloc::{boxed::Box, fmt};
+use core::{any::TypeId, marker::PhantomData};
 
 use hashbrown::HashMap;
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
-use triomphe::Arc;
-use unsize::CoerceUnsize;
 
 use crate::{
     ReportRef,
-    hooks::hook_lock::HookLock,
+    hooks::HookData,
     markers::{Dynamic, Local, Uncloneable},
     preformatted::PreformattedContext,
 };
 
-type HookMap =
-    HashMap<TypeId, Arc<dyn UntypedContextFormattingOverride>, rustc_hash::FxBuildHasher>;
+#[derive(Default)]
+pub(crate) struct HookMap {
+    /// # Safety Invariant
+    ///
+    /// The hook stored under `TypeId::of::<C>()` is guaranteed to be an
+    /// instance of the type `Hook<C, H>`.
+    map: HashMap<TypeId, Box<dyn StoredHook>, rustc_hash::FxBuildHasher>,
+}
 
-/// Global registry of context formatting override hooks.
-///
-/// # Safety invariant
-///
-/// This registry can only contain hooks of type `Hook<C, H>`, where
-/// `TypeId::of::<C>()` is the key used to store the hook in the [`HashMap`].
-///
-/// This invariant is guaranteed by the [`register_context_hook`] function.
-static HOOKS: HookLock<HookMap> = HookLock::new();
+impl core::fmt::Debug for HookMap {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.map.values().fmt(f)
+    }
+}
 
-/// Retrieves the formatting override hook for the specified context type.
-///
-/// # Safety invariant
-///
-/// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
-/// where `TypeId::of::<C>() == type_id`.
-fn get_hook(type_id: TypeId) -> Option<Arc<dyn UntypedContextFormattingOverride>> {
-    HOOKS.read().get()?.get(&type_id).cloned()
+impl HookMap {
+    /// Retrieves the formatter hook for the specified context
+    /// type.
+    ///
+    /// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
+    /// where `TypeId::of::<C>() == type_id`.
+    fn get(&self, type_id: TypeId) -> Option<&dyn StoredHook> {
+        Some(&**self.map.get(&type_id)?)
+    }
+
+    pub(crate) fn insert<C, H>(&mut self, hook: H)
+    where
+        C: 'static,
+        H: ContextFormatterHook<C>,
+    {
+        let hook: Hook<C, H> = Hook {
+            hook,
+            _hooked_type: PhantomData,
+        };
+        let hook: Box<Hook<C, H>> = Box::new(hook);
+        // We must uphold the safety invariant of HookMap.
+        //
+        // The safety invariant requires that the hook stored under
+        // `TypeId::of::<C>()` is always of type `Hook<C, H>`.
+        //
+        // However this is exactly what we are doing here,
+        // so the invariant is upheld.
+        self.map.insert(TypeId::of::<C>(), hook);
+    }
+
+    pub(crate) fn display_context(
+        &self,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+        formatter: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        if let Some(report) = report.downcast_report::<PreformattedContext>()
+            && let Some(hook) = self.get(report.current_context().original_type_id())
+        {
+            hook.display_preformatted(report, formatter)
+        } else if let Some(hook) = self.get(report.current_context_type_id()) {
+            // SAFETY:
+            // 1. The call to `get_hook` guarantees that the returned hook is of type
+            //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
+            //    Therefore the type `C` stored in the context matches the `C` from type
+            //    `Hook<C, H>`.
+            unsafe {
+                // @add-unsafe-context: UntypedContextFormatterHook
+                hook.display(report, formatter)
+            }
+        } else {
+            fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
+        }
+    }
+
+    pub(crate) fn debug_context(
+        &self,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+        formatter: &mut fmt::Formatter<'_>,
+    ) -> fmt::Result {
+        if let Some(report) = report.downcast_report::<PreformattedContext>()
+            && let Some(hook) = self.get(report.current_context().original_type_id())
+        {
+            hook.debug_preformatted(report, formatter)
+        } else if let Some(hook) = self.get(report.current_context_type_id()) {
+            // SAFETY:
+            // 1. The call to `get` guarantees that the returned hook is of type `Hook<C,
+            //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
+            //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
+            unsafe {
+                // @add-unsafe-context: UntypedContextFormatterHook
+                hook.debug(report, formatter)
+            }
+        } else {
+            fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
+        }
+    }
+
+    /// # Arguments
+    ///
+    /// - `report_formatting_function`: Whether the report in which this context
+    ///   will be embedded is being formatted using [`Display`] formatting or
+    ///   [`Debug`]
+    ///
+    /// [`Display`]: core::fmt::Display
+    /// [`Debug`]: core::fmt::Debug
+    pub(crate) fn get_preferred_context_formatting_style(
+        &self,
+        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+        report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        if let Some(current_context) = report.downcast_current_context::<PreformattedContext>()
+            && let Some(hook) = self.get(current_context.original_type_id())
+        {
+            hook.preferred_context_formatting_style(report, report_formatting_function)
+        } else if let Some(hook) = self.get(report.current_context_type_id()) {
+            hook.preferred_context_formatting_style(report, report_formatting_function)
+        } else {
+            report.preferred_context_formatting_style_unhooked(report_formatting_function)
+        }
+    }
 }
 
 struct Hook<C, H>
@@ -96,30 +246,27 @@ where
     C: 'static,
 {
     hook: H,
-    added_at: &'static Location<'static>,
     _hooked_type: PhantomData<fn(C) -> C>,
 }
 
-impl<C, H> core::fmt::Display for Hook<C, H>
+impl<C, H> core::fmt::Debug for Hook<C, H>
 where
     C: 'static,
 {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
-            "Context hook {} for context type {} registered at {}:{}",
-            core::any::type_name::<H>(),
+            "ContextFormattingHook<{}, {}>",
             core::any::type_name::<C>(),
-            self.added_at.file(),
-            self.added_at.line()
+            core::any::type_name::<H>(),
         )
     }
 }
 
-/// Trait for untyped context formatting overrides.
+/// Trait for untyped context formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
-trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Display {
+trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the context using Display formatting.
     ///
     /// # Safety
@@ -182,7 +329,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
 /// # Default Implementations
 ///
 /// All methods have default implementations that delegate to the unhooked
-/// formatting, so you only need to override the methods for the formatting you
+/// formatting, so you only need to implement the methods for the formatting you
 /// want to customize.
 ///
 /// # Examples
@@ -193,7 +340,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
 ///
 /// use rootcause::{
 ///     ReportRef,
-///     hooks::formatting_overrides::context::ContextFormattingOverride,
+///     hooks::context_formatter::ContextFormatterHook,
 ///     markers::{Local, Uncloneable},
 /// };
 ///
@@ -205,7 +352,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
 ///
 /// struct ValidationErrorFormatter;
 ///
-/// impl ContextFormattingOverride<ValidationError> for ValidationErrorFormatter {
+/// impl ContextFormatterHook<ValidationError> for ValidationErrorFormatter {
 ///     fn display(
 ///         &self,
 ///         report: ReportRef<'_, ValidationError, Uncloneable, Local>,
@@ -220,7 +367,7 @@ trait UntypedContextFormattingOverride: 'static + Send + Sync + core::fmt::Displ
 ///     }
 /// }
 /// ```
-pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
+pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     /// Formats the context using Display formatting.
     ///
     /// This method is called when the context needs to be displayed in a
@@ -239,7 +386,7 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     ///
     /// use rootcause::{
     ///     ReportRef,
-    ///     hooks::formatting_overrides::context::ContextFormattingOverride,
+    ///     hooks::context_formatter::ContextFormatterHook,
     ///     markers::{Local, Uncloneable},
     /// };
     ///
@@ -250,7 +397,7 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     ///
     /// struct HttpErrorFormatter;
     ///
-    /// impl ContextFormattingOverride<HttpError> for HttpErrorFormatter {
+    /// impl ContextFormatterHook<HttpError> for HttpErrorFormatter {
     ///     fn display(
     ///         &self,
     ///         report: ReportRef<'_, HttpError, Uncloneable, Local>,
@@ -351,10 +498,10 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     }
 }
 
-impl<C, H> UntypedContextFormattingOverride for Hook<C, H>
+impl<C, H> StoredHook for Hook<C, H>
 where
     C: 'static,
-    H: ContextFormattingOverride<C>,
+    H: ContextFormatterHook<C>,
 {
     unsafe fn display(
         &self,
@@ -404,111 +551,14 @@ where
     }
 }
 
-/// Registers a formatting override hook for contexts of type `C`.
-///
-/// This function allows you to customize how contexts (main error types) of a
-/// specific type are formatted in error reports. Once registered, the hook will
-/// be called whenever a context of type `C` needs to be formatted.
-///
-/// The registration includes location tracking for debugging purposes, so you
-/// can identify where hooks were registered using [`debug_context_hooks`].
-///
-/// # Type Parameters
-///
-/// * `C` - The type of context this hook will handle
-/// * `H` - The type of the formatting override hook
-///
-/// # Arguments
-///
-/// * `hook` - An implementation of [`ContextFormattingOverride<C>`]
-///
-/// # Examples
-///
-/// ```rust
-/// use core::fmt;
-///
-/// use rootcause::{
-///     ReportRef,
-///     hooks::formatting_overrides::context::{ContextFormattingOverride, register_context_hook},
-///     markers::{Local, Uncloneable},
-/// };
-///
-/// struct FileSystemError {
-///     path: String,
-///     operation: String,
-///     error_code: i32,
-/// }
-///
-/// struct FileSystemErrorFormatter;
-///
-/// impl ContextFormattingOverride<FileSystemError> for FileSystemErrorFormatter {
-///     fn display(
-///         &self,
-///         report: ReportRef<'_, FileSystemError, Uncloneable, Local>,
-///         f: &mut fmt::Formatter<'_>,
-///     ) -> fmt::Result {
-///         let err = report.current_context();
-///         write!(
-///             f,
-///             "File system error during {} on '{}' (code: {})",
-///             err.operation, err.path, err.error_code
-///         )
-///     }
-/// }
-///
-/// register_context_hook::<FileSystemError, _>(FileSystemErrorFormatter);
-/// ```
-#[track_caller]
-pub fn register_context_hook<C, H>(hook: H)
-where
-    C: 'static,
-    H: ContextFormattingOverride<C> + Send + Sync + 'static,
-{
-    let added_location = Location::caller();
-    let hook: Hook<C, H> = Hook {
-        hook,
-        added_at: added_location,
-        _hooked_type: PhantomData,
-    };
-    let hook: Arc<Hook<C, H>> = Arc::new(hook);
-    let hook = hook.unsize(unsize::Coercion!(to dyn UntypedContextFormattingOverride));
-
-    // We must uphold the safety invariant of
-    // the global `HOOKS` registry here.
-    //
-    // The safety invariant requires that the registry
-    // can only contain hooks of type `Hook<A, H>` for some
-    // `C` and `H`, where the key used to store the hook
-    // is `TypeId::of::<C>()`.
-    //
-    // However this is exactly what we are doing here,
-    // so the invariant is upheld.
-    HOOKS
-        .write()
-        .get()
-        .get_or_insert_default()
-        .insert(TypeId::of::<C>(), hook);
-}
-
 pub(crate) fn display_context(
     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(report) = report.downcast_report::<PreformattedContext>()
-        && let Some(hook) = get_hook(report.current_context().original_type_id())
-    {
-        hook.display_preformatted(report, formatter)
-    } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        // SAFETY:
-        // 1. The call to `get_hook` guarantees that the returned hook is of type
-        //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
-        //    Therefore the type `C` stored in the context matches the `C` from type
-        //    `Hook<C, H>`.
-        unsafe {
-            // @add-unsafe-context: get_hook
-            // @add-unsafe-context: UntypedContextFormattingOverride
-            hook.display(report, formatter)
-        }
+    if let Some(hook_data) = HookData::fetch() {
+        hook_data
+            .context_formatters
+            .display_context(report, formatter)
     } else {
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
     }
@@ -518,21 +568,10 @@ pub(crate) fn debug_context(
     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(report) = report.downcast_report::<PreformattedContext>()
-        && let Some(hook) = get_hook(report.current_context().original_type_id())
-    {
-        hook.debug_preformatted(report, formatter)
-    } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        // SAFETY:
-        // 1. The call to `get_hook` guarantees that the returned hook is of type
-        //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
-        //    Therefore the type `C` stored in the context matches the `C` from type
-        //    `Hook<C, H>`.
-        unsafe {
-            // @add-unsafe-context: get_hook
-            // @add-unsafe-context: UntypedContextFormattingOverride
-            hook.debug(report, formatter)
-        }
+    if let Some(hook_data) = HookData::fetch() {
+        hook_data
+            .context_formatters
+            .debug_context(report, formatter)
     } else {
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
     }
@@ -550,49 +589,11 @@ pub(crate) fn get_preferred_context_formatting_style(
     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     report_formatting_function: FormattingFunction,
 ) -> ContextFormattingStyle {
-    if let Some(current_context) = report.downcast_current_context::<PreformattedContext>()
-        && let Some(hook) = get_hook(current_context.original_type_id())
-    {
-        hook.preferred_context_formatting_style(report, report_formatting_function)
-    } else if let Some(hook) = get_hook(report.current_context_type_id()) {
-        hook.preferred_context_formatting_style(report, report_formatting_function)
+    if let Some(hook_data) = HookData::fetch() {
+        hook_data
+            .context_formatters
+            .get_preferred_context_formatting_style(report, report_formatting_function)
     } else {
         report.preferred_context_formatting_style_unhooked(report_formatting_function)
-    }
-}
-
-/// Calls a function for each registered context formatting hook for debugging
-/// purposes.
-///
-/// This utility function allows you to inspect all currently registered context
-/// formatting hooks. Each hook provides information about the hook type, the
-/// context type it handles, and where it was registered.
-///
-/// # Arguments
-///
-/// * `f` - A function that will be called once for each registered hook with a
-///   displayable representation of the hook information
-///
-/// # Warning
-///
-/// This function will lock the internal hook registry for reading, so it can
-/// potentially cause deadlocks if [`register_context_hook`] is called while the
-/// function is executing.
-///
-/// # Examples
-///
-/// ```rust
-/// use rootcause::hooks::formatting_overrides::context::debug_context_hooks;
-///
-/// // Print all registered context hooks
-/// debug_context_hooks(|hook| {
-///     println!("Registered hook: {}", hook);
-/// });
-/// ```
-pub fn debug_context_hooks(mut f: impl FnMut(&dyn core::fmt::Display)) {
-    if let Some(hooks) = HOOKS.read().get() {
-        for hook in hooks.values() {
-            f(hook);
-        }
     }
 }

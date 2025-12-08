@@ -665,12 +665,8 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     pub fn format_current_context(self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.into_dynamic().into_uncloneable().into_local(),
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::display_context(report, formatter)
-            },
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::debug_context(report, formatter)
-            },
+            |report, formatter| crate::hooks::context_formatter::display_context(report, formatter),
+            |report, formatter| crate::hooks::context_formatter::debug_context(report, formatter),
         )
     }
 
@@ -714,11 +710,11 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// let report_ref = report.as_ref();
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = report_ref.format_with_hook(&DefaultReportFormatter::ASCII);
+    /// let formatted = report_ref.format_with(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with_hook<H: crate::hooks::report_formatting::ReportFormatterHook>(
+    pub fn format_with<H: crate::hooks::report_formatter::ReportFormatter>(
         self,
         hook: &H,
     ) -> impl core::fmt::Display + core::fmt::Debug {
@@ -759,7 +755,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
+        crate::hooks::context_formatter::get_preferred_context_formatting_style(
             self.into_dynamic().into_uncloneable().into_local(),
             report_formatting_function,
         )
@@ -1003,14 +999,14 @@ impl<'a, C: ?Sized, T> From<ReportRef<'a, C, Cloneable, T>> for Report<C, Clonea
 impl<'a, C: ?Sized, O, T> core::fmt::Display for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
-        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Display)
+        crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Display)
     }
 }
 
 impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
-        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Debug)
+        crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Debug)
     }
 }
 

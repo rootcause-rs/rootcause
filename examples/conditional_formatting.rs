@@ -5,15 +5,13 @@
 // - Show/hide verbose info based on feature flags or debug settings
 // - Customize visibility based on user permissions or logging levels
 //
-// Pattern: Check runtime state in AttachmentFormattingOverride to control
+// Pattern: Check runtime state in AttachmentFormatterHook to control
 // placement/visibility
 
 use std::env;
 
 use rootcause::{
-    hooks::formatting_overrides::attachment::{
-        AttachmentFormattingOverride, register_attachment_hook,
-    },
+    hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
     markers::Dynamic,
     prelude::*,
     report_attachment::ReportAttachmentRef,
@@ -44,7 +42,7 @@ impl core::fmt::Display for ApiCredentials {
 /// The same pattern works for feature flags, user permissions, etc.
 struct CredentialsFormatter;
 
-impl AttachmentFormattingOverride<ApiCredentials> for CredentialsFormatter {
+impl AttachmentFormatterHook<ApiCredentials> for CredentialsFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -98,7 +96,7 @@ impl core::fmt::Display for DebugSnapshot {
 /// Could also check debug flags, log levels, feature toggles, etc.
 struct DebugSnapshotFormatter;
 
-impl AttachmentFormattingOverride<DebugSnapshot> for DebugSnapshotFormatter {
+impl AttachmentFormatterHook<DebugSnapshot> for DebugSnapshotFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -173,9 +171,12 @@ fn main() {
     println!("Running in: {} mode", env);
     println!("(Set APP_ENV=production to see different behavior)\n");
 
-    // Register conditional formatting hooks
-    register_attachment_hook::<ApiCredentials, _>(CredentialsFormatter);
-    register_attachment_hook::<DebugSnapshot, _>(DebugSnapshotFormatter);
+    // Install conditional formatting hooks
+    Hooks::new()
+        .attachment_formatter::<ApiCredentials, _>(CredentialsFormatter)
+        .attachment_formatter::<DebugSnapshot, _>(DebugSnapshotFormatter)
+        .install()
+        .expect("failed to install hooks");
 
     println!("Example 1: Conditionally hide sensitive data\n");
     match authenticate_api() {
