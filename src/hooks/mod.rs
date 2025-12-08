@@ -48,10 +48,9 @@
 //! - **[`report_formatter`]**: Format the entire report structure and layout
 //!   (e.g., ASCII vs Unicode, colors, JSON output, custom layouts)
 //!
-//! ## Built-in Hooks
+//! ## Built-in Components
 //!
-//! - **[`builtin_hooks`]**: Default hooks automatically included
-//!   (location tracking, backtrace collection, default formatter)
+//! - **[`builtin_hooks`]**: Location tracking and default report formatter
 //!
 //! See [`examples/report_creation_hook.rs`] and
 //! [`examples/formatting_hooks.rs`] for complete examples.
@@ -77,8 +76,8 @@ use self::{
     builtin_hooks::location::{Location, LocationHandler, LocationHook},
     context_formatter::ContextFormatterHook,
     report_creation::{
-        AttachmentCollector, ReportCreationHook, UntypedReportCreationHook,
-        attachment_hook_to_untyped, creation_hook_to_untyped,
+        AttachmentCollector, ReportCreationHook, StoredCreationHook, attachment_hook_to_untyped,
+        creation_hook_to_untyped,
     },
     report_formatter::ReportFormatter,
 };
@@ -129,7 +128,7 @@ pub struct Hooks(Box<HookData>);
 
 #[derive(Debug)]
 pub(crate) struct HookData {
-    pub(crate) report_creation: Vec<Box<dyn UntypedReportCreationHook>>,
+    pub(crate) report_creation: Vec<Box<dyn StoredCreationHook>>,
     pub(crate) attachment_formatters: attachment_formatter::HookMap,
     pub(crate) context_formatters: context_formatter::HookMap,
     pub(crate) report_formatter: Option<Box<dyn ReportFormatter>>,
@@ -142,30 +141,31 @@ pub(crate) struct HookData {
 ///
 /// Contains the hooks that were attempted to be installed, allowing you to
 /// recover them if needed.
-pub struct HooksAlreadyInstalled(pub Hooks);
+pub struct HooksAlreadyInstalledError(pub Hooks);
 
-impl core::fmt::Debug for HooksAlreadyInstalled {
+impl core::fmt::Debug for HooksAlreadyInstalledError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("HooksAlreadyInstalled").finish()
+        f.debug_struct("HooksAlreadyInstalledError").finish()
     }
 }
 
-impl core::fmt::Display for HooksAlreadyInstalled {
+impl core::fmt::Display for HooksAlreadyInstalledError {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "hooks are already installed globally")
     }
 }
 
-impl core::error::Error for HooksAlreadyInstalled {}
+impl core::error::Error for HooksAlreadyInstalledError {}
 
 impl Hooks {
-    /// Creates a new `Hooks` builder with the default built-in hooks.
+    /// Creates a new `Hooks` builder with location tracking.
     ///
-    /// By default, this includes:
-    /// - Location tracking for capturing file/line information
+    /// This is equivalent to using rootcause without installing any hooks - you
+    /// get automatic location tracking. Use this as the base when you want to add
+    /// additional hooks while keeping location tracking.
     ///
-    /// See also [`new_without_builtin_hooks`](Self::new_without_builtin_hooks)
-    /// if you want full control over which hooks are registered.
+    /// See also [`new_without_locations`](Self::new_without_locations) to disable
+    /// automatic location tracking.
     ///
     /// # Examples
     ///
@@ -189,10 +189,10 @@ impl Hooks {
         }))
     }
 
-    /// Creates a new `Hooks` builder without any built-in hooks.
+    /// Creates a new `Hooks` builder without location tracking.
     ///
-    /// This gives you full control over which hooks are registered, but you'll
-    /// need to manually add any hooks you want (including location tracking).
+    /// By default, rootcause automatically tracks source locations where errors
+    /// occur. Use this method when you don't want that automatic tracking.
     ///
     /// # Examples
     ///
@@ -200,11 +200,11 @@ impl Hooks {
     /// use rootcause::hooks::Hooks;
     ///
     /// let hooks =
-    ///     Hooks::new_without_builtin_hooks().attachment_collector(|| "custom data".to_string());
+    ///     Hooks::new_without_locations().attachment_collector(|| "custom data".to_string());
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```
-    pub fn new_without_builtin_hooks() -> Self {
+    pub fn new_without_locations() -> Self {
         Self(Box::new(HookData {
             report_creation: Vec::new(),
             attachment_formatters: Default::default(),
@@ -393,7 +393,7 @@ impl Hooks {
     /// Installs the hooks globally.
     ///
     /// If hooks are already installed, returns an error
-    /// [`HooksAlreadyInstalled`], containing the hooks that were attempted
+    /// [`HooksAlreadyInstalledError`], containing the hooks that were attempted
     /// to be installed.
     ///
     /// See also [`replace`](Self::replace) which will replace any existing
@@ -419,7 +419,7 @@ impl Hooks {
     /// // Second installation would fail
     /// Hooks::new().install().unwrap_err();
     /// ```
-    pub fn install(self) -> Result<(), HooksAlreadyInstalled> {
+    pub fn install(self) -> Result<(), HooksAlreadyInstalledError> {
         let boxed = Box::into_raw(self.0);
         match HOOKS.compare_exchange(
             core::ptr::null_mut(),
@@ -431,7 +431,7 @@ impl Hooks {
             Err(_) => {
                 // Restore ownership to avoid leak
                 let hooks = unsafe { Box::from_raw(boxed) };
-                Err(HooksAlreadyInstalled(Hooks(hooks)))
+                Err(HooksAlreadyInstalledError(Hooks(hooks)))
             }
         }
     }

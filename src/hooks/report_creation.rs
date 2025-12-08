@@ -7,8 +7,10 @@
 //! # Hook Types (use in order of complexity)
 //!
 //! 1. **Closures** - Simplest: Just return a value to attach
-//!    ```rust,ignore
-//!    Hooks::new().attachment_collector(|| "some data".to_string())
+//!    ```rust
+//!    # use rootcause::hooks::Hooks;
+//!    Hooks::new().attachment_collector(|| "some data")
+//!    # ;
 //!    ```
 //!
 //! 2. **[`AttachmentCollector`]** - Simple: Collect and attach specific data
@@ -21,7 +23,53 @@
 //!
 //! # Examples
 //!
-//! ## Installing a Custom Report Creation Hook
+//! ## Simple: Using a Closure
+//!
+//! The easiest way to attach data to all errors:
+//!
+//! ```rust
+//! use rootcause::hooks::Hooks;
+//!
+//! // Attach a request ID to every error
+//! Hooks::new()
+//!     .attachment_collector(|| format!("Request ID: {}", get_request_id()))
+//!     .install()
+//!     .expect("failed to install hooks");
+//!
+//! fn get_request_id() -> u64 { 42 }
+//! ```
+//!
+//! ## Medium: Custom Attachment Collector
+//!
+//! When you need more control over formatting, implement [`AttachmentCollector`]:
+//!
+//! ```rust
+//! use rootcause::{
+//!     hooks::{Hooks, report_creation::AttachmentCollector},
+//!     prelude::*,
+//! };
+//!
+//! // Custom collector that adds environment information
+//! struct EnvironmentCollector;
+//!
+//! impl AttachmentCollector<String> for EnvironmentCollector {
+//!     type Handler = handlers::Display;
+//!
+//!     fn collect(&self) -> String {
+//!         format!("Environment: {}", std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string()))
+//!     }
+//! }
+//!
+//! Hooks::new()
+//!     .attachment_collector(EnvironmentCollector)
+//!     .install()
+//!     .expect("failed to install hooks");
+//! ```
+//!
+//! ## Advanced: Custom Report Creation Hook
+//!
+//! When you need conditional logic based on the error type, implement
+//! [`ReportCreationHook`]:
 //!
 //! ```rust
 //! use rootcause::{
@@ -31,76 +79,37 @@
 //!     prelude::*,
 //! };
 //!
-//! struct MyHook;
+//! // Hook that adds retry hints for I/O errors
+//! struct RetryHintHook;
 //!
-//! impl ReportCreationHook for MyHook {
+//! impl ReportCreationHook for RetryHintHook {
 //!     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
-//!         // Add custom logic for local reports
-//!         let attachment = report_attachment!("Custom local context");
-//!         report.attachments_mut().push(attachment.into());
+//!         // Check if this is an I/O error and add appropriate hint
+//!         if let Some(io_err) = report.downcast_current_context::<std::io::Error>() {
+//!             let hint = match io_err.kind() {
+//!                 std::io::ErrorKind::TimedOut | std::io::ErrorKind::ConnectionRefused
+//!                     => "Retry may succeed",
+//!                 _ => "Retry unlikely to help",
+//!             };
+//!             report.attachments_mut().push(report_attachment!(hint).into());
+//!         }
 //!     }
 //!
 //!     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
-//!         // Add custom logic for send+sync reports
-//!         let attachment = report_attachment!("Custom sendsync context");
-//!         report.attachments_mut().push(attachment.into());
+//!         // Same logic for Send+Sync errors
+//!         if let Some(io_err) = report.downcast_current_context::<std::io::Error>() {
+//!             let hint = match io_err.kind() {
+//!                 std::io::ErrorKind::TimedOut | std::io::ErrorKind::ConnectionRefused
+//!                     => "Retry may succeed",
+//!                 _ => "Retry unlikely to help",
+//!             };
+//!             report.attachments_mut().push(report_attachment!(hint).into());
+//!         }
 //!     }
 //! }
 //!
-//! // Install the hook globally
 //! Hooks::new()
-//!     .report_creation_hook(MyHook)
-//!     .install()
-//!     .expect("failed to install hooks");
-//! ```
-//!
-//! ## Installing an Attachment Collector Hook
-//!
-//! ```rust
-//! use rootcause::{
-//!     hooks::{Hooks, report_creation::AttachmentCollector},
-//!     prelude::*,
-//! };
-//!
-//! struct ProcessIdCollector;
-//!
-//! #[derive(Debug)]
-//! struct ProcessId(u32);
-//!
-//! impl std::fmt::Display for ProcessId {
-//!     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//!         write!(f, "Process ID: {}", self.0)
-//!     }
-//! }
-//!
-//! impl AttachmentCollector<ProcessId> for ProcessIdCollector {
-//!     type Handler = handlers::Display;
-//!
-//!     fn collect(&self) -> ProcessId {
-//!         ProcessId(std::process::id())
-//!     }
-//! }
-//!
-//! // Install the collector globally
-//! Hooks::new()
-//!     .attachment_collector(ProcessIdCollector)
-//!     .install()
-//!     .expect("failed to install hooks");
-//! ```
-//!
-//! ## Using a Closure as an Attachment Collector
-//!
-//! ```rust
-//! use rootcause::hooks::Hooks;
-//!
-//! // Install a simple closure that collects the current timestamp
-//! Hooks::new()
-//!     .attachment_collector(|| {
-//!         std::time::SystemTime::now()
-//!             .duration_since(std::time::UNIX_EPOCH)
-//!             .unwrap()
-//!             .as_secs()
-//!     })
+//!     .report_creation_hook(RetryHintHook)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
@@ -120,14 +129,11 @@ use crate::{
     report_attachment::ReportAttachment,
 };
 
-pub(crate) trait UntypedReportCreationHook:
-    'static + Send + Sync + core::fmt::Debug
-{
+pub(crate) trait StoredCreationHook: 'static + Send + Sync + core::fmt::Debug {
     #[track_caller]
-    /// TODO
     fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>);
+
     #[track_caller]
-    /// TODO
     fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
@@ -184,7 +190,7 @@ pub trait ReportCreationHook: 'static + Send + Sync {
     fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
-pub(crate) fn creation_hook_to_untyped<H>(hook: H) -> Box<dyn UntypedReportCreationHook>
+pub(crate) fn creation_hook_to_untyped<H>(hook: H) -> Box<dyn StoredCreationHook>
 where
     H: ReportCreationHook + Send + Sync + 'static,
 {
@@ -198,7 +204,7 @@ where
         }
     }
 
-    impl<H> UntypedReportCreationHook for Hook<H>
+    impl<H> StoredCreationHook for Hook<H>
     where
         H: ReportCreationHook,
     {
@@ -215,9 +221,7 @@ where
     Box::new(hook)
 }
 
-pub(crate) fn attachment_hook_to_untyped<A, H, C>(
-    collector: C,
-) -> Box<dyn UntypedReportCreationHook>
+pub(crate) fn attachment_hook_to_untyped<A, H, C>(collector: C) -> Box<dyn StoredCreationHook>
 where
     A: 'static + Send + Sync,
     H: AttachmentHandler<A>,
@@ -229,7 +233,19 @@ where
         _handler: core::marker::PhantomData<fn(Handler) -> Handler>,
     }
 
-    impl<A, Handler, Collector> UntypedReportCreationHook for Hook<A, Handler, Collector>
+    impl<A, Handler, Collector> core::fmt::Debug for Hook<A, Handler, Collector> {
+        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+            write!(
+                f,
+                "AttachmentCollector<{}, {}, {}>",
+                core::any::type_name::<A>(),
+                core::any::type_name::<Handler>(),
+                core::any::type_name::<Collector>(),
+            )
+        }
+    }
+
+    impl<A, Handler, Collector> StoredCreationHook for Hook<A, Handler, Collector>
     where
         A: 'static + Send + Sync,
         Handler: AttachmentHandler<A>,
@@ -249,17 +265,6 @@ where
             report
                 .attachments_mut()
                 .push(ReportAttachment::new_sendsync_custom::<Handler>(attachment).into_dynamic());
-        }
-    }
-    impl<A, Handler, Collector> core::fmt::Debug for Hook<A, Handler, Collector> {
-        fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-            write!(
-                f,
-                "AttachmentCollector<{}, {}, {}>",
-                core::any::type_name::<A>(),
-                core::any::type_name::<Handler>(),
-                core::any::type_name::<Collector>(),
-            )
         }
     }
 

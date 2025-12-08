@@ -77,7 +77,7 @@ pub(crate) struct HookMap {
     ///
     /// The hook stored under `TypeId::of::<C>()` is guaranteed to be an
     /// instance of the type `Hook<C, H>`.
-    map: HashMap<TypeId, Box<dyn UntypedContextFormatterHook>, rustc_hash::FxBuildHasher>,
+    map: HashMap<TypeId, Box<dyn StoredHook>, rustc_hash::FxBuildHasher>,
 }
 
 impl core::fmt::Debug for HookMap {
@@ -92,7 +92,7 @@ impl HookMap {
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
     /// where `TypeId::of::<C>() == type_id`.
-    fn get(&self, type_id: TypeId) -> Option<&Box<dyn UntypedContextFormatterHook>> {
+    fn get(&self, type_id: TypeId) -> Option<&Box<dyn StoredHook>> {
         self.map.get(&type_id)
     }
 
@@ -213,9 +213,7 @@ where
 /// Trait for untyped context formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
-pub(crate) trait UntypedContextFormatterHook:
-    'static + Send + Sync + core::fmt::Debug
-{
+pub(crate) trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the context using Display formatting.
     ///
     /// # Safety
@@ -447,7 +445,7 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     }
 }
 
-impl<C, H> UntypedContextFormatterHook for Hook<C, H>
+impl<C, H> StoredHook for Hook<C, H>
 where
     C: 'static,
     H: ContextFormatterHook<C>,

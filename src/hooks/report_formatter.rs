@@ -13,11 +13,12 @@
 //! [`attachment_formatter`]: crate::hooks::attachment_formatter
 //! [`context_formatter`]: crate::hooks::context_formatter
 //!
-//! # Built-in Formatters
+//! # Default Formatter
 //!
-//! By default, rootcause uses [`DefaultReportFormatter::UNICODE`], which
-//! provides Unicode box-drawing characters without ANSI colors. Other variants
-//! are also available:
+//! By default, rootcause uses [`DefaultReportFormatter::UNICODE`] for Unicode
+//! box-drawing characters without ANSI colors.
+//!
+//! You can switch to other variants:
 //!
 //! ```rust
 //! use rootcause::{
@@ -45,7 +46,7 @@
 //!
 //! let report = report!("parsing error");
 //!
-//! // This report uses the global formatter (Unicode + ANSI by default)
+//! // This report uses the default formatter (Unicode without colors)
 //! println!("{}", report);
 //!
 //! // This uses ASCII-only for this specific report

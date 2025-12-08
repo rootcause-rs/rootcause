@@ -1,33 +1,36 @@
-//! Built-in hooks that are automatically registered by the rootcause system.
+//! Built-in hooks provided by rootcause.
 //!
-//! This module contains all the default hooks that are automatically enabled
-//! when using rootcause.
+//! # What's Automatic
+//!
+//! Rootcause automatically provides:
+//! - **Location tracking** - Captures file/line where errors occur
+//! - **Default report formatter** ([`DefaultReportFormatter`]) - Unicode output
+//!   without colors
+//!
+//! Both are active even without installing any hooks. Use
+//! `Hooks::new_without_locations()` if you don't want location tracking.
 //!
 //! ## Attachment Collectors
 //!
-//! These hooks automatically collect and attach debugging information on report
-//! creation:
-//!
 //! - **[`location`]**: Captures the source code location ([`Location`]) where
-//!   each report was created. This helps identify exactly where in your code an
-//!   error originated.
+//!   each report was created. Always enabled unless you use
+//!   `Hooks::new_without_locations()`.
 //!
 //! - **[`backtrace`]** (requires `backtrace` feature): Captures a full stack
-//!   [`Backtrace`] when each report is created, showing the call chain that led
-//!   to the error.
+//!   trace. Not automatic - add explicitly with
+//!   `.attachment_collector(BacktraceHook)`.
 //!
 //! [`Location`]: crate::hooks::builtin_hooks::location::Location
 //! [`Backtrace`]: crate::hooks::builtin_hooks::backtrace::Backtrace
 //!
 //! ## Report Formatter
 //!
-//! By default we install the [`DefaultReportFormatter`] as the report
-//! formatting hook.
+//! - **[`report_formatter`]**: Controls the overall report layout and styling.
+//!   [`DefaultReportFormatter`] is used by default.
 //!
-//! To customize report formatting, you can either install
-//! the built-in formatter with different options, or create your own custom
-//! formatter by implementing the [`ReportFormatter`] trait and then
-//! installing it via [`Hooks::report_formatter`].
+//! To customize, either use a different [`DefaultReportFormatter`] variant or
+//! create your own by implementing the [`ReportFormatter`] trait, then install
+//! it via [`Hooks::report_formatter`].
 //!
 //! [`DefaultReportFormatter`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter
 //! [`ReportFormatter`]: crate::hooks::report_formatter::ReportFormatter

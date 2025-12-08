@@ -129,7 +129,7 @@ pub(crate) struct HookMap {
     ///
     /// The hook stored under `TypeId::of::<A>()` is guaranteed to be an
     /// instance of the type `Hook<A, H>`.
-    map: HashMap<TypeId, Box<dyn UntypedAttachmentFormatterHook>, rustc_hash::FxBuildHasher>,
+    map: HashMap<TypeId, Box<dyn StoredHook>, rustc_hash::FxBuildHasher>,
 }
 
 impl core::fmt::Debug for HookMap {
@@ -144,7 +144,7 @@ impl HookMap {
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
     /// where `TypeId::of::<A>() == type_id`.
-    fn get(&self, type_id: TypeId) -> Option<&Box<dyn UntypedAttachmentFormatterHook>> {
+    fn get(&self, type_id: TypeId) -> Option<&Box<dyn StoredHook>> {
         self.map.get(&type_id)
     }
 
@@ -242,9 +242,7 @@ pub struct AttachmentParent<'a> {
 /// Trait for untyped attachment formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<A, H>`].
-pub(crate) trait UntypedAttachmentFormatterHook:
-    'static + Send + Sync + core::fmt::Debug
-{
+pub(crate) trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the attachment using Display formatting.
     ///
     /// # Safety
@@ -476,7 +474,7 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     }
 }
 
-impl<A, H> UntypedAttachmentFormatterHook for Hook<A, H>
+impl<A, H> StoredHook for Hook<A, H>
 where
     H: AttachmentFormatterHook<A>,
 {
