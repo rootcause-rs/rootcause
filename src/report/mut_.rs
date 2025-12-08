@@ -740,12 +740,8 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         let report = self.as_ref().into_dynamic().into_uncloneable().into_local();
         format_helper(
             report,
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::display_context(report, formatter)
-            },
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::debug_context(report, formatter)
-            },
+            |report, formatter| crate::hooks::context_formatter::display_context(report, formatter),
+            |report, formatter| crate::hooks::context_formatter::debug_context(report, formatter),
         )
     }
 
@@ -826,7 +822,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         let report = self.as_ref().into_dynamic().into_uncloneable().into_local();
-        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
+        crate::hooks::context_formatter::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
         )

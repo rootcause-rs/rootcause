@@ -17,7 +17,7 @@
 //!
 //! // Switch to ASCII-only output globally (affects all reports)
 //! Hooks::new()
-//!     .with_report_formatter(DefaultReportFormatter::ASCII)
+//!     .report_formatter(DefaultReportFormatter::ASCII)
 //!     .install()
 //!     .expect("failed to install hooks");
 //!
@@ -131,7 +131,7 @@ use crate::{
 /// }
 ///
 /// Hooks::new()
-///     .with_report_formatter(SimpleFormatter)
+///     .report_formatter(SimpleFormatter)
 ///     .install()
 ///     .expect("failed to install hooks");
 /// ```
@@ -171,7 +171,7 @@ pub(crate) fn format_report(
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
     if let Some(hook_data) = HookData::fetch()
-        && let Some(hook) = &hook_data.report_formatting
+        && let Some(hook) = &hook_data.report_formatter
     {
         hook.format_report(report, formatter, report_formatting_function)
     } else {
@@ -185,7 +185,7 @@ pub(crate) fn format_reports(
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
     if let Some(hook_data) = HookData::fetch()
-        && let Some(hook) = &hook_data.report_formatting
+        && let Some(hook) = &hook_data.report_formatter
     {
         hook.format_reports(reports, formatter, report_formatting_function)
     } else {

@@ -8,16 +8,16 @@
 //
 // Use formatting hooks to customize how types are displayed across your entire
 // application:
-// - AttachmentFormattingOverride: Control placement (Inline/Appendix/Hidden)
-//   and priority
-// - ContextFormattingOverride: Customize how error contexts are formatted
+// - AttachmentFormatterHook: Control placement (Inline/Appendix/Hidden) and
+//   priority
+// - ContextFormatterHook: Customize how error contexts are formatted
 
 use rootcause::{
     ReportRef,
     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
     hooks::{
-        Hooks, formatting_overrides::attachment::AttachmentFormattingOverride,
-        formatting_overrides::context::ContextFormattingOverride,
+        Hooks, attachment_formatter::AttachmentFormatterHook,
+        context_formatter::ContextFormatterHook,
     },
     markers::{Dynamic, Local, Uncloneable},
     prelude::*,
@@ -51,7 +51,7 @@ impl core::fmt::Debug for DatabaseQuery {
 // Move verbose query diagnostics to appendix instead of cluttering inline
 struct DatabaseQueryFormatter;
 
-impl AttachmentFormattingOverride<DatabaseQuery> for DatabaseQueryFormatter {
+impl AttachmentFormatterHook<DatabaseQuery> for DatabaseQueryFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -86,7 +86,7 @@ impl core::fmt::Debug for ActionRequired {
 // High priority ensures important actions appear first
 struct ActionRequiredFormatter;
 
-impl AttachmentFormattingOverride<ActionRequired> for ActionRequiredFormatter {
+impl AttachmentFormatterHook<ActionRequired> for ActionRequiredFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -118,7 +118,7 @@ impl std::error::Error for ValidationError {}
 // Custom formatting for validation errors across the app
 struct ValidationErrorFormatter;
 
-impl ContextFormattingOverride<ValidationError> for ValidationErrorFormatter {
+impl ContextFormatterHook<ValidationError> for ValidationErrorFormatter {
     fn display(
         &self,
         report: ReportRef<'_, ValidationError, Uncloneable, Local>,
@@ -169,9 +169,9 @@ fn demo_context_formatting() -> Result<(), Report> {
 fn main() {
     // Install formatting hooks
     Hooks::new()
-        .with_attachment_override::<DatabaseQuery, _>(DatabaseQueryFormatter)
-        .with_attachment_override::<ActionRequired, _>(ActionRequiredFormatter)
-        .with_context_override::<ValidationError, _>(ValidationErrorFormatter)
+        .attachment_formatter::<DatabaseQuery, _>(DatabaseQueryFormatter)
+        .attachment_formatter::<ActionRequired, _>(ActionRequiredFormatter)
+        .context_formatter::<ValidationError, _>(ValidationErrorFormatter)
         .install()
         .expect("failed to install hooks");
 

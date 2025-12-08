@@ -1220,7 +1220,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
             .into_dynamic()
             .into_uncloneable()
             .into_local();
-        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
+        crate::hooks::context_formatter::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
         )

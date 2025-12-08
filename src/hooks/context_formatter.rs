@@ -9,7 +9,7 @@
 //!
 //! # Key Components
 //!
-//! - [`ContextFormattingOverride`] - Trait for implementing custom context
+//! - [`ContextFormatterHook`] - Trait for implementing custom context
 //!   formatting
 //!
 //! # Example
@@ -19,7 +19,7 @@
 //!
 //! use rootcause::{
 //!     ReportRef,
-//!     hooks::{Hooks, formatting_overrides::context::ContextFormattingOverride},
+//!     hooks::{Hooks, context_formatter::ContextFormatterHook},
 //!     markers::{Local, Uncloneable},
 //! };
 //!
@@ -31,7 +31,7 @@
 //!
 //! struct DatabaseErrorFormatter;
 //!
-//! impl ContextFormattingOverride<DatabaseError> for DatabaseErrorFormatter {
+//! impl ContextFormatterHook<DatabaseError> for DatabaseErrorFormatter {
 //!     fn display(
 //!         &self,
 //!         report: ReportRef<'_, DatabaseError, Uncloneable, Local>,
@@ -48,7 +48,7 @@
 //!
 //! // Install the custom formatter globally
 //! Hooks::new()
-//!     .with_context_override::<DatabaseError, _>(DatabaseErrorFormatter)
+//!     .context_formatter::<DatabaseError, _>(DatabaseErrorFormatter)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
@@ -68,7 +68,11 @@ use crate::{
 
 #[derive(Default)]
 pub(crate) struct HookMap {
-    map: HashMap<TypeId, Box<dyn UntypedContextFormattingOverride>, rustc_hash::FxBuildHasher>,
+    /// # Safety Invariant
+    ///
+    /// The hook stored under `TypeId::of::<C>()` is guaranteed to be an
+    /// instance of the type `Hook<C, H>`.
+    map: HashMap<TypeId, Box<dyn UntypedContextFormatterHook>, rustc_hash::FxBuildHasher>,
 }
 
 impl core::fmt::Debug for HookMap {
@@ -83,14 +87,14 @@ impl HookMap {
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
     /// where `TypeId::of::<C>() == type_id`.
-    fn get(&self, type_id: TypeId) -> Option<&Box<dyn UntypedContextFormattingOverride>> {
+    fn get(&self, type_id: TypeId) -> Option<&Box<dyn UntypedContextFormatterHook>> {
         self.map.get(&type_id)
     }
 
     pub(crate) fn insert<C, H>(&mut self, hook: H)
     where
         C: 'static,
-        H: ContextFormattingOverride<C>,
+        H: ContextFormatterHook<C>,
     {
         let hook: Hook<C, H> = Hook {
             hook,
@@ -123,7 +127,7 @@ impl HookMap {
             //    Therefore the type `C` stored in the context matches the `C` from type
             //    `Hook<C, H>`.
             unsafe {
-                // @add-unsafe-context: UntypedContextFormattingOverride
+                // @add-unsafe-context: UntypedContextFormatterHook
                 hook.display(report, formatter)
             }
         } else {
@@ -146,7 +150,7 @@ impl HookMap {
             //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
             //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
             unsafe {
-                // @add-unsafe-context: UntypedContextFormattingOverride
+                // @add-unsafe-context: UntypedContextFormatterHook
                 hook.debug(report, formatter)
             }
         } else {
@@ -204,7 +208,7 @@ where
 /// Trait for untyped context formatting overrides.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
-pub(crate) trait UntypedContextFormattingOverride:
+pub(crate) trait UntypedContextFormatterHook:
     'static + Send + Sync + core::fmt::Debug
 {
     /// Formats the context using Display formatting.
@@ -280,7 +284,7 @@ pub(crate) trait UntypedContextFormattingOverride:
 ///
 /// use rootcause::{
 ///     ReportRef,
-///     hooks::formatting_overrides::context::ContextFormattingOverride,
+///     hooks::context_formatter::ContextFormatterHook,
 ///     markers::{Local, Uncloneable},
 /// };
 ///
@@ -292,7 +296,7 @@ pub(crate) trait UntypedContextFormattingOverride:
 ///
 /// struct ValidationErrorFormatter;
 ///
-/// impl ContextFormattingOverride<ValidationError> for ValidationErrorFormatter {
+/// impl ContextFormatterHook<ValidationError> for ValidationErrorFormatter {
 ///     fn display(
 ///         &self,
 ///         report: ReportRef<'_, ValidationError, Uncloneable, Local>,
@@ -307,7 +311,7 @@ pub(crate) trait UntypedContextFormattingOverride:
 ///     }
 /// }
 /// ```
-pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
+pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     /// Formats the context using Display formatting.
     ///
     /// This method is called when the context needs to be displayed in a
@@ -326,7 +330,7 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     ///
     /// use rootcause::{
     ///     ReportRef,
-    ///     hooks::formatting_overrides::context::ContextFormattingOverride,
+    ///     hooks::context_formatter::ContextFormatterHook,
     ///     markers::{Local, Uncloneable},
     /// };
     ///
@@ -337,7 +341,7 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     ///
     /// struct HttpErrorFormatter;
     ///
-    /// impl ContextFormattingOverride<HttpError> for HttpErrorFormatter {
+    /// impl ContextFormatterHook<HttpError> for HttpErrorFormatter {
     ///     fn display(
     ///         &self,
     ///         report: ReportRef<'_, HttpError, Uncloneable, Local>,
@@ -438,10 +442,10 @@ pub trait ContextFormattingOverride<C>: 'static + Send + Sync {
     }
 }
 
-impl<C, H> UntypedContextFormattingOverride for Hook<C, H>
+impl<C, H> UntypedContextFormatterHook for Hook<C, H>
 where
     C: 'static,
-    H: ContextFormattingOverride<C>,
+    H: ContextFormatterHook<C>,
 {
     unsafe fn display(
         &self,
@@ -497,7 +501,7 @@ pub(crate) fn display_context(
 ) -> fmt::Result {
     if let Some(hook_data) = HookData::fetch() {
         hook_data
-            .context_formatting_overrides
+            .context_formatters
             .display_context(report, formatter)
     } else {
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
@@ -510,7 +514,7 @@ pub(crate) fn debug_context(
 ) -> fmt::Result {
     if let Some(hook_data) = HookData::fetch() {
         hook_data
-            .context_formatting_overrides
+            .context_formatters
             .debug_context(report, formatter)
     } else {
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
@@ -531,7 +535,7 @@ pub(crate) fn get_preferred_context_formatting_style(
 ) -> ContextFormattingStyle {
     if let Some(hook_data) = HookData::fetch() {
         hook_data
-            .context_formatting_overrides
+            .context_formatters
             .get_preferred_context_formatting_style(report, report_formatting_function)
     } else {
         report.preferred_context_formatting_style_unhooked(report_formatting_function)

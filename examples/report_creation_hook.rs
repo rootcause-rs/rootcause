@@ -154,7 +154,7 @@ fn main() {
 
     // Install the request ID collector hook
     Hooks::new()
-        .with_attachment_collector(RequestIdCollector)
+        .attachment_collector(RequestIdCollector)
         .install()
         .expect("failed to install hooks");
 
@@ -179,9 +179,7 @@ fn main() {
     println!("\nExample 2: ReportCreationHook - conditional retry hints\n");
 
     // Install retry hint hook (replaces previous hooks)
-    Hooks::new()
-        .with_report_creation_hook(RetryHintHook)
-        .replace();
+    Hooks::new().report_creation_hook(RetryHintHook).replace();
 
     println!("Attempting transient network error...");
     match simulate_api_request(1003) {

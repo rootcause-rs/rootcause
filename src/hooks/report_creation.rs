@@ -49,7 +49,7 @@
 //!
 //! // Install the hook globally
 //! Hooks::new()
-//!     .with_report_creation_hook(MyHook)
+//!     .report_creation_hook(MyHook)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
@@ -83,7 +83,7 @@
 //!
 //! // Install the collector globally
 //! Hooks::new()
-//!     .with_attachment_collector(ProcessIdCollector)
+//!     .attachment_collector(ProcessIdCollector)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
@@ -95,7 +95,7 @@
 //!
 //! // Install a simple closure that collects the current timestamp
 //! Hooks::new()
-//!     .with_attachment_collector(|| {
+//!     .attachment_collector(|| {
 //!         std::time::SystemTime::now()
 //!             .duration_since(std::time::UNIX_EPOCH)
 //!             .unwrap()
@@ -172,7 +172,7 @@ pub(crate) trait UntypedReportCreationHook:
 ///
 /// // Install the hook globally
 /// Hooks::new()
-///     .with_report_creation_hook(LoggingHook)
+///     .report_creation_hook(LoggingHook)
 ///     .install()
 ///     .expect("failed to install hooks");
 /// ```
@@ -297,7 +297,7 @@ where
 ///
 /// // This closure automatically implements AttachmentCollector<String>
 /// Hooks::new()
-///     .with_attachment_collector(|| "timestamp".to_string())
+///     .attachment_collector(|| "timestamp".to_string())
 ///     .install()
 ///     .expect("failed to install hooks");
 /// ```
@@ -328,7 +328,7 @@ where
 ///
 /// // Install the collector globally
 /// Hooks::new()
-///     .with_attachment_collector(SystemInfoCollector)
+///     .attachment_collector(SystemInfoCollector)
 ///     .install()
 ///     .expect("failed to install hooks");
 /// ```
@@ -340,7 +340,7 @@ where
 ///
 /// // Install a closure that collects the current working directory
 /// Hooks::new()
-///     .with_attachment_collector(|| {
+///     .attachment_collector(|| {
 ///         std::env::current_dir()
 ///             .map(|p| p.display().to_string())
 ///             .unwrap_or_else(|_| "unknown".to_string())

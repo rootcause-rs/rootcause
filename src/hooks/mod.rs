@@ -21,9 +21,9 @@
 //! - **[`report_creation`]**: Automatically add data to every report as it's
 //!   created (e.g., request IDs, correlation IDs, environment variables)
 //!
-//! - **[`attachment_override`]** and **[`context_override`]**: Control how
-//!   specific types appear in error messages (e.g., redact passwords, format
-//!   timestamps, control attachment placement)
+//! - **[`formatting_overrides`]**: Control how specific types appear in error
+//!   messages (e.g., redact passwords, format timestamps, control attachment
+//!   placement)
 //!
 //! - **[`report_formatting`]**: Change the entire report layout and structure
 //!   (e.g., JSON output for logging, compact format, custom colors)
@@ -37,8 +37,9 @@
 //! [`examples/report_creation_hook.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/report_creation_hook.rs
 //! [`examples/formatting_hooks.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/formatting_hooks.rs
 
+pub mod attachment_formatter;
 pub mod builtin_hooks;
-pub mod formatting_overrides;
+pub mod context_formatter;
 pub mod report_creation;
 pub mod report_formatting;
 
@@ -50,10 +51,9 @@ use core::{
 };
 
 use self::{
+    attachment_formatter::AttachmentFormatterHook,
     builtin_hooks::location::{Location, LocationHandler, LocationHook},
-    formatting_overrides::{
-        attachment::AttachmentFormattingOverride, context::ContextFormattingOverride,
-    },
+    context_formatter::ContextFormatterHook,
     report_creation::{
         AttachmentCollector, ReportCreationHook, UntypedReportCreationHook,
         attachment_hook_to_untyped, creation_hook_to_untyped,
@@ -73,7 +73,7 @@ use self::{
 /// use rootcause::{hooks::Hooks, prelude::*};
 ///
 /// // Create a new Hooks builder with default hooks
-/// let hooks = Hooks::new().with_attachment_collector(|| "Custom data".to_string());
+/// let hooks = Hooks::new().attachment_collector(|| "Custom data".to_string());
 ///
 /// // Install globally (can only be done once)
 /// hooks.install().expect("hooks already installed");
@@ -89,9 +89,9 @@ pub struct Hooks(Box<HookData>);
 #[derive(Debug)]
 pub(crate) struct HookData {
     pub(crate) report_creation: Vec<Box<dyn UntypedReportCreationHook>>,
-    pub(crate) attachment_formatting_overrides: formatting_overrides::attachment::HookMap,
-    pub(crate) context_formatting_overrides: formatting_overrides::context::HookMap,
-    pub(crate) report_formatting: Option<Box<dyn ReportFormatter>>,
+    pub(crate) attachment_formatters: attachment_formatter::HookMap,
+    pub(crate) context_formatters: context_formatter::HookMap,
+    pub(crate) report_formatter: Option<Box<dyn ReportFormatter>>,
     #[allow(dead_code, reason = "only used for debugging purposes")]
     pub(crate) created_at: Location,
 }
@@ -131,7 +131,7 @@ impl Hooks {
     /// ```rust
     /// use rootcause::hooks::Hooks;
     ///
-    /// let hooks = Hooks::new().with_attachment_collector(|| std::process::id());
+    /// let hooks = Hooks::new().attachment_collector(|| std::process::id());
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```
@@ -141,9 +141,9 @@ impl Hooks {
             report_creation: vec![attachment_hook_to_untyped::<_, LocationHandler, _>(
                 LocationHook,
             )],
-            attachment_formatting_overrides: Default::default(),
-            context_formatting_overrides: Default::default(),
-            report_formatting: None,
+            attachment_formatters: Default::default(),
+            context_formatters: Default::default(),
+            report_formatter: None,
             created_at: Location::caller(),
         }))
     }
@@ -159,16 +159,16 @@ impl Hooks {
     /// use rootcause::hooks::Hooks;
     ///
     /// let hooks =
-    ///     Hooks::new_without_builtin_hooks().with_attachment_collector(|| "custom data".to_string());
+    ///     Hooks::new_without_builtin_hooks().attachment_collector(|| "custom data".to_string());
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```
     pub fn new_without_builtin_hooks() -> Self {
         Self(Box::new(HookData {
             report_creation: Vec::new(),
-            attachment_formatting_overrides: Default::default(),
-            context_formatting_overrides: Default::default(),
-            report_formatting: None,
+            attachment_formatters: Default::default(),
+            context_formatters: Default::default(),
+            report_formatter: None,
             created_at: Location::caller(),
         }))
     }
@@ -186,12 +186,12 @@ impl Hooks {
     ///
     /// let hooks = Hooks::new()
     ///     // Simple closure that returns Display + Debug types
-    ///     .with_attachment_collector(|| std::process::id())
-    ///     .with_attachment_collector(|| "Environment: production".to_string());
+    ///     .attachment_collector(|| std::process::id())
+    ///     .attachment_collector(|| "Environment: production".to_string());
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```
-    pub fn with_attachment_collector<A, C>(mut self, collector: C) -> Self
+    pub fn attachment_collector<A, C>(mut self, collector: C) -> Self
     where
         A: 'static + Send + Sync,
         C: AttachmentCollector<A> + Send + Sync + 'static,
@@ -206,7 +206,7 @@ impl Hooks {
     ///
     /// Use this when you need conditional logic or access to the full report
     /// during creation. For simple data collection, prefer
-    /// [`with_attachment_collector`](Self::with_attachment_collector).
+    /// [`attachment_collector`](Self::attachment_collector).
     ///
     /// # Examples
     ///
@@ -230,10 +230,10 @@ impl Hooks {
     ///     }
     /// }
     ///
-    /// let hooks = Hooks::new().with_report_creation_hook(MyHook);
+    /// let hooks = Hooks::new().report_creation_hook(MyHook);
     /// hooks.install().expect("failed to install hooks");
     /// ```
-    pub fn with_report_creation_hook<H>(mut self, hook: H) -> Self
+    pub fn report_creation_hook<H>(mut self, hook: H) -> Self
     where
         H: ReportCreationHook + Send + Sync + 'static,
     {
@@ -251,7 +251,7 @@ impl Hooks {
     /// ```rust
     /// use rootcause::{
     ///     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
-    ///     hooks::{Hooks, formatting_overrides::attachment::AttachmentFormattingOverride},
+    ///     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
     ///     markers::Dynamic,
     ///     report_attachment::ReportAttachmentRef,
     /// };
@@ -259,7 +259,7 @@ impl Hooks {
     /// struct MyData(String);
     /// struct MyFormatter;
     ///
-    /// impl AttachmentFormattingOverride<MyData> for MyFormatter {
+    /// impl AttachmentFormatterHook<MyData> for MyFormatter {
     ///     fn preferred_formatting_style(
     ///         &self,
     ///         _: ReportAttachmentRef<'_, Dynamic>,
@@ -273,15 +273,15 @@ impl Hooks {
     ///     }
     /// }
     ///
-    /// let hooks = Hooks::new().with_attachment_override::<MyData, _>(MyFormatter);
+    /// let hooks = Hooks::new().attachment_formatter::<MyData, _>(MyFormatter);
     /// hooks.install().expect("failed to install hooks");
     /// ```
-    pub fn with_attachment_override<A, H>(mut self, hook: H) -> Self
+    pub fn attachment_formatter<A, H>(mut self, hook: H) -> Self
     where
         A: Sized + 'static,
-        H: AttachmentFormattingOverride<A>,
+        H: AttachmentFormatterHook<A>,
     {
-        self.0.attachment_formatting_overrides.insert::<A, H>(hook);
+        self.0.attachment_formatters.insert::<A, H>(hook);
         self
     }
 
@@ -297,14 +297,14 @@ impl Hooks {
     ///
     /// use rootcause::{
     ///     ReportRef,
-    ///     hooks::{Hooks, formatting_overrides::context::ContextFormattingOverride},
+    ///     hooks::{Hooks, context_formatter::ContextFormatterHook},
     ///     markers::{Local, Uncloneable},
     /// };
     ///
     /// struct MyError(String);
     /// struct MyFormatter;
     ///
-    /// impl ContextFormattingOverride<MyError> for MyFormatter {
+    /// impl ContextFormatterHook<MyError> for MyFormatter {
     ///     fn display(
     ///         &self,
     ///         report: ReportRef<'_, MyError, Uncloneable, Local>,
@@ -314,15 +314,15 @@ impl Hooks {
     ///     }
     /// }
     ///
-    /// let hooks = Hooks::new().with_context_override::<MyError, _>(MyFormatter);
+    /// let hooks = Hooks::new().context_formatter::<MyError, _>(MyFormatter);
     /// hooks.install().expect("failed to install hooks");
     /// ```
-    pub fn with_context_override<C, H>(mut self, hook: H) -> Self
+    pub fn context_formatter<C, H>(mut self, hook: H) -> Self
     where
         C: Sized + 'static,
-        H: ContextFormattingOverride<C>,
+        H: ContextFormatterHook<C>,
     {
-        self.0.context_formatting_overrides.insert::<C, H>(hook);
+        self.0.context_formatters.insert::<C, H>(hook);
         self
     }
 
@@ -337,15 +337,15 @@ impl Hooks {
     /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
     ///
     /// // Use ASCII-only formatting
-    /// let hooks = Hooks::new().with_report_formatter(DefaultReportFormatter::ASCII);
+    /// let hooks = Hooks::new().report_formatter(DefaultReportFormatter::ASCII);
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```
-    pub fn with_report_formatter<H>(mut self, hook: H) -> Self
+    pub fn report_formatter<H>(mut self, hook: H) -> Self
     where
         H: ReportFormatter + 'static,
     {
-        self.0.report_formatting = Some(Box::new(hook));
+        self.0.report_formatter = Some(Box::new(hook));
         self
     }
 
@@ -370,7 +370,7 @@ impl Hooks {
     /// ```rust
     /// use rootcause::hooks::Hooks;
     ///
-    /// let hooks = Hooks::new().with_attachment_collector(|| "custom data".to_string());
+    /// let hooks = Hooks::new().attachment_collector(|| "custom data".to_string());
     ///
     /// // First installation succeeds
     /// hooks.install().expect("failed to install hooks");
@@ -414,11 +414,11 @@ impl Hooks {
     /// ```rust
     /// use rootcause::hooks::Hooks;
     ///
-    /// let hooks = Hooks::new().with_attachment_collector(|| "first".to_string());
+    /// let hooks = Hooks::new().attachment_collector(|| "first".to_string());
     /// hooks.install().expect("failed to install hooks");
     ///
     /// // Replace with different hooks
-    /// let hooks2 = Hooks::new().with_attachment_collector(|| "second".to_string());
+    /// let hooks2 = Hooks::new().attachment_collector(|| "second".to_string());
     /// let _previous = hooks2.replace();
     /// ```
     pub fn replace(self) -> Option<LeakedHooks> {

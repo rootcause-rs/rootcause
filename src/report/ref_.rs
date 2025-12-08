@@ -665,12 +665,8 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     pub fn format_current_context(self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.into_dynamic().into_uncloneable().into_local(),
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::display_context(report, formatter)
-            },
-            |report, formatter| {
-                crate::hooks::formatting_overrides::context::debug_context(report, formatter)
-            },
+            |report, formatter| crate::hooks::context_formatter::display_context(report, formatter),
+            |report, formatter| crate::hooks::context_formatter::debug_context(report, formatter),
         )
     }
 
@@ -759,7 +755,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        crate::hooks::formatting_overrides::context::get_preferred_context_formatting_style(
+        crate::hooks::context_formatter::get_preferred_context_formatting_style(
             self.into_dynamic().into_uncloneable().into_local(),
             report_formatting_function,
         )

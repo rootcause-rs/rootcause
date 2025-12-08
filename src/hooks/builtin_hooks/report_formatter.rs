@@ -23,19 +23,19 @@
 //!
 //! // Use the default Unicode configuration (no colors)
 //! Hooks::new()
-//!     .with_report_formatter(DefaultReportFormatter::default())
+//!     .report_formatter(DefaultReportFormatter::default())
 //!     .install()
 //!     .ok();
 //!
 //! // Or use Unicode with ANSI colors for enhanced visuals
 //! Hooks::new()
-//!     .with_report_formatter(DefaultReportFormatter::UNICODE_COLORS)
+//!     .report_formatter(DefaultReportFormatter::UNICODE_COLORS)
 //!     .install()
 //!     .ok();
 //!
 //! // Or use ASCII-only for compatibility
 //! Hooks::new()
-//!     .with_report_formatter(DefaultReportFormatter::ASCII)
+//!     .report_formatter(DefaultReportFormatter::ASCII)
 //!     .install()
 //!     .ok();
 //! ```
@@ -84,7 +84,7 @@ use crate::{
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
-///     .with_report_formatter(DefaultReportFormatter::default())
+///     .report_formatter(DefaultReportFormatter::default())
 ///     .install()
 ///     .ok();
 /// // Use with report formatting system (Unicode without colors)
@@ -95,7 +95,7 @@ use crate::{
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
-///     .with_report_formatter(DefaultReportFormatter::UNICODE_COLORS)
+///     .report_formatter(DefaultReportFormatter::UNICODE_COLORS)
 ///     .install()
 ///     .ok();
 /// // Use in modern terminals that support ANSI colors
@@ -106,7 +106,7 @@ use crate::{
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
-///     .with_report_formatter(DefaultReportFormatter::ASCII)
+///     .report_formatter(DefaultReportFormatter::ASCII)
 ///     .install()
 ///     .ok();
 /// // Use in environments without Unicode/ANSI support

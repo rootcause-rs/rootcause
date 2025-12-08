@@ -78,7 +78,7 @@ impl AttachmentHandler<Location> for LocationHandler {
 ///
 /// // Install hooks with location collector
 /// Hooks::new()
-///     .with_attachment_collector(LocationHook)
+///     .attachment_collector(LocationHook)
 ///     .install()
 ///     .ok();
 /// ```
