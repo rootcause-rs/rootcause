@@ -11,7 +11,9 @@
 //!     .install()
 //!     .expect("failed to install hooks");
 //!
-//! fn get_request_id() -> u64 { 42 } // Your implementation here
+//! fn get_request_id() -> u64 {
+//!     42
+//! } // Your implementation here
 //! ```
 //!
 //! # When to Use Hooks
@@ -42,8 +44,8 @@
 //! - **[`attachment_formatter`]**: Format individual pieces of attached data
 //!   (e.g., hide passwords, format timestamps, control where data appears)
 //!
-//! - **[`context_formatter`]**: Format the main error message itself
-//!   (e.g., custom error descriptions, add context, structured output)
+//! - **[`context_formatter`]**: Format the main error message itself (e.g.,
+//!   custom error descriptions, add context, structured output)
 //!
 //! - **[`report_formatter`]**: Format the entire report structure and layout
 //!   (e.g., ASCII vs Unicode, colors, JSON output, custom layouts)
@@ -91,13 +93,18 @@ use self::{
 /// # Hook Types
 ///
 /// **Creation Hooks** (add data to errors):
-/// - [`attachment_collector()`](Self::attachment_collector) - Automatically attach data to all errors
-/// - [`report_creation_hook()`](Self::report_creation_hook) - Conditional logic during error creation
+/// - [`attachment_collector()`](Self::attachment_collector) - Automatically
+///   attach data to all errors
+/// - [`report_creation_hook()`](Self::report_creation_hook) - Conditional logic
+///   during error creation
 ///
 /// **Formatting Hooks** (control how things are displayed):
-/// - [`attachment_formatter()`](Self::attachment_formatter) - Format individual attached data
-/// - [`context_formatter()`](Self::context_formatter) - Format main error messages
-/// - [`report_formatter()`](Self::report_formatter) - Customize entire report layout
+/// - [`attachment_formatter()`](Self::attachment_formatter) - Format individual
+///   attached data
+/// - [`context_formatter()`](Self::context_formatter) - Format main error
+///   messages
+/// - [`report_formatter()`](Self::report_formatter) - Customize entire report
+///   layout
 ///
 /// # Examples
 ///
@@ -125,7 +132,8 @@ use self::{
 ///
 /// See also:
 /// - [`report_creation`] - Add data automatically when reports are created
-/// - [`attachment_formatter`] and [`context_formatter`] - Customize formatting of specific types
+/// - [`attachment_formatter`] and [`context_formatter`] - Customize formatting
+///   of specific types
 /// - [`report_formatter`] - Change the entire report layout
 #[derive(Debug)]
 pub struct Hooks(Box<HookData>);
@@ -165,11 +173,11 @@ impl Hooks {
     /// Creates a new `Hooks` builder with location tracking.
     ///
     /// This is equivalent to using rootcause without installing any hooks - you
-    /// get automatic location tracking. Use this as the base when you want to add
-    /// additional hooks while keeping location tracking.
+    /// get automatic location tracking. Use this as the base when you want to
+    /// add additional hooks while keeping location tracking.
     ///
-    /// See also [`new_without_locations`](Self::new_without_locations) to disable
-    /// automatic location tracking.
+    /// See also [`new_without_locations`](Self::new_without_locations) to
+    /// disable automatic location tracking.
     ///
     /// # Examples
     ///
@@ -203,8 +211,7 @@ impl Hooks {
     /// ```rust
     /// use rootcause::hooks::Hooks;
     ///
-    /// let hooks =
-    ///     Hooks::new_without_locations().attachment_collector(|| "custom data".to_string());
+    /// let hooks = Hooks::new_without_locations().attachment_collector(|| "custom data".to_string());
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```

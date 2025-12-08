@@ -4,12 +4,13 @@
 //! allowing you to attach metadata or modify reports without changing the code
 //! that creates the errors.
 //!
-//! **Note:** Hooks affect ALL errors globally. If you only need to attach data to
-//! a specific error, use `.attach()` directly instead of hooks.
+//! **Note:** Hooks affect ALL errors globally. If you only need to attach data
+//! to a specific error, use `.attach()` directly instead of hooks.
 //!
 //! # Hook Types (use in order of complexity)
 //!
 //! 1. **Closures** - Simplest: Just return a value to attach
+//!
 //!    ```rust
 //!    # use rootcause::hooks::Hooks;
 //!    Hooks::new().attachment_collector(|| "some data")
@@ -39,7 +40,9 @@
 //!     .install()
 //!     .expect("failed to install hooks");
 //!
-//! fn get_request_id() -> u64 { 42 }
+//! fn get_request_id() -> u64 {
+//!     42
+//! }
 //! ```
 //!
 //! ## Medium: Custom Attachment Collector
@@ -62,7 +65,10 @@
 //!
 //! fn get_system_load() -> SystemLoad {
 //!     // In real code, this would call an external crate like `sysinfo`
-//!     SystemLoad { cpu_percent: 45.2, memory_used_mb: 2048 }
+//!     SystemLoad {
+//!         cpu_percent: 45.2,
+//!         memory_used_mb: 2048,
+//!     }
 //! }
 //!
 //! struct SystemLoadCollector;
@@ -94,31 +100,35 @@
 //!     prelude::*,
 //! };
 //!
-//! // Hook that adds retry hints for I/O errors
+//! // Hook that adds retry hints only for retryable I/O errors
 //! struct RetryHintHook;
 //!
 //! impl ReportCreationHook for RetryHintHook {
 //!     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
-//!         // Check if this is an I/O error and add appropriate hint
+//!         // Only attach hint for I/O errors where retry might help
 //!         if let Some(io_err) = report.downcast_current_context::<std::io::Error>() {
-//!             let hint = match io_err.kind() {
+//!             if matches!(
+//!                 io_err.kind(),
 //!                 std::io::ErrorKind::TimedOut | std::io::ErrorKind::ConnectionRefused
-//!                     => "Retry may succeed",
-//!                 _ => "Retry unlikely to help",
-//!             };
-//!             report.attachments_mut().push(report_attachment!(hint).into());
+//!             ) {
+//!                 report
+//!                     .attachments_mut()
+//!                     .push(report_attachment!("Retry may succeed").into());
+//!             }
 //!         }
 //!     }
 //!
 //!     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
 //!         // Same logic for Send+Sync errors
 //!         if let Some(io_err) = report.downcast_current_context::<std::io::Error>() {
-//!             let hint = match io_err.kind() {
+//!             if matches!(
+//!                 io_err.kind(),
 //!                 std::io::ErrorKind::TimedOut | std::io::ErrorKind::ConnectionRefused
-//!                     => "Retry may succeed",
-//!                 _ => "Retry unlikely to help",
-//!             };
-//!             report.attachments_mut().push(report_attachment!(hint).into());
+//!             ) {
+//!                 report
+//!                     .attachments_mut()
+//!                     .push(report_attachment!("Retry may succeed").into());
+//!             }
 //!         }
 //!     }
 //! }
