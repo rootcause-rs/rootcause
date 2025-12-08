@@ -7,7 +7,7 @@
 //   attachments/contexts are displayed
 //
 // Two types of creation hooks:
-// - AttachmentCollectorHook: Simple - always collects and attaches data
+// - AttachmentCollector: Simple - always collects and attaches data
 // - ReportCreationHook: Advanced - conditional logic based on report state
 
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -22,7 +22,7 @@ use rootcause::{
     prelude::*,
 };
 
-// Example 1: AttachmentCollectorHook - automatic request tracking
+// Example 1: AttachmentCollector - automatic request tracking
 
 /// Global request ID counter for demonstration
 static REQUEST_COUNTER: AtomicU64 = AtomicU64::new(1);
@@ -150,7 +150,7 @@ fn file_operation(exists: bool) -> Result<(), Report> {
 }
 
 fn main() {
-    println!("Example 1: AttachmentCollectorHook - automatic request tracking\n");
+    println!("Example 1: AttachmentCollector - automatic request tracking\n");
 
     // Install the request ID collector hook
     Hooks::new()

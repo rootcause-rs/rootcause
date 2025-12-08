@@ -1,9 +1,9 @@
-//! Context formatting override system for customizing how error report contexts
+//! Context formatting hooks for customizing how error report contexts
 //! are displayed.
 //!
 //! This module provides a hook system that allows customization of how contexts
 //! (the main error types) are formatted in error reports. By installing hooks
-//! for specific context types, you can override the default Display and Debug
+//! for specific context types, you can customize the default Display and Debug
 //! formatting behavior to provide more detailed, context-aware, or
 //! domain-specific formatting.
 //!
@@ -82,7 +82,7 @@ impl core::fmt::Debug for HookMap {
 }
 
 impl HookMap {
-    /// Retrieves the formatting override hook for the specified attachment
+    /// Retrieves the formatter hook for the specified context
     /// type.
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
@@ -205,7 +205,7 @@ where
     }
 }
 
-/// Trait for untyped context formatting overrides.
+/// Trait for untyped context formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
 pub(crate) trait UntypedContextFormatterHook:
@@ -261,7 +261,7 @@ pub(crate) trait UntypedContextFormatterHook:
 /// Trait for customizing how contexts of a specific type are formatted in error
 /// reports.
 ///
-/// This trait allows you to override the default formatting behavior for
+/// This trait allows you to customize the default formatting behavior for
 /// contexts (the main error types) of type `C`. You can customize both Display
 /// and Debug formatting, handle preformatted contexts, and specify preferred
 /// formatting styles.
@@ -273,7 +273,7 @@ pub(crate) trait UntypedContextFormatterHook:
 /// # Default Implementations
 ///
 /// All methods have default implementations that delegate to the unhooked
-/// formatting, so you only need to override the methods for the formatting you
+/// formatting, so you only need to implement the methods for the formatting you
 /// want to customize.
 ///
 /// # Examples

@@ -21,9 +21,9 @@
 //! - **[`report_creation`]**: Automatically add data to every report as it's
 //!   created (e.g., request IDs, correlation IDs, environment variables)
 //!
-//! - **[`formatting_overrides`]**: Control how specific types appear in error
-//!   messages (e.g., redact passwords, format timestamps, control attachment
-//!   placement)
+//! - **[`attachment_formatter`]** and **[`context_formatter`]**: Control how
+//!   specific types appear in error messages (e.g., redact passwords, format
+//!   timestamps, control attachment placement)
 //!
 //! - **[`report_formatting`]**: Change the entire report layout and structure
 //!   (e.g., JSON output for logging, compact format, custom colors)
@@ -81,7 +81,7 @@ use self::{
 ///
 /// See also the individual hook modules for more details:
 /// - [`report_creation`] - Add data automatically when reports are created
-/// - [`formatting_overrides`] - Customize formatting of specific types
+/// - [`attachment_formatter`] and [`context_formatter`] - Customize formatting of specific types
 /// - [`report_formatting`] - Change the entire report layout
 #[derive(Debug)]
 pub struct Hooks(Box<HookData>);
@@ -241,7 +241,7 @@ impl Hooks {
         self
     }
 
-    /// Registers a override for a specific attachment type.
+    /// Registers a formatter for a specific attachment type.
     ///
     /// This controls how attachments of type `A` are displayed in error
     /// reports, including their placement, priority, and formatting.
@@ -285,7 +285,7 @@ impl Hooks {
         self
     }
 
-    /// Registers a override for a specific context (error) type.
+    /// Registers a formatter for a specific context (error) type.
     ///
     /// This controls how contexts of type `C` are displayed when they appear
     /// as the main error in a report.

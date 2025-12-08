@@ -1,9 +1,9 @@
-//! Attachment formatting override system for customizing how error report
+//! Attachment formatting hooks for customizing how error report
 //! attachments are displayed.
 //!
 //! This module provides a hook system that allows customization of how
 //! attachments are formatted in error reports. By installing hooks for
-//! specific attachment types, you can override the default Display and Debug
+//! specific attachment types, you can customize the default Display and Debug
 //! formatting behavior to provide more context-aware or specialized formatting.
 //!
 //! # Key Components
@@ -69,7 +69,7 @@
 //!
 //! # Example: Hiding Attachments
 //!
-//! You can also use formatting overrides to conditionally hide attachments by
+//! You can also use formatter hooks to conditionally hide attachments by
 //! setting their placement to `Hidden`:
 //!
 //! ```rust
@@ -135,7 +135,7 @@ impl core::fmt::Debug for HookMap {
 }
 
 impl HookMap {
-    /// Retrieves the formatting override hook for the specified attachment
+    /// Retrieves the formatter hook for the specified attachment
     /// type.
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
@@ -235,7 +235,7 @@ pub struct AttachmentParent<'a> {
     pub attachment_index: usize,
 }
 
-/// Trait for untyped attachment formatting overrides.
+/// Trait for untyped attachment formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<A, H>`].
 pub(crate) trait UntypedAttachmentFormatterHook:
@@ -295,7 +295,7 @@ pub(crate) trait UntypedAttachmentFormatterHook:
 /// Trait for customizing how attachments of a specific type are formatted in
 /// error reports.
 ///
-/// This trait allows you to override the default formatting behavior for
+/// This trait allows you to customize the default formatting behavior for
 /// attachments of type `A`. You can customize both Display and Debug
 /// formatting, as well as handle preformatted attachments and specify preferred
 /// formatting styles.
@@ -307,7 +307,7 @@ pub(crate) trait UntypedAttachmentFormatterHook:
 /// # Default Implementations
 ///
 /// All methods have default implementations that delegate to the unhooked
-/// formatting, so you only need to override the methods for the formatting you
+/// formatting, so you only need to implement the methods for the formatting you
 /// want to customize.
 ///
 /// # Examples

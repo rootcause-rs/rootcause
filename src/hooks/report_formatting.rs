@@ -152,7 +152,7 @@ pub trait ReportFormatter: 'static + Send + Sync + fmt::Debug {
     ///
     /// This method provides a default implementation that calls
     /// [`format_reports`](ReportFormatter::format_reports) with a
-    /// single-element slice. You typically don't need to override this
+    /// single-element slice. You typically don't need to implement this
     /// unless you want different behavior for single reports vs. report
     /// collections.
     fn format_report(
