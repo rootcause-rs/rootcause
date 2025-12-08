@@ -68,7 +68,6 @@ pub mod report_formatter;
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::{
-    marker::PhantomData,
     ptr::NonNull,
     sync::atomic::{AtomicPtr, Ordering},
 };
@@ -137,6 +136,12 @@ use self::{
 /// - [`report_formatter`] - Change the entire report layout
 #[derive(Debug)]
 pub struct Hooks(Box<HookData>);
+
+impl Default for Hooks {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 #[derive(Debug)]
 pub(crate) struct HookData {
@@ -432,16 +437,26 @@ impl Hooks {
     /// ```
     pub fn install(self) -> Result<(), HooksAlreadyInstalledError> {
         let boxed = Box::into_raw(self.0);
-        match HOOKS.compare_exchange(
-            core::ptr::null_mut(),
-            boxed,
-            Ordering::Release,
-            Ordering::Relaxed,
-        ) {
-            Ok(_) => Ok(()),
-            Err(_) => {
-                // Restore ownership to avoid leak
+
+        // SAFETY:
+        //
+        // 1. The pointer `boxed` is valid and was obtained from
+        //    `Box::into_raw`.
+        // 2. On success, the pointer will not be used anymore.
+        // 3. On failure, the pointer remains owned by us.
+        let install_result = unsafe { HOOKS.install(boxed) };
+
+        match install_result {
+            Ok(()) => Ok(()),
+            Err(()) => {
+                // SAFETY:
+                //
+                // - This pointer was obtained from Box::into_raw above, so it is
+                //   valid to convert it back into a Box.
+                // - Since installation failed, we own the pointer, so
+                //   it's safe to convert it back into a Box here.
                 let hooks = unsafe { Box::from_raw(boxed) };
+
                 Err(HooksAlreadyInstalledError(Hooks(hooks)))
             }
         }
@@ -482,12 +497,8 @@ impl Hooks {
     /// This is useful for installing the hooks later using
     /// [`LeakedHooks::replace`].
     pub fn leak(self) -> LeakedHooks {
-        let ptr = Box::into_raw(self.0);
-        let ptr = unsafe { NonNull::new_unchecked(ptr) };
-        LeakedHooks {
-            hook_data: ptr,
-            _marker: PhantomData,
-        }
+        let hook_data = Box::leak(self.0);
+        LeakedHooks { hook_data }
     }
 }
 
@@ -496,28 +507,16 @@ impl Hooks {
 /// This allows you to replace hooks multiple times without having to create
 /// new hooks each time. The hooks remain in memory for the lifetime of the
 /// program.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct LeakedHooks {
-    hook_data: NonNull<HookData>,
-    _marker: PhantomData<&'static HookData>,
-}
-
-impl core::fmt::Debug for LeakedHooks {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.debug_struct("LeakedHooks")
-            .field("hook_data", self.hook_data())
-            .finish()
-    }
+    hook_data: &'static HookData,
 }
 
 impl LeakedHooks {
     /// Fetches the currently installed hooks, if any.
     pub fn fetch_current_hooks() -> Option<Self> {
-        let current = HOOKS.load(Ordering::Acquire);
-        let current = NonNull::new(current)?;
-        Some(LeakedHooks {
-            hook_data: current,
-            _marker: PhantomData,
+        Some(Self {
+            hook_data: HOOKS.fetch()?,
         })
     }
 
@@ -525,23 +524,95 @@ impl LeakedHooks {
     ///
     /// Returns the previously installed hooks, if any.
     pub fn replace(self) -> Option<LeakedHooks> {
-        let previous = HOOKS.swap(self.hook_data.as_ptr(), Ordering::AcqRel);
-        let previous = NonNull::new(previous)?;
-        Some(LeakedHooks {
-            hook_data: previous,
-            _marker: PhantomData,
+        Some(Self {
+            hook_data: HOOKS.replace(self.hook_data)?,
         })
-    }
-
-    fn hook_data(self) -> &'static HookData {
-        unsafe { self.hook_data.as_ref() }
     }
 }
 
-static HOOKS: AtomicPtr<HookData> = AtomicPtr::new(core::ptr::null_mut());
+struct GlobalHooks {
+    /// # Safety
+    ///
+    /// 1. This pointer will either be null, or point to a valid HookData that
+    ///    has been leaked and will remain valid for the lifetime of the program.
+    /// 2. All writing to this pointer is done using release semantics.
+    /// 3. All reading from this pointer is done using acquire semantics when
+    ///    the pointer will be dereferenced and with relaxed semantics otherwise.
+    ptr: AtomicPtr<HookData>,
+}
+
+impl GlobalHooks {
+    const fn new() -> Self {
+        Self {
+            ptr: AtomicPtr::new(core::ptr::null_mut()),
+        }
+    }
+
+    /// Fetches the currently installed hooks, if any.
+    fn fetch(&self) -> Option<&'static HookData> {
+        let ptr = self.ptr.load(Ordering::Acquire);
+        let ptr = NonNull::new(ptr)?;
+
+        // SAFETY:
+        // - The invariants on our type guarantees that the pointer
+        //   is either null, or points to valid HookData that has been
+        //   leaked and will remain for the lifetime of the program.
+        //   We have already checked for null above.
+        let reference = unsafe { ptr.as_ref() };
+
+        Some(reference)
+    }
+
+    /// Installs new hooks, returning an error if hooks are already installed.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The `new` pointer is valid and points to a `Box<HookData>` that
+    ///    has been turned into a raw pointer using `Box::into_raw`.
+    /// 2. On success the function claims ownership of the `new` pointer,
+    ///    and it cannot be used by the caller anymore.
+    /// 3. On failure, the `new` pointer remains owned by the caller and
+    ///    it is their responsibility to manage its memory.
+    unsafe fn install(&self, new: *mut HookData) -> Result<(), ()> {
+        match self.ptr.compare_exchange(
+            core::ptr::null_mut(),
+            new,
+            Ordering::Release,
+            Ordering::Relaxed,
+        ) {
+            Ok(_) => Ok(()),
+            Err(_) => Err(()),
+        }
+    }
+
+    /// Replaces the currently installed hooks with `new`.
+    ///
+    /// The `new` pointer's ownership is claimed by this function.
+    ///
+    /// Returns the previously installed hooks, if any.
+    fn replace(&self, new: &'static HookData) -> Option<&'static HookData> {
+        let previous = self
+            .ptr
+            .swap(core::ptr::from_ref(new).cast_mut(), Ordering::AcqRel);
+        let previous = NonNull::new(previous)?;
+
+        // SAFETY:
+        // - The invariants on our type guarantees that the pointer
+        //   is either null, or points to valid HookData that has been
+        //   leaked and will remain for the lifetime of the program.
+        //   We have already checked for null above.
+        let previous = unsafe { previous.as_ref() };
+
+        Some(previous)
+    }
+}
+
+static HOOKS: GlobalHooks = GlobalHooks::new();
 
 impl HookData {
     pub(crate) fn fetch() -> Option<&'static HookData> {
-        Some(LeakedHooks::fetch_current_hooks()?.hook_data())
+        HOOKS.fetch()
     }
 }
