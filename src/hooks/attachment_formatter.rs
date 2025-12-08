@@ -3,7 +3,7 @@
 //!
 //! This module provides a hook system that allows customization of how
 //! attachments are formatted in error reports. By installing hooks for
-//! specific attachment types, you can customize the default Display and Debug
+//! specific attachment types, you can override the default Display and Debug
 //! formatting behavior to provide more context-aware or specialized formatting.
 //!
 //! # Key Components
@@ -295,7 +295,7 @@ pub(crate) trait UntypedAttachmentFormatterHook:
 /// Trait for customizing how attachments of a specific type are formatted in
 /// error reports.
 ///
-/// This trait allows you to customize the default formatting behavior for
+/// This trait allows you to override the default formatting behavior for
 /// attachments of type `A`. You can customize both Display and Debug
 /// formatting, as well as handle preformatted attachments and specify preferred
 /// formatting styles.

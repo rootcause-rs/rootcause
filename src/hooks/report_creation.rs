@@ -1,23 +1,23 @@
 //! Report creation hooks for automatic report modification.
 //!
-//! This module provides a system for hooks that are automatically executed when
-//! reports are created. These hooks can add additional context or attachments
-//! to reports automatically, without requiring manual intervention from the
-//! code creating the report.
+//! This module provides hooks that run automatically when errors are created,
+//! allowing you to attach metadata or modify reports without changing the code
+//! that creates the errors.
 //!
-//! # Hook Types
+//! # Hook Types (use in order of complexity)
 //!
-//! There are two main types of hooks:
+//! 1. **Closures** - Simplest: Just return a value to attach
+//!    ```rust,ignore
+//!    Hooks::new().attachment_collector(|| "some data".to_string())
+//!    ```
 //!
-//! 1. [`ReportCreationHook`]: General hooks that get access to the entire
-//!    report during creation and can perform arbitrary operations.
+//! 2. **[`AttachmentCollector`]** - Simple: Collect and attach specific data
+//!    automatically to every error. Use when you always want to attach the same
+//!    type of information.
 //!
-//! 2. [`AttachmentCollector`]: Specialized hooks that collect specific types of
-//!    data and automatically attach them to reports.
-//!
-//! Internally the attachment collector hooks are converted to report creation
-//! hooks and registered using the same system. They exist to provide a simpler
-//! API for the common use case of adding attachments.
+//! 3. **[`ReportCreationHook`]** - Advanced: Full access to the report for
+//!    conditional logic. Use when you need to inspect the error type or context
+//!    before deciding what to attach.
 //!
 //! # Examples
 //!

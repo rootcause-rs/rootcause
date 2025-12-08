@@ -3,7 +3,7 @@
 //!
 //! This module provides a hook system that allows customization of how contexts
 //! (the main error types) are formatted in error reports. By installing hooks
-//! for specific context types, you can customize the default Display and Debug
+//! for specific context types, you can override the default Display and Debug
 //! formatting behavior to provide more detailed, context-aware, or
 //! domain-specific formatting.
 //!
@@ -261,7 +261,7 @@ pub(crate) trait UntypedContextFormatterHook:
 /// Trait for customizing how contexts of a specific type are formatted in error
 /// reports.
 ///
-/// This trait allows you to customize the default formatting behavior for
+/// This trait allows you to override the default formatting behavior for
 /// contexts (the main error types) of type `C`. You can customize both Display
 /// and Debug formatting, handle preformatted contexts, and specify preferred
 /// formatting styles.

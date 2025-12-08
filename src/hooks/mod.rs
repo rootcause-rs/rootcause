@@ -1,5 +1,19 @@
 //! Hooks system for customizing report creation and formatting behavior.
 //!
+//! # Quick Start
+//!
+//! ```rust
+//! use rootcause::hooks::Hooks;
+//!
+//! // Automatically attach request IDs to all errors
+//! Hooks::new()
+//!     .attachment_collector(|| format!("Request: {}", get_request_id()))
+//!     .install()
+//!     .expect("failed to install hooks");
+//!
+//! fn get_request_id() -> u64 { 42 } // Your implementation here
+//! ```
+//!
 //! # When to Use Hooks
 //!
 //! **Most users don't need hooks** - the defaults work well. Use hooks when you
@@ -64,22 +78,41 @@ use self::{
 /// Builder for configuring and installing hooks globally.
 ///
 /// Hooks allow you to customize how reports are created and formatted across
-/// your entire application. Unlike the older `register_*` functions, `Hooks`
-/// uses a builder pattern without locks for better performance and flexibility.
+/// your entire application. The builder pattern lets you chain multiple hook
+/// configurations together before installing them globally.
+///
+/// # Hook Types (from simple to advanced)
+///
+/// 1. **Attachment Collectors** - Automatically attach data to all errors
+/// 2. **Report Creation Hooks** - Conditional logic during error creation
+/// 3. **Formatter Hooks** - Control how types are displayed
+/// 4. **Report Formatters** - Customize entire report layout
 ///
 /// # Examples
 ///
+/// Simple attachment collection:
 /// ```rust
-/// use rootcause::{hooks::Hooks, prelude::*};
+/// use rootcause::hooks::Hooks;
 ///
-/// // Create a new Hooks builder with default hooks
-/// let hooks = Hooks::new().attachment_collector(|| "Custom data".to_string());
-///
-/// // Install globally (can only be done once)
-/// hooks.install().expect("hooks already installed");
+/// // Automatically attach process ID to all errors
+/// Hooks::new()
+///     .attachment_collector(|| std::process::id())
+///     .install()
+///     .expect("failed to install hooks");
 /// ```
 ///
-/// See also the individual hook modules for more details:
+/// Combining multiple hooks:
+/// ```rust
+/// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
+///
+/// Hooks::new()
+///     .attachment_collector(|| "production".to_string())
+///     .report_formatter(DefaultReportFormatter::ASCII)
+///     .install()
+///     .expect("failed to install hooks");
+/// ```
+///
+/// See also:
 /// - [`report_creation`] - Add data automatically when reports are created
 /// - [`attachment_formatter`] and [`context_formatter`] - Customize formatting of specific types
 /// - [`report_formatting`] - Change the entire report layout

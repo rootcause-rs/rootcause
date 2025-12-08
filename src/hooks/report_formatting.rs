@@ -1,7 +1,13 @@
 //! Report formatting hooks for customizing the overall appearance of reports.
 //!
-//! This module provides hooks that allow you to completely customize how entire
-//! reports are formatted, including their structure, colors, and layout.
+//! This module lets you control the entire visual presentation of error reports:
+//! structure, colors, layout, and formatting of all components.
+//!
+//! Use this when you need:
+//! - Different output formats (JSON, plain text, HTML)
+//! - ASCII-only output for compatibility
+//! - Custom color schemes
+//! - Integration with logging systems
 //!
 //! # Built-in Formatters
 //!
