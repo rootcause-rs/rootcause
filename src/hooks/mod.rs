@@ -436,7 +436,7 @@ impl Hooks {
     /// Hooks::new().install().unwrap_err();
     /// ```
     pub fn install(self) -> Result<(), HooksAlreadyInstalledError> {
-        let boxed = Box::into_raw(self.0);
+        let boxed = Box::leak(self.0) as *mut HookData;
 
         // SAFETY:
         //
@@ -450,7 +450,7 @@ impl Hooks {
             Err(()) => {
                 // SAFETY:
                 //
-                // - This pointer was obtained from Box::into_raw above, so it is valid to
+                // - This pointer was obtained from Box::leak above, so it is valid to
                 //   convert it back into a Box.
                 // - Since installation failed, we own the pointer, so it's safe to convert it
                 //   back into a Box here.
@@ -485,6 +485,7 @@ impl Hooks {
     ///
     /// // Replace with different hooks
     /// let hooks2 = Hooks::new().attachment_collector(|| "second".to_string());
+    /// # #[cfg(not(miri))] // Miri doesn't like leaking memory
     /// let _previous = hooks2.replace();
     /// ```
     pub fn replace(self) -> Option<LeakedHooks> {
@@ -570,7 +571,7 @@ impl GlobalHooks {
     /// The caller must ensure:
     ///
     /// 1. The `new` pointer is valid and points to a `Box<HookData>` that has
-    ///    been turned into a raw pointer using `Box::into_raw`.
+    ///    been turned into a raw pointer using `Box::leak(b) as *mut HookData`.
     /// 2. On success the function claims ownership of the `new` pointer, and it
     ///    cannot be used by the caller anymore.
     /// 3. On failure, the `new` pointer remains owned by the caller and it is
