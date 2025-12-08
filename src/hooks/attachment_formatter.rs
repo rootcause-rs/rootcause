@@ -195,8 +195,8 @@ impl HookMap {
     ///
     /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
     /// where `TypeId::of::<A>() == type_id`.
-    fn get(&self, type_id: TypeId) -> Option<&Box<dyn StoredHook>> {
-        self.map.get(&type_id)
+    fn get(&self, type_id: TypeId) -> Option<&dyn StoredHook> {
+        Some(&**self.map.get(&type_id)?)
     }
 
     pub(crate) fn insert<A, H>(&mut self, hook: H)
