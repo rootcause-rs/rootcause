@@ -88,12 +88,16 @@ use self::{
 /// your entire application. The builder pattern lets you chain multiple hook
 /// configurations together before installing them globally.
 ///
-/// # Hook Types (from simple to advanced)
+/// # Hook Types
 ///
-/// 1. **Attachment Collectors** - Automatically attach data to all errors
-/// 2. **Report Creation Hooks** - Conditional logic during error creation
-/// 3. **Formatter Hooks** - Control how types are displayed
-/// 4. **Report Formatters** - Customize entire report layout
+/// **Creation Hooks** (add data to errors):
+/// - [`attachment_collector()`](Self::attachment_collector) - Automatically attach data to all errors
+/// - [`report_creation_hook()`](Self::report_creation_hook) - Conditional logic during error creation
+///
+/// **Formatting Hooks** (control how things are displayed):
+/// - [`attachment_formatter()`](Self::attachment_formatter) - Format individual attached data
+/// - [`context_formatter()`](Self::context_formatter) - Format main error messages
+/// - [`report_formatter()`](Self::report_formatter) - Customize entire report layout
 ///
 /// # Examples
 ///

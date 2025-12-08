@@ -7,6 +7,11 @@
 //! - Control where data appears (inline vs appendix)
 //! - Set priority (which attachments show first)
 //!
+//! **Note:** Hooks format a type globally across ALL errors. To control formatting
+//! for a single attachment, use [`attach_custom()`] with a handler instead.
+//!
+//! [`attach_custom()`]: crate::Report::attach_custom
+//!
 //! By installing hooks for specific types, you can customize the default Display
 //! and Debug formatting behavior.
 //!

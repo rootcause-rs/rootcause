@@ -12,6 +12,12 @@
 //! By installing hooks for specific error types, you can customize how they
 //! appear in reports without changing the error type itself.
 //!
+//! > **Note:** Hooks format a type globally across ALL errors. To control
+//! > formatting for a single context, use [`context_custom()`] with a handler
+//! > instead (see `examples/custom_handler.rs`).
+//!
+//! [`context_custom()`]: crate::Report::context_custom
+//!
 //! # Key Components
 //!
 //! - [`ContextFormatterHook`] - Trait for implementing custom context

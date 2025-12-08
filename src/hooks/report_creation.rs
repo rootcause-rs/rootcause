@@ -4,6 +4,9 @@
 //! allowing you to attach metadata or modify reports without changing the code
 //! that creates the errors.
 //!
+//! **Note:** Hooks affect ALL errors globally. If you only need to attach data to
+//! a specific error, use `.attach()` directly instead of hooks.
+//!
 //! # Hook Types (use in order of complexity)
 //!
 //! 1. **Closures** - Simplest: Just return a value to attach
@@ -41,7 +44,8 @@
 //!
 //! ## Medium: Custom Attachment Collector
 //!
-//! When you need more control over formatting, implement [`AttachmentCollector`]:
+//! When you need to attach structured data or use a custom handler, implement
+//! [`AttachmentCollector`]:
 //!
 //! ```rust
 //! use rootcause::{
@@ -49,19 +53,30 @@
 //!     prelude::*,
 //! };
 //!
-//! // Custom collector that adds environment information
-//! struct EnvironmentCollector;
+//! // Simulates data from an external system monitoring crate
+//! #[derive(Debug)]
+//! struct SystemLoad {
+//!     cpu_percent: f32,
+//!     memory_used_mb: u64,
+//! }
 //!
-//! impl AttachmentCollector<String> for EnvironmentCollector {
-//!     type Handler = handlers::Display;
+//! fn get_system_load() -> SystemLoad {
+//!     // In real code, this would call an external crate like `sysinfo`
+//!     SystemLoad { cpu_percent: 45.2, memory_used_mb: 2048 }
+//! }
 //!
-//!     fn collect(&self) -> String {
-//!         format!("Environment: {}", std::env::var("APP_ENV").unwrap_or_else(|_| "development".to_string()))
+//! struct SystemLoadCollector;
+//!
+//! impl AttachmentCollector<SystemLoad> for SystemLoadCollector {
+//!     type Handler = handlers::Debug;
+//!
+//!     fn collect(&self) -> SystemLoad {
+//!         get_system_load()
 //!     }
 //! }
 //!
 //! Hooks::new()
-//!     .attachment_collector(EnvironmentCollector)
+//!     .attachment_collector(SystemLoadCollector)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
