@@ -1,13 +1,17 @@
-//! Report formatting hooks for customizing the overall appearance of reports.
+//! Report formatting hooks for customizing the overall report structure.
 //!
-//! This module lets you control the entire visual presentation of error reports:
-//! structure, colors, layout, and formatting of all components.
+//! Unlike [`attachment_formatter`] and [`context_formatter`] which control
+//! individual pieces, this module controls the **entire report layout**:
+//! how errors are arranged, what sections appear, colors, borders, etc.
 //!
 //! Use this when you need:
 //! - Different output formats (JSON, plain text, HTML)
 //! - ASCII-only output for compatibility
-//! - Custom color schemes
+//! - Custom color schemes or visual styling
 //! - Integration with logging systems
+//!
+//! [`attachment_formatter`]: crate::hooks::attachment_formatter
+//! [`context_formatter`]: crate::hooks::context_formatter
 //!
 //! # Built-in Formatters
 //!
@@ -95,7 +99,7 @@ use crate::{
 ///
 /// use rootcause::{
 ///     ReportRef,
-///     hooks::{Hooks, report_formatting::ReportFormatter},
+///     hooks::{Hooks, report_formatter::ReportFormatter},
 ///     markers::{Dynamic, Local, Uncloneable},
 ///     prelude::*,
 /// };

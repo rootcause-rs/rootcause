@@ -30,7 +30,7 @@
 //! installing it via [`Hooks::report_formatter`].
 //!
 //! [`DefaultReportFormatter`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter
-//! [`ReportFormatter`]: crate::hooks::report_formatting::ReportFormatter
+//! [`ReportFormatter`]: crate::hooks::report_formatter::ReportFormatter
 //! [`Hooks::report_formatter`]: crate::hooks::Hooks::report_formatter
 
 #[cfg(feature = "backtrace")]

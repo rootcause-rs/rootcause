@@ -791,7 +791,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     #[must_use]
     pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
     where
-        H: crate::hooks::report_formatting::ReportFormatter,
+        H: crate::hooks::report_formatter::ReportFormatter,
     {
         self.as_ref().format_with_hook(hook)
     }

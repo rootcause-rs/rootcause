@@ -544,7 +544,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     #[must_use]
     pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
     where
-        H: crate::hooks::report_formatting::ReportFormatter,
+        H: crate::hooks::report_formatter::ReportFormatter,
     {
         let raw = self.as_raw();
 
@@ -908,7 +908,7 @@ impl<C: ?Sized, T> core::fmt::Display for ReportCollection<C, T> {
             ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
-        crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Display)
+        crate::hooks::report_formatter::format_reports(slice, f, FormattingFunction::Display)
     }
 }
 
@@ -930,7 +930,7 @@ impl<C: ?Sized, T> core::fmt::Debug for ReportCollection<C, T> {
             ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
-        crate::hooks::report_formatting::format_reports(slice, f, FormattingFunction::Debug)
+        crate::hooks::report_formatter::format_reports(slice, f, FormattingFunction::Debug)
     }
 }
 

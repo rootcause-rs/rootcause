@@ -110,8 +110,6 @@ use core::fmt;
 
 use rootcause_internals::handlers::AttachmentHandler;
 
-#[cfg(feature = "backtrace")]
-use crate::hooks::builtin_hooks::backtrace::BacktraceCollector;
 use crate::{
     ReportMut, handlers,
     hooks::{

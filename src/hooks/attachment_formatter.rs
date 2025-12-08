@@ -1,10 +1,14 @@
-//! Attachment formatting hooks for customizing how error report
-//! attachments are displayed.
+//! Attachment formatting hooks for customizing how attached data is displayed.
 //!
-//! This module provides a hook system that allows customization of how
-//! attachments are formatted in error reports. By installing hooks for
-//! specific attachment types, you can override the default Display and Debug
-//! formatting behavior to provide more context-aware or specialized formatting.
+//! This module lets you control how individual pieces of attached data appear in
+//! error reports. Use this to:
+//! - Hide sensitive data (passwords, API keys)
+//! - Format data nicely (timestamps, file sizes)
+//! - Control where data appears (inline vs appendix)
+//! - Set priority (which attachments show first)
+//!
+//! By installing hooks for specific types, you can customize the default Display
+//! and Debug formatting behavior.
 //!
 //! # Key Components
 //!

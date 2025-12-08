@@ -1,11 +1,16 @@
-//! Context formatting hooks for customizing how error report contexts
-//! are displayed.
+//! Context formatting hooks for customizing how error messages are displayed.
 //!
-//! This module provides a hook system that allows customization of how contexts
-//! (the main error types) are formatted in error reports. By installing hooks
-//! for specific context types, you can override the default Display and Debug
-//! formatting behavior to provide more detailed, context-aware, or
-//! domain-specific formatting.
+//! **Context** = the main error type (like `io::Error`, `ParseError`, etc.).
+//! This is the primary error message, not the attached data.
+//!
+//! Use this module to control how your error types appear when displayed:
+//! - Custom error descriptions
+//! - Structured formatting for complex errors
+//! - Domain-specific error messages
+//! - Different formats for Display vs Debug
+//!
+//! By installing hooks for specific error types, you can customize how they
+//! appear in reports without changing the error type itself.
 //!
 //! # Key Components
 //!

@@ -30,20 +30,28 @@
 //!
 //! [`examples/custom_handler.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/custom_handler.rs
 //!
-//! # Modules
+//! # Hook Types
 //!
-//! - **[`report_creation`]**: Automatically add data to every report as it's
-//!   created (e.g., request IDs, correlation IDs, environment variables)
+//! ## Creation Hooks (add data to errors)
 //!
-//! - **[`attachment_formatter`]** and **[`context_formatter`]**: Control how
-//!   specific types appear in error messages (e.g., redact passwords, format
-//!   timestamps, control attachment placement)
+//! - **[`report_creation`]**: Automatically attach data when errors are created
+//!   (e.g., request IDs, timestamps, environment info)
 //!
-//! - **[`report_formatting`]**: Change the entire report layout and structure
-//!   (e.g., JSON output for logging, compact format, custom colors)
+//! ## Formatting Hooks (control how things are displayed)
 //!
-//! - **[`builtin_hooks`]**: Default hooks that are automatically registered
-//!   (location collectors, backtrace collectors, and the default formatter)
+//! - **[`attachment_formatter`]**: Format individual pieces of attached data
+//!   (e.g., hide passwords, format timestamps, control where data appears)
+//!
+//! - **[`context_formatter`]**: Format the main error message itself
+//!   (e.g., custom error descriptions, add context, structured output)
+//!
+//! - **[`report_formatter`]**: Format the entire report structure and layout
+//!   (e.g., ASCII vs Unicode, colors, JSON output, custom layouts)
+//!
+//! ## Built-in Hooks
+//!
+//! - **[`builtin_hooks`]**: Default hooks automatically included
+//!   (location tracking, backtrace collection, default formatter)
 //!
 //! See [`examples/report_creation_hook.rs`] and
 //! [`examples/formatting_hooks.rs`] for complete examples.
@@ -55,7 +63,7 @@ pub mod attachment_formatter;
 pub mod builtin_hooks;
 pub mod context_formatter;
 pub mod report_creation;
-pub mod report_formatting;
+pub mod report_formatter;
 
 use alloc::{boxed::Box, vec, vec::Vec};
 use core::{
@@ -72,7 +80,7 @@ use self::{
         AttachmentCollector, ReportCreationHook, UntypedReportCreationHook,
         attachment_hook_to_untyped, creation_hook_to_untyped,
     },
-    report_formatting::ReportFormatter,
+    report_formatter::ReportFormatter,
 };
 
 /// Builder for configuring and installing hooks globally.
@@ -96,7 +104,7 @@ use self::{
 ///
 /// // Automatically attach process ID to all errors
 /// Hooks::new()
-///     .attachment_collector(|| std::process::id())
+///     .attachment_collector(|| format!("Process id: {}", std::process::id()))
 ///     .install()
 ///     .expect("failed to install hooks");
 /// ```
@@ -106,7 +114,7 @@ use self::{
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
-///     .attachment_collector(|| "production".to_string())
+///     .attachment_collector(|| "Running on production".to_string())
 ///     .report_formatter(DefaultReportFormatter::ASCII)
 ///     .install()
 ///     .expect("failed to install hooks");
@@ -115,7 +123,7 @@ use self::{
 /// See also:
 /// - [`report_creation`] - Add data automatically when reports are created
 /// - [`attachment_formatter`] and [`context_formatter`] - Customize formatting of specific types
-/// - [`report_formatting`] - Change the entire report layout
+/// - [`report_formatter`] - Change the entire report layout
 #[derive(Debug)]
 pub struct Hooks(Box<HookData>);
 

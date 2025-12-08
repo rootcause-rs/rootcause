@@ -64,7 +64,7 @@ use rootcause_internals::handlers::{
 
 use crate::{
     ReportRef,
-    hooks::report_formatting::ReportFormatter,
+    hooks::report_formatter::ReportFormatter,
     markers::{Dynamic, Local, Uncloneable},
     report_attachment::ReportAttachmentRef,
 };

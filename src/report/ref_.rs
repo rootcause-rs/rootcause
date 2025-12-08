@@ -714,7 +714,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with_hook<H: crate::hooks::report_formatting::ReportFormatter>(
+    pub fn format_with_hook<H: crate::hooks::report_formatter::ReportFormatter>(
         self,
         hook: &H,
     ) -> impl core::fmt::Display + core::fmt::Debug {
@@ -999,14 +999,14 @@ impl<'a, C: ?Sized, T> From<ReportRef<'a, C, Cloneable, T>> for Report<C, Clonea
 impl<'a, C: ?Sized, O, T> core::fmt::Display for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
-        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Display)
+        crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Display)
     }
 }
 
 impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
-        crate::hooks::report_formatting::format_report(report, f, FormattingFunction::Debug)
+        crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Debug)
     }
 }
 
