@@ -103,7 +103,9 @@
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
 //!             // Put logs in appendix to reduce noise in main error
-//!             placement: AttachmentFormattingPlacement::Appendix,
+//!             placement: AttachmentFormattingPlacement::Appendix {
+//!                 appendix_name: "Log Entries",
+//!             },
 //!             function: FormattingFunction::Display,
 //!             priority: 10, // Lower priority than important data
 //!         }

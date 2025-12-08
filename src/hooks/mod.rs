@@ -440,8 +440,7 @@ impl Hooks {
 
         // SAFETY:
         //
-        // 1. The pointer `boxed` is valid and was obtained from
-        //    `Box::into_raw`.
+        // 1. The pointer `boxed` is valid and was obtained from `Box::into_raw`.
         // 2. On success, the pointer will not be used anymore.
         // 3. On failure, the pointer remains owned by us.
         let install_result = unsafe { HOOKS.install(boxed) };
@@ -451,10 +450,10 @@ impl Hooks {
             Err(()) => {
                 // SAFETY:
                 //
-                // - This pointer was obtained from Box::into_raw above, so it is
-                //   valid to convert it back into a Box.
-                // - Since installation failed, we own the pointer, so
-                //   it's safe to convert it back into a Box here.
+                // - This pointer was obtained from Box::into_raw above, so it is valid to
+                //   convert it back into a Box.
+                // - Since installation failed, we own the pointer, so it's safe to convert it
+                //   back into a Box here.
                 let hooks = unsafe { Box::from_raw(boxed) };
 
                 Err(HooksAlreadyInstalledError(Hooks(hooks)))
@@ -534,10 +533,12 @@ struct GlobalHooks {
     /// # Safety
     ///
     /// 1. This pointer will either be null, or point to a valid HookData that
-    ///    has been leaked and will remain valid for the lifetime of the program.
+    ///    has been leaked and will remain valid for the lifetime of the
+    ///    program.
     /// 2. All writing to this pointer is done using release semantics.
     /// 3. All reading from this pointer is done using acquire semantics when
-    ///    the pointer will be dereferenced and with relaxed semantics otherwise.
+    ///    the pointer will be dereferenced and with relaxed semantics
+    ///    otherwise.
     ptr: AtomicPtr<HookData>,
 }
 
@@ -554,10 +555,9 @@ impl GlobalHooks {
         let ptr = NonNull::new(ptr)?;
 
         // SAFETY:
-        // - The invariants on our type guarantees that the pointer
-        //   is either null, or points to valid HookData that has been
-        //   leaked and will remain for the lifetime of the program.
-        //   We have already checked for null above.
+        // - The invariants on our type guarantees that the pointer is either null, or
+        //   points to valid HookData that has been leaked and will remain for the
+        //   lifetime of the program. We have already checked for null above.
         let reference = unsafe { ptr.as_ref() };
 
         Some(reference)
@@ -569,12 +569,12 @@ impl GlobalHooks {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The `new` pointer is valid and points to a `Box<HookData>` that
-    ///    has been turned into a raw pointer using `Box::into_raw`.
-    /// 2. On success the function claims ownership of the `new` pointer,
-    ///    and it cannot be used by the caller anymore.
-    /// 3. On failure, the `new` pointer remains owned by the caller and
-    ///    it is their responsibility to manage its memory.
+    /// 1. The `new` pointer is valid and points to a `Box<HookData>` that has
+    ///    been turned into a raw pointer using `Box::into_raw`.
+    /// 2. On success the function claims ownership of the `new` pointer, and it
+    ///    cannot be used by the caller anymore.
+    /// 3. On failure, the `new` pointer remains owned by the caller and it is
+    ///    their responsibility to manage its memory.
     unsafe fn install(&self, new: *mut HookData) -> Result<(), ()> {
         match self.ptr.compare_exchange(
             core::ptr::null_mut(),
@@ -599,10 +599,9 @@ impl GlobalHooks {
         let previous = NonNull::new(previous)?;
 
         // SAFETY:
-        // - The invariants on our type guarantees that the pointer
-        //   is either null, or points to valid HookData that has been
-        //   leaked and will remain for the lifetime of the program.
-        //   We have already checked for null above.
+        // - The invariants on our type guarantees that the pointer is either null, or
+        //   points to valid HookData that has been leaked and will remain for the
+        //   lifetime of the program. We have already checked for null above.
         let previous = unsafe { previous.as_ref() };
 
         Some(previous)

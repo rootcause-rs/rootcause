@@ -77,7 +77,10 @@ impl RawAttachment {
         let ptr: *mut AttachmentData<Erased> = ptr.cast::<AttachmentData<Erased>>();
 
         // SAFETY: `Box::into_raw` returns a non-null pointer
-        let ptr: NonNull<AttachmentData<Erased>> = unsafe { NonNull::new_unchecked(ptr) };
+        let ptr: NonNull<AttachmentData<Erased>> = unsafe {
+            // @add-unsafe-context: Erased
+            NonNull::new_unchecked(ptr)
+        };
 
         Self { ptr }
     }
