@@ -1179,15 +1179,15 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// let report = report!("error message");
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = report.format_with_hook(&DefaultReportFormatter::ASCII);
+    /// let formatted = report.format_with(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
+    pub fn format_with<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
     where
         H: crate::hooks::report_formatter::ReportFormatter,
     {
-        self.as_uncloneable_ref().format_with_hook(hook)
+        self.as_uncloneable_ref().format_with(hook)
     }
 
     /// Gets the preferred formatting style for the context with hook

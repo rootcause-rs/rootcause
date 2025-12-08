@@ -39,7 +39,7 @@
 //! # Per-Report Formatting
 //!
 //! You can also apply a formatter to a specific report without changing the
-//! global default using [`Report::format_with_hook`]:
+//! global default using [`Report::format_with`]:
 //!
 //! ```rust
 //! use rootcause::{hooks::builtin_hooks::report_formatter::DefaultReportFormatter, prelude::*};
@@ -50,10 +50,7 @@
 //! println!("{}", report);
 //!
 //! // This uses ASCII-only for this specific report
-//! println!(
-//!     "{}",
-//!     report.format_with_hook(&DefaultReportFormatter::ASCII)
-//! );
+//! println!("{}", report.format_with(&DefaultReportFormatter::ASCII));
 //! ```
 //!
 //! This is useful when you need different output formats in different contexts,
@@ -73,7 +70,7 @@
 //!
 //! [`Display`]: core::fmt::Display
 //! [`Debug`]: core::fmt::Debug
-//! [`Report::format_with_hook`]: crate::Report::format_with_hook
+//! [`Report::format_with`]: crate::Report::format_with
 //! [`DefaultReportFormatter::UNICODE`]: crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter::UNICODE
 
 use core::fmt;

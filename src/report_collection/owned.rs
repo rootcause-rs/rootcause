@@ -538,11 +538,11 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// collection.push(report!("Error 2").into_cloneable());
     ///
     /// // Format with ASCII-only output (no Unicode or ANSI colors)
-    /// let formatted = collection.format_with_hook(&DefaultReportFormatter::ASCII);
+    /// let formatted = collection.format_with(&DefaultReportFormatter::ASCII);
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with_hook<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
+    pub fn format_with<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
     where
         H: crate::hooks::report_formatter::ReportFormatter,
     {

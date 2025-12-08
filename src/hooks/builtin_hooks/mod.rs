@@ -19,8 +19,7 @@
 //!   [`Hooks::new_without_locations()`].
 //!
 //! - **[`backtrace`]** (requires `backtrace` feature): Captures a full stack
-//!   trace. Not automatic - add explicitly with
-//!   [`attachment_collector()`].
+//!   trace. Not automatic - add explicitly with [`attachment_collector()`].
 //!
 //! [`attachment_collector()`]: crate::hooks::Hooks::attachment_collector
 //!
