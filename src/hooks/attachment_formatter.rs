@@ -293,7 +293,7 @@ pub struct AttachmentParent<'a> {
 /// Trait for untyped attachment formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<A, H>`].
-pub(crate) trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
+trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the attachment using Display formatting.
     ///
     /// # Safety

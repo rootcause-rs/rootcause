@@ -266,7 +266,7 @@ where
 /// Trait for untyped context formatter hooks.
 ///
 /// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
-pub(crate) trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
+trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the context using Display formatting.
     ///
     /// # Safety
