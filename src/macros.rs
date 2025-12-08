@@ -89,6 +89,36 @@
 /// );
 /// ```
 ///
+/// ## Debug-Only Types
+///
+/// When using a type that implements [`Debug`](core::fmt::Debug) but not
+/// [`Display`](core::fmt::Display), the report uses [`crate::handlers::Debug`]
+/// which shows "Context of type `TypeName`" when displayed:
+///
+/// ```
+/// use std::any::TypeId;
+///
+/// use rootcause::prelude::*;
+///
+/// #[derive(Debug)]
+/// struct InternalState {
+///     value: usize,
+/// }
+///
+/// let state = InternalState { value: 42 };
+/// let report: Report<InternalState> = report!(state);
+///
+/// // Display shows a generic message with the type name
+/// let output = format!("{}", report);
+/// assert!(output.contains("InternalState"));
+/// assert!(!output.contains("value")); // Debug details not shown in Display
+///
+/// assert_eq!(
+///     report.current_context_handler_type_id(),
+///     TypeId::of::<handlers::Debug>()
+/// );
+/// ```
+///
 /// ## Local (Non-Send) Reports
 ///
 /// When using non-thread-safe types like [`Rc`](std::rc::Rc), the macro

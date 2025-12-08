@@ -23,7 +23,9 @@
 //! - [`ContextFormatterHook`] - Trait for implementing custom context
 //!   formatting
 //!
-//! # Example
+//! # Examples
+//!
+//! ## Custom formatting for your own types
 //!
 //! ```rust
 //! use core::fmt;
@@ -60,6 +62,54 @@
 //! // Install the custom formatter globally
 //! Hooks::new()
 //!     .context_formatter::<DatabaseError, _>(DatabaseErrorFormatter)
+//!     .install()
+//!     .expect("failed to install hooks");
+//! ```
+//!
+//! ## Improving Display for Debug-only types
+//!
+//! When using types that only implement [`Debug`](core::fmt::Debug) (not
+//! [`Display`](core::fmt::Display)), reports show "Context of type `TypeName`"
+//! by default (see [`crate::handlers::Debug`]). Use a context formatter to provide
+//! better output:
+//!
+//! ```rust
+//! use core::fmt;
+//!
+//! use rootcause::{
+//!     ReportRef,
+//!     hooks::{Hooks, context_formatter::ContextFormatterHook},
+//!     markers::{Local, Uncloneable},
+//!     prelude::*,
+//! };
+//!
+//! // External type you can't modify (only has Debug, not Display)
+//! #[derive(Debug)]
+//! struct InternalState {
+//!     connection_count: usize,
+//!     pending_requests: usize,
+//! }
+//!
+//! struct InternalStateFormatter;
+//!
+//! impl ContextFormatterHook<InternalState> for InternalStateFormatter {
+//!     fn display(
+//!         &self,
+//!         report: ReportRef<'_, InternalState, Uncloneable, Local>,
+//!         f: &mut fmt::Formatter<'_>,
+//!     ) -> fmt::Result {
+//!         let state = report.current_context();
+//!         write!(
+//!             f,
+//!             "System overloaded: {} connections, {} pending",
+//!             state.connection_count, state.pending_requests
+//!         )
+//!     }
+//! }
+//!
+//! // Without this hook, would show "Context of type `InternalState`"
+//! Hooks::new()
+//!     .context_formatter::<InternalState, _>(InternalStateFormatter)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
