@@ -8,17 +8,21 @@
 //!   without colors
 //!
 //! Both are active even without installing any hooks. Use
-//! `Hooks::new_without_locations()` if you don't want location tracking.
+//! [`Hooks::new_without_locations()`] if you don't want location tracking.
+//!
+//! [`Hooks::new_without_locations()`]: crate::hooks::Hooks::new_without_locations
 //!
 //! ## Attachment Collectors
 //!
 //! - **[`location`]**: Captures the source code location ([`Location`]) where
 //!   each report was created. Always enabled unless you use
-//!   `Hooks::new_without_locations()`.
+//!   [`Hooks::new_without_locations()`].
 //!
 //! - **[`backtrace`]** (requires `backtrace` feature): Captures a full stack
 //!   trace. Not automatic - add explicitly with
-//!   `.attachment_collector(BacktraceHook)`.
+//!   [`attachment_collector()`].
+//!
+//! [`attachment_collector()`]: crate::hooks::Hooks::attachment_collector
 //!
 //! [`Location`]: crate::hooks::builtin_hooks::location::Location
 //! [`Backtrace`]: crate::hooks::builtin_hooks::backtrace::Backtrace

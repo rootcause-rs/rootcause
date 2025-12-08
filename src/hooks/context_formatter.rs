@@ -1,13 +1,10 @@
 //! Context formatting hooks for customizing how error messages are displayed.
 //!
-//! **Context** = the main error type (like `io::Error`, `ParseError`, etc.).
-//! This is the primary error message, not the attached data.
-//!
-//! Use this module to control how your error types appear when displayed:
-//! - Custom error descriptions
-//! - Structured formatting for complex errors
-//! - Domain-specific error messages
-//! - Different formats for Display vs Debug
+//! Control how the main error type in each report appears:
+//! - Custom error descriptions for your types
+//! - Better Display output for Debug-only types
+//! - Simplify noisy or complex error messages
+//! - Hide sensitive details while keeping useful information
 //!
 //! By installing hooks for specific error types, you can customize how they
 //! appear in reports without changing the error type itself.
@@ -66,12 +63,12 @@
 //!     .expect("failed to install hooks");
 //! ```
 //!
-//! ## Improving Display for Debug-only types
+//! ## Simplifying complex or Debug-only types
 //!
 //! When using types that only implement [`Debug`](core::fmt::Debug) (not
 //! [`Display`](core::fmt::Display)), reports show "Context of type `TypeName`"
-//! by default (see [`crate::handlers::Debug`]). Use a context formatter to provide
-//! better output:
+//! by default (see [`crate::handlers::Debug`]). Use a context formatter to
+//! provide simplified, user-friendly output:
 //!
 //! ```rust
 //! use core::fmt;

@@ -2,10 +2,10 @@
 //!
 //! This module lets you control how individual pieces of attached data appear
 //! in error reports. Use this to:
-//! - Hide sensitive data (passwords, API keys)
-//! - Format data nicely (timestamps, file sizes)
+//! - Format data nicely (timestamps, file sizes, structured data)
 //! - Control where data appears (inline vs appendix)
 //! - Set priority (which attachments show first)
+//! - Hide noisy or sensitive information
 //!
 //! **Note:** Hooks format a type globally across ALL errors. To control
 //! formatting for a single attachment, use [`attach_custom()`] with a handler
@@ -13,8 +13,8 @@
 //!
 //! [`attach_custom()`]: crate::Report::attach_custom
 //!
-//! By installing hooks for specific types, you can customize the default
-//! Display and Debug formatting behavior.
+//! By installing hooks for specific types, you can customize how attachments
+//! are formatted and where they appear in reports.
 //!
 //! # Key Components
 //!
@@ -22,7 +22,9 @@
 //!   formatting
 //! - [`AttachmentParent`] - Context about the report containing an attachment
 //!
-//! # Example: Displaying an Attachment with Custom Formatting
+//! # Examples
+//!
+//! ## Custom Formatting
 //!
 //! ```rust
 //! use core::fmt;
@@ -77,10 +79,9 @@
 //!     .expect("failed to install hooks");
 //! ```
 //!
-//! # Example: Hiding Attachments
+//! ## Controlling Placement and Priority
 //!
-//! You can also use formatter hooks to conditionally hide attachments by
-//! setting their placement to `Hidden`:
+//! Control where attachments appear and in what order:
 //!
 //! ```rust
 //! use rootcause::{
@@ -90,11 +91,48 @@
 //!     report_attachment::ReportAttachmentRef,
 //! };
 //!
-//! struct SensitiveData(String);
+//! struct LogEntry(String);
 //!
-//! struct SilenceAttachmentHook;
+//! struct LogFormatter;
 //!
-//! impl<A: 'static> AttachmentFormatterHook<A> for SilenceAttachmentHook {
+//! impl AttachmentFormatterHook<LogEntry> for LogFormatter {
+//!     fn preferred_formatting_style(
+//!         &self,
+//!         _attachment: ReportAttachmentRef<'_, Dynamic>,
+//!         _report_formatting_function: FormattingFunction,
+//!     ) -> AttachmentFormattingStyle {
+//!         AttachmentFormattingStyle {
+//!             // Put logs in appendix to reduce noise in main error
+//!             placement: AttachmentFormattingPlacement::Appendix,
+//!             function: FormattingFunction::Display,
+//!             priority: 10, // Lower priority than important data
+//!         }
+//!     }
+//! }
+//!
+//! Hooks::new()
+//!     .attachment_formatter::<LogEntry, _>(LogFormatter)
+//!     .install()
+//!     .expect("failed to install hooks");
+//! ```
+//!
+//! ## Hiding Attachments
+//!
+//! Hide noisy or unnecessary information by setting placement to `Hidden`:
+//!
+//! ```rust
+//! use rootcause::{
+//!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
+//!     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
+//!     markers::Dynamic,
+//!     report_attachment::ReportAttachmentRef,
+//! };
+//!
+//! struct DebugInfo(String);
+//!
+//! struct HideDebugInfo;
+//!
+//! impl AttachmentFormatterHook<DebugInfo> for HideDebugInfo {
 //!     fn preferred_formatting_style(
 //!         &self,
 //!         _attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -108,12 +146,19 @@
 //!     }
 //! }
 //!
-//! // Install the silencing hook to suppress sensitive data in error reports
+//! // Install hook to suppress debug info in production reports
 //! Hooks::new()
-//!     .attachment_formatter::<SensitiveData, _>(SilenceAttachmentHook)
+//!     .attachment_formatter::<DebugInfo, _>(HideDebugInfo)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
+//!
+//! **Note:** Attachment formatter hooks provide explicit control over what
+//! appears in reports. For sensitive data, you can also use custom handlers
+//! (see [`attach_custom()`]) or [`crate::handlers::Debug`] which shows
+//! "Context of type..." by default to avoid exposing debug data.
+//!
+//! [`attach_custom()`]: crate::Report::attach_custom
 
 use alloc::{boxed::Box, fmt};
 use core::{any::TypeId, marker::PhantomData};
