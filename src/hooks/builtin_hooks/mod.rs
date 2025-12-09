@@ -18,13 +18,7 @@
 //!   each report was created. Always enabled unless you use
 //!   [`Hooks::new_without_locations()`].
 //!
-//! - **[`backtrace`]** (requires `backtrace` feature): Captures a full stack
-//!   trace. Not automatic - add explicitly with [`attachment_collector()`].
-//!
-//! [`attachment_collector()`]: crate::hooks::Hooks::attachment_collector
-//!
 //! [`Location`]: crate::hooks::builtin_hooks::location::Location
-//! [`Backtrace`]: crate::hooks::builtin_hooks::backtrace::Backtrace
 //!
 //! ## Report Formatter
 //!
@@ -39,8 +33,5 @@
 //! [`ReportFormatter`]: crate::hooks::report_formatter::ReportFormatter
 //! [`Hooks::report_formatter`]: crate::hooks::Hooks::report_formatter
 
-#[cfg(feature = "backtrace")]
-#[cfg_attr(docsrs, doc(cfg(feature = "backtrace")))]
-pub mod backtrace;
 pub mod location;
 pub mod report_formatter;

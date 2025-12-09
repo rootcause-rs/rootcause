@@ -245,6 +245,12 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 
 **Ready to learn more?** See [`examples/basic.rs`](examples/basic.rs) for a hands-on tutorial covering `.context()`, `.attach()`, and composing error chains.
 
+## Ecosystem
+
+rootcause is designed to be lightweight and extensible. The core library provides essential error handling functionality, while optional companion crates add specialized capabilities:
+
+- **[`rootcause-backtrace`](https://docs.rs/rootcause-backtrace)** - Automatic stack trace capture for debugging. Install hooks to attach backtraces to all errors, or use the extension trait to add them selectively.
+
 ## Next Steps
 
 - **New to rootcause?** See [`examples/basic.rs`](examples/basic.rs) for a hands-on introduction
@@ -254,7 +260,6 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 ## Features
 
 - **`std`** (default): Enable standard library support
-- **`backtrace`**: Automatic backtrace capture on error creation
 
 ## Coming from other libraries?
 
@@ -284,12 +289,16 @@ Once you're comfortable with the basics, rootcause offers powerful features for 
 
 ## Architecture
 
-The library consists of two main crates:
+The rootcause ecosystem consists of multiple crates:
 
-- **`rootcause`**: The main user-facing API. Contains safe abstractions and some unsafe code for type parameter handling.
-- **`rootcause-internals`**: Low-level implementation details. Contains the majority of unsafe code, isolated from user-facing APIs.
+**Core:**
+- **`rootcause`** - The main user-facing API with type-safe abstractions. Uses type markers to ensure the underlying data structures are used safely.
+- **`rootcause-internals`** - Low-level data structures and memory management. Handles the actual report storage, allocations, and pointer manipulation.
 
-This separation ensures that most unsafe operations are contained in a single, auditable crate. The public API in `rootcause` uses these primitives to provide safe, ergonomic error handling.
+**Extensions:**
+- **`rootcause-backtrace`** - Optional backtrace capture support. Provides hooks for automatic stack trace collection.
+
+The split between `rootcause` and `rootcause-internals` provides a clean API boundary: internals define how data is stored, while the main crate ensures that storage is accessed safely through Rust's type system. This makes it easy to understand the underlying representation while keeping the safe API ergonomic. Extensions integrate via the hook system without requiring changes to core.
 
 ## Stability and Roadmap
 

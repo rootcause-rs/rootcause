@@ -1,4 +1,4 @@
-#![cfg_attr(not(any(doc, feature = "std")), no_std)]
+#![no_std]
 #![deny(
     missing_docs,
     clippy::alloc_instead_of_core,
@@ -72,6 +72,18 @@
 //!
 //! [`rootcause-internals`]: rootcause_internals
 //!
+//! ## Ecosystem
+//!
+//! rootcause is designed to be lightweight and extensible. The core library
+//! provides essential error handling, while optional companion crates add
+//! specialized capabilities:
+//!
+//! - **[`rootcause-backtrace`]** - Automatic stack trace capture for debugging.
+//!   Install hooks to attach backtraces to all errors, or use the extension
+//!   trait to add them selectively.
+//!
+//! [`rootcause-backtrace`]: https://docs.rs/rootcause-backtrace
+//!
 //! ## Project Goals
 //!
 //! - **Ergonomic**: The `?` operator should work with most error types, even
@@ -88,7 +100,8 @@
 //! - **Cloneable**: It should be possible to clone a [`Report`] when you need
 //!   to.
 //! - **Self-documenting**: Reports should automatically capture information
-//!   (like backtraces and locations) that might be useful in debugging.
+//!   (like locations) that might be useful in debugging. Additional
+//!   instrumentation like backtraces can be added via extension crates.
 //! - **Customizable**: It should be possible to customize what data gets
 //!   collected, or how reports are formatted.
 //! - **Lightweight**: [`Report`] has a pointer-sized representation, keeping
@@ -356,9 +369,12 @@ pub use self::{
     report::{iter::ReportIter, mut_::ReportMut, owned::Report, ref_::ReportRef},
 };
 
-// Not public API. Referenced by macro-generated code.
+// Not public API. Referenced by macro-generated code and rootcause-backtrace.
 #[doc(hidden)]
 pub mod __private {
+    // Used by the rootcause-backtrace
+    pub const ROOTCAUSE_LOCATION: &'static core::panic::Location = core::panic::Location::caller();
+
     use alloc::fmt;
     #[doc(hidden)]
     pub use alloc::format;

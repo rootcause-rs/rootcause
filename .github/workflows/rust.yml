@@ -43,7 +43,7 @@ jobs:
         run: cargo test --doc && cargo test --doc --all-features
 
       - name: Run docs
-        run: cargo doc --no-deps -p rootcause-internals -p rootcause --all-features
+        run: cargo doc --no-deps -p rootcause-backtrace -p rootcause-internals -p rootcause --all-features
 
       - name: Run cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
