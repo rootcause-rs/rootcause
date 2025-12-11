@@ -1,4 +1,4 @@
-#![no_std]
+#![cfg_attr(not(doc), no_std)]
 #![deny(
     missing_docs,
     clippy::alloc_instead_of_core,
