@@ -1,0 +1,29 @@
+[package]
+name = "rootcause-backtrace"
+version = "0.11.0"
+edition = "2024"
+license = "MIT/Apache-2.0"
+categories = ["rust-patterns", "no-std"]
+keywords = [
+  "error",
+  "error-handling",
+  "ergonomic",
+  "library",
+  "no_std",
+  "backtrace",
+]
+description = "Backtraces support for the rootcause error reporting library"
+repository = "https://github.com/rootcause-rs/rootcause"
+documentation = "https://docs.rs/rootcause-backtrace"
+rust-version = "1.89"
+
+[dependencies]
+backtrace = { version = "0.3.76", default-features = false, features = [
+  "std",
+  "cpp_demangle",
+] }
+regex = { version = "1.12.2", default-features = false }
+unicode-ident = "1.0.22"
+
+# Internal dependencies
+rootcause = { path = "../", version = "=0.11.0" }

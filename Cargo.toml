@@ -11,12 +11,10 @@ documentation = "https://docs.rs/rootcause"
 rust-version = "1.89"
 
 [workspace]
-members = ["rootcause-internals"]
+members = ["rootcause-internals", "rootcause-backtrace"]
 
 [features]
 default = []
-std = []
-backtrace = ["dep:backtrace", "dep:regex", "std", "dep:unicode-ident"]
 
 # Compatibility traits
 compat-anyhow1 = ["dep:anyhow"]
@@ -32,15 +30,9 @@ triomphe = { version = "0.1.15", default-features = false }
 
 # Optional dependencies
 anyhow = { version = "1.0.100", default-features = false, optional = true }
-backtrace = { version = "0.3.76", default-features = false, optional = true, features = [
-  "std",
-  "cpp_demangle",
-] }
 error-stack = { version = "0.6.0", default-features = false, optional = true }
 error-stack05 = { package = "error-stack", version = "0.5.0", default-features = false, optional = true }
 eyre = { version = "0.6.12", default-features = false, optional = true }
-regex = { version = "1.12.2", default-features = false, optional = true }
-unicode-ident = { version = "1.0.22", optional = true }
 
 # Internal dependencies
 rootcause-internals = { path = "rootcause-internals", version = "=0.11.0" }
