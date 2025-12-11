@@ -23,5 +23,7 @@ backtrace = { version = "0.3.76", default-features = false, features = [
   "cpp_demangle",
 ] }
 regex = { version = "1.12.2", default-features = false }
-rootcause = { path = "../", version = "=0.11.0" }
 unicode-ident = "1.0.22"
+
+# Internal dependencies
+rootcause = { path = "../", version = "=0.11.0" }
