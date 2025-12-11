@@ -540,7 +540,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///   wrapped
     ///
     /// **Use [`context()`](Report::context) when:**
-    /// - You want to add a descriptive message explaining what operation failed
+    /// - You want to wrap the error under a new parent context
     ///
     /// See [`examples/error_hierarchy.rs`] for a complete comparison of these
     /// approaches.
@@ -660,7 +660,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// - The type change doesn't represent a meaningful abstraction boundary
     ///
     /// **Use [`context()`](Report::context) when:**
-    /// - You want to add a descriptive message explaining what operation failed
+    /// - You want to wrap the error under a new parent context
     ///
     /// See [`examples/error_hierarchy.rs`] for a complete comparison of these
     /// approaches.
@@ -1028,31 +1028,41 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// Converts this report to a different context type using a
     /// [`ReportConversion`] implementation.
     ///
-    /// This method enables type-safe conversion between report contexts when a
-    /// conversion pattern has been defined via the [`ReportConversion`] trait.
-    /// It's particularly useful for translating library errors into
-    /// application-specific error types or moving errors across domain
-    /// boundaries.
+    /// This is the **call-site API** for error conversion. You implement
+    /// [`ReportConversion`] once to define *how* errors convert, then use
+    /// `context_to()` throughout your code to *apply* that conversion. This
+    /// separation enables clean, consistent error handling across your
+    /// codebase.
     ///
     /// # When to Use
     ///
-    /// **This is the recommended approach for converting library errors into
-    /// application error types.** Use `context_to()` when you have a standard,
-    /// reusable conversion pattern between error types that you've encoded in a
+    /// **Use `context_to()` when you have a standard, reusable conversion
+    /// pattern** between error types that you've encoded in a
     /// [`ReportConversion`] implementation.
     ///
     /// The typical pattern is:
-    /// 1. Implement [`ReportConversion`] for your application error type
-    /// 2. Use `context_to()` at call sites - the conversion happens
-    ///    automatically
     ///
-    /// For ad-hoc transformations that won't be reused, consider using
-    /// [`context()`](Report::context) to wrap the error directly instead of
-    /// implementing a trait.
+    /// 1. **Define conversions once:** Implement [`ReportConversion`] for your
+    ///    application error type. Common strategies include:
+    ///    - [`context_transform()`](Report::context_transform) for lightweight
+    ///      type wrapping (preserves structure, no hooks)
+    ///    - [`context_transform_nested()`](Report::context_transform_nested)
+    ///      for boundaries where you want fresh hook data
+    ///    - [`context()`](Report::context) for wrapping with a new parent
+    ///      context
     ///
-    /// See [`examples/error_hierarchy.rs`] for a complete guide.
+    ///    You can also inspect the report and choose different strategies
+    ///    based on its contents.
+    ///
+    /// 2. **Use everywhere:** Call `.context_to()` at call sites—the
+    ///    conversion happens automatically based on your trait implementation.
+    ///
+    /// See [`examples/error_hierarchy.rs`] for a complete guide on choosing
+    /// between transformation strategies, and [`examples/thiserror_interop.rs`]
+    /// for patterns when integrating with thiserror.
     ///
     /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
     ///
     /// # Type Inference
     ///
@@ -1084,15 +1094,6 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///     s.parse::<i32>().context_to()  // Convert ParseIntError to MyError
     /// }
     /// ```
-    ///
-    /// # See Also
-    ///
-    /// - [`ReportConversion`] - The trait that defines conversions
-    /// - [`context()`](Report::context) - For ad-hoc error wrapping
-    /// - [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to) -
-    ///   Result-based conversion
-    ///
-    /// [`ReportConversion`]: crate::ReportConversion
     #[track_caller]
     #[must_use]
     pub fn context_to<D: ReportConversion<C, O, T>>(self) -> Report<D, Mutable, T> {
