@@ -1,5 +1,9 @@
 //! Hooks system for customizing report creation and formatting behavior.
 //!
+//! Hooks are global callback functions that intercept error creation and
+//! formatting events, allowing you to automatically add data or customize
+//! display across your entire application.
+//!
 //! # Quick Start
 //!
 //! ```rust
@@ -77,8 +81,8 @@ use self::{
     builtin_hooks::location::{Location, LocationHandler, LocationHook},
     context_formatter::ContextFormatterHook,
     report_creation::{
-        AttachmentCollector, ReportCreationHook, StoredCreationHook, attachment_hook_to_untyped,
-        creation_hook_to_untyped,
+        AttachmentCollector, ReportCreationHook, StoredReportCreationHook,
+        attachment_hook_to_stored_hook, creation_hook_to_stored_hook,
     },
     report_formatter::ReportFormatter,
 };
@@ -143,9 +147,53 @@ impl Default for Hooks {
     }
 }
 
+// The lifetime of an instance of the `HookData` struct is as follows:
+//
+// ### `Hooks`
+//
+// - Creation: A `HookData` is allocated using `Box::new()` when `Hooks::new()`
+//   or `Hooks::new_without_locations()` is called.
+// - `Hooks->GlobalHooks`: When the `install()` method is called on a `Hooks`
+//   instance, the allocated `HookData` is either transferred to the global
+//   hooks storage or returned back to the caller in case of an error.
+// - `Hooks->HooksHandle`: When the `leak()` method is called on a `Hooks`
+//   instance, the allocated `HookData` is transferred to a `HooksHandle`
+//   instance.
+// - Deallocation: If the `Hooks` object is dropped without calling `install()`
+//   or `leak()`, then the `HookData` is deallocated and its memory is freed.
+//
+// ### `GlobalHooks`
+//
+// - Initialization: The `GlobalHooks` is initialized using a null pointer,
+//   indicating that no hooks are installed initially.
+// - `GlobalHooks`->`use_hooks`: The global hooks storage may be accessed by
+//   multiple threads concurrently via the `use_hooks` function, which provides
+//   temporary access to the `HookData`. The `HookData` must remain valid for
+//   the duration of these accesses.
+// - `GlobalHooks`->`HooksHandle`: When the `replace()` method is called on a
+//   `HooksHandle` instance, the allocated `HookData` is transferred to the
+//   global hooks storage, replacing any existing hooks. The previous hooks, if
+//   any, are returned as a new `HooksHandle` instance.
+// - If the `replace()` method is not called, then the `HookData` remains in
+//   memory for the lifetime of the program.
+//
+// ### `HooksHandle`
+//
+// - `HooksHandle->GlobalHooks`: When the `replace()` method is called on a
+//   `HooksHandle` instance, the allocated `HookData` is transferred to the
+//   global hooks storage, replacing any existing hooks.
+// - `HooksHandle->Hooks`: When the `reclaim()` method is called on a
+//   `HooksHandle` instance, the allocated `HookData` is transferred back to a
+//   `Hooks` instance, allowing further modifications or deallocation. Since the
+//   `HooksHandle` instance might previously have been installed globally, the
+//   `use_hooks` function might currently be accessing the same `HookData`.
+//   Therefore, care must be taken to ensure that no concurrent accesses are
+//   happening when reclaiming the hooks.
+// - Deallocation: If the `HooksHandle` object is dropped without calling
+//   `replace()` or `reclaim()`, the `HookData` is leaked.
 #[derive(Debug)]
 pub(crate) struct HookData {
-    pub(crate) report_creation: Vec<Box<dyn StoredCreationHook>>,
+    pub(crate) report_creation: Vec<Box<dyn StoredReportCreationHook>>,
     pub(crate) attachment_formatters: attachment_formatter::HookMap,
     pub(crate) context_formatters: context_formatter::HookMap,
     pub(crate) report_formatter: Option<Box<dyn ReportFormatter>>,
@@ -196,7 +244,7 @@ impl Hooks {
     #[track_caller]
     pub fn new() -> Self {
         Self(Box::new(HookData {
-            report_creation: vec![attachment_hook_to_untyped::<_, LocationHandler, _>(
+            report_creation: vec![attachment_hook_to_stored_hook::<_, LocationHandler, _>(
                 LocationHook,
             )],
             attachment_formatters: Default::default(),
@@ -220,6 +268,7 @@ impl Hooks {
     ///
     /// hooks.install().expect("failed to install hooks");
     /// ```
+    #[track_caller]
     pub fn new_without_locations() -> Self {
         Self(Box::new(HookData {
             report_creation: Vec::new(),
@@ -233,8 +282,13 @@ impl Hooks {
     /// Registers an attachment collector hook that automatically collects and
     /// attaches data to every report.
     ///
-    /// This is useful for adding consistent metadata like request IDs,
-    /// timestamps, or environment information to all errors.
+    /// This accepts any type implementing [`AttachmentCollector`], including
+    /// closures (which have a blanket implementation). Use this for the common
+    /// case of simply adding data to all errors. For more control, such as
+    /// conditional logic based on the error type, use
+    /// [`report_creation_hook`](Self::report_creation_hook) instead.
+    ///
+    /// [`AttachmentCollector`]: report_creation::AttachmentCollector
     ///
     /// # Examples
     ///
@@ -243,7 +297,7 @@ impl Hooks {
     ///
     /// let hooks = Hooks::new()
     ///     // Simple closure that returns Display + Debug types
-    ///     .attachment_collector(|| std::process::id())
+    ///     .attachment_collector(|| format!("Thread ID: {:?}", std::thread::current().id()))
     ///     .attachment_collector(|| "Environment: production".to_string());
     ///
     /// hooks.install().expect("failed to install hooks");
@@ -255,15 +309,18 @@ impl Hooks {
     {
         self.0
             .report_creation
-            .push(attachment_hook_to_untyped::<A, C::Handler, C>(collector));
+            .push(attachment_hook_to_stored_hook::<A, C::Handler, C>(
+                collector,
+            ));
         self
     }
 
     /// Registers a report creation hook for advanced customization.
     ///
     /// Use this when you need conditional logic or access to the full report
-    /// during creation. For simple data collection, prefer
-    /// [`attachment_collector`](Self::attachment_collector).
+    /// during creation. For the common case of simply attaching data to all
+    /// errors, use [`attachment_collector`](Self::attachment_collector)
+    /// instead, which is easier to use.
     ///
     /// # Examples
     ///
@@ -294,7 +351,9 @@ impl Hooks {
     where
         H: ReportCreationHook + Send + Sync + 'static,
     {
-        self.0.report_creation.push(creation_hook_to_untyped(hook));
+        self.0
+            .report_creation
+            .push(creation_hook_to_stored_hook(hook));
         self
     }
 
@@ -436,13 +495,21 @@ impl Hooks {
     /// ```
     pub fn install(self) -> Result<(), HooksAlreadyInstalledError> {
         let boxed = Box::into_raw(self.0);
-
         // SAFETY:
         //
         // 1. The pointer `boxed` is valid and was obtained from `Box::into_raw`.
         // 2. On success, the pointer will not be used anymore.
-        // 3. On failure, the pointer remains owned by us.
-        let install_result = unsafe { HOOKS.install(boxed) };
+        // 3. On failure, the pointer remains owned by us and the install function will
+        //    not create any additional references to it.
+        let install_result = unsafe {
+            // @add-unsafe-context: GlobalHooks
+            // @add-unsafe-context: HooksHandle
+            // @add-unsafe-context: Hooks
+            // @add-unsafe-context: HookData
+            // @add-unsafe-context: use_hooks
+            // @add-unsafe-context: HOOKS
+            HOOKS.install(boxed)
+        };
 
         match install_result {
             Ok(()) => Ok(()),
@@ -451,8 +518,8 @@ impl Hooks {
                 //
                 // - This pointer was obtained from Box::into_raw above, so it is valid to
                 //   convert it back into a Box.
-                // - Since installation failed, we own the pointer, so it's safe to convert it
-                //   back into a Box here.
+                // - Since installation failed, we own the pointer and have the only reference
+                //   to it.
                 let hooks = unsafe { Box::from_raw(boxed) };
 
                 Err(HooksAlreadyInstalledError(Hooks(hooks)))
@@ -462,7 +529,7 @@ impl Hooks {
 
     /// Replaces the currently installed hooks with `self`.
     ///
-    /// Returns the previously installed hooks, if any, as a [`LeakedHooks`]
+    /// Returns the previously installed hooks, if any, as a [`HooksHandle`]
     /// handle.
     ///
     /// See also [`install`](Self::install) which will error if hooks are
@@ -484,90 +551,171 @@ impl Hooks {
     ///
     /// // Replace with different hooks
     /// let hooks2 = Hooks::new().attachment_collector(|| "second".to_string());
-    /// let _previous = hooks2.replace();
-    /// # unsafe { _previous.unwrap().reclaim() }; // Miri doesn't like leaking memory
+    /// let previous = hooks2.replace();
+    /// # unsafe { previous.unwrap().reclaim(); } // Clean up as miri does not like memory leaks
     /// ```
-    pub fn replace(self) -> Option<LeakedHooks> {
+    pub fn replace(self) -> Option<HooksHandle> {
         self.leak().replace()
     }
 
-    /// Leaks the hooks, returning a [`LeakedHooks`] handle.
+    /// Leaks the hooks, returning a [`HooksHandle`] handle.
     ///
     /// This is useful for installing the hooks later using
-    /// [`LeakedHooks::replace`].
-    pub fn leak(self) -> LeakedHooks {
+    /// [`HooksHandle::replace`].
+    fn leak(self) -> HooksHandle {
         let ptr = Box::into_raw(self.0);
         let ptr = NonNull::new(ptr).expect("Box::into_raw returned null pointer");
-        LeakedHooks { hook_data: ptr }
+        HooksHandle { hook_data: ptr }
     }
 }
 
 /// A handle to hooks that have been leaked into static memory.
 ///
-/// This allows you to replace hooks multiple times without having to create
-/// new hooks each time. The hooks remain in memory for the lifetime of the
-/// program.
-#[derive(Copy, Clone, Debug)]
-pub struct LeakedHooks {
+/// You get a `HooksHandle` when calling [`Hooks::replace()`], which returns
+/// the previously installed hooks. The hooks remain in memory for the lifetime
+/// of the program unless you call the unsafe [`reclaim()`](Self::reclaim)
+/// method.
+///
+/// # What to do with a HooksHandle
+///
+/// - **Call [`replace()`](Self::replace)** to install these hooks again,
+///   swapping them with the currently active hooks
+/// - **Drop it** to intentionally leak the memory (safe, but permanent)
+/// - **Call [`reclaim()`](Self::reclaim)** (unsafe) to recover the memory -
+///   only if you can guarantee no code is using these hooks anymore
+///
+/// # Memory Leak Warning
+///
+/// Dropping a `HooksHandle` **will leak memory**. This is by design - the hooks
+/// might still be referenced by other threads, so we can't safely deallocate
+/// them. In most applications this is fine since you typically install hooks
+/// once at startup. If you're replacing hooks frequently in tests or hot-reload
+/// scenarios, be aware of this behavior.
+///
+/// # Examples
+///
+/// ```rust
+/// use rootcause::hooks::Hooks;
+///
+/// // Install initial hooks
+/// Hooks::new()
+///     .attachment_collector(|| "v1")
+///     .install()
+///     .unwrap();
+///
+/// // Replace with new hooks, getting back the old ones
+/// let old_hooks = Hooks::new().attachment_collector(|| "v2").replace();
+///
+/// // Option 1: Drop and leak (typical case)
+/// # // We don't want to leak in the doctest, as miri will complain about a memory leak
+/// # let saved_old_hooks = old_hooks;
+/// # let old_hooks = ();
+/// let _ = old_hooks;
+///
+/// // Option 2: Replace again to swap back
+/// # // Restore the saved hooks, and save the ones we replace with
+/// # // so we can free them in option 3
+/// # let old_hooks = saved_old_hooks;
+/// # let old_hooks =
+/// old_hooks.unwrap().replace();
+///
+/// // Option 3: Unsafe reclaim (only if you know it's safe!)
+/// if let Some(old_hooks) = old_hooks {
+///     unsafe {
+///         old_hooks.reclaim();
+///     }
+/// }
+/// ```
+#[derive(Debug)]
+#[allow(
+    missing_copy_implementations,
+    reason = "ownership semantics require move-only"
+)]
+pub struct HooksHandle {
     /// # Safety
     ///
     /// 1. This pointer points to a valid HookData that has been created by
     ///    calling `Box::into_raw` on a `Box<HookData>`.
-    /// 2. The HookData pointed to has been leaked and will remain valid for the
-    ///    lifetime of the program, unless reclaimed using
-    ///    [`LeakedHooks::reclaim`].
+    /// 2. This struct has exclusive ownership of the pointer. No other
+    ///    `HooksHandle` instances exist pointing to the same data.
+    /// 3. There might exist shared references to the HookData created by
+    ///    `use_hooks`. These references are always temporary (scoped to the
+    ///    `use_hooks` call) and read-only. Deallocation through `reclaim()` is
+    ///    only safe when the caller can guarantee no such references exist or
+    ///    will be created in the future.
+    /// 4. No mutation or deallocation of the pointed-to data will occur until
+    ///    `reclaim()` is called.
     hook_data: NonNull<HookData>,
 }
 
-impl LeakedHooks {
-    /// Fetches the currently installed hooks, if any.
-    pub fn fetch_current_hooks() -> Option<Self> {
-        Some(Self {
-            hook_data: HOOKS.fetch()?,
-        })
-    }
-
+impl HooksHandle {
     /// Replaces the currently installed hooks with `self`.
     ///
     /// Returns the previously installed hooks, if any.
-    pub fn replace(self) -> Option<LeakedHooks> {
-        Some(Self {
-            hook_data: HOOKS.replace(self.hook_data)?,
-        })
+    pub fn replace(self) -> Option<HooksHandle> {
+        let Self { hook_data } = self;
+
+        // SAFETY:
+        // 1. The `hook_data` pointer is valid and points to a `Box<HookData>` that has
+        //    been turned into a raw pointer using `Box::into_raw` as guaranteed by the
+        //    struct invariant.
+        // 2. The `self` we have just deconstructed had ownership of the `new` pointer,
+        //    which we now transfer to the called function.
+        // 3. If the function returns `Some(ptr)`, then that pointer will have been
+        //    created using `Box::into_raw`, and ownership of it is transferred to us.
+        // 4. The returned pointer might still be referenced by this or other threads in
+        //    the process of executing `use_hooks`, so it must not be deallocated or
+        //    mutated until it is certain that all such function calls have completed.
+        //    The struct invariant ensures we will not attempt to do so - the only way
+        //    to deallocate is through `reclaim()`, which requires the caller to uphold
+        //    the safety contract that no concurrent `use_hooks` calls exist. The
+        //    returned `HooksHandle` can be safely stored because it provides exclusive
+        //    ownership without allowing mutation until `reclaim()` is called.
+        let hook_data = unsafe {
+            // @add-unsafe-context: GlobalHooks
+            // @add-unsafe-context: HooksHandle
+            // @add-unsafe-context: Hooks
+            // @add-unsafe-context: HookData
+            // @add-unsafe-context: use_hooks
+            // @add-unsafe-context: HOOKS
+            HOOKS.replace(hook_data)
+        };
+
+        let hook_data = hook_data?;
+        Some(Self { hook_data })
     }
 
     /// Reclaims ownership of the leaked hooks, returning them as a `Hooks`
     /// instance.
     ///
     /// **⚠ WARNING: This function is almost impossible to use safely. Do not
-    /// call it unless you are okay with undefined behavior, or unless you
-    /// have global knowledge about the entire execution state of the
-    /// program that justifies why it is safe.**
+    /// call it unless you have global knowledge about the entire execution
+    /// state of the program that justifies why it is safe.**
     ///
     /// # Safety
     ///
-    /// To call this function safely, the caller must at the very least ensure
-    /// that no other references to these hooks exist. These references can take
-    /// many forms, including:
-    ///
-    /// 1. The hooks being currently installed globally.
-    /// 2. This or other threads currently creating or formatting reports.
-    /// 3. This or other threads holding onto a `LeakedHooks` instance that point
-    ///    to the same hooks. These instances could for instance have been obtained
-    ///    using [`LeakedHooks::fetch_current_hooks`].
-    /// 4. This or other threads holding onto references obtained from the current
-    ///    hooks. This might plausibly be done from inside custom hooks.
+    /// 1. The caller must guarantee that, if this pointer came from being
+    ///    installed globally, then all calls to `use_hooks` that might have
+    ///    used this pointer have completed, and that no future calls to
+    ///    `use_hooks` will use this pointer.
     pub unsafe fn reclaim(self) -> Hooks {
         // SAFETY:
-        // - The caller has guaranteed that no other references to these hooks exist,
-        //   so in principle it might be safe to reclaim ownership.
-        // - While other parts of this file promise that the hooks remain for the lifetime
-        //   of the program, the user has promised that no other references to
-        //   the pointer exist, so while these guarantees are broken, there *should* be no way
-        //   for it to lead to undefined behavior.
-        // - In any case, the caller has explicitly opted into calling this function and promised
-        //   that they have ensured safety.
-        let boxed = unsafe { Box::from_raw(self.hook_data.as_ptr()) };
+        // - We know that the pointer is valid and was obtained from `Box::into_raw`
+        //   because of the struct invariant.
+        // - We know that we have exclusive ownership of the pointer because of the
+        //   struct invariant.
+        // - The caller has guaranteed that all calls to `use_hooks` that might have
+        //   used this pointer have completed. Since this is the only way to access the
+        //   pointer, we can safely convert it back into a Box here.
+        let boxed = unsafe {
+            // @add-unsafe-context: GlobalHooks
+            // @add-unsafe-context: HooksHandle
+            // @add-unsafe-context: Hooks
+            // @add-unsafe-context: HookData
+            // @add-unsafe-context: use_hooks
+            // @add-unsafe-context: HOOKS
+            Box::from_raw(self.hook_data.as_ptr())
+        };
         Hooks(boxed)
     }
 }
@@ -577,13 +725,15 @@ struct GlobalHooks {
     ///
     /// 1. This pointer will either be null, or point to a valid HookData that
     ///    has been created using `Box::into_raw`.
-    /// 2. The pointer will remain valid for the lifetime of the program once set,
-    ///    or until replaced with another valid pointer and then reclaimed using
-    ///    `LeakedHooks::reclaim`.
+    /// 2. If the pointer is non-null, then it is owned by this struct.
     /// 3. All writing to the `AtomicPtr` is done using release semantics.
     /// 4. All reading from the `AtomicPtr` is done using acquire semantics when
     ///    the pointer will be dereferenced and with relaxed semantics
     ///    otherwise.
+    /// 5. If the pointer is replaced, then the previous pointer might still be
+    ///    referenced by this or other threads in the process of executing
+    ///    `use_hooks`, so it must not be deallocated or mutated until it is
+    ///    certain that all such function calls have completed.
     ptr: AtomicPtr<HookData>,
 }
 
@@ -594,30 +744,20 @@ impl GlobalHooks {
         }
     }
 
-    /// Fetches the currently installed hooks, if any.
-    ///
-    /// The returned pointer is guaranteed to come from a call to
-    /// `Box::into_raw` on a `Box<HookData>`. It is also guaranteed
-    /// to remain valid for the lifetime of the program, or until replaced
-    /// with another valid pointer and reclaimed using `LeakedHooks::reclaim`.
-    fn fetch(&self) -> Option<NonNull<HookData>> {
-        let ptr = self.ptr.load(Ordering::Acquire);
-        NonNull::new(ptr)
-    }
-
     /// Installs new hooks, returning an error if hooks are already installed.
     ///
     /// # Safety
-    ///
-    /// The caller must ensure:
     ///
     /// 1. The `new` pointer is valid and points to a `Box<HookData>` that has
     ///    been turned into a raw pointer using `Box::into_raw`.
     /// 2. On success the function claims ownership of the `new` pointer, and it
     ///    cannot be used by the caller anymore.
-    /// 3. On failure, the `new` pointer remains owned by the caller and it is
-    ///    their responsibility to manage its memory.
+    /// 3. On failure, the `new` pointer remains owned by the caller, and no
+    ///    additional references to it are created by this function.
     unsafe fn install(&self, new: *mut HookData) -> Result<(), ()> {
+        // Use Release on success to synchronize with Acquire loads in `use_hooks`.
+        // Use Relaxed on failure since we don't need synchronization when the
+        // operation fails - the caller retains ownership and no sharing occurs.
         match self.ptr.compare_exchange(
             core::ptr::null_mut(),
             new,
@@ -631,10 +771,22 @@ impl GlobalHooks {
 
     /// Replaces the currently installed hooks with `new`.
     ///
-    /// The `new` pointer's ownership is claimed by this function.
+    /// # Safety
     ///
-    /// Returns the previously installed hooks, if any.
-    fn replace(&self, new: NonNull<HookData>) -> Option<NonNull<HookData>> {
+    /// 1. The `new` pointer is valid and points to a `Box<HookData>` that has
+    ///    been turned into a raw pointer using `Box::into_raw`.
+    /// 2. The function claims ownership of the `new` pointer.
+    /// 3. If the function returns `Some(ptr)`, then ownership of that pointer
+    ///    is transferred to the caller. The returned pointer is similarly
+    ///    guaranteed to have been created using `Box::into_raw`.
+    /// 4. The returned pointer might still be referenced by this or other
+    ///    threads in the process of executing `use_hooks`, so it must not be
+    ///    deallocated or mutated until it is certain that all such function
+    ///    calls have completed.
+    unsafe fn replace(&self, new: NonNull<HookData>) -> Option<NonNull<HookData>> {
+        // Use AcqRel: Release ensures the new HookData is visible to future Acquire
+        // loads in `use_hooks`; Acquire ensures we properly observe any previous
+        // HookData before returning it (though we don't actually access it here).
         let previous = self.ptr.swap(new.as_ptr(), Ordering::AcqRel);
         NonNull::new(previous)
     }
@@ -642,21 +794,55 @@ impl GlobalHooks {
 
 static HOOKS: GlobalHooks = GlobalHooks::new();
 
-impl HookData {
-    pub(crate) fn fetch() -> Option<&'static HookData> {
-        let ptr = HOOKS.fetch()?;
+/// A trait for calling hook functions with optional `HookData`.
+///
+/// This is functionally similar to `FnOnce(Option<&HookData>) -> R`, but
+/// adds a `#[track_caller]` to allow `report_creation` hooks to track the
+/// caller location.
+pub(crate) trait HookCallback<R> {
+    #[track_caller]
+    fn call(self, hook_data: Option<&HookData>) -> R;
+}
 
-        // SAFETY:
-        //
-        // - This pointer was obtained from Box::into_raw, so it is valid to
-        //   convert it back into a reference.
-        // - The pointer remains valid for the lifetime of the program or
-        //   until replaced and then reclaimed using `LeakedHooks::reclaim`. However,
-        //   for any such reclaiming to occur, they must ensure that no other
-        //   references exist. This means we are free to assume that the pointer is valid
-        //   here.
-        let ptr = unsafe { ptr.as_ref() };
-
-        Some(ptr)
+impl<R, F> HookCallback<R> for F
+where
+    for<'a> F: FnOnce(Option<&'a HookData>) -> R,
+{
+    fn call(self, hook_data: Option<&HookData>) -> R {
+        self(hook_data)
     }
+}
+
+#[track_caller]
+pub(crate) fn use_hooks<F, R>(f: F) -> R
+where
+    F: HookCallback<R>,
+{
+    let ptr = HOOKS.ptr.load(Ordering::Acquire);
+
+    // SAFETY:
+    // 1. The pointer was obtained from `Box::into_raw`, so it is either null or
+    //    points to a valid `HookData`.
+    // 2. The Acquire load synchronizes with the Release store in `install` and the
+    //    AcqRel swap in `replace`, ensuring we see a properly initialized
+    //    `HookData`.
+    // 3. Even if the pointer is replaced by another thread immediately after we
+    //    load it, the old `HookData` remains valid and will not be deallocated. The
+    //    only way to deallocate is through `HooksHandle::reclaim()`, which is
+    //    `unsafe` and requires the caller to guarantee that all `use_hooks` calls
+    //    have completed.
+    // 4. We only create a shared reference with a lifetime limited to this
+    //    function. We do not mutate or deallocate the data, satisfying GlobalHooks
+    //    invariant #5.
+    let ptr = unsafe {
+        // @add-unsafe-context: GlobalHooks
+        // @add-unsafe-context: HooksHandle
+        // @add-unsafe-context: Hooks
+        // @add-unsafe-context: HookData
+        // @add-unsafe-context: use_hooks
+        // @add-unsafe-context: HOOKS
+        ptr.as_ref()
+    };
+
+    f.call(ptr)
 }

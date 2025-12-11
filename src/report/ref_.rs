@@ -305,7 +305,10 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         // 3. `C=Dynamic`, so this is trivially true.
         // 4. This is guaranteed by our safety invariants.
         // 5. This is guaranteed by our safety invariants.
-        unsafe { ReportCollection::<Dynamic, T>::from_raw_ref(raw) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportCollection::<Dynamic, T>::from_raw_ref(raw)
+        }
     }
 
     /// Returns a reference to the attachments.

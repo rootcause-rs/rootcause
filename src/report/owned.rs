@@ -417,7 +417,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         // SAFETY:
         // 1. This is guaranteed by the invariants of this type.
         // 2. Since `O=Mutable` and we are consuming `self`, then this is guaranteed to
-        //    be the unique owner of the report. We also no that there are no other
+        //    be the unique owner of the report. We also know that there are no other
         //    references such as `ReportRef` or `ReportMut` active, as those would
         //    require a borrow of `self`.
         let (context, children, attachments) = unsafe { raw.into_parts() };

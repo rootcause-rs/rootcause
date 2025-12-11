@@ -147,14 +147,16 @@ use rootcause_internals::handlers::AttachmentHandler;
 use crate::{
     ReportMut, handlers,
     hooks::{
-        HookData,
+        HookCallback, HookData,
         builtin_hooks::location::{Location, LocationHandler},
+        use_hooks,
     },
     markers::{Dynamic, Local, SendSync},
     report_attachment::ReportAttachment,
 };
 
-pub(crate) trait StoredCreationHook: 'static + Send + Sync + core::fmt::Debug {
+/// Internal trait for stored report creation hooks.
+pub(crate) trait StoredReportCreationHook: 'static + Send + Sync + core::fmt::Debug {
     #[track_caller]
     fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>);
 
@@ -215,7 +217,7 @@ pub trait ReportCreationHook: 'static + Send + Sync {
     fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
 
-pub(crate) fn creation_hook_to_untyped<H>(hook: H) -> Box<dyn StoredCreationHook>
+pub(crate) fn creation_hook_to_stored_hook<H>(hook: H) -> Box<dyn StoredReportCreationHook>
 where
     H: ReportCreationHook + Send + Sync + 'static,
 {
@@ -229,7 +231,7 @@ where
         }
     }
 
-    impl<H> StoredCreationHook for Hook<H>
+    impl<H> StoredReportCreationHook for Hook<H>
     where
         H: ReportCreationHook,
     {
@@ -246,7 +248,9 @@ where
     Box::new(hook)
 }
 
-pub(crate) fn attachment_hook_to_untyped<A, H, C>(collector: C) -> Box<dyn StoredCreationHook>
+pub(crate) fn attachment_hook_to_stored_hook<A, H, C>(
+    collector: C,
+) -> Box<dyn StoredReportCreationHook>
 where
     A: 'static + Send + Sync,
     H: AttachmentHandler<A>,
@@ -270,7 +274,7 @@ where
         }
     }
 
-    impl<A, Handler, Collector> StoredCreationHook for Hook<A, Handler, Collector>
+    impl<A, Handler, Collector> StoredReportCreationHook for Hook<A, Handler, Collector>
     where
         A: 'static + Send + Sync,
         Handler: AttachmentHandler<A>,
@@ -403,29 +407,45 @@ where
 }
 
 #[track_caller]
-pub(crate) fn run_creation_hooks_local(mut report: ReportMut<'_, Dynamic, Local>) {
-    if let Some(hook_data) = HookData::fetch() {
-        for hook in &hook_data.report_creation {
-            hook.on_local_creation(report.as_mut());
+pub(crate) fn run_creation_hooks_local(report: ReportMut<'_, Dynamic, Local>) {
+    struct Inner<'a>(ReportMut<'a, Dynamic, Local>);
+    impl HookCallback<()> for Inner<'_> {
+        fn call(self, hook_data: Option<&HookData>) {
+            let mut report = self.0;
+            if let Some(hook_data) = hook_data {
+                for hook in &hook_data.report_creation {
+                    hook.on_local_creation(report.as_mut());
+                }
+            } else {
+                report.attachments_mut().push(
+                    ReportAttachment::new_local_custom::<LocationHandler>(Location::caller())
+                        .into_dynamic(),
+                );
+            }
         }
-    } else {
-        report.attachments_mut().push(
-            ReportAttachment::new_local_custom::<LocationHandler>(Location::caller())
-                .into_dynamic(),
-        );
     }
+
+    use_hooks(Inner(report))
 }
 
 #[track_caller]
-pub(crate) fn run_creation_hooks_sendsync(mut report: ReportMut<'_, Dynamic, SendSync>) {
-    if let Some(hook_data) = HookData::fetch() {
-        for hook in &hook_data.report_creation {
-            hook.on_sendsync_creation(report.as_mut());
+pub(crate) fn run_creation_hooks_sendsync(report: ReportMut<'_, Dynamic, SendSync>) {
+    struct Inner<'a>(ReportMut<'a, Dynamic, SendSync>);
+    impl HookCallback<()> for Inner<'_> {
+        fn call(self, hook_data: Option<&HookData>) {
+            let mut report = self.0;
+            if let Some(hook_data) = hook_data {
+                for hook in &hook_data.report_creation {
+                    hook.on_sendsync_creation(report.as_mut());
+                }
+            } else {
+                report.attachments_mut().push(
+                    ReportAttachment::new_sendsync_custom::<LocationHandler>(Location::caller())
+                        .into_dynamic(),
+                );
+            }
         }
-    } else {
-        report.attachments_mut().push(
-            ReportAttachment::new_sendsync_custom::<LocationHandler>(Location::caller())
-                .into_dynamic(),
-        );
     }
+
+    use_hooks(Inner(report))
 }
