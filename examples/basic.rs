@@ -15,7 +15,7 @@
 //!
 //! **What's next?** You've learned the basics. Now choose your path:
 //! - Need to create your own errors? → `custom_errors.rs`
-//! - Want to understand the type system? → `typed_reports.rs`
+//! - Want to understand typed reports? → `typed_reports.rs`
 //! - Ready to see all the examples? → See `examples/README.md`
 
 use std::fs;

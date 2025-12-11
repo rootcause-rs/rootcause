@@ -6,10 +6,10 @@ use rootcause_internals::{
 };
 
 use crate::{
-    ReportIter, ReportMut, ReportRef,
+    ReportConversion, ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
     markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::PreformattedContext,
+    preformatted::{self, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -502,6 +502,356 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     pub fn current_context_mut(&mut self) -> &mut C {
         self.as_mut().into_current_context_mut()
     }
+
+    /// Transforms the context of this report using a closure, preserving the
+    /// report structure.
+    ///
+    /// This method extracts the current context, applies the provided closure
+    /// to transform it, and creates a new report with the transformed
+    /// context while keeping all children and attachments intact. The
+    /// transformation bypasses the report creation hook to avoid running
+    /// hooks twice (which would result in duplicate hook-added data such as
+    /// backtraces and location tracking).
+    ///
+    /// Unlike [`context()`](Report::context) which wraps the current report as
+    /// a child, this method replaces the context in-place while maintaining
+    /// the same report structure.
+    ///
+    /// # When to Use
+    ///
+    /// **For reusable conversions:** Implement
+    /// [`ReportConversion`](crate::ReportConversion) and use
+    /// [`context_to()`](Report::context_to) in your application code. Use
+    /// `context_transform()` *inside* your trait implementation when the
+    /// wrapping is just a type change with no semantic meaning.
+    ///
+    /// **Use `context_transform()` when:**
+    /// - Wrapping library errors in your application error enum where the
+    ///   wrapping is mechanical (no additional semantic layer)
+    /// - You want to preserve the original report structure without nesting
+    /// - You want to keep the original hook data (backtraces, locations)
+    /// - The type change doesn't represent a meaningful abstraction boundary
+    ///
+    /// **Use [`context_transform_nested()`](Report::context_transform_nested)
+    /// when:**
+    /// - The transformation marks a significant boundary and you want fresh
+    ///   hook data at the transformation point
+    /// - You need to track both where the error occurred AND where it was
+    ///   wrapped
+    ///
+    /// **Use [`context()`](Report::context) when:**
+    /// - You want to add a descriptive message explaining what operation failed
+    ///
+    /// See [`examples/error_hierarchy.rs`] for a complete comparison of these
+    /// approaches.
+    ///
+    /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    ///
+    /// # Examples
+    ///
+    /// ## Common Use Case: Wrapping in Error Hierarchy
+    ///
+    /// The most common use case is wrapping library errors in your
+    /// application's error enum:
+    ///
+    /// ```rust
+    /// use rootcause::prelude::*;
+    ///
+    /// // Library-specific error
+    /// #[derive(Debug)]
+    /// struct DeserializationError {
+    ///     details: String,
+    /// }
+    ///
+    /// impl std::fmt::Display for DeserializationError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "Deserialization failed: {}", self.details)
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for DeserializationError {}
+    ///
+    /// // Application error hierarchy
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     DeserializationError(DeserializationError),
+    ///     // ... other variants
+    /// }
+    ///
+    /// impl std::fmt::Display for AppError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         match self {
+    ///             AppError::DeserializationError(e) => write!(f, "App error: {}", e),
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for AppError {}
+    ///
+    /// let deserialization_report: Report<DeserializationError> = report!(DeserializationError {
+    ///     details: "Invalid JSON".to_string(),
+    /// });
+    ///
+    /// // Wrap in application error hierarchy
+    /// let app_report: Report<AppError> =
+    ///     deserialization_report.context_transform(AppError::DeserializationError);
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// - [`context_transform_nested()`](Report::context_transform_nested) -
+    ///   Transforms while nesting the entire original report as a child
+    /// - [`context()`](Report::context) - Wraps the report as a child under new
+    ///   context
+    /// - [`context_to()`](Report::context_to) - Converts using a
+    ///   [`ReportConversion`](crate::ReportConversion) trait implementation
+    pub fn context_transform<F, D>(self, f: F) -> Report<D, Mutable, T>
+    where
+        F: FnOnce(C) -> D,
+        D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+    {
+        let (context, children, attachments) = self.into_parts();
+        let new_context = f(context);
+
+        Report::from_parts_unhooked::<handlers::Display>(new_context, children, attachments)
+    }
+
+    /// Transforms the context of this report while nesting the entire
+    /// original report structure as a child.
+    ///
+    /// This method is similar to
+    /// [`context_transform()`](Report::context_transform), but instead of
+    /// replacing the context in-place, it preformats the current report
+    /// (converting the context to
+    /// [`PreformattedContext`](crate::preformatted::PreformattedContext) which
+    /// stores its string representation along with any hook-generated data),
+    /// then wraps the entire preformatted report as a child under the new
+    /// context. The new context is created by applying the provided closure
+    /// to the old context value.
+    ///
+    /// Since this creates a new context node via
+    /// [`context()`](Report::context), the report creation hooks run again,
+    /// capturing fresh hook data (such as a new backtrace and location) for
+    /// the transformed context. This results in a report with the new
+    /// context as the root and the entire original report structure (with
+    /// preformatted context) nested as its single child.
+    ///
+    /// # When to Use
+    ///
+    /// **For reusable conversions:** Implement
+    /// [`ReportConversion`](crate::ReportConversion) and use
+    /// [`context_to()`](Report::context_to) in your application code. Use
+    /// `context_transform_nested()` *inside* your trait implementation when
+    /// crossing significant abstraction boundaries.
+    ///
+    /// **Use `context_transform_nested()` when:**
+    /// - The transformation marks a significant abstraction boundary (e.g.,
+    ///   library error → application error) and you want fresh hook data
+    /// - You need to track both where the error originally occurred AND where
+    ///   it was wrapped in your error hierarchy
+    /// - Using hooks like `rootcause-backtrace` and want separate backtraces at
+    ///   both the original error location and the wrapping location
+    /// - The act of transforming the error is semantically meaningful
+    ///
+    /// **Use [`context_transform()`](Report::context_transform) when:**
+    /// - The transformation is just a mechanical type wrapper
+    /// - You want to preserve original hook data without running creation hooks
+    ///   again
+    /// - The type change doesn't represent a meaningful abstraction boundary
+    ///
+    /// **Use [`context()`](Report::context) when:**
+    /// - You want to add a descriptive message explaining what operation failed
+    ///
+    /// See [`examples/error_hierarchy.rs`] for a complete comparison of these
+    /// approaches.
+    ///
+    /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    ///
+    /// # Examples
+    ///
+    /// ## Common Use Case: Wrapping in Error Hierarchy with Metadata Preservation
+    ///
+    /// The most common use case is wrapping library errors in your
+    /// application's error enum while preserving the original error's
+    /// backtrace:
+    ///
+    /// ```rust
+    /// use rootcause::prelude::*;
+    ///
+    /// // Library-specific error
+    /// #[derive(Debug)]
+    /// struct DeserializationError {
+    ///     details: String,
+    /// }
+    ///
+    /// impl std::fmt::Display for DeserializationError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "Deserialization failed: {}", self.details)
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for DeserializationError {}
+    ///
+    /// // Application error hierarchy
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     DeserializationError(DeserializationError),
+    ///     // ... other variants
+    /// }
+    ///
+    /// impl std::fmt::Display for AppError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         match self {
+    ///             AppError::DeserializationError(e) => write!(f, "App error: {}", e),
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for AppError {}
+    ///
+    /// let deserialization_report: Report<DeserializationError> = report!(DeserializationError {
+    ///     details: "Invalid JSON".to_string(),
+    /// });
+    ///
+    /// // Wrap in application error hierarchy with fresh creation hooks
+    /// let app_report: Report<AppError> =
+    ///     deserialization_report.context_transform_nested(AppError::DeserializationError);
+    ///
+    /// // The formatted output will show:
+    /// // - The new AppError context with fresh hook data from this location
+    /// //   (such as a new backtrace if using rootcause-backtrace)
+    /// // - The entire original report (with preformatted DeserializationError
+    /// //   context and all its children/attachments) nested as a child, preserving
+    /// //   its original hook data
+    /// println!("{}", app_report);
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// - [`context_transform()`](Report::context_transform) - Transforms
+    ///   without nesting (keeps same structure level)
+    /// - [`preformat_root()`](Report::preformat_root) - Extracts context and
+    ///   creates preformatted report
+    /// - [`context()`](Report::context) - Wraps the report as a child under new
+    ///   context
+    pub fn context_transform_nested<F, D>(self, f: F) -> Report<D, Mutable, T>
+    where
+        F: FnOnce(C) -> D,
+        D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+        PreformattedContext: markers::ObjectMarkerFor<T>,
+    {
+        let (context, report) = self.preformat_root();
+        report.context_custom::<handlers::Display, _>(f(context))
+    }
+
+    /// Extracts the context and returns it along with a preformatted version of
+    /// the report.
+    ///
+    /// This method decomposes the report into two parts:
+    /// 1. The original context value of type `C`
+    /// 2. A new report with a
+    ///    [`PreformattedContext`](crate::preformatted::PreformattedContext)
+    ///    that contains the string representation of the original context
+    ///
+    /// The preformatted report maintains the same structure (children and
+    /// attachments) as the original, but replaces the typed context with a
+    /// preformatted string version. This is useful when you need both the
+    /// original typed value for processing and a formatted version for display.
+    ///
+    /// Unlike [`preformat()`](Report::preformat), which preformats the entire
+    /// report hierarchy, this method only preformats the root context and
+    /// returns it separately.
+    ///
+    /// # When to Use
+    ///
+    /// This method is primarily useful for implementing custom transformation
+    /// logic similar to
+    /// [`context_transform_nested()`](Report::context_transform_nested).
+    /// Most users should use the higher-level transformation methods instead:
+    /// - [`context_transform()`](Report::context_transform) - Transform without
+    ///   running creation hooks again
+    /// - [`context_transform_nested()`](Report::context_transform_nested) -
+    ///   Transform with fresh creation hooks
+    /// - [`context_to()`](Report::context_to) - Transform using a
+    ///   [`ReportConversion`](crate::ReportConversion) trait
+    ///
+    /// # Examples
+    ///
+    /// Implementing a custom preserving transformation with conditional
+    /// behavior:
+    ///
+    /// ```rust
+    /// use rootcause::{preformatted::PreformattedContext, prelude::*};
+    ///
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     Critical(String),
+    ///     Warning(String),
+    /// }
+    ///
+    /// impl std::fmt::Display for AppError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         match self {
+    ///             AppError::Critical(msg) => write!(f, "CRITICAL: {}", msg),
+    ///             AppError::Warning(msg) => write!(f, "Warning: {}", msg),
+    ///         }
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for AppError {}
+    ///
+    /// #[derive(Debug)]
+    /// struct ParseError {
+    ///     severity: u8,
+    /// }
+    ///
+    /// impl std::fmt::Display for ParseError {
+    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         write!(f, "Parse error (severity {})", self.severity)
+    ///     }
+    /// }
+    ///
+    /// impl std::error::Error for ParseError {}
+    ///
+    /// let parse_report: Report<ParseError> = report!(ParseError { severity: 8 });
+    ///
+    /// // Custom transformation: preformat and wrap only if severity is high
+    /// let (context, preformatted_report) = parse_report.preformat_root();
+    /// let app_report: Report<AppError> = if context.severity >= 5 {
+    ///     // High severity: wrap with new context (runs creation hooks again)
+    ///     preformatted_report.context(AppError::Critical("High severity parse error".into()))
+    /// } else {
+    ///     // Low severity: just transform in-place (reuses existing hook data)
+    ///     preformatted_report.context_transform(|_| AppError::Warning("Minor parse issue".into()))
+    /// };
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// - [`context_transform_nested()`](Report::context_transform_nested) -
+    ///   Uses this method internally for standard preserving transformations
+    /// - [`preformat()`](Report::preformat) - Preformats the entire report
+    ///   hierarchy
+    /// - [`into_parts()`](Report::into_parts) - Extracts context without
+    ///   preformatting
+    /// - [`current_context()`](crate::ReportRef::current_context) - Gets a
+    ///   reference to the context without extraction
+    pub fn preformat_root(self) -> (C, Report<PreformattedContext, Mutable, T>)
+    where
+        PreformattedContext: markers::ObjectMarkerFor<T>,
+    {
+        let preformatted = PreformattedContext::new_from_context(self.as_ref());
+        let (context, children, attachments) = self.into_parts();
+
+        (
+            context,
+            Report::from_parts_unhooked::<preformatted::PreformattedHandler>(
+                preformatted,
+                children,
+                attachments,
+            ),
+        )
+    }
 }
 
 impl<C: ?Sized, T> Report<C, Mutable, T> {
@@ -673,6 +1023,80 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
             ReportCollection::from([self.into_dynamic().into_cloneable()]),
             ReportAttachments::<T>::new(),
         )
+    }
+
+    /// Converts this report to a different context type using a
+    /// [`ReportConversion`] implementation.
+    ///
+    /// This method enables type-safe conversion between report contexts when a
+    /// conversion pattern has been defined via the [`ReportConversion`] trait.
+    /// It's particularly useful for translating library errors into
+    /// application-specific error types or moving errors across domain
+    /// boundaries.
+    ///
+    /// # When to Use
+    ///
+    /// **This is the recommended approach for converting library errors into
+    /// application error types.** Use `context_to()` when you have a standard,
+    /// reusable conversion pattern between error types that you've encoded in a
+    /// [`ReportConversion`] implementation.
+    ///
+    /// The typical pattern is:
+    /// 1. Implement [`ReportConversion`] for your application error type
+    /// 2. Use `context_to()` at call sites - the conversion happens
+    ///    automatically
+    ///
+    /// For ad-hoc transformations that won't be reused, consider using
+    /// [`context()`](Report::context) to wrap the error directly instead of
+    /// implementing a trait.
+    ///
+    /// See [`examples/error_hierarchy.rs`] for a complete guide.
+    ///
+    /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    ///
+    /// # Type Inference
+    ///
+    /// You typically need to specify the target type explicitly using the
+    /// turbofish syntax (`::<Type>`), as Rust cannot always infer it from
+    /// context.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::{ReportConversion, markers::Mutable, prelude::*};
+    /// # #[derive(Debug)]
+    /// # enum MyError { ParseError(String) }
+    /// # impl std::fmt::Display for MyError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// #         match self { MyError::ParseError(msg) => write!(f, "Parse error: {}", msg) }
+    /// #     }
+    /// # }
+    /// # impl std::error::Error for MyError {}
+    /// # impl<O, T> ReportConversion<std::num::ParseIntError, O, T> for MyError
+    /// #   where MyError: markers::ObjectMarkerFor<T>
+    /// # {
+    /// #     fn convert_report(report: Report<std::num::ParseIntError, O, T>) -> Report<Self, Mutable, T>
+    /// #     {
+    /// #         report.context(MyError::ParseError("Invalid number".to_string()))
+    /// #     }
+    /// # }
+    /// fn parse_number(s: &str) -> Result<i32, Report<MyError>> {
+    ///     s.parse::<i32>().context_to()  // Convert ParseIntError to MyError
+    /// }
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// - [`ReportConversion`] - The trait that defines conversions
+    /// - [`context()`](Report::context) - For ad-hoc error wrapping
+    /// - [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to) -
+    ///   Result-based conversion
+    ///
+    /// [`ReportConversion`]: crate::ReportConversion
+    #[track_caller]
+    #[must_use]
+    pub fn context_to<D: ReportConversion<C, O, T>>(self) -> Report<D, Mutable, T> {
+        D::convert_report(self)
     }
 
     /// Returns a reference to the child reports.

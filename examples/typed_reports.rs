@@ -36,8 +36,8 @@
 //! type parameters (Cloneable, Local), see the API docs.
 //!
 //! **What's next?**
-//! - Confused about type conversions? → `error_coercion.rs` explains how `?`
-//!   works
+//! - See how `?` handles type conversions automatically → `error_coercion.rs`
+//! - Want systematic conversion patterns? → `error_hierarchy.rs`
 //! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;

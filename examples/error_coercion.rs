@@ -12,6 +12,9 @@
 //! - `Report<C>` → `Report<Dynamic>`
 //!
 //! This lets you freely mix error types and let `?` handle conversions.
+//!
+//! **What's next?** For more control over conversions (reusable patterns,
+//! wrapping library errors in your app types), see `error_hierarchy.rs`.
 
 use std::fs;
 
