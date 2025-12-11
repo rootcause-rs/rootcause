@@ -49,17 +49,17 @@ use rootcause::{ReportConversion, markers, prelude::*};
 /// into a unified hierarchy.
 #[derive(Debug)]
 enum AppError {
-    IoError(io::Error),
-    ParseError(std::num::ParseIntError),
-    ValidationError(String),
+    Io(io::Error),
+    Parse(std::num::ParseIntError),
+    Validation(String),
 }
 
 impl std::fmt::Display for AppError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            AppError::IoError(e) => write!(f, "IO error: {e}"),
-            AppError::ParseError(e) => write!(f, "Parse error: {e}"),
-            AppError::ValidationError(msg) => write!(f, "Validation error: {msg}"),
+            AppError::Io(e) => write!(f, "IO error: {e}"),
+            AppError::Parse(e) => write!(f, "Parse error: {e}"),
+            AppError::Validation(msg) => write!(f, "Validation error: {msg}"),
         }
     }
 }
@@ -96,7 +96,7 @@ where
         report: Report<io::Error, markers::Mutable, T>,
     ) -> Report<Self, markers::Mutable, T> {
         // Lightweight wrapping - just changes the type, preserves structure
-        report.context_transform(AppError::IoError)
+        report.context_transform(AppError::Io)
     }
 }
 
@@ -131,7 +131,7 @@ where
         report: Report<std::num::ParseIntError, markers::Mutable, T>,
     ) -> Report<Self, markers::Mutable, T> {
         // Heavyweight wrapping - creates new layer with fresh hooks
-        report.context_transform_nested(AppError::ParseError)
+        report.context_transform_nested(AppError::Parse)
     }
 }
 
@@ -163,7 +163,7 @@ where
     AppError: markers::ObjectMarkerFor<T>,
 {
     // Adds descriptive message as new layer
-    report.context(AppError::ValidationError(
+    report.context(AppError::Validation(
         "Failed to parse user input".to_string(),
     ))
 }
@@ -178,15 +178,15 @@ where
 /// you use `context_to()`. The error conversions happen automatically via
 /// the ReportConversion trait implementations above.
 fn read_and_parse_number(path: &str) -> Result<i32, Report<AppError>> {
-    // .context_to() uses the IoError ReportConversion (context_transform)
+    // .context_to() uses the Io ReportConversion (context_transform)
     let contents = std::fs::read_to_string(path).context_to()?;
 
-    // .context_to() uses the ParseError ReportConversion (context_transform_nested)
+    // .context_to() uses the Parse ReportConversion (context_transform_nested)
     let number: i32 = contents.trim().parse().context_to()?;
 
     // Direct AppError creation (not a conversion)
     if number < 0 {
-        return Err(report!(AppError::ValidationError(
+        return Err(report!(AppError::Validation(
             "Number must be non-negative".to_string()
         ))
         .attach(format!("Got: {number}")));
@@ -240,7 +240,7 @@ fn demonstrate_approaches() {
     if let Err(parse_error) = parse_result {
         let report_with_context: Report<AppError> = report!(parse_error)
             .attach("Input: also_not_a_number")
-            .context(AppError::ValidationError(
+            .context(AppError::Validation(
                 "Failed to parse user input".to_string(),
             ));
 
@@ -262,13 +262,13 @@ fn realistic_example() {
 
             // You can pattern match on the typed error if needed
             match report.current_context() {
-                AppError::IoError(_) => {
+                AppError::Io(_) => {
                     println!("→ This was an IO error - maybe retry or use default config")
                 }
-                AppError::ParseError(_) => {
+                AppError::Parse(_) => {
                     println!("→ This was a parse error - maybe show user a helpful message")
                 }
-                AppError::ValidationError(_) => {
+                AppError::Validation(_) => {
                     println!("→ This was a validation error - maybe prompt for new input")
                 }
             }
