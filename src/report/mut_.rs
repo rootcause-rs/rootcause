@@ -336,7 +336,10 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         // 3. `C=Dynamic`, so this is trivially true
         // 4. Guaranteed by the invariants of this type.
         // 5. Guaranteed by the invariants of this type.
-        unsafe { ReportCollection::<Dynamic, T>::from_raw_mut(raw_children) }
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportCollection::<Dynamic, T>::from_raw_mut(raw_children)
+        }
     }
 
     /// Returns an immutable reference to the attachments.

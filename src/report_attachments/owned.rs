@@ -255,7 +255,10 @@ impl<T> ReportAttachments<T> {
         // 4. If `T=Local`, then this is trivially true. If `T=SendSync`, then the
         //    safety requirement is upheld because the collection invariant guarantees
         //    this.
-        let attachment = unsafe { ReportAttachment::<Dynamic, T>::from_raw(attachment) };
+        let attachment = unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachment::<Dynamic, T>::from_raw(attachment)
+        };
 
         Some(attachment)
     }

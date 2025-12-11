@@ -79,7 +79,7 @@ use rootcause_internals::handlers::FormattingFunction;
 
 use crate::{
     ReportRef,
-    hooks::{HookData, builtin_hooks::report_formatter::DefaultReportFormatter},
+    hooks::{HookData, builtin_hooks::report_formatter::DefaultReportFormatter, use_hooks},
     markers::{Dynamic, Local, Uncloneable},
 };
 
@@ -178,13 +178,19 @@ pub(crate) fn format_report(
     formatter: &mut fmt::Formatter<'_>,
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
-    if let Some(hook_data) = HookData::fetch()
-        && let Some(hook) = &hook_data.report_formatter
-    {
-        hook.format_report(report, formatter, report_formatting_function)
-    } else {
-        DefaultReportFormatter::DEFAULT.format_report(report, formatter, report_formatting_function)
-    }
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data
+            && let Some(hook) = &hook_data.report_formatter
+        {
+            hook.format_report(report, formatter, report_formatting_function)
+        } else {
+            DefaultReportFormatter::DEFAULT.format_report(
+                report,
+                formatter,
+                report_formatting_function,
+            )
+        }
+    })
 }
 
 pub(crate) fn format_reports(
@@ -192,15 +198,17 @@ pub(crate) fn format_reports(
     formatter: &mut fmt::Formatter<'_>,
     report_formatting_function: FormattingFunction,
 ) -> fmt::Result {
-    if let Some(hook_data) = HookData::fetch()
-        && let Some(hook) = &hook_data.report_formatter
-    {
-        hook.format_reports(reports, formatter, report_formatting_function)
-    } else {
-        DefaultReportFormatter::DEFAULT.format_reports(
-            reports,
-            formatter,
-            report_formatting_function,
-        )
-    }
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data
+            && let Some(hook) = &hook_data.report_formatter
+        {
+            hook.format_reports(reports, formatter, report_formatting_function)
+        } else {
+            DefaultReportFormatter::DEFAULT.format_reports(
+                reports,
+                formatter,
+                report_formatting_function,
+            )
+        }
+    })
 }

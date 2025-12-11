@@ -11,9 +11,10 @@
 //!
 //! > **Note:** Hooks format a type globally across ALL errors. To control
 //! > formatting for a single context, use [`context_custom()`] with a handler
-//! > instead (see `examples/custom_handler.rs`).
+//! > instead (see [`examples/custom_handler.rs`]).
 //!
 //! [`context_custom()`]: crate::Report::context_custom
+//! [`examples/custom_handler.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/custom_handler.rs
 //!
 //! # Key Components
 //!
@@ -119,7 +120,7 @@ use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     ReportRef,
-    hooks::HookData,
+    hooks::{HookData, use_hooks},
     markers::{Dynamic, Local, Uncloneable},
     preformatted::PreformattedContext,
 };
@@ -167,77 +168,6 @@ impl HookMap {
         // However this is exactly what we are doing here,
         // so the invariant is upheld.
         self.map.insert(TypeId::of::<C>(), hook);
-    }
-
-    pub(crate) fn display_context(
-        &self,
-        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
-        formatter: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        if let Some(report) = report.downcast_report::<PreformattedContext>()
-            && let Some(hook) = self.get(report.current_context().original_type_id())
-        {
-            hook.display_preformatted(report, formatter)
-        } else if let Some(hook) = self.get(report.current_context_type_id()) {
-            // SAFETY:
-            // 1. The call to `get_hook` guarantees that the returned hook is of type
-            //    `Hook<C, H>`, and `TypeId::of<C>() == report.current_context_type_id()`.
-            //    Therefore the type `C` stored in the context matches the `C` from type
-            //    `Hook<C, H>`.
-            unsafe {
-                // @add-unsafe-context: UntypedContextFormatterHook
-                hook.display(report, formatter)
-            }
-        } else {
-            fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
-        }
-    }
-
-    pub(crate) fn debug_context(
-        &self,
-        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
-        formatter: &mut fmt::Formatter<'_>,
-    ) -> fmt::Result {
-        if let Some(report) = report.downcast_report::<PreformattedContext>()
-            && let Some(hook) = self.get(report.current_context().original_type_id())
-        {
-            hook.debug_preformatted(report, formatter)
-        } else if let Some(hook) = self.get(report.current_context_type_id()) {
-            // SAFETY:
-            // 1. The call to `get` guarantees that the returned hook is of type `Hook<C,
-            //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
-            //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
-            unsafe {
-                // @add-unsafe-context: UntypedContextFormatterHook
-                hook.debug(report, formatter)
-            }
-        } else {
-            fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
-        }
-    }
-
-    /// # Arguments
-    ///
-    /// - `report_formatting_function`: Whether the report in which this context
-    ///   will be embedded is being formatted using [`Display`] formatting or
-    ///   [`Debug`]
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
-    pub(crate) fn get_preferred_context_formatting_style(
-        &self,
-        report: ReportRef<'_, Dynamic, Uncloneable, Local>,
-        report_formatting_function: FormattingFunction,
-    ) -> ContextFormattingStyle {
-        if let Some(current_context) = report.downcast_current_context::<PreformattedContext>()
-            && let Some(hook) = self.get(current_context.original_type_id())
-        {
-            hook.preferred_context_formatting_style(report, report_formatting_function)
-        } else if let Some(hook) = self.get(report.current_context_type_id()) {
-            hook.preferred_context_formatting_style(report, report_formatting_function)
-        } else {
-            report.preferred_context_formatting_style_unhooked(report_formatting_function)
-        }
     }
 }
 
@@ -555,26 +485,58 @@ pub(crate) fn display_context(
     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(hook_data) = HookData::fetch() {
-        hook_data
-            .context_formatters
-            .display_context(report, formatter)
-    } else {
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data {
+            let context_formatters: &HookMap = &hook_data.context_formatters;
+            if let Some(report) = report.downcast_report::<PreformattedContext>()
+                && let Some(hook) =
+                    context_formatters.get(report.current_context().original_type_id())
+            {
+                return hook.display_preformatted(report, formatter);
+            }
+
+            if let Some(hook) = context_formatters.get(report.current_context_type_id()) {
+                // SAFETY:
+                // 1. The call to `get` guarantees that the returned hook is of type `Hook<C,
+                //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
+                //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
+                unsafe {
+                    // @add-unsafe-context: StoredHook
+                    return hook.display(report, formatter);
+                }
+            }
+        }
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
-    }
+    })
 }
 
 pub(crate) fn debug_context(
     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(hook_data) = HookData::fetch() {
-        hook_data
-            .context_formatters
-            .debug_context(report, formatter)
-    } else {
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data {
+            let context_formatters: &HookMap = &hook_data.context_formatters;
+            if let Some(report) = report.downcast_report::<PreformattedContext>()
+                && let Some(hook) =
+                    context_formatters.get(report.current_context().original_type_id())
+            {
+                return hook.debug_preformatted(report, formatter);
+            }
+
+            if let Some(hook) = context_formatters.get(report.current_context_type_id()) {
+                // SAFETY:
+                // 1. The call to `get` guarantees that the returned hook is of type `Hook<C,
+                //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
+                //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
+                unsafe {
+                    // @add-unsafe-context: StoredHook
+                    return hook.debug(report, formatter);
+                }
+            }
+        }
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)
-    }
+    })
 }
 
 /// # Arguments
@@ -589,11 +551,20 @@ pub(crate) fn get_preferred_context_formatting_style(
     report: ReportRef<'_, Dynamic, Uncloneable, Local>,
     report_formatting_function: FormattingFunction,
 ) -> ContextFormattingStyle {
-    if let Some(hook_data) = HookData::fetch() {
-        hook_data
-            .context_formatters
-            .get_preferred_context_formatting_style(report, report_formatting_function)
-    } else {
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data {
+            let context_formatters: &HookMap = &hook_data.context_formatters;
+
+            if let Some(current_context) = report.downcast_current_context::<PreformattedContext>()
+                && let Some(hook) = context_formatters.get(current_context.original_type_id())
+            {
+                return hook.preferred_context_formatting_style(report, report_formatting_function);
+            }
+
+            if let Some(hook) = context_formatters.get(report.current_context_type_id()) {
+                return hook.preferred_context_formatting_style(report, report_formatting_function);
+            }
+        }
         report.preferred_context_formatting_style_unhooked(report_formatting_function)
-    }
+    })
 }

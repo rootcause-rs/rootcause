@@ -170,7 +170,7 @@ use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunctio
 
 use crate::{
     ReportRef,
-    hooks::HookData,
+    hooks::{HookData, use_hooks},
     markers::{Dynamic, Local, Uncloneable},
     preformatted::PreformattedAttachment,
     report_attachment::ReportAttachmentRef,
@@ -590,30 +590,29 @@ pub(crate) fn display_attachment(
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(hook_data) = HookData::fetch() {
-        if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
-            && let Some(hook) = hook_data
-                .attachment_formatters
-                .get(attachment.inner().original_type_id())
-        {
-            return hook.display_preformatted(attachment, attachment_parent, formatter);
-        }
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data {
+            let attachment_formatters: &HookMap = &hook_data.attachment_formatters;
 
-        if let Some(hook) = hook_data
-            .attachment_formatters
-            .get(attachment.inner_type_id())
-        {
-            // SAFETY:
-            // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
-            //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
-            //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
-            unsafe {
-                // @add-unsafe-context: UntypedAttachmentFormatterHook
-                return hook.display(attachment, attachment_parent, formatter);
+            if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
+                && let Some(hook) = attachment_formatters.get(attachment.inner().original_type_id())
+            {
+                return hook.display_preformatted(attachment, attachment_parent, formatter);
+            }
+
+            if let Some(hook) = attachment_formatters.get(attachment.inner_type_id()) {
+                // SAFETY:
+                // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
+                //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
+                //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
+                unsafe {
+                    // @add-unsafe-context: StoredHook
+                    return hook.display(attachment, attachment_parent, formatter);
+                }
             }
         }
-    }
-    fmt::Display::fmt(&attachment.format_inner_unhooked(), formatter)
+        fmt::Display::fmt(&attachment.format_inner_unhooked(), formatter)
+    })
 }
 
 pub(crate) fn debug_attachment(
@@ -621,51 +620,48 @@ pub(crate) fn debug_attachment(
     attachment_parent: Option<AttachmentParent<'_>>,
     formatter: &mut fmt::Formatter<'_>,
 ) -> fmt::Result {
-    if let Some(hook_data) = HookData::fetch() {
-        if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
-            && let Some(hook) = hook_data
-                .attachment_formatters
-                .get(attachment.inner().original_type_id())
-        {
-            return hook.debug_preformatted(attachment, attachment_parent, formatter);
-        }
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data {
+            let attachment_formatters: &HookMap = &hook_data.attachment_formatters;
 
-        if let Some(hook) = hook_data
-            .attachment_formatters
-            .get(attachment.inner_type_id())
-        {
-            // SAFETY:
-            // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
-            //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
-            //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
-            unsafe {
-                // @add-unsafe-context: UntypedAttachmentFormatterHook
-                return hook.debug(attachment, attachment_parent, formatter);
+            if let Some(attachment) = attachment.downcast_attachment::<PreformattedAttachment>()
+                && let Some(hook) = attachment_formatters.get(attachment.inner().original_type_id())
+            {
+                return hook.debug_preformatted(attachment, attachment_parent, formatter);
+            }
+
+            if let Some(hook) = attachment_formatters.get(attachment.inner_type_id()) {
+                // SAFETY:
+                // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
+                //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
+                //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
+                unsafe {
+                    // @add-unsafe-context: StoredHook
+                    return hook.debug(attachment, attachment_parent, formatter);
+                }
             }
         }
-    }
-    fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
+        fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
+    })
 }
 
 pub(crate) fn get_preferred_formatting_style(
     attachment: ReportAttachmentRef<'_, Dynamic>,
     report_formatting_function: FormattingFunction,
 ) -> AttachmentFormattingStyle {
-    if let Some(hook_data) = HookData::fetch() {
-        if let Some(inner) = attachment.downcast_inner::<PreformattedAttachment>()
-            && let Some(hook) = hook_data
-                .attachment_formatters
-                .get(inner.original_type_id())
-        {
-            return hook.preferred_formatting_style(attachment, report_formatting_function);
-        }
+    use_hooks(|hook_data: Option<&HookData>| {
+        if let Some(hook_data) = hook_data {
+            let attachment_formatters: &HookMap = &hook_data.attachment_formatters;
+            if let Some(inner) = attachment.downcast_inner::<PreformattedAttachment>()
+                && let Some(hook) = attachment_formatters.get(inner.original_type_id())
+            {
+                return hook.preferred_formatting_style(attachment, report_formatting_function);
+            }
 
-        if let Some(hook) = hook_data
-            .attachment_formatters
-            .get(attachment.inner_type_id())
-        {
-            return hook.preferred_formatting_style(attachment, report_formatting_function);
+            if let Some(hook) = attachment_formatters.get(attachment.inner_type_id()) {
+                return hook.preferred_formatting_style(attachment, report_formatting_function);
+            }
         }
-    }
-    attachment.preferred_formatting_style_unhooked(report_formatting_function)
+        attachment.preferred_formatting_style_unhooked(report_formatting_function)
+    })
 }

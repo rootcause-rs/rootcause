@@ -52,7 +52,11 @@ mod limit_field_access {
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 5. If `T = SendSync`: All contexts and attachments in all of the
-        ///    reports and all sub-reports must be `Send+Sync`
+        ///    reports and all sub-reports must be `Send+Sync`.
+        /// 6. If the mutable reference to this struct was created through
+        ///    `Self::from_raw_mut` on a `&'a mut Vec<RawReport>`, then
+        ///    invariant number 5 is upheld for the entire lifetime of the `&'a
+        ///    mut Vec<RawReport>`.
         raw: Vec<RawReport>,
         _context: PhantomData<Context>,
         _thread_safety: PhantomData<ThreadSafety>,
@@ -75,7 +79,7 @@ mod limit_field_access {
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 5. If `T = SendSync`: All contexts and attachments in all of the
-        ///    report and all sub-reports must be `Send+Sync`
+        ///    reports and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw(raw: Vec<RawReport>) -> Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -84,6 +88,7 @@ mod limit_field_access {
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
             // 5. Guaranteed by the caller
+            // 6. Not applicable
             Self {
                 raw,
                 _context: PhantomData,
@@ -108,7 +113,7 @@ mod limit_field_access {
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 5. If `T = SendSync`: All contexts and attachments in all of the
-        ///    report and all sub-reports must be `Send+Sync`
+        ///    reports and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_ref(raw: &Vec<RawReport>) -> &Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -117,6 +122,7 @@ mod limit_field_access {
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
             // 5. Guaranteed by the caller
+            // 6. Not applicable
             let raw_ptr = core::ptr::from_ref(raw).cast::<Self>();
 
             // SAFETY:
@@ -145,7 +151,7 @@ mod limit_field_access {
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 5. If `T = SendSync`: All contexts and attachments in all of the
-        ///    report and all sub-reports must be `Send+Sync`
+        ///    reports and all sub-reports must be `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn from_raw_mut(raw: &mut Vec<RawReport>) -> &mut Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -154,6 +160,7 @@ mod limit_field_access {
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
             // 5. Guaranteed by the caller
+            // 6. We are not mutating the vector here, so the invariant is upheld here.
             let raw_ptr = core::ptr::from_mut(raw).cast::<Self>();
 
             // SAFETY:
@@ -170,7 +177,9 @@ mod limit_field_access {
         #[must_use]
         pub(crate) fn into_raw(self) -> Vec<RawReport> {
             // SAFETY: We are destroying `self`, so we no longer
-            // need to uphold any safety invariants.
+            // need to uphold invariants 1-5. Invariant 6 is not relevent as
+            // we are consuming self and thus could not have been created through
+            // `from_raw_mut`.
             self.raw
         }
 
@@ -183,6 +192,7 @@ mod limit_field_access {
             // 3. Upheld, as we are not allowing mutation
             // 4. Upheld, as we are not creating any such references
             // 5. Upheld, as we are not allowing mutation
+            // 6. Not applicable, as we are not allowing mutation
             &self.raw
         }
 
@@ -211,6 +221,7 @@ mod limit_field_access {
             // 3. Guaranteed by the caller
             // 4. Guaranteed by the caller
             // 5. Guaranteed by the caller
+            // 6. Guaranteed by the caller
             &mut self.raw
         }
     }
@@ -557,6 +568,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         // 6. Guaranteed by the invariants of the collection.
         // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
+            // @add-unsafe-context: Dynamic
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
             ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
@@ -665,7 +677,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
 
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
-        // 2. The invariants of the collection guarantee this.
+        // 2. `T=Local`, so this is trivially true.
         // 3. The invariants of the collection guarantee this.
         // 4. The invariants of the collection guarantee this.
         // 5. `T=Local`, so this is trivially true.
@@ -680,7 +692,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
 
         // SAFETY:
         // 1. The invariants of the collection guarantee this.
-        // 2. The invariants of the collection guarantee this.
+        // 2. `T=Local`, so this is trivially true.
         // 3. The invariants of the collection guarantee this.
         // 4. The invariants of the collection guarantee this.
         // 5. `T=Local`, so this is trivially true.
@@ -925,6 +937,7 @@ impl<C: ?Sized, T> core::fmt::Debug for ReportCollection<C, T> {
         // 6. Guaranteed by the invariants of the collection.
         // 7. For the called method we set `T=Local`, so this is trivially true.
         let slice = unsafe {
+            // @add-unsafe-context: Dynamic
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
             ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)

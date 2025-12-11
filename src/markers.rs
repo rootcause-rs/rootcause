@@ -630,6 +630,12 @@ impl ReportOwnershipMarker for Cloneable {
 /// let rc_data: Rc<String> = Rc::new("error".to_string());
 /// let report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(rc_data);
 /// ```
+//
+// # Safety:
+//
+// This trait is sealed and cannot be implemented outside of this crate. It is
+// guaranteed to only be implemented for the combinations of types and
+// thread-safety markers listed above.
 pub trait ObjectMarkerFor<T>: sealed_object_marker::Sealed + Sized + 'static {
     /// Runs report creation hooks specific to this thread-safety marker.
     #[doc(hidden)]
