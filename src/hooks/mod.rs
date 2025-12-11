@@ -644,7 +644,7 @@ pub struct HooksHandle {
     ///    only safe when the caller can guarantee no such references exist or
     ///    will be created in the future.
     /// 4. No mutation or deallocation of the pointed-to data will occur until
-    ///   `reclaim()` is called.
+    ///    `reclaim()` is called.
     hook_data: NonNull<HookData>,
 }
 
@@ -681,11 +681,8 @@ impl HooksHandle {
             HOOKS.replace(hook_data)
         };
 
-        if let Some(hook_data) = hook_data {
-            Some(Self { hook_data })
-        } else {
-            None
-        }
+        let hook_data = hook_data?;
+        Some(Self { hook_data })
     }
 
     /// Reclaims ownership of the leaked hooks, returning them as a `Hooks`

@@ -410,7 +410,7 @@ where
 pub(crate) fn run_creation_hooks_local(report: ReportMut<'_, Dynamic, Local>) {
     struct Inner<'a>(ReportMut<'a, Dynamic, Local>);
     impl HookCallback<()> for Inner<'_> {
-        fn call(self, hook_data: Option<&HookData>) -> () {
+        fn call(self, hook_data: Option<&HookData>) {
             let mut report = self.0;
             if let Some(hook_data) = hook_data {
                 for hook in &hook_data.report_creation {
@@ -432,7 +432,7 @@ pub(crate) fn run_creation_hooks_local(report: ReportMut<'_, Dynamic, Local>) {
 pub(crate) fn run_creation_hooks_sendsync(report: ReportMut<'_, Dynamic, SendSync>) {
     struct Inner<'a>(ReportMut<'a, Dynamic, SendSync>);
     impl HookCallback<()> for Inner<'_> {
-        fn call(self, hook_data: Option<&HookData>) -> () {
+        fn call(self, hook_data: Option<&HookData>) {
             let mut report = self.0;
             if let Some(hook_data) = hook_data {
                 for hook in &hook_data.report_creation {
