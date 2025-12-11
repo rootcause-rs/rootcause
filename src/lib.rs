@@ -373,7 +373,7 @@ pub use self::{
 #[doc(hidden)]
 pub mod __private {
     // Used by the rootcause-backtrace
-    pub const ROOTCAUSE_LOCATION: &'static core::panic::Location = core::panic::Location::caller();
+    pub const ROOTCAUSE_LOCATION: &core::panic::Location = core::panic::Location::caller();
 
     use alloc::fmt;
     #[doc(hidden)]
