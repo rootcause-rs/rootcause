@@ -17,6 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The default report formatter no longer uses ANSI colors [#74](https://github.com/rootcause-rs/rootcause/pull/74)
 - Re-organize the compatibility modules [#75](https://github.com/rootcause-rs/rootcause/pull/75)
 - The `dyn Any`-marker for type-erased reports was replaced with a custom `Dynamic` marker [#78](https://github.com/rootcause-rs/rootcause/pull/78)
+- Implement a new hook system [#80](https://github.com/rootcause-rs/rootcause/pull/80), [#81](https://github.com/rootcause-rs/rootcause/pull/81)
+- Moved backtrace support into the new `rootcause-backtrace` crate [#82](https://github.com/rootcause-rs/rootcause/pull/82)
 
 ## [0.10.0] - 2025-11-24
 
