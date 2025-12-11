@@ -15,7 +15,7 @@ keywords = [
 description = "Backtraces support for the rootcause error reporting library"
 repository = "https://github.com/rootcause-rs/rootcause"
 documentation = "https://docs.rs/rootcause-backtrace"
-rust-version = "1.88"
+rust-version = "1.89"
 
 [dependencies]
 backtrace = { version = "0.3.76", default-features = false, features = [
