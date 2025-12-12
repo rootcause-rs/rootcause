@@ -37,7 +37,7 @@
 //!
 //! **What's next?**
 //! - See how `?` handles type conversions automatically → `error_coercion.rs`
-//! - Want systematic conversion patterns? → `error_hierarchy.rs`
+//! - Compare context transformation methods → `context_methods.rs`
 //! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;

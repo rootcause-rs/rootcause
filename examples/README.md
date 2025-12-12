@@ -11,7 +11,7 @@ Demonstrations of rootcause features and patterns.
 - [`lazy_evaluation.rs`](lazy_evaluation.rs) - Lazy evaluation: `.attach_with()` and `.context_with()` for expensive computations
 - [`typed_reports.rs`](typed_reports.rs) - Type-safe errors with `Report<C>`, pattern matching for error recovery
 - [`error_coercion.rs`](error_coercion.rs) - How `?` automatically converts between error types - mixing typed and dynamic
-- [`error_hierarchy.rs`](error_hierarchy.rs) - Systematic error conversion with `ReportConversion` and `context_to()` - beyond what `?` does automatically
+- [`context_methods.rs`](context_methods.rs) - Comparing context transformation methods: `context()`, `context_transform()`, `context_transform_nested()`, `context_to()`
 
 ## Collections
 

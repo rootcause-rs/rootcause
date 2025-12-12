@@ -13,8 +13,8 @@
 //!
 //! This lets you freely mix error types and let `?` handle conversions.
 //!
-//! **What's next?** For more control over conversions (reusable patterns,
-//! wrapping library errors in your app types), see `error_hierarchy.rs`.
+//! **Next:** Learn about automatic conversions with `?` in `error_coercion.rs`,
+//! or compare context transformation methods in `context_methods.rs`.
 
 use std::fs;
 

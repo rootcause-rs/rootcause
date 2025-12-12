@@ -12,129 +12,108 @@ use crate::{
 /// [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to) methods,
 /// allowing ergonomic conversions between related error types.
 ///
-/// # When to Implement
+/// Implement `ReportConversion` for reusable error conversions. For one-off
+/// transformations, use [`context()`](crate::Report::context) directly.
 ///
-/// Implement `ReportConversion` when you have a standard, reusable way to
-/// convert from one error context to another. Common scenarios include:
+/// # Choosing a Transformation Strategy
 ///
-/// - **Wrapping library errors**: Converting `serde_json::Error` to your
-///   application's `MyError::Json` variant
-/// - **Error hierarchies**: Converting specific errors to more general types
-/// - **Domain boundaries**: Translating errors between layers of your
-///   application
+/// Inside your `convert_report` implementation, you have full access to
+/// inspect the report before choosing how to convert it. However most
+/// implementations are straightforward and can use one of the following
+/// methods:
 ///
-/// For ad-hoc, one-off transformations, consider using the
-/// [`context()`](crate::Report::context) method to wrap errors instead of
-/// implementing this trait.
+/// | Method                         | New Report? | Runs Hooks? | Preformats? | Result Structure                                       |
+/// |--------------------------------|-------------|-------------|-------------|--------------------------------------------------------|
+/// | [`context()`]                  | ✅ Yes      | ✅ Yes      | ❌ No       | New context in new node                                |
+/// | [`context_transform()`]        | ❌ No       | ❌ No       | ❌ No       | Same structure, new context                            |
+/// | [`context_transform_nested()`] | ✅ Yes      | ✅ Yes      | ✅ Yes      | Original context preformatted, new context in new node |
+///
+/// [`context_transform()`]: crate::Report::context_transform
+/// [`context_transform_nested()`]: crate::Report::context_transform_nested
+/// [`context()`]: crate::Report::context
+///
+/// See [`examples/context_methods.rs`] for a complete comparison of these
+/// strategies, and [`examples/thiserror_interop.rs`] for integration patterns.
+///
+/// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+/// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
 ///
 /// # Examples
 ///
-/// ## Basic Implementation
+/// Using [`context()`](crate::Report::context):
 ///
 /// ```rust
 /// use rootcause::{ReportConversion, markers, prelude::*};
 ///
-/// #[derive(Debug)]
-/// enum MyError {
-///     ParseError(String),
+/// # #[derive(Debug)]
+/// enum AppError {
+///   Io
 /// }
+/// # impl std::fmt::Display for AppError {
+/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+/// #         match self { AppError::Io => write!(f, "Io error") }
+/// #     }
+/// # }
 ///
-/// impl std::fmt::Display for MyError {
-///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-///         match self {
-///             MyError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-///         }
-///     }
-/// }
-///
-/// impl std::error::Error for MyError {}
-///
-/// // Implement conversion from std::num::ParseIntError
-/// impl<O, T> ReportConversion<std::num::ParseIntError, O, T> for MyError
+/// impl<O, T> ReportConversion<std::io::Error, O, T> for AppError
 /// where
-///     MyError: markers::ObjectMarkerFor<T>,
+///     AppError: markers::ObjectMarkerFor<T>,
 /// {
 ///     fn convert_report(
-///         report: Report<std::num::ParseIntError, O, T>,
+///         report: Report<std::io::Error, O, T>,
 ///     ) -> Report<Self, markers::Mutable, T> {
-///         report.context(MyError::ParseError("Invalid number".to_string()))
+///         report.context(AppError::Io)
 ///     }
 /// }
 /// ```
+
 ///
-/// ## Using the Conversion
+/// Using [`context_transform()`](crate::Report::context_transform):
 ///
 /// ```rust
-/// # use rootcause::{ReportConversion, markers, prelude::*};
-/// #
+/// use rootcause::{ReportConversion, markers, prelude::*};
+/// # use std::io;
+///
 /// # #[derive(Debug)]
-/// # enum MyError {
-/// #     ParseError(String),
-/// # }
-/// #
-/// # impl std::fmt::Display for MyError {
+/// enum AppError {
+///   Io(io::Error)
+/// }
+/// # impl std::fmt::Display for AppError {
 /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-/// #         match self {
-/// #             MyError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-/// #         }
+/// #         match self { AppError::Io(e) => write!(f, "IO error: {}", e) }
 /// #     }
 /// # }
-/// #
-/// # impl std::error::Error for MyError {}
-/// #
-/// # impl<O, T> ReportConversion<std::num::ParseIntError, O, T> for MyError
-/// #   where MyError: rootcause::markers::ObjectMarkerFor<T>
-/// # {
-/// #     fn convert_report(
-/// #         report: Report<std::num::ParseIntError, O, T>) -> Report<Self, markers::Mutable, T> {
-/// #         report.context(MyError::ParseError("Invalid number".to_string()))
-/// #     }
-/// # }
-/// #
-/// fn parse_config(s: &str) -> Result<i32, Report<MyError>> {
-///     s.parse::<i32>().context_to() // Uses ReportConversion
+///
+/// impl<T> ReportConversion<io::Error, markers::Mutable, T> for AppError
+/// where
+///     AppError: markers::ObjectMarkerFor<T>,
+/// {
+///     fn convert_report(
+///         report: Report<io::Error, markers::Mutable, T>,
+///     ) -> Report<Self, markers::Mutable, T> {
+///         report.context_transform(AppError::Io)
+///     }
 /// }
 /// ```
 pub trait ReportConversion<C: ?Sized, O, T>: ObjectMarkerFor<T> {
     /// Converts a report with context `C` to a report with context `Self`.
     ///
-    /// This method receives the source report and should return a new report
-    /// with the transformed context. The thread-safety marker `T` is preserved,
-    /// while the ownership marker becomes [`Mutable`] for the new report.
-    ///
-    /// # Implementation Notes
-    ///
-    /// Implementations typically use one of these report transformation
-    /// methods:
-    ///
-    /// - [`context()`](crate::Report::context) - Wraps the report as a child
-    ///   under new context (runs creation hooks)
-    /// - [`context_transform()`](crate::Report::context_transform) - Transforms
-    ///   context in-place without running creation hooks again
-    /// - [`context_transform_nested()`](crate::Report::context_transform_nested) -
-    ///   Transforms while preserving the original report as a nested child with
-    ///   fresh creation hooks
+    /// This method is called automatically by [`context_to`](crate::Report::context_to)
+    /// and [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to).
+    /// The thread-safety marker `T` is preserved, while the ownership marker
+    /// becomes [`Mutable`] for the new report.
     ///
     /// # Examples
     ///
-    /// Using `context()` to wrap the error:
-    ///
     /// ```
     /// use rootcause::{ReportConversion, markers, prelude::*};
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     ParseError(String),
-    /// }
-    ///
-    /// impl std::fmt::Display for AppError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             AppError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-    ///         }
-    ///     }
-    /// }
-    /// # impl std::error::Error for AppError {}
+    /// # #[derive(Debug)]
+    /// # enum AppError { ParseError(String) }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    /// #         match self { AppError::ParseError(msg) => write!(f, "Parse error: {}", msg) }
+    /// #     }
+    /// # }
     ///
     /// impl<O, T> ReportConversion<std::num::ParseIntError, O, T> for AppError
     /// where
@@ -147,41 +126,5 @@ pub trait ReportConversion<C: ?Sized, O, T>: ObjectMarkerFor<T> {
     ///     }
     /// }
     /// ```
-    ///
-    /// Using `context_transform()` for in-place transformation:
-    ///
-    /// ```
-    /// use rootcause::{ReportConversion, markers, prelude::*};
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     ParseError(std::num::ParseIntError),
-    /// }
-    ///
-    /// impl std::fmt::Display for AppError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             AppError::ParseError(e) => write!(f, "Parse error: {}", e),
-    ///         }
-    ///     }
-    /// }
-    /// # impl std::error::Error for AppError {}
-    ///
-    /// impl<T> ReportConversion<std::num::ParseIntError, markers::Mutable, T> for AppError
-    /// where
-    ///     AppError: markers::ObjectMarkerFor<T>,
-    /// {
-    ///     fn convert_report(
-    ///         report: Report<std::num::ParseIntError, markers::Mutable, T>,
-    ///     ) -> Report<Self, markers::Mutable, T> {
-    ///         report.context_transform(AppError::ParseError)
-    ///     }
-    /// }
-    /// ```
-    ///
-    /// This method is called automatically by
-    /// [`context_to`](crate::Report::context_to) and
-    /// [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to), so
-    /// users rarely invoke it directly.
     fn convert_report(report: Report<C, O, T>) -> Report<Self, Mutable, T>;
 }

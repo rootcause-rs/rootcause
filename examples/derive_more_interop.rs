@@ -46,8 +46,8 @@
 //! - The trade-off between enum granularity and pattern matching complexity
 //! - How to mix styles during gradual migration
 //!
-//! For a deep dive into `ReportConversion` patterns and systematic
-//! conversion, see [`error_hierarchy.rs`](error_hierarchy.rs).
+//! For a comparison of context transformation methods, see
+//! [`context_methods.rs`](context_methods.rs).
 
 use std::io;
 
@@ -59,7 +59,7 @@ use rootcause::{ReportConversion, prelude::*};
 // ============================================================================
 //
 // Minimal migration path: keep your existing derive_more error types and
-// `#[from]` conversions, just wrap the Result in Report at API boundaries.
+// `From` conversions, just wrap the Result in Report at API boundaries.
 // Error nesting happens at the TYPE level (one error inside another enum),
 // so only one location is captured per error chain.
 //
@@ -149,14 +149,14 @@ mod type_nested {
 // context_transform to wrap errors at the TYPE level (DatabaseError inside
 // AppError::Database variant).
 //
-// **Key point**: context_transform preserves the original Report's location but
-// doesn't capture a new location at the wrapping site. You get multiple
-// locations by creating Reports earlier in the call stack, not by wrapping.
+// **Key point**: context_transform does NOT run hooks (no new location
+// captured at wrapping site). It transforms the context value in-place. You
+// get multiple locations by creating Reports earlier in the call stack (each
+// call to report!() captures a location), not from the wrapping itself.
 //
 // Migration effort: MEDIUM - Change function signatures to return Report<E>
 // Location tracking: GOOD - Locations captured where Reports are created
-// When to use: Want more location tracking but preserve existing error type
-// hierarchy
+// When to use: Want more location tracking while preserving error type hierarchy
 
 mod report_nested {
     use super::*;
@@ -203,11 +203,12 @@ mod report_nested {
     }
 
     /// Higher-level functions use context_transform to change Report type.
-    /// MULTIPLE locations are captured (query_database + here).
+    /// Location captured in direct_query_database (report!() call), but NOT here
+    /// (context_transform doesn't run hooks).
     pub fn direct_process_request(user_id: u32) -> Result<String, Report<AppError>> {
         // context_transform works directly on Result via ResultExt
-        // Changes Report<DatabaseError> -> Report<AppError> by wrapping in
-        // AppError::Database
+        // In-place type change: DatabaseError → AppError::Database(DatabaseError)
+        // No new report node, no hooks run
         let data = direct_query_database(user_id).context_transform(AppError::Database)?;
         Ok(data)
     }
@@ -221,7 +222,7 @@ mod report_nested {
         fn convert_report(
             report: Report<DatabaseError, markers::Mutable, T>,
         ) -> Report<Self, markers::Mutable, T> {
-            // Use context_transform to wrap DatabaseError in AppError::Database
+            // In-place transformation: preserves structure, no hooks
             report.context_transform(AppError::Database)
         }
     }
@@ -261,42 +262,34 @@ mod report_nested {
 // child Reports via .context(), creating parent-child Report chains. Like style
 // 2, you implement ReportConversion once and use context_to() at call sites.
 //
-// **Trade-offs vs Style 2:**
+// **Key differences from Style 2:**
 //
-// Style 2 limitations:
-// - Conversion method choice: context_transform loses location info from
-//   wrapping site, context_transform_nested has performance cost (creates
-//   PreformattedContext)
-// - Rigid hierarchy: Your AppError structure must exactly match your error
-//   types
-//   - Can't split DatabaseError into finer categories (e.g.,
-//     DatabaseConnectionFailed)
-//   - Can't merge categories (e.g., combining Config and Io into SystemError)
-//   - Refactoring error structure requires changing type definitions with
-//     From
+// **Style 2** (context_transform):
+// - Type-level nesting: DatabaseError inside AppError::Database(DatabaseError)
+// - NO hooks at wrapping site (context_transform doesn't run hooks)
+// - Must match type structure 1-to-1 (due to `From` pattern)
+// - Can pattern match directly: AppError::Database(DatabaseError::ConnectionFailed)
 //
-// Style 3 advantages:
-// - Full location tracking: .context() captures fresh hooks at each wrapping
-//   site
-// - Flexible granularity: Your enum can be coarser OR finer than underlying
-//   errors
-//   - Split: Map DatabaseError::ConnectionFailed ->
-//     AppErrorFineGrained::DatabaseConnectionFailed
-//   - Merge: Map both ConfigError and IoError -> AppError::System
-//   - Same error can be categorized differently based on calling context
+// **Style 3** (context):
+// - Report-level nesting: DatabaseError as child Report under AppError category
+// - RUNS hooks at wrapping site (context() captures fresh locations)
+// - Flexible categorization: can split, merge, or remap error types
+// - Pattern matching on root only: AppError::DatabaseConnectionFailed
+//   (child details need iter_reports() + downcast)
 //
-// Style 3 limitations:
-// - Requires thoughtful design: If granularity doesn't match your needs, you'll
-//   use iter_reports() + downcast (painful and potentially slow for large error
-//   chains)
-// - Pattern matching: Can't match AppError::Database(DatabaseError::X) directly
-//   - With coarse enum: Need iter_reports() to find child error details
-//   - With fine-grained enum: Can match directly on AppError variants
+// **Choose Style 3 when:**
+// - Location tracking at conversion points matters (hooks at each wrapper)
+// - Your categorization doesn't match error type structure 1-to-1
+// - You want flexibility to split/merge/remap error categories
 //
-// Migration effort: HIGH - Redesign error types (remove #[from], flatten
-// hierarchy) Location tracking: EXCELLENT - Full parent-child Report chain with
-// fresh hooks When to use: Need flexible categorization or want maximum
-// location tracking
+// **Choose Style 2 when:**
+// - You want to preserve existing `From`-based type hierarchy
+// - Direct pattern matching on nested types is important
+// - Don't need hooks at conversion points (only at error creation)
+//
+// Migration effort: HIGH - Redesign error types (remove `From`, flatten
+// hierarchy) Location tracking: EXCELLENT - Hooks run at every wrapping point
+// When to use: Need flexible categorization or maximum location tracking
 
 mod flat {
     use super::*;
@@ -364,17 +357,15 @@ mod flat {
 
     pub fn direct_process_request(user_id: u32) -> Result<String, Report<AppError>> {
         // Manually categorize based on the specific error
-        let data = match direct_query_database(user_id) {
-            Ok(d) => d,
-            Err(report) => {
-                let category = match report.current_context() {
-                    DatabaseError::ConnectionFailed { .. } => AppError::DatabaseConnectionFailed,
-                    DatabaseError::QueryTimeout { .. } => AppError::DatabaseOther,
-                };
-                return Err(report.context(category));
-            }
-        };
-        Ok(data)
+        match direct_query_database(user_id) {
+            Ok(d) => Ok(d),
+            Err(report) => match report.current_context() {
+                DatabaseError::ConnectionFailed { .. } => {
+                    Err(report.context(AppError::DatabaseConnectionFailed))
+                }
+                DatabaseError::QueryTimeout { .. } => Err(report.context(AppError::DatabaseOther)),
+            },
+        }
     }
 
     // --- Systematic conversion approach ---
@@ -489,19 +480,22 @@ mod flat {
 // and downcast only for errors they need to handle programmatically.
 //
 // **When to use this pattern:**
-// You need rootcause features (.attach(), hooks, etc.) that anyhow lacks,
-// but you only need to handle some error variants programmatically. If you
-// needed full type safety, you'd use styles 1-3. If you didn't need selective
-// handling, you'd use anyhow.
+// Convenience matters more than type safety. You want the flexibility to
+// propagate errors dynamically (no wrapper enum needed) while selectively
+// handling only specific variants that matter. The key benefit: you can use
+// `.attach()` to add context WITHOUT changing the root error type, making
+// the code feel lightweight while still being inspectable.
 //
-// **Honest assessment:**
-// - Pros: Selective handling via downcasting, rich context via .attach()
+// **Trade-offs:**
+// - Pros: Lightweight propagation, selective handling, rich context via
+//   .attach()
 // - Cons: Lose type safety at boundaries, downcasting is more awkward than
 //   pattern matching, no compiler help ensuring you handle what you need
 //
-// Migration effort: LOW - Similar to anyhow usage
+// Migration effort: LOW - Dynamic propagation with typed lower functions
 // Location tracking: GOOD - Reports track locations
-// When to use: Need .attach() + selective error handling without wrapper enum
+// When to use: Convenience over type safety, selective handling without wrapper
+// enum
 
 mod dynamic_propagation {
     use super::*;
@@ -551,25 +545,25 @@ mod dynamic_propagation {
     /// Higher-level function propagates dynamically but handles specific
     /// errors.
     ///
-    /// This is the key pattern: we can selectively handle errors we care about
-    /// (like NotFound) while propagating everything else. This is why you'd
-    /// use this over anyhow - you need .attach() AND selective handling.
+    /// This is the key pattern: selectively handle errors you care about
+    /// (like NotFound) while propagating everything else dynamically. The
+    /// convenience comes from adding rich context via .attach() without
+    /// changing the root error type—keeping the code lightweight.
     pub fn process_request(user_id: u32, _config_path: &str) -> Result<String, Report> {
         // Selectively handle NotFound, propagate everything else
-        let data = match query_database(user_id).attach("Querying database") {
-            Ok(d) => d,
+        match query_database(user_id).attach("Querying database") {
+            Ok(d) => Ok(d),
             Err(report) => {
                 // report is still Report<DatabaseError> here, so direct pattern matching works
                 if let DatabaseError::NotFound { id } = report.current_context() {
                     println!("  Record {id} not found, using default");
-                    return Ok("default".to_string());
+                    Ok("default".to_string())
+                } else {
+                    // .into() converts Report<DatabaseError> -> Report (dynamic)
+                    Err(report.into())
                 }
-                // .into() converts Report<DatabaseError> -> Report (dynamic)
-                return Err(report.into());
             }
-        };
-
-        Ok(data)
+        }
     }
 
     /// Demonstrates downcasting with dynamic reports.
@@ -591,7 +585,7 @@ mod dynamic_propagation {
 
 fn main() {
     println!("=== Style 1: Type-Nested Hierarchy ===");
-    println!("Minimal migration: use #[from] to nest errors at type level.\n");
+    println!("Minimal migration: use `From` to nest errors at type level.\n");
 
     if let Err(e) = type_nested::process_request(123) {
         println!("{e}\n");

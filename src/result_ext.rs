@@ -231,28 +231,25 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// Converts the error to a different context type using a
     /// [`ReportConversion`] implementation.
     ///
-    /// **This is the recommended approach for converting library errors into
-    /// application error types.** If the result is `Ok`, returns the value
-    /// unchanged. If the result is `Err`, converts the error into a [`Report`]
-    /// and then transforms it to a different context type using the
-    /// [`ReportConversion`] trait implementation.
+    /// If the result is `Ok`, returns the value unchanged. If the result is
+    /// `Err`, converts the error into a [`Report`] and then transforms it to a
+    /// different context type using the [`ReportConversion`] trait
+    /// implementation.
     ///
-    /// The typical pattern is:
-    /// 1. Implement [`ReportConversion`] for your application error type
-    /// 2. Use `.context_to()` on `Result`s - the conversion happens
-    ///    automatically
+    /// Implement [`ReportConversion`] once to define how errors convert, then
+    /// use `context_to()` throughout your code to apply that conversion.
     ///
-    /// For ad-hoc transformations that won't be reused, consider using
-    /// [`context()`](ResultExt::context) to wrap errors directly.
-    ///
-    /// See [`examples/error_hierarchy.rs`] for a complete guide.
+    /// See [`examples/context_methods.rs`] for choosing transformation
+    /// strategies, and [`examples/thiserror_interop.rs`] for integration
+    /// patterns.
     ///
     /// See also [`local_context_to`](ResultExt::local_context_to) for a
     /// non-thread-safe version that works with types that are not
     /// `Send + Sync`.
     ///
     /// [`ReportConversion`]: crate::ReportConversion
-    /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+    /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
     ///
     /// # Type Inference
     ///
@@ -263,38 +260,22 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{ReportConversion, markers, prelude::*};
-    ///
-    /// #[derive(Debug)]
-    /// enum MyError {
-    ///     ParseError(String),
-    /// }
-    ///
-    /// impl std::fmt::Display for MyError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             MyError::ParseError(msg) => write!(f, "Parse error: {}", msg),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for MyError {}
-    ///
-    /// impl<O, T> ReportConversion<std::num::ParseIntError, O, T> for MyError
-    /// where
-    ///     MyError: markers::ObjectMarkerFor<T>,
-    /// {
-    ///     fn convert_report(
-    ///         report: Report<std::num::ParseIntError, O, T>,
-    ///     ) -> Report<Self, markers::Mutable, T> {
-    ///         report.context(MyError::ParseError("Invalid number".to_string()))
-    ///     }
-    /// }
-    ///
-    /// fn parse_number(s: &str) -> Result<i32, Report<MyError>> {
-    ///     // Type inference determines C = MyError from return type
-    ///     s.parse::<i32>().context_to()
-    /// }
+    /// # use rootcause::{ReportConversion, markers, prelude::*};
+    /// # #[derive(Debug)]
+    /// # enum AppError { Parse }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
+    /// # impl<O, T> ReportConversion<std::num::ParseIntError, O, T> for AppError
+    /// #   where AppError: markers::ObjectMarkerFor<T>
+    /// # {
+    /// #     fn convert_report(report: Report<std::num::ParseIntError, O, T>) -> Report<Self, markers::Mutable, T>
+    /// #     {
+    /// #         report.context(AppError::Parse)
+    /// #     }
+    /// # }
+    /// // After implementing ReportConversion, use at call sites:
+    /// let result: Result<i32, Report<AppError>> = "abc".parse::<i32>().context_to();
     /// ```
     #[track_caller]
     fn context_to<C>(self) -> Result<V, Report<C, Mutable, SendSync>>
@@ -314,42 +295,25 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// Unlike [`context()`](ResultExt::context) which wraps the error as a
     /// child, this method replaces the context in-place.
     ///
-    /// **For reusable conversions:** Implement [`ReportConversion`] and use
-    /// [`context_to()`](ResultExt::context_to) instead. This method is
-    /// typically used *inside* trait implementations, not directly in
-    /// application code.
-    ///
-    /// See [`examples/error_hierarchy.rs`] for guidance on choosing between
-    /// transformation approaches.
+    /// See [`examples/context_methods.rs`] for guidance on choosing between
+    /// this, [`context_transform_nested()`](ResultExt::context_transform_nested),
+    /// and [`context()`](ResultExt::context).
     ///
     /// See also [`local_context_transform`](ResultExt::local_context_transform)
     /// for a non-thread-safe version.
     ///
-    /// [`ReportConversion`]: crate::ReportConversion
-    /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
     /// # Examples
     ///
     /// ```
-    /// use std::io;
-    ///
-    /// use rootcause::prelude::*;
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     Io(io::Error),
-    /// }
-    ///
-    /// impl std::fmt::Display for AppError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             AppError::Io(e) => write!(f, "IO error: {}", e),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for AppError {}
-    ///
+    /// # use std::io;
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// # enum AppError { Io(io::Error) }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
     /// let result: Result<String, Report<AppError>> =
     ///     std::fs::read_to_string("config.toml").context_transform(AppError::Io);
     /// ```
@@ -371,48 +335,26 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// [`context()`](ResultExt::context) internally, report creation hooks
     /// run again, capturing fresh hook data at the transformation point.
     ///
-    /// **When to use:** This is useful when crossing significant abstraction
-    /// boundaries where you want fresh hook data (such as backtraces from
-    /// `rootcause-backtrace`) at both the original error location AND the
-    /// wrapping location.
-    ///
-    /// **For reusable conversions:** Implement [`ReportConversion`] and use
-    /// [`context_to()`](ResultExt::context_to) instead. This method is
-    /// typically used *inside* trait implementations, not directly in
-    /// application code.
-    ///
-    /// See [`examples/error_hierarchy.rs`] for guidance on choosing between
-    /// transformation approaches.
+    /// See [`examples/context_methods.rs`] for guidance on choosing between
+    /// this, [`context_transform()`](ResultExt::context_transform), and
+    /// [`context()`](ResultExt::context).
     ///
     /// See also
     /// [`local_context_transform_nested`](ResultExt::local_context_transform_nested)
     /// for a non-thread-safe version.
     ///
-    /// [`ReportConversion`]: crate::ReportConversion
-    /// [`examples/error_hierarchy.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_hierarchy.rs
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
     /// # Examples
     ///
     /// ```
-    /// use std::io;
-    ///
-    /// use rootcause::prelude::*;
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     Io(io::Error),
-    /// }
-    ///
-    /// impl std::fmt::Display for AppError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             AppError::Io(e) => write!(f, "IO error: {}", e),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for AppError {}
-    ///
+    /// # use std::io;
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// # enum AppError { Io(io::Error) }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
     /// let result: Result<String, Report<AppError>> =
     ///     std::fs::read_to_string("config.toml").context_transform_nested(AppError::Io);
     /// ```
@@ -827,36 +769,21 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::rc::Rc;
-    ///
-    /// use rootcause::{ReportConversion, markers, prelude::*};
-    ///
-    /// #[derive(Debug)]
-    /// struct LocalError {
-    ///     context: Rc<str>,
-    /// }
-    ///
-    /// impl std::fmt::Display for LocalError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         write!(f, "Local error: {}", self.context)
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for LocalError {}
-    ///
-    /// impl<O> ReportConversion<std::num::ParseIntError, O, markers::Local> for LocalError {
-    ///     fn convert_report(
-    ///         report: Report<std::num::ParseIntError, O, markers::Local>,
-    ///     ) -> Report<Self, markers::Mutable, markers::Local> {
-    ///         report.context(LocalError {
-    ///             context: Rc::from("Invalid number format"),
-    ///         })
-    ///     }
-    /// }
-    ///
-    /// fn parse_local(s: &str) -> Result<i32, Report<LocalError, markers::Mutable, markers::Local>> {
-    ///     s.parse::<i32>().local_context_to()
-    /// }
+    /// # use std::rc::Rc;
+    /// # use rootcause::{ReportConversion, markers, prelude::*};
+    /// # #[derive(Debug)]
+    /// # struct LocalError(Rc<str>);
+    /// # impl std::fmt::Display for LocalError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
+    /// # impl<O> ReportConversion<std::num::ParseIntError, O, markers::Local> for LocalError {
+    /// #     fn convert_report(report: Report<std::num::ParseIntError, O, markers::Local>) -> Report<Self, markers::Mutable, markers::Local>
+    /// #     {
+    /// #         report.context(LocalError(Rc::from("error")))
+    /// #     }
+    /// # }
+    /// // After implementing ReportConversion:
+    /// let result: Result<i32, Report<LocalError, _, markers::Local>> = "abc".parse::<i32>().local_context_to();
     /// ```
     #[track_caller]
     fn local_context_to<C>(self) -> Result<V, Report<C, Mutable, Local>>
@@ -883,28 +810,15 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::{io, rc::Rc};
-    ///
-    /// use rootcause::prelude::*;
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     Io(Rc<io::Error>),
-    /// }
-    ///
-    /// impl std::fmt::Display for AppError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             AppError::Io(e) => write!(f, "IO error: {}", e),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for AppError {}
-    ///
-    /// let result: Result<String, Report<AppError, markers::Mutable, markers::Local>> =
-    ///     std::fs::read_to_string("config.toml")
-    ///         .local_context_transform(|e| AppError::Io(Rc::new(e)));
+    /// # use std::{io, rc::Rc};
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// # enum AppError { Io(Rc<io::Error>) }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
+    /// let result: Result<String, Report<AppError, _, markers::Local>> =
+    ///     std::fs::read_to_string("config.toml").local_context_transform(|e| AppError::Io(Rc::new(e)));
     /// ```
     #[track_caller]
     fn local_context_transform<C, F>(self, f: F) -> Result<V, Report<C, Mutable, Local>>
@@ -935,28 +849,15 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// # Examples
     ///
     /// ```
-    /// use std::{io, rc::Rc};
-    ///
-    /// use rootcause::prelude::*;
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     Io(Rc<io::Error>),
-    /// }
-    ///
-    /// impl std::fmt::Display for AppError {
-    ///     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         match self {
-    ///             AppError::Io(e) => write!(f, "IO error: {}", e),
-    ///         }
-    ///     }
-    /// }
-    ///
-    /// impl std::error::Error for AppError {}
-    ///
-    /// let result: Result<String, Report<AppError, markers::Mutable, markers::Local>> =
-    ///     std::fs::read_to_string("config.toml")
-    ///         .local_context_transform_nested(|e| AppError::Io(Rc::new(e)));
+    /// # use std::{io, rc::Rc};
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// # enum AppError { Io(Rc<io::Error>) }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
+    /// let result: Result<String, Report<AppError, _, markers::Local>> =
+    ///     std::fs::read_to_string("config.toml").local_context_transform_nested(|e| AppError::Io(Rc::new(e)));
     /// ```
     #[track_caller]
     fn local_context_transform_nested<C, F>(self, f: F) -> Result<V, Report<C, Mutable, Local>>
