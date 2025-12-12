@@ -34,7 +34,7 @@ fn validate_email(email: &str) -> Result<(), Report> {
 fn validate_user_input(email: &str, age: i32) -> Result<(), Report> {
     validate_email(email).context("Email validation failed")?;
 
-    if age < 0 || age > 150 {
+    if !(0..=150).contains(&age) {
         return Err(report!("Age out of valid range: {}", age));
     }
     Ok(())
@@ -84,7 +84,7 @@ fn validate_order(email: &str, quantity: i32, discount_percent: f32) -> Result<(
         });
     }
 
-    if discount_percent < 0.0 || discount_percent > 50.0 {
+    if !(0.0..=50.0).contains(&discount_percent) {
         bail!(OrderError::InvalidDiscount {
             reason: format!("{discount_percent}% exceeds maximum allowed discount of 50%"),
         });
