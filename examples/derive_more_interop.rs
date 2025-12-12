@@ -9,11 +9,12 @@
 //!    - Minimal migration from plain derive_more
 //!
 //! 2. **Early Report creation** - Return `Report<E>` from lower functions
-//!    - Multiple locations captured
+//!    - Locations captured closer to the error source
+//!    - Easier to capture multiple locations
 //!    - Use `.context_transform()` or `ReportConversion` trait
 //!
 //! 3. **Flat enums with Report nesting** - Categories with child Reports
-//!    - Maximum location tracking
+//!    - Multiple locations captured
 //!    - Flexible categorization via `.context()` or `ReportConversion`
 //!
 //! **What's next?**
@@ -24,6 +25,7 @@ use rootcause::{ReportConversion, markers, prelude::*};
 
 // Shared error types used across patterns
 #[derive(Error, Debug, Display)]
+#[expect(dead_code, reason = "example code")]
 enum DatabaseError {
     #[display("Connection timeout after {seconds}s")]
     ConnectionTimeout { seconds: u64 },
@@ -32,6 +34,7 @@ enum DatabaseError {
 }
 
 #[derive(Error, Debug, Display)]
+#[expect(dead_code, reason = "example code")]
 enum ConfigError {
     #[display("Invalid format in {file}")]
     InvalidFormat { file: String },
@@ -48,7 +51,7 @@ enum AppError1 {
 }
 
 fn query_plain(_id: u32) -> Result<String, DatabaseError> {
-    Err(DatabaseError::QueryTimeout { seconds: 30 })
+    Err(DatabaseError::ConnectionTimeout { seconds: 30 })
 }
 
 // Only ONE location captured (here)
@@ -87,13 +90,21 @@ enum AppError2 {
     Database(DatabaseError),
 }
 
+// Locations captured close to the error source
 fn query_report(_id: u32) -> Result<String, Report<DatabaseError>> {
-    Err(report!(DatabaseError::QueryTimeout { seconds: 30 }))
+    Err(report!(DatabaseError::ConnectionTimeout { seconds: 30 }))
 }
 
-// Multiple locations: one in query_report(), plus transformations
+// This still captures only ONE location per error, but it's close to the source
 fn process_early_report(user_id: u32) -> Result<String, Report<AppError2>> {
     let data = query_report(user_id).context_transform(AppError2::Database)?;
+    Ok(data)
+}
+
+// If we want to capture multiple locations, we can use context_transform_nested
+// instead
+fn process_early_report_multiple_locations(user_id: u32) -> Result<String, Report<AppError2>> {
+    let data = query_report(user_id).context_transform_nested(AppError2::Database)?;
     Ok(data)
 }
 
@@ -160,16 +171,9 @@ where
     }
 }
 
-fn query_with_timeout(id: u32) -> Result<String, Report<DatabaseError>> {
-    if id == 1 {
-        Err(report!(DatabaseError::ConnectionTimeout { seconds: 5 }))
-    } else {
-        Err(report!(DatabaseError::QueryTimeout { seconds: 30 }))
-    }
-}
-
 fn main() {
-    println!("Pattern 1: Type-nesting with #[from]\n");
+    println!("\n## Pattern 1: Type-nesting with #[from]\n");
+    println!("Only one location captured and it's not at the source:");
     if let Err(report) = process_type_nested(123) {
         eprintln!("{report}\n");
     }
@@ -178,32 +182,25 @@ fn main() {
     let _ = handle_typed_error(123);
     println!();
 
-    println!("Pattern 2: Early Report creation\n");
+    println!("\n## Pattern 2: Early Report creation\n");
+    println!("Locations captured close to the error source:");
     if let Err(report) = process_early_report(123) {
         eprintln!("{report}\n");
     }
 
-    println!("Using ReportConversion trait:\n");
+    println!("Multiple locations captured using context_transform_nested:");
+    if let Err(report) = process_early_report_multiple_locations(123) {
+        eprintln!("{report}\n");
+    }
+
+    println!("Using ReportConversion trait:");
     if let Err(report) = process_with_conversion(123) {
         eprintln!("{report}\n");
     }
 
-    println!("Pattern 3: Flexible categorization\n");
-    println!("Split - ConnectionTimeout → DatabaseConnection:");
-    if let Err(report) = query_with_timeout(1).context_to::<AppError3>() {
+    println!("\n## Pattern 3: Flexible categorization\n");
+    println!("The data type of AppError3 does not have to be 1-to-1 with the underlying errors:");
+    if let Err(report) = query_report(123).context_to::<AppError3>() {
         eprintln!("{report}\n");
-    }
-
-    println!("Split - QueryTimeout → DatabaseOther:");
-    if let Err(report) = query_with_timeout(2).context_to::<AppError3>() {
-        eprintln!("{report}\n");
-    }
-
-    println!("Merge - ConfigError → System:");
-    let config_error = report!(ConfigError::InvalidFormat {
-        file: "config.toml".to_string()
-    });
-    if let Err(report) = Err::<(), _>(config_error).context_to::<AppError3>() {
-        eprintln!("{report}");
     }
 }
