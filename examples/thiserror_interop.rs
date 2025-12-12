@@ -1,208 +1,201 @@
-//! Demonstrates using thiserror-generated errors with rootcause.
+//! Using thiserror errors with rootcause.
 //!
-//! Shows how to use thiserror errors as Report contexts, pattern matching,
-//! and why rootcause's `.context()` provides better error chains than
-//! thiserror's `#[from]`/`#[source]` nesting.
+//! Three patterns for integrating thiserror-generated errors:
+//!
+//! 1. Type-nesting with `#[from]`: Traditional thiserror pattern
+//!    - One location captured per error
+//!    - Minimal migration from plain thiserror
+//!
+//! 2. Early Report creation: Return `Report<E>` from lower functions
+//!    - Locations captured closer to the error source
+//!    - Easier to capture multiple locations
+//!    - Use `.context_transform()` or `ReportConversion` trait
+//!
+//! 3. Flat enums with Report nesting: Categories with child Reports
+//!    - Multiple locations captured
+//!    - Flexible categorization via `.context()` or `ReportConversion`
 
-use std::{io, num::ParseIntError};
-
-use rootcause::prelude::*;
+use rootcause::{ReportConversion, markers, prelude::*};
 use thiserror::Error;
 
-mod example1 {
-    use super::*;
+// Shared error types used across patterns
+#[derive(Error, Debug)]
+#[expect(dead_code, reason = "example code")]
+enum DatabaseError {
+    #[error("Connection timeout after {seconds}s")]
+    ConnectionTimeout { seconds: u64 },
+    #[error("Query timeout after {seconds}s")]
+    QueryTimeout { seconds: u64 },
+}
 
-    /// Pattern matching: Use Report<E> to preserve type information for
-    /// conditional error handling based on the specific variant.
-    #[derive(Error, Debug)]
-    #[expect(dead_code, reason = "example code: not all variants are used")]
-    pub enum ConfigError {
-        #[error("Configuration file not found: {path}")]
-        NotFound { path: String },
+#[derive(Error, Debug)]
+#[expect(dead_code, reason = "example code")]
+enum ConfigError {
+    #[error("Invalid format in {file}")]
+    InvalidFormat { file: String },
+}
 
-        #[error("Invalid configuration format")]
-        InvalidFormat,
+// ============================================================================
+// Pattern 1: Type-nesting with #[from]
+// ============================================================================
 
-        #[error("Missing required field: {field}")]
-        MissingField { field: String },
-    }
+#[derive(Error, Debug)]
+enum AppError1 {
+    #[error("Database error")]
+    Database(#[from] DatabaseError),
+}
 
-    pub fn load_config(path: &str) -> Result<String, Report<ConfigError>> {
-        if path.is_empty() {
-            return Err(report!(ConfigError::InvalidFormat));
+fn query_plain(_id: u32) -> Result<String, DatabaseError> {
+    Err(DatabaseError::ConnectionTimeout { seconds: 30 })
+}
+
+// Only ONE location captured (here)
+fn process_type_nested(user_id: u32) -> Result<String, Report<AppError1>> {
+    let data = query_plain(user_id).map_err(AppError1::from)?;
+    Ok(data)
+}
+
+// Pattern matching on typed reports enables selective handling
+fn handle_typed_error(user_id: u32) -> Result<String, Report<AppError1>> {
+    match process_type_nested(user_id) {
+        Ok(data) => Ok(data),
+        Err(report) => {
+            // Access the typed error for decision-making
+            match report.current_context() {
+                AppError1::Database(DatabaseError::ConnectionTimeout { .. }) => {
+                    println!("  → Detected connection timeout, could retry here");
+                    Err(report)
+                }
+                AppError1::Database(DatabaseError::QueryTimeout { .. }) => {
+                    println!("  → Query timeout, could adjust query parameters");
+                    Err(report)
+                }
+            }
         }
-
-        Err(report!(ConfigError::NotFound {
-            path: path.to_string(),
-        })
-        .attach("Config version: 2.0"))
-    }
-
-    /// Demonstrates pattern matching on the error variant to decide recovery
-    /// strategy.
-    pub fn load_config_with_fallback(path: &str) -> Result<String, Report> {
-        let report = match load_config(path) {
-            Ok(config) => return Ok(config),
-            Err(report) => report,
-        };
-
-        // Use matches!() to check for specific variant
-        let should_fallback = matches!(report.current_context(), ConfigError::NotFound { .. });
-
-        if should_fallback {
-            println!("  Trying fallback config...");
-            return Ok(load_config("/etc/app/config.toml")?);
-        }
-
-        // Use match to provide variant-specific context
-        let context_msg = match report.current_context() {
-            ConfigError::MissingField { field } => format!("Cannot proceed without '{field}'"),
-            ConfigError::InvalidFormat => "Config file is corrupted".to_string(),
-            ConfigError::NotFound { .. } => unreachable!(),
-        };
-
-        Err(report.context(context_msg))?
     }
 }
 
-mod example2 {
-    use super::*;
+// ============================================================================
+// Pattern 2: Early Report creation
+// ============================================================================
 
-    /// Easiest migration: Keep thiserror's #[from] nesting, wrap in Report.
-    /// This works well for existing codebases using thiserror, but only
-    /// tracks a single location per error.
-    #[derive(Error, Debug)]
-    pub enum AppError {
-        #[error("Database error")]
-        Database(#[from] DatabaseError),
+#[derive(Error, Debug)]
+enum AppError2 {
+    #[error("Database error")]
+    Database(#[from] DatabaseError),
+}
 
-        #[error("Configuration error")]
-        Config(#[from] example1::ConfigError),
+// Locations captured close to the error source
+fn query_report(_id: u32) -> Result<String, Report<DatabaseError>> {
+    Err(report!(DatabaseError::ConnectionTimeout { seconds: 30 }))
+}
 
-        #[error("I/O error: {0}")]
-        Io(#[from] io::Error),
+// This still captures only ONE location per error, but it's close to the source
+fn process_early_report(user_id: u32) -> Result<String, Report<AppError2>> {
+    let data = query_report(user_id).context_transform(AppError2::Database)?;
+    Ok(data)
+}
 
-        #[error("Parse error: {0}")]
-        Parse(#[from] ParseIntError),
-    }
+// If we want to capture multiple locations, we can use context_transform_nested
+// instead
+fn process_early_report_multiple_locations(user_id: u32) -> Result<String, Report<AppError2>> {
+    let data = query_report(user_id).context_transform_nested(AppError2::Database)?;
+    Ok(data)
+}
 
-    #[expect(dead_code, reason = "example code: not all variants are used")]
-    #[derive(Error, Debug)]
-    pub enum DatabaseError {
-        #[error("Connection failed: {reason}")]
-        ConnectionFailed { reason: String },
-
-        #[error("Query timeout after {seconds}s")]
-        QueryTimeout { seconds: u64 },
-
-        #[error("Constraint violation: {constraint}")]
-        ConstraintViolation { constraint: String },
-    }
-
-    pub fn query_database(_id: u32) -> Result<String, DatabaseError> {
-        Err(DatabaseError::QueryTimeout { seconds: 30 })
-    }
-
-    pub fn process_user_data(user_id: u32) -> Result<String, Report<AppError>> {
-        // Use .map_err() to invoke thiserror's #[from] conversions
-        let data = query_database(user_id).map_err(AppError::from)?;
-
-        Ok(data)
-    }
-
-    pub fn process_user_with_context(user_id: u32) -> Result<String, Report<AppError>> {
-        let data = process_user_data(user_id).attach(format!("Processing user: {user_id}"))?;
-
-        Ok(data)
+// Systematic conversion with ReportConversion trait
+impl<T> ReportConversion<DatabaseError, markers::Mutable, T> for AppError2
+where
+    AppError2: markers::ObjectMarkerFor<T>,
+{
+    fn convert_report(
+        report: Report<DatabaseError, markers::Mutable, T>,
+    ) -> Report<Self, markers::Mutable, T> {
+        report.context_transform(AppError2::Database)
     }
 }
 
-mod example3 {
-    use super::*;
+fn process_with_conversion(user_id: u32) -> Result<String, Report<AppError2>> {
+    let data = query_report(user_id).context_to::<AppError2>()?;
+    Ok(data)
+}
 
-    /// Best for new code: Flat thiserror enums with rootcause nesting.
-    /// Compare to example2 - same logic, but tracks multiple locations
-    /// in the error chain for better debugging.
-    #[derive(Error, Debug)]
-    #[expect(dead_code, reason = "example code: not all variants are used")]
-    pub enum AppError {
-        #[error("Database operation failed")]
-        Database,
+// ============================================================================
+// Pattern 3: Flat enums with Report nesting (flexible categorization)
+// ============================================================================
+//
+// Unlike Patterns 1-2 (which require 1-to-1 mapping with #[from]), Pattern 3
+// lets you design categories independently of error type structure:
+// - Split: one error type into multiple categories based on variants
+// - Merge: multiple error types into one category
 
-        #[error("Configuration operation failed")]
-        Config,
+#[derive(Error, Debug)]
+enum AppError3 {
+    #[error("Database connection issue")]
+    DatabaseConnection,
+    #[error("Database operation failed")]
+    DatabaseOther,
+    #[error("System error")]
+    System,
+}
 
-        #[error("I/O operation failed")]
-        Io,
-
-        #[error("Parse operation failed")]
-        Parse,
+// Split: one DatabaseError type into different categories
+impl<T> ReportConversion<DatabaseError, markers::Mutable, T> for AppError3
+where
+    AppError3: markers::ObjectMarkerFor<T>,
+{
+    fn convert_report(
+        report: Report<DatabaseError, markers::Mutable, T>,
+    ) -> Report<Self, markers::Mutable, T> {
+        match report.current_context() {
+            DatabaseError::ConnectionTimeout { .. } => report.context(Self::DatabaseConnection),
+            DatabaseError::QueryTimeout { .. } => report.context(Self::DatabaseOther),
+        }
     }
+}
 
-    /// Detailed errors go in child reports, not nested in AppError.
-    #[derive(Error, Debug, Clone)]
-    #[expect(dead_code, reason = "demonstrates database error variants")]
-    pub enum DatabaseError {
-        #[error("Connection failed: {reason}")]
-        ConnectionFailed { reason: String },
-
-        #[error("Query timeout after {seconds}s")]
-        QueryTimeout { seconds: u64 },
-
-        #[error("Constraint violation: {constraint}")]
-        ConstraintViolation { constraint: String },
-    }
-
-    pub fn query_database(_id: u32) -> Result<String, Report<DatabaseError>> {
-        Err(report!(DatabaseError::QueryTimeout { seconds: 30 }))
-    }
-
-    pub fn process_user_data(user_id: u32) -> Result<String, Report> {
-        // Add flat enum variant as parent context via .context()
-        let data = query_database(user_id).context(AppError::Database)?;
-
-        Ok(data)
-    }
-
-    pub fn process_user_with_context(user_id: u32) -> Result<String, Report> {
-        let data = process_user_data(user_id).attach(format!("Processing user: {user_id}"))?;
-
-        Ok(data)
+// Merge: different error types into one category
+impl<T> ReportConversion<ConfigError, markers::Mutable, T> for AppError3
+where
+    AppError3: markers::ObjectMarkerFor<T>,
+{
+    fn convert_report(
+        report: Report<ConfigError, markers::Mutable, T>,
+    ) -> Report<Self, markers::Mutable, T> {
+        report.context(Self::System)
     }
 }
 
 fn main() {
-    println!("=== Example 1: Basic thiserror integration ===\n");
-
-    if let Err(e) = example1::load_config("") {
-        println!("Direct thiserror error:\n{e}\n");
+    println!("\n## Pattern 1: Type-nesting with #[from]\n");
+    println!("Only one location captured and it's not at the source:");
+    if let Err(report) = process_type_nested(123) {
+        eprintln!("{report}\n");
     }
 
-    if let Err(e) = example1::load_config_with_fallback("/nonexistent/config.toml") {
-        println!("Pattern matching on thiserror error:\n{e}\n");
+    println!("Pattern matching on typed reports:");
+    let _ = handle_typed_error(123);
+    println!();
+
+    println!("\n## Pattern 2: Early Report creation\n");
+    println!("Locations captured close to the error source:");
+    if let Err(report) = process_early_report(123) {
+        eprintln!("{report}\n");
     }
 
-    println!("=== Example 2 vs 3: Comparison ===");
-    println!("Both examples do the same thing, but example2 uses thiserror nesting");
-    println!("while example3 uses rootcause nesting.\n");
-
-    println!("Example 2 (thiserror #[from] - easier migration):\n");
-
-    if let Err(e) = example2::process_user_data(123) {
-        println!("{e}\n");
+    println!("Multiple locations captured using context_transform_nested:");
+    if let Err(report) = process_early_report_multiple_locations(123) {
+        eprintln!("{report}\n");
     }
 
-    if let Err(e) = example2::process_user_with_context(123) {
-        println!("{e}\n");
+    println!("Using ReportConversion trait:");
+    if let Err(report) = process_with_conversion(123) {
+        eprintln!("{report}\n");
     }
 
-    println!("Example 3 (rootcause .context() - better debugging):\n");
-
-    if let Err(e) = example3::process_user_data(123) {
-        println!("{e}\n");
-    }
-
-    if let Err(e) = example3::process_user_with_context(123) {
-        println!("{e}\n");
+    println!("\n## Pattern 3: Flexible categorization\n");
+    println!("The data type of AppError3 does not have to be 1-to-1 with the underlying errors:");
+    if let Err(report) = query_report(123).context_to::<AppError3>() {
+        eprintln!("{report}\n");
     }
 }

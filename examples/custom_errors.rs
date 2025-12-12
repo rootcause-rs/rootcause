@@ -1,243 +1,111 @@
-//! Creating custom errors
+//! Creating custom errors with `report!()` and `bail!()`.
 //!
 //! **Run this example:** `cargo run --example custom_errors`
 //!
-//! After basic.rs showed wrapping external errors with `.context()` and
-//! `.attach()`, this example shows how to create errors from scratch when
-//! there's no underlying error to wrap.
+//! In `basic.rs`, you learned to wrap external errors with `.context()` and
+//! `.attach()`. This example shows how to create your own errors from scratch.
 //!
-//! Key concepts:
-//! 1. `report!()` with string messages - for quick validation errors
-//! 2. Custom error types - for structured, domain-specific errors
-//! 3. Mixing approaches - combining report!(), custom types, and external
-//!    errors
+//! Two approaches:
+//! 1. **Simple validation**: Use `report!()` for quick error messages
+//! 2. **Structured errors**: Define custom types with `report!(YourType)`
 //!
-//! **What's next?** Most users can stop here - you know enough to be
-//! productive!
-//! - Performance optimization? → `lazy_evaluation.rs` (`.attach_with()`,
-//!   `.context_with()`)
-//! - Type system deep dive? → `typed_reports.rs` (preserving error types)
+//! Bonus: `bail!()` is a convenience macro that's shorthand for `return
+//! Err(report!(...).into())`
+//!
+//! **What's next?**
+//! - Want to understand type preservation? → `typed_reports.rs`
+//! - Need lazy evaluation for performance? → `lazy_evaluation.rs`
 //! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;
 
-// ============================================================================
-// PART 1: Creating Errors with report!()
-// ============================================================================
-// When you need a custom error but don't want to define a type
-
-/// Simple validation using report!() for quick error messages.
+// Use report!() to create errors from scratch
 fn validate_email(email: &str) -> Result<(), Report> {
     if !email.contains('@') {
         return Err(report!("Invalid email format"));
     }
     if email.len() < 3 {
-        return Err(report!("Email too short"));
+        return Err(report!("Email too short: {}", email));
     }
     Ok(())
 }
 
-/// report!() works with .attach() to add debugging information.
-fn validate_age(age: i32) -> Result<(), Report> {
-    if age < 0 {
-        return Err(report!("Age cannot be negative").attach(format!("Provided age: {age}")));
-    }
-    if age > 150 {
-        return Err(report!("Age seems unrealistic")
-            .attach(format!("Provided age: {age}"))
-            .attach("Maximum reasonable age: 150"));
-    }
-    Ok(())
-}
-
-/// report!() errors can be wrapped with .context() just like external errors.
-fn validate_user(email: &str, age: i32) -> Result<(), Report> {
+// report!() composes with .attach() and .context() just like external errors
+fn validate_user_input(email: &str, age: i32) -> Result<(), Report> {
     validate_email(email).context("Email validation failed")?;
-    validate_age(age).context("Age validation failed")?;
-    Ok(())
-}
 
-// ============================================================================
-// PART 2: Custom Error Types
-// ============================================================================
-// For domain-specific errors with structure and behavior
-
-/// A custom error type for configuration validation.
-///
-/// This gives you more structure than plain strings and allows
-/// programmatic inspection of error details.
-#[derive(Debug)]
-struct ConfigError {
-    field: String,
-    expected: String,
-    actual: String,
-}
-
-impl std::fmt::Display for ConfigError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(
-            f,
-            "Invalid config field '{}': expected {}, got {}",
-            self.field, self.expected, self.actual
-        )
-    }
-}
-
-impl std::error::Error for ConfigError {}
-
-/// Use report!() with your custom error type.
-fn validate_port(port: u16) -> Result<(), Report> {
-    if port == 0 {
-        return Err(report!(ConfigError {
-            field: "port".to_string(),
-            expected: "1-65535".to_string(),
-            actual: "0".to_string(),
-        })
-        // .into() converts Report<ConfigError> to Report<Dynamic>
-        // This lets the function return the general Report type
-        // (See typed_reports.rs to learn more about typed vs dynamic reports)
-        .into());
+    if !(0..=150).contains(&age) {
+        return Err(report!("Age out of valid range: {}", age));
     }
     Ok(())
 }
 
-/// Another custom error for business logic validation.
-#[derive(Debug)]
-enum ValidationError {
-    OutOfRange {
-        field_name: String,
-        min: i32,
-        max: i32,
-        actual: i32,
-    },
+// bail!() is shorthand for: return Err(report!(...).into())
+fn validate_password(password: &str) -> Result<(), Report> {
+    if password.len() < 8 {
+        bail!("Password too short: minimum 8 characters");
+    }
+    Ok(())
 }
 
-impl std::fmt::Display for ValidationError {
+// Custom error types for structured, domain-specific errors
+#[derive(Debug)]
+enum OrderError {
+    InvalidQuantity { min: i32, max: i32, actual: i32 },
+    InvalidDiscount { reason: String },
+}
+
+impl std::fmt::Display for OrderError {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ValidationError::OutOfRange {
-                field_name,
-                min,
-                max,
-                actual,
-            } => {
-                write!(
-                    f,
-                    "Field '{}' out of range: {} not in [{}, {}]",
-                    field_name, actual, min, max
-                )
+            OrderError::InvalidQuantity { min, max, actual } => {
+                write!(f, "Quantity {actual} outside valid range [{min}, {max}]")
+            }
+            OrderError::InvalidDiscount { reason } => {
+                write!(f, "Invalid discount: {reason}")
             }
         }
     }
 }
 
-impl std::error::Error for ValidationError {}
+impl std::error::Error for OrderError {}
 
-fn validate_quantity(quantity: i32) -> Result<(), Report> {
-    if (1..=100).contains(&quantity) {
-        Ok(())
-    } else {
-        Err(report!(ValidationError::OutOfRange {
-            field_name: "quantity".to_string(),
+// All error types compose naturally - mix report!(), bail!(), and custom types
+fn validate_order(email: &str, quantity: i32, discount_percent: f32) -> Result<(), Report> {
+    // report!() errors compose with .context()
+    validate_email(email).context("Customer email validation failed")?;
+
+    // Custom type errors
+    if !(1..=100).contains(&quantity) {
+        bail!(OrderError::InvalidQuantity {
             min: 1,
             max: 100,
             actual: quantity,
-        })
-        .into())
-    }
-}
-
-// ============================================================================
-// PART 3: Mixing Approaches
-// ============================================================================
-// Real code combines external errors, report!(), and custom types
-
-/// A realistic example showing all three approaches together.
-fn process_order(user_email: &str, quantity: i32, config_port: u16) -> Result<(), Report> {
-    // Quick validation with report!() - simple string message
-    if user_email.is_empty() {
-        return Err(report!("Email cannot be empty").attach("Field: user_email"));
+        });
     }
 
-    // External error handling (from validate_email which uses report!())
-    validate_email(user_email).context("User email validation failed")?;
-
-    // Custom error type for business logic
-    validate_quantity(quantity)
-        .attach(format!(
-            "Order details: email={}, qty={}",
-            user_email, quantity
-        ))
-        .context("Order quantity validation failed")?;
-
-    // Custom error type for configuration
-    validate_port(config_port).context("Configuration validation failed")?;
+    if !(0.0..=50.0).contains(&discount_percent) {
+        bail!(OrderError::InvalidDiscount {
+            reason: format!("{discount_percent}% exceeds maximum allowed discount of 50%"),
+        });
+    }
 
     Ok(())
 }
 
 fn main() {
-    println!("=== Creating Custom Errors Tutorial ===\n");
-    println!("This example shows three ways to create errors:\n");
-
-    println!("=== Part 1: report!() with String Messages ===\n");
-    println!("Use case: Quick validation where you don't need structured error data\n");
-
-    if let Err(report) = validate_user("invalid-email", 25) {
+    println!("Creating errors with report!():\n");
+    if let Err(report) = validate_user_input("invalid-email", 25) {
         eprintln!("{report}\n");
     }
 
-    println!("{}\n", "=".repeat(70));
-    println!("=== Part 1b: report!() with .attach() ===\n");
-    println!("Use case: Quick validation + debugging information\n");
-
-    if let Err(report) = validate_age(-5) {
+    println!("Using bail!() as shorthand:\n");
+    if let Err(report) = validate_password("short") {
         eprintln!("{report}\n");
     }
 
-    println!("{}\n", "=".repeat(70));
-    println!("=== Part 2: Custom Error Types (Struct) ===\n");
-    println!("Use case: Domain-specific errors with structure and Display impl\n");
-
-    if let Err(report) = validate_port(0) {
+    println!("Composing different error types:\n");
+    if let Err(report) = validate_order("invalid-email", 150, 60.0) {
         eprintln!("{report}\n");
     }
-
-    println!("{}\n", "=".repeat(70));
-    println!("=== Part 2b: Custom Error Types (Enum) ===\n");
-    println!("Use case: Multiple error variants with structured data\n");
-
-    if let Err(report) = validate_quantity(150) {
-        eprintln!("{report}\n");
-    }
-
-    println!("{}\n", "=".repeat(70));
-    println!("=== Part 3: Mixing All Approaches ===\n");
-    println!("Use case: Real-world code combining different error strategies\n");
-
-    if let Err(report) = process_order("user@example.com", 150, 8080) {
-        eprintln!("{report}\n");
-    }
-
-    println!("{}\n", "=".repeat(70));
-    println!(
-        "DECISION GUIDE - Which approach should you use?\n\
-         \n\
-         ✓ report!(\"message\") when:\n\
-           • Quick validation in small functions\n\
-           • Error message is simple and self-explanatory\n\
-           • You don't need to programmatically inspect error details\n\
-         \n\
-         ✓ Custom error type when:\n\
-           • You have domain-specific error categories\n\
-           • You need structured data (fields, variants)\n\
-           • Callers might pattern match on error details\n\
-           • You want to implement custom Display/Debug\n\
-         \n\
-         ✓ External errors (from basic.rs):\n\
-           • Wrapping std errors or library errors\n\
-           • Use .context() and .attach() to add meaning\n\
-         \n\
-         All three approaches compose! Mix and match as needed.\n"
-    );
 }

@@ -1,14 +1,14 @@
-// Report creation hooks - automatically attach context when errors are created
-//
-// Report creation hooks vs formatting hooks:
-// - Creation hooks (this example): Automatically attach data when reports are
-//   created
-// - Formatting hooks (see formatting_hooks.rs): Control how
-//   attachments/contexts are displayed
-//
-// Two types of creation hooks:
-// - AttachmentCollector: Simple - always collects and attaches data
-// - ReportCreationHook: Advanced - conditional logic based on report state
+//! Report creation hooks - automatically attach context when errors are created
+//!
+//! Report creation hooks vs formatting hooks:
+//! - Creation hooks (this example): Automatically attach data when reports are
+//!   created
+//! - Formatting hooks (see formatting_hooks.rs): Control how
+//!   attachments/contexts are displayed
+//!
+//! Two types of creation hooks:
+//! - AttachmentCollector: Simple - always collects and attaches data
+//! - ReportCreationHook: Advanced - conditional logic based on report state
 
 use std::sync::atomic::{AtomicU64, Ordering};
 

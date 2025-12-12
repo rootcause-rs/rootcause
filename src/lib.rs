@@ -361,12 +361,14 @@ pub mod report_collection;
 
 mod into_report;
 mod iterator_ext;
+mod report_conversion;
 mod result_ext;
 mod util;
 
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},
     report::{iter::ReportIter, mut_::ReportMut, owned::Report, ref_::ReportRef},
+    report_conversion::ReportConversion,
 };
 
 // Not public API. Referenced by macro-generated code and rootcause-backtrace.

@@ -6,10 +6,10 @@ use rootcause_internals::{
 };
 
 use crate::{
-    ReportIter, ReportMut, ReportRef,
+    ReportConversion, ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
     markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::PreformattedContext,
+    preformatted::{self, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -469,8 +469,6 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///     }
     /// }
     ///
-    /// impl std::error::Error for MyError {}
-    ///
     /// // Create a report with a custom error context
     /// let original_error = MyError {
     ///     message: "database connection failed".to_string(),
@@ -501,6 +499,144 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     #[must_use]
     pub fn current_context_mut(&mut self) -> &mut C {
         self.as_mut().into_current_context_mut()
+    }
+
+    /// Transforms the context type by applying a function, preserving report structure.
+    ///
+    /// Converts the context type in-place without creating new nodes. Children,
+    /// attachments, and hook data (backtraces, locations) are preserved.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// # struct LibError;
+    /// # impl std::fmt::Display for LibError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "lib error") }
+    /// # }
+    /// # #[derive(Debug)]
+    /// enum AppError {
+    ///     Lib(LibError)
+    /// }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "app error") }
+    /// # }
+    ///
+    /// let lib_report: Report<LibError> = report!(LibError);
+    /// let app_report: Report<AppError> = lib_report.context_transform(AppError::Lib);
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// - [`context_transform_nested()`](Report::context_transform_nested) - Wraps original as preformatted child
+    /// - [`context()`](Report::context) - Adds new parent context
+    /// - [`context_to()`](Report::context_to) - Uses [`ReportConversion`](crate::ReportConversion) trait
+    /// - [`examples/context_methods.rs`] - Comparison guide
+    ///
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+    pub fn context_transform<F, D>(self, f: F) -> Report<D, Mutable, T>
+    where
+        F: FnOnce(C) -> D,
+        D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+    {
+        let (context, children, attachments) = self.into_parts();
+        let new_context = f(context);
+
+        Report::from_parts_unhooked::<handlers::Display>(new_context, children, attachments)
+    }
+
+    /// Transforms the context and nests the original report as a preformatted child.
+    ///
+    /// Creates a new parent node with fresh hook data (location, backtrace), but the
+    /// original context type is lost—the child becomes [`PreformattedContext`] and
+    /// cannot be downcast.
+    ///
+    /// [`PreformattedContext`]: crate::preformatted::PreformattedContext
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// # struct LibError;
+    /// # impl std::fmt::Display for LibError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "lib error") }
+    /// # }
+    /// # #[derive(Debug)]
+    /// enum AppError {
+    ///     Lib(LibError)
+    /// }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "app error") }
+    /// # }
+    ///
+    /// let lib_report: Report<LibError> = report!(LibError);
+    /// let app_report: Report<AppError> = lib_report.context_transform_nested(AppError::Lib);
+    /// ```
+    ///
+    /// # See Also
+    ///
+    /// - [`context_transform()`](Report::context_transform) - Transforms without nesting
+    /// - [`context()`](Report::context) - Adds new parent, preserves child's type
+    /// - [`preformat_root()`](Report::preformat_root) - Lower-level operation used internally
+    /// - [`examples/context_methods.rs`] - Comparison guide
+    ///
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+    pub fn context_transform_nested<F, D>(self, f: F) -> Report<D, Mutable, T>
+    where
+        F: FnOnce(C) -> D,
+        D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+        PreformattedContext: markers::ObjectMarkerFor<T>,
+    {
+        let (context, report) = self.preformat_root();
+        report.context_custom::<handlers::Display, _>(f(context))
+    }
+
+    /// Extracts the context and returns it with a preformatted version of the report.
+    ///
+    /// Returns a tuple: the original typed context and a new report with [`PreformattedContext`](crate::preformatted::PreformattedContext)
+    /// containing the string representation. The preformatted report maintains the same structure (children and
+    /// attachments). Useful when you need the typed value for processing and the formatted version for display.
+    ///
+    /// This is a lower-level method primarily for custom transformation logic. Most users should use
+    /// [`context_transform`](Self::context_transform), [`context_transform_nested`](Self::context_transform_nested),
+    /// or [`context_to`](Self::context_to) instead.
+    ///
+    /// See also: [`preformat`](Report::preformat) (formats entire hierarchy),
+    /// [`into_parts`](Report::into_parts) (extracts without formatting),
+    /// [`current_context`](crate::ReportRef::current_context) (reference without extraction).
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::{preformatted::PreformattedContext, prelude::*};
+    /// # #[derive(Debug)]
+    /// struct MyError {
+    ///     code: u32
+    /// }
+    /// # impl std::fmt::Display for MyError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error {}", self.code) }
+    /// # }
+    ///
+    /// let report: Report<MyError> = report!(MyError { code: 500 });
+    /// let (context, preformatted): (MyError, Report<PreformattedContext>) = report.preformat_root();
+    /// ```
+    pub fn preformat_root(self) -> (C, Report<PreformattedContext, Mutable, T>)
+    where
+        PreformattedContext: markers::ObjectMarkerFor<T>,
+    {
+        let preformatted = PreformattedContext::new_from_context(self.as_ref());
+        let (context, children, attachments) = self.into_parts();
+
+        (
+            context,
+            Report::from_parts_unhooked::<preformatted::PreformattedHandler>(
+                preformatted,
+                children,
+                attachments,
+            ),
+        )
     }
 }
 
@@ -673,6 +809,44 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
             ReportCollection::from([self.into_dynamic().into_cloneable()]),
             ReportAttachments::<T>::new(),
         )
+    }
+
+    /// Converts this report to a different context type using [`ReportConversion`].
+    ///
+    /// Implement [`ReportConversion`] once to define conversion logic, then use `context_to()` at call sites.
+    /// Useful for consistent error type coercion across your codebase, especially when integrating with
+    /// external libraries. You typically need to specify the target type (`::<Type>`).
+    ///
+    /// See also: [`context_transform`](Self::context_transform) for direct conversion,
+    /// [`context_transform_nested`](Self::context_transform_nested) for wrapping,
+    /// [`examples/thiserror_interop.rs`] for integration patterns.
+    ///
+    /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::{ReportConversion, markers::Mutable, prelude::*};
+    /// # #[derive(Debug)]
+    /// enum AppError { Parse }
+    /// # impl std::fmt::Display for AppError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
+    /// # }
+    /// impl<T> ReportConversion<std::num::ParseIntError, Mutable, T> for AppError
+    ///   where AppError: markers::ObjectMarkerFor<T>
+    /// {
+    ///     fn convert_report(report: Report<std::num::ParseIntError, Mutable, T>) -> Report<Self, Mutable, T>
+    ///     {
+    ///         report.context(AppError::Parse)
+    ///     }
+    /// }
+    /// // After implementing ReportConversion, use at call sites:
+    /// let result: Result<i32, Report<AppError>> = "abc".parse::<i32>().context_to();
+    /// ```
+    #[track_caller]
+    #[must_use]
+    pub fn context_to<D: ReportConversion<C, O, T>>(self) -> Report<D, Mutable, T> {
+        D::convert_report(self)
     }
 
     /// Returns a reference to the child reports.

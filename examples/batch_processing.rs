@@ -1,13 +1,14 @@
-// Batch processing with error collection
-//
-// IteratorExt::collect_reports() gathers all errors from batch operations
-// instead of stopping at the first failure.
+//! Batch processing with error collection
+//!
+//! Three approaches to handling errors in batch operations:
+//! - Standard `.collect()` - stops at first error
+//! - `.collect_reports()` - collects all errors
+//! - Manual loop - allows partial success
 
 use std::io;
 
 use rootcause::{prelude::*, report_collection::ReportCollection};
 
-// Simulates processing that might fail
 fn process_file(filename: &str) -> Result<String, Report<io::Error>> {
     if filename.contains("bad") {
         Err(report!(io::Error::new(
@@ -17,7 +18,7 @@ fn process_file(filename: &str) -> Result<String, Report<io::Error>> {
         .attach(format!("File: {filename}")))
     } else if filename.contains("missing") {
         Err(
-            report!(io::Error::new(io::ErrorKind::NotFound, "File not found",))
+            report!(io::Error::new(io::ErrorKind::NotFound, "File not found"))
                 .attach(format!("File: {filename}")),
         )
     } else {
@@ -25,39 +26,27 @@ fn process_file(filename: &str) -> Result<String, Report<io::Error>> {
     }
 }
 
-// Collect all errors instead of stopping at first failure
-fn process_all_files(files: &[&str]) -> Result<Vec<String>, Report> {
-    files
+// Standard Rust: stops at first error
+fn process_standard_collect(files: &[&str]) -> Result<Vec<String>, Report> {
+    let results = files
         .iter()
         .map(|&filename| process_file(filename))
-        .collect_reports() // Result<Vec<T>, ReportCollection>
-        .map_err(|errors| {
-            errors
-                .context("Failed to process one or more files")
-                .into_dynamic()
-        })
+        .collect::<Result<Vec<_>, _>>()?;
+    Ok(results)
 }
 
-// Add context to each item before collecting
-fn process_batch_with_context(items: &[&str], batch_id: u32) -> Result<Vec<String>, Report> {
-    items
+// IteratorExt: processes all items, collects all errors
+fn process_collect_reports(files: &[&str]) -> Result<Vec<String>, Report> {
+    let results = files
         .iter()
-        .enumerate()
-        .map(|(index, &item)| {
-            process_file(item)
-                .attach(format!("Batch ID: {batch_id}"))
-                .attach(format!("Item index: {index}"))
-        })
+        .map(|&filename| process_file(filename))
         .collect_reports()
-        .map_err(|errors| {
-            errors
-                .context(format!("Batch {batch_id} processing failed"))
-                .into_dynamic()
-        })
+        .context("Failed to process one or more files")?;
+    Ok(results)
 }
 
-// Partial success: return what succeeded and what failed
-fn process_with_partial_results(files: &[&str]) -> (Vec<String>, Option<Report>) {
+// Manual loop: processes all items, allows partial success
+fn process_with_partial_success(files: &[&str]) -> (Vec<String>, Option<Report>) {
     let mut successes = Vec::new();
     let mut failures = ReportCollection::new();
 
@@ -85,52 +74,30 @@ fn process_with_partial_results(files: &[&str]) -> (Vec<String>, Option<Report>)
     (successes, error)
 }
 
-// Filter and process selected items
-fn process_selected_files(files: &[&str]) -> Result<Vec<String>, Report> {
-    files
-        .iter()
-        .filter(|f| !f.starts_with('_')) // Skip underscore-prefixed files
-        .map(|&f| process_file(f).attach(format!("Selected file: {f}")))
-        .collect_reports()
-        .map_err(|errors| {
-            errors
-                .context("Failed to process selected files")
-                .into_dynamic()
-        })
-}
-
 fn main() {
-    println!("Example 1: Collect all errors\n");
     let files = &[
         "data.txt",
         "bad_file.dat",
         "config.json",
         "missing_file.txt",
     ];
-    match process_all_files(files) {
+
+    println!("Approach 1: Standard .collect() (stops at first error)\n");
+    match process_standard_collect(files) {
         Ok(results) => println!("All succeeded: {results:?}"),
         Err(error) => eprintln!("{error}\n"),
     }
 
-    println!("Example 2: Add context per item\n");
-    let batch = &["item1.txt", "bad_item2.txt", "item3.txt"];
-    match process_batch_with_context(batch, 42) {
-        Ok(results) => println!("Batch succeeded: {results:?}"),
+    println!("Approach 2: .collect_reports() (collects all errors)\n");
+    match process_collect_reports(files) {
+        Ok(results) => println!("All succeeded: {results:?}"),
         Err(error) => eprintln!("{error}\n"),
     }
 
-    println!("Example 3: Partial success\n");
-    let mixed_files = &["good1.txt", "bad_file.dat", "good2.txt", "missing_file.txt"];
-    let (successes, error) = process_with_partial_results(mixed_files);
+    println!("Approach 3: Manual loop (partial success)\n");
+    let (successes, error) = process_with_partial_success(files);
     println!("Successes: {successes:?}");
     if let Some(error) = error {
-        eprintln!("\n{error}\n");
-    }
-
-    println!("Example 4: Filter before processing\n");
-    let all_files = &["_skip.txt", "process.txt", "bad_file.dat", "_ignore.txt"];
-    match process_selected_files(all_files) {
-        Ok(results) => println!("Filtered results: {results:?}"),
-        Err(error) => eprintln!("{error}"),
+        eprintln!("\n{error}");
     }
 }

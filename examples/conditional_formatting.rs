@@ -1,12 +1,12 @@
-// Conditional formatting based on runtime context
-//
-// Use conditional formatting to adapt error output based on runtime conditions:
-// - Hide sensitive data based on environment (production vs development)
-// - Show/hide verbose info based on feature flags or debug settings
-// - Customize visibility based on user permissions or logging levels
-//
-// Pattern: Check runtime state in AttachmentFormatterHook to control
-// placement/visibility
+//! Conditional formatting based on runtime context
+//!
+//! Use conditional formatting to adapt error output based on runtime conditions:
+//! - Hide sensitive data based on environment (production vs development)
+//! - Show/hide verbose info based on feature flags or debug settings
+//! - Customize visibility based on user permissions or logging levels
+//!
+//! Pattern: Check runtime state in AttachmentFormatterHook to control
+//! placement/visibility
 
 use std::env;
 

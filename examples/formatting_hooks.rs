@@ -1,16 +1,16 @@
-// Formatting hooks for global formatting overrides
-//
-// Formatting hooks vs handlers: Both customize how types are displayed, but:
-// - Handlers (see custom_handler.rs): Applied per-attachment with
-//   .attach_custom() or per-context
-// - Hooks (this example): Registered once globally and apply to all instances
-//   of a type
-//
-// Use formatting hooks to customize how types are displayed across your entire
-// application:
-// - AttachmentFormatterHook: Control placement (Inline/Appendix/Hidden) and
-//   priority
-// - ContextFormatterHook: Customize how error contexts are formatted
+//! Formatting hooks for global formatting overrides
+//!
+//! Formatting hooks vs handlers: Both customize how types are displayed, but:
+//! - Handlers (see custom_handler.rs): Applied per-attachment with
+//!   .attach_custom() or per-context
+//! - Hooks (this example): Registered once globally and apply to all instances
+//!   of a type
+//!
+//! Use formatting hooks to customize how types are displayed across your entire
+//! application:
+//! - AttachmentFormatterHook: Control placement (Inline/Appendix/Hidden) and
+//!   priority
+//! - ContextFormatterHook: Customize how error contexts are formatted
 
 use rootcause::{
     ReportRef,
