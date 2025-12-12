@@ -5,7 +5,6 @@ edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns", "no-std"]
 keywords = [
-  "error",
   "error-handling",
   "ergonomic",
   "library",
