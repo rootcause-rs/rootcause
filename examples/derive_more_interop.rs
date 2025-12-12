@@ -1,24 +1,19 @@
 //! Using derive_more errors with rootcause.
 //!
-//! **Run this example:** `cargo run --example derive_more_interop`
-//!
 //! Three patterns for integrating derive_more-generated errors:
 //!
-//! 1. **Type-nesting with `#[from]`** - Traditional derive_more pattern
+//! 1. Type-nesting with `#[from]`: Traditional derive_more pattern
 //!    - One location captured per error
 //!    - Minimal migration from plain derive_more
 //!
-//! 2. **Early Report creation** - Return `Report<E>` from lower functions
+//! 2. Early Report creation: Return `Report<E>` from lower functions
 //!    - Locations captured closer to the error source
 //!    - Easier to capture multiple locations
 //!    - Use `.context_transform()` or `ReportConversion` trait
 //!
-//! 3. **Flat enums with Report nesting** - Categories with child Reports
+//! 3. Flat enums with Report nesting: Categories with child Reports
 //!    - Multiple locations captured
 //!    - Flexible categorization via `.context()` or `ReportConversion`
-//!
-//! **What's next?**
-//! - See all examples? → `examples/README.md`
 
 use derive_more::{Display, Error, From};
 use rootcause::{ReportConversion, markers, prelude::*};

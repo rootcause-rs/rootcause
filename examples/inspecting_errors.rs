@@ -1,14 +1,9 @@
 //! Programmatic error inspection and analysis.
 //!
-//! **Run this example:** `cargo run --example inspecting_errors`
-//!
 //! Traverse error trees and extract structured data for analytics and monitoring:
 //! - `.iter_reports()` - traverse all nodes
 //! - `.downcast_current_context::<T>()` - extract typed context
 //! - `.downcast_inner::<T>()` - extract typed attachments
-//!
-//! **What's next?**
-//! - See all examples? → `examples/README.md`
 
 use rootcause::{prelude::*, report_collection::ReportCollection};
 

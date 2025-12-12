@@ -1,7 +1,5 @@
 //! Comparing context transformation methods.
 //!
-//! **Run this example:** `cargo run --example context_methods`
-//!
 //! This example compares four methods for transforming report contexts:
 //!
 //! - **`context()`** - Wraps report as child under new context

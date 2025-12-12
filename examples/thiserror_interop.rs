@@ -1,30 +1,26 @@
 //! Using thiserror errors with rootcause.
 //!
-//! **Run this example:** `cargo run --example thiserror_interop`
-//!
 //! Three patterns for integrating thiserror-generated errors:
 //!
-//! 1. **Type-nesting with `#[from]`** - Traditional thiserror pattern
+//! 1. Type-nesting with `#[from]`: Traditional thiserror pattern
 //!    - One location captured per error
 //!    - Minimal migration from plain thiserror
 //!
-//! 2. **Early Report creation** - Return `Report<E>` from lower functions
+//! 2. Early Report creation: Return `Report<E>` from lower functions
 //!    - Locations captured closer to the error source
 //!    - Easier to capture multiple locations
 //!    - Use `.context_transform()` or `ReportConversion` trait
 //!
-//! 3. **Flat enums with Report nesting** - Categories with child Reports
+//! 3. Flat enums with Report nesting: Categories with child Reports
 //!    - Multiple locations captured
 //!    - Flexible categorization via `.context()` or `ReportConversion`
-//!
-//! **What's next?**
-//! - See all examples? → `examples/README.md`
 
 use rootcause::{ReportConversion, markers, prelude::*};
 use thiserror::Error;
 
 // Shared error types used across patterns
 #[derive(Error, Debug)]
+#[expect(dead_code, reason = "example code")]
 enum DatabaseError {
     #[error("Connection timeout after {seconds}s")]
     ConnectionTimeout { seconds: u64 },
@@ -33,6 +29,7 @@ enum DatabaseError {
 }
 
 #[derive(Error, Debug)]
+#[expect(dead_code, reason = "example code")]
 enum ConfigError {
     #[error("Invalid format in {file}")]
     InvalidFormat { file: String },
@@ -90,7 +87,7 @@ enum AppError2 {
 
 // Locations captured close to the error source
 fn query_report(_id: u32) -> Result<String, Report<DatabaseError>> {
-    Err(report!(DatabaseError::QueryTimeout { seconds: 30 }))
+    Err(report!(DatabaseError::ConnectionTimeout { seconds: 30 }))
 }
 
 // This still captures only ONE location per error, but it's close to the source

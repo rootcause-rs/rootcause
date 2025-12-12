@@ -4,12 +4,6 @@
 //! [`Report`]s and boxed error trait objects (`Box<dyn Error>`). This is
 //! useful for integrating with APIs that expect standard Rust error types.
 //!
-//! # Running this Example
-//!
-//! ```bash
-//! cargo run --example boxed_error_interop
-//! ```
-//!
 //! # Conversion Overview
 //!
 //! ## From Boxed Errors to Rootcause

@@ -1,16 +1,11 @@
 //! Automatic error type conversions with `?`.
 //!
-//! **Run this example:** `cargo run --example error_coercion`
-//!
 //! The `?` operator automatically converts between error types:
 //! - `C` → `Report<C>`
 //! - `C` → `Report<Dynamic>`
 //! - `Report<C>` → `Report<Dynamic>`
 //!
 //! This lets you freely mix error types without manual conversions.
-//!
-//! **What's next?**
-//! - See all examples? → `examples/README.md`
 
 use std::fs;
 

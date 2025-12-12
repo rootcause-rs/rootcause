@@ -1,7 +1,5 @@
 //! Pattern matching on typed errors with `Report<YourError>`.
 //!
-//! **Run this example:** `cargo run --example typed_reports`
-//!
 //! By default, `report!()` creates `Report` (shorthand for `Report<Dynamic>`),
 //! which can hold any error type—like anyhow. But when you need callers to
 //! pattern match on specific error variants, use `Report<YourError>` instead.
@@ -16,9 +14,6 @@
 //!
 //! Typed and dynamic reports work together seamlessly—use `.into_dynamic()`
 //! or let `?` convert automatically.
-//!
-//! **What's next?**
-//! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;
 
