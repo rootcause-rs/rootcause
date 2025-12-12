@@ -47,7 +47,7 @@ use crate::{
 ///
 /// # #[derive(Debug)]
 /// enum AppError {
-///   Io
+///     Io,
 /// }
 /// # impl std::fmt::Display for AppError {
 /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -76,7 +76,7 @@ use crate::{
 ///
 /// # #[derive(Debug)]
 /// enum AppError {
-///   Io(io::Error)
+///     Io(io::Error),
 /// }
 /// # impl std::fmt::Display for AppError {
 /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

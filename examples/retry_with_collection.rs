@@ -1,7 +1,7 @@
-// Retry logic with error collection: why each attempt failed
-//
-// ReportCollection gathers multiple errors so you can see the full history
-// of retry attempts instead of just the last failure.
+//! Retry logic with error collection: why each attempt failed
+//!
+//! ReportCollection gathers multiple errors so you can see the full history
+//! of retry attempts instead of just the last failure.
 
 use rootcause::{prelude::*, report_collection::ReportCollection};
 
@@ -17,45 +17,35 @@ impl core::fmt::Display for HttpError {
     }
 }
 
-// Simulates network fetch (always fails for demonstration)
-fn fetch_document(_url: &str) -> Result<Vec<u8>, Report> {
-    const ERRORS: [HttpError; 3] = [
-        HttpError {
+fn fetch_document(attempt: usize) -> Result<Vec<u8>, Report> {
+    let error = match attempt {
+        1 => HttpError {
             code: 500,
             msg: "Internal server error",
         },
-        HttpError {
+        2 => HttpError {
             code: 404,
             msg: "Not found",
         },
-        HttpError {
-            code: 400,
-            msg: "Bad Request: Could not parse JSON payload",
+        _ => HttpError {
+            code: 503,
+            msg: "Service unavailable",
         },
-    ];
+    };
 
-    // Cycle through errors deterministically
-    use std::sync::atomic::{AtomicUsize, Ordering};
-    static COUNTER: AtomicUsize = AtomicUsize::new(0);
-    let index = COUNTER.fetch_add(1, Ordering::Relaxed) % ERRORS.len();
-
-    Err(report!(ERRORS[index]))? // HttpError → Report<HttpError> → Report<Dynamic>
+    Err(report!(error))?
 }
 
-// Retry logic that preserves all failure information
 fn fetch_document_with_retry(url: &str, retry_count: usize) -> Result<Vec<u8>, Report> {
-    let mut errors = ReportCollection::new(); // Accumulate all failures
+    let mut errors = ReportCollection::new();
 
     for attempt in 1..=retry_count {
-        match fetch_document(url).attach_with(|| format!("Attempt #{attempt}")) {
+        match fetch_document(attempt).attach_with(|| format!("Attempt #{attempt}")) {
             Ok(data) => return Ok(data),
-            Err(error) => {
-                errors.push(error.into_cloneable()); // Store this attempt's failure
-            }
+            Err(error) => errors.push(error.into_cloneable()),
         }
     }
 
-    // Return all failures as children of a parent error
     Err(errors.context(format!("Unable to fetch document {url}")))?
 }
 

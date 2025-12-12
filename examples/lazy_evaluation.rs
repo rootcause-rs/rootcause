@@ -1,130 +1,90 @@
-//! Lazy evaluation with `.attach_with()` and `.context_with()`.
+//! Deferred computation with `.attach_with()` and `.context_with()`.
 //!
 //! **Run this example:** `cargo run --example lazy_evaluation`
 //!
-//! This is an **optional optimization** - use it when you have performance
-//! concerns. The `_with()` variants work exactly like `.context()` and
-//! `.attach()`, but only compute their arguments when an error actually occurs.
+//! In `basic.rs`, you learned `.context()` and `.attach()`. This example shows
+//! when to use the `_with()` variants that defer computation.
 //!
-//! Use the `_with()` variants when:
-//! - The string is expensive to compute (e.g., formatting large data
-//!   structures)
-//! - You need to capture values from the surrounding scope
-//! - The computation should only happen if an error actually occurs
+//! **Use `_with()` on Results when you need to compute the value:**
+//! - Formatting with `format!()`
+//! - Expensive computations that shouldn't run on success
 //!
-//! Key concepts:
-//! - `.attach_with(|| ...)` - Lazy attachments (debug info)
-//! - `.context_with(|| ...)` - Lazy context (error messages)
-//! - Capturing variables from the surrounding scope
-//! - Performance: computation only happens on error path
+//! The closure only runs if the Result is Err, avoiding unnecessary work.
+//!
+//! **Don't use `_with()` when already constructing an error:**
+//!
+//! If you're using `bail!()` or `report!()`, you're already on the error path.
+//! Just compute the value directly and use `.attach()` or `.context()`.
+//!
+//! **What's next?**
+//! - Want to understand type preservation? → `typed_reports.rs`
+//! - See all examples? → `examples/README.md`
 
 use rootcause::prelude::*;
 
-// ============================================================================
-// CONCEPT 1: .attach_with() - Lazy Debug Information
-// ============================================================================
-// Use .attach_with() when the attachment string is expensive to compute or
-// needs to capture values from the surrounding scope.
+fn database_query(id: u32) -> Result<String, Report> {
+    if id == 999 {
+        bail!("Connection timeout");
+    }
+    Ok(format!("Record {id}"))
+}
 
-/// Demonstrates lazy attachments that capture loop variables.
-fn process_items(items: &[&str]) -> Result<(), Report> {
+// Defer expensive formatting or other computations until actually needed
+fn fetch_user_record(user_id: u32, db_host: &str, timestamp: u64) -> Result<String, Report> {
+    let record = database_query(user_id).context_with(|| {
+        format!("Failed to fetch user {user_id} from {db_host} at timestamp {timestamp}")
+    })?;
+    Ok(record)
+}
+
+fn validate_item(item: &str) -> Result<(), Report> {
+    if item.is_empty() {
+        bail!("Item cannot be empty");
+    }
+    if item.len() > 100 {
+        bail!("Item exceeds maximum length");
+    }
+    Ok(())
+}
+
+// This can be extra important in loops as the savings compound
+fn process_batch(items: &[&str]) -> Result<(), Report> {
     for (index, item) in items.iter().enumerate() {
         validate_item(item)
-            // attach_with() captures 'index' and 'item' from the loop
-            // The closure only runs if validate_item returns Err
-            .attach_with(|| format!("Processing item {index}: {item}"))
+            .attach_with(|| format!("Item {index}: '{item}'"))
             .context("Batch processing failed")?;
     }
     Ok(())
 }
 
-fn validate_item(item: &str) -> Result<(), Report> {
-    if item.is_empty() {
-        return Err(report!("Item cannot be empty"));
-    }
-    if item.len() > 100 {
-        return Err(report!("Item too long")
-            .attach(format!("Length: {} characters", item.len()))
-            .attach("Maximum allowed: 100 characters"));
-    }
-    Ok(())
-}
-
-// ============================================================================
-// CONCEPT 2: .context_with() - Lazy Context Messages
-// ============================================================================
-// Use .context_with() when the context message itself is expensive to generate.
-// Common when you need to format complex state or call functions.
-
-/// Simulates an expensive operation that should only run on error.
-fn get_diagnostic_info() -> String {
-    // In a real app, this might query databases, format large structures, etc.
-    "System state: [diagnostic data would be expensive to compute]".to_string()
-}
-
-/// Demonstrates lazy context with expensive computation.
-fn process_with_diagnostics(should_fail: bool) -> Result<(), Report> {
-    if should_fail {
-        // context_with() means get_diagnostic_info() ONLY runs if we hit this error
-        // path
-        return Err(report!("Operation failed"))
-            .context_with(|| format!("Failed to process. {}", get_diagnostic_info()))
-            .map_err(|e| e.into());
+// Anti-pattern: If you already have an error, it no longer makes sense to defer
+fn validate_data(data: &str) -> Result<(), Report> {
+    if data.is_empty() {
+        // Don't do this:
+        //
+        //   return Err(report!("Empty data"))
+        //     .attach_with(|| format!("Length: {}, Expected: >0", data.len()));
+        //
+        // Instead, just compute directly:
+        return Err(report!("Empty data").attach(format!("Length: {}, Expected: >0", data.len())));
     }
     Ok(())
 }
 
 fn main() {
-    println!("=== Lazy Evaluation Tutorial ===\n");
-    println!("When to use _with() variants vs regular methods:\n");
-
-    println!("=== Example 1: .attach_with() - Capturing Loop Variables ===\n");
-    let items = vec!["valid", "", "also valid", "x".repeat(150).leak()];
-    match process_items(&items) {
-        Ok(()) => println!("All items processed successfully"),
-        Err(error) => eprintln!("{error}\n"),
+    println!("Deferring expensive formatting:\n");
+    if let Err(report) = fetch_user_record(999, "db.example.com", 1234567890) {
+        eprintln!("{report}\n");
     }
 
-    println!("{}\n", "=".repeat(70));
-    println!("=== Example 2: .context_with() - Expensive Diagnostic Info ===\n");
-    match process_with_diagnostics(true) {
-        Ok(()) => println!("Operation succeeded"),
-        Err(error) => eprintln!("{error}\n"),
+    println!("Avoiding unnecessary work in a loop:\n");
+    let items = vec!["valid", "", "also valid"];
+    if let Err(report) = process_batch(&items) {
+        eprintln!("{report}\n");
     }
 
-    println!("{}\n", "=".repeat(70));
-    println!(
-        "When NOT to use lazy evaluation:\n\
-         \n\
-         ❌ DON'T do this for simple strings:\n\
-         \n\
-            Err(report!(\"Invalid value\"))\n\
-                .context_with(|| \"Value must be positive\")  // Unnecessary closure!\n\
-         \n\
-         ✅ DO this instead:\n\
-         \n\
-            Err(report!(\"Invalid value\"))\n\
-                .context(\"Value must be positive\")          // Simple and clear\n\
-         \n\
-         The _with() variants are for EXPENSIVE operations like:\n\
-         • Formatting large data structures (Vec, HashMap, etc.)\n\
-         • Calling functions that do work (database queries, file I/O)\n\
-         • Capturing many variables from the surrounding scope\n\
-         \n\
-         For simple string literals, use the regular methods.\n\
-         \n{}\n",
-        "=".repeat(70)
-    );
-    println!(
-        "Key takeaways:\n\
-         \n\
-         • Use .attach_with() when the attachment is expensive or captures variables\n\
-         • Use .context_with() when the context message itself is costly to generate\n\
-         • Use regular .attach() and .context() for simple, cheap strings\n\
-         • Lazy evaluation only happens on the error path - zero cost on success\n\
-         \n\
-         Next steps:\n\
-         • See typed_reports.rs to learn about preserving custom error types\n\
-         • See custom_attachments.rs for structured attachments you can query\n"
-    );
+    println!("Already on error path - compute directly:\n");
+    if let Err(report) = validate_data("") {
+        eprintln!("{report}\n");
+    }
 }

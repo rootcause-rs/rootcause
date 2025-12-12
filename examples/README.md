@@ -16,7 +16,7 @@ Demonstrations of rootcause features and patterns.
 ## Collections
 
 - [`retry_with_collection.rs`](retry_with_collection.rs) - Accumulate multiple errors with `ReportCollection`, retry patterns
-- [`batch_processing.rs`](batch_processing.rs) - Batch processing with `IteratorExt::collect_reports()`, partial success
+- [`batch_processing.rs`](batch_processing.rs) - Three error collection strategies: standard `.collect()` vs `.collect_reports()` vs manual loop for partial success
 
 ## Inspection & Analysis
 
