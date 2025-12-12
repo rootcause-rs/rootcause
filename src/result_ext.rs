@@ -6,11 +6,6 @@ use crate::{
     markers::{Local, Mutable, SendSync},
 };
 
-mod sealed {
-    pub trait Sealed {}
-    impl<A, E> Sealed for Result<A, E> {}
-}
-
 /// Extension trait for `Result` that provides error handling and reporting
 /// functionality.
 ///
@@ -31,7 +26,7 @@ mod sealed {
 ///
 /// Each method has a `local_*` variant for working with types that are not
 /// `Send + Sync`.
-pub trait ResultExt<V, E>: sealed::Sealed {
+pub trait ResultExt<V, E> {
     /// Converts the error into a [`Report`].
     ///
     /// If the result is `Ok`, returns the value unchanged. If the result is
@@ -228,34 +223,17 @@ pub trait ResultExt<V, E>: sealed::Sealed {
         C: Send + Sync,
         H: handlers::ContextHandler<C>;
 
-    /// Converts the error to a different context type using a
-    /// [`ReportConversion`] implementation.
+    /// Converts the error to a different context type using [`ReportConversion`].
     ///
-    /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a [`Report`] and then transforms it to a
-    /// different context type using the [`ReportConversion`] trait
-    /// implementation.
+    /// If `Err`, converts the error into a [`Report`] and transforms it using the [`ReportConversion`]
+    /// implementation. Implement [`ReportConversion`] once to define conversions, then use `context_to()`
+    /// at call sites. The target type `C` is typically inferred from the return type.
     ///
-    /// Implement [`ReportConversion`] once to define how errors convert, then
-    /// use `context_to()` throughout your code to apply that conversion.
-    ///
-    /// See [`examples/context_methods.rs`] for choosing transformation
-    /// strategies, and [`examples/thiserror_interop.rs`] for integration
-    /// patterns.
-    ///
-    /// See also [`local_context_to`](ResultExt::local_context_to) for a
-    /// non-thread-safe version that works with types that are not
-    /// `Send + Sync`.
+    /// See also: [`local_context_to`](ResultExt::local_context_to) (non-`Send + Sync` version),
+    /// [`examples/thiserror_interop.rs`] (integration patterns).
     ///
     /// [`ReportConversion`]: crate::ReportConversion
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
-    ///
-    /// # Type Inference
-    ///
-    /// The target context type `C` is typically inferred from the return type,
-    /// but you may need to specify it explicitly using turbofish syntax if the
-    /// compiler cannot infer it.
     ///
     /// # Examples
     ///
@@ -283,24 +261,15 @@ pub trait ResultExt<V, E>: sealed::Sealed {
         E: IntoReport<SendSync>,
         C: ReportConversion<E::Context, E::Ownership, SendSync>;
 
-    /// Transforms the error's context using a closure, preserving the report
-    /// structure.
+    /// Transforms the error's context using a closure, preserving the report structure.
     ///
-    /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a [`Report`] and applies the provided
-    /// closure to transform the context, while keeping all children and
-    /// attachments intact. The transformation bypasses the report creation
-    /// hook.
+    /// If `Err`, converts to a [`Report`] and applies the closure to transform the context in-place,
+    /// keeping all children and attachments. Bypasses the report creation hook.
+    /// See [`Report::context_transform`](crate::Report::context_transform) for details.
     ///
-    /// Unlike [`context()`](ResultExt::context) which wraps the error as a
-    /// child, this method replaces the context in-place.
-    ///
-    /// See [`examples/context_methods.rs`] for guidance on choosing between
-    /// this, [`context_transform_nested()`](ResultExt::context_transform_nested),
-    /// and [`context()`](ResultExt::context).
-    ///
-    /// See also [`local_context_transform`](ResultExt::local_context_transform)
-    /// for a non-thread-safe version.
+    /// See also: [`local_context_transform`](ResultExt::local_context_transform) (non-`Send + Sync` version),
+    /// [`context_transform_nested`](ResultExt::context_transform_nested) (creates new parent),
+    /// [`examples/context_methods.rs`] (comparison guide).
     ///
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
@@ -309,11 +278,14 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// ```
     /// # use std::io;
     /// # use rootcause::prelude::*;
-    /// # #[derive(Debug)]
-    /// # enum AppError { Io(io::Error) }
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     Io(io::Error)
+    /// }
     /// # impl std::fmt::Display for AppError {
     /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
     /// # }
+    ///
     /// let result: Result<String, Report<AppError>> =
     ///     std::fs::read_to_string("config.toml").context_transform(AppError::Io);
     /// ```
@@ -325,23 +297,15 @@ pub trait ResultExt<V, E>: sealed::Sealed {
         F: FnOnce(E::Context) -> C,
         C: Send + Sync + core::fmt::Display + core::fmt::Debug;
 
-    /// Transforms the error's context while nesting the entire original
-    /// report structure as a child.
+    /// Transforms the error's context while nesting the original report as a child.
     ///
-    /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a [`Report`], preformats it, and wraps
-    /// the entire preformatted report as a child under the new context created
-    /// by the provided closure. Since this uses
-    /// [`context()`](ResultExt::context) internally, report creation hooks
-    /// run again, capturing fresh hook data at the transformation point.
+    /// If `Err`, converts to a [`Report`], preformats it, and wraps it as a child under the new context.
+    /// Report creation hooks run again, capturing fresh hook data.
+    /// See [`Report::context_transform_nested`](crate::Report::context_transform_nested) for details.
     ///
-    /// See [`examples/context_methods.rs`] for guidance on choosing between
-    /// this, [`context_transform()`](ResultExt::context_transform), and
-    /// [`context()`](ResultExt::context).
-    ///
-    /// See also
-    /// [`local_context_transform_nested`](ResultExt::local_context_transform_nested)
-    /// for a non-thread-safe version.
+    /// See also: [`local_context_transform_nested`](ResultExt::local_context_transform_nested) (non-`Send + Sync` version),
+    /// [`context_transform`](ResultExt::context_transform) (preserves structure),
+    /// [`examples/context_methods.rs`] (comparison guide).
     ///
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
@@ -350,11 +314,14 @@ pub trait ResultExt<V, E>: sealed::Sealed {
     /// ```
     /// # use std::io;
     /// # use rootcause::prelude::*;
-    /// # #[derive(Debug)]
-    /// # enum AppError { Io(io::Error) }
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     Io(io::Error)
+    /// }
     /// # impl std::fmt::Display for AppError {
     /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
     /// # }
+    ///
     /// let result: Result<String, Report<AppError>> =
     ///     std::fs::read_to_string("config.toml").context_transform_nested(AppError::Io);
     /// ```
@@ -742,29 +709,12 @@ pub trait ResultExt<V, E>: sealed::Sealed {
         F: FnOnce() -> C,
         H: handlers::ContextHandler<C>;
 
-    /// Converts the error to a different context type using a
-    /// [`ReportConversion`] implementation, producing a non-thread-safe
-    /// [`Report`].
+    /// Non-`Send + Sync` version of [`context_to`](ResultExt::context_to).
     ///
-    /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a local (non-thread-safe) [`Report`] and
-    /// then transforms it to a different context type using the
-    /// [`ReportConversion`] trait implementation.
-    ///
-    /// This method is the non-thread-safe version of
-    /// [`context_to`](ResultExt::context_to), allowing you to work with context
-    /// types that are not `Send + Sync`.
-    ///
-    /// See also [`context_to`](ResultExt::context_to) for a thread-safe version
-    /// that returns a [`Report`] that can be sent across thread boundaries.
+    /// Converts the error to a different context type using [`ReportConversion`], producing a local
+    /// (non-thread-safe) [`Report`]. Allows working with context types that are not `Send + Sync`.
     ///
     /// [`ReportConversion`]: crate::ReportConversion
-    ///
-    /// # Type Inference
-    ///
-    /// The target context type `C` is typically inferred from the return type,
-    /// but you may need to specify it explicitly using turbofish syntax if the
-    /// compiler cannot infer it.
     ///
     /// # Examples
     ///
@@ -791,32 +741,26 @@ pub trait ResultExt<V, E>: sealed::Sealed {
         E: IntoReport<Local>,
         C: ReportConversion<E::Context, E::Ownership, Local>;
 
-    /// Transforms the error's context using a closure, preserving the report
-    /// structure (non-thread-safe version).
+    /// Non-`Send + Sync` version of [`context_transform`](ResultExt::context_transform).
     ///
-    /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a local (non-thread-safe) [`Report`] and
-    /// applies the provided closure to transform the context, while keeping all
-    /// children and attachments intact. The transformation bypasses the report
-    /// creation hook.
-    ///
-    /// This is the non-thread-safe version of
-    /// [`context_transform`](ResultExt::context_transform), allowing you to
-    /// work with context types that are not `Send + Sync`.
-    ///
-    /// See also [`context_transform`](ResultExt::context_transform) for a
-    /// thread-safe version.
+    /// Transforms the error's context using a closure, preserving the report structure.
+    /// Produces a local (non-thread-safe) [`Report`].
     ///
     /// # Examples
     ///
     /// ```
-    /// # use std::{io, rc::Rc};
-    /// # use rootcause::prelude::*;
-    /// # #[derive(Debug)]
-    /// # enum AppError { Io(Rc<io::Error>) }
+    /// # use std::io;
+    /// use std::rc::Rc;
+    /// use rootcause::prelude::*;
+    ///
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     Io(Rc<io::Error>)  // Rc is not Send + Sync
+    /// }
     /// # impl std::fmt::Display for AppError {
     /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
     /// # }
+    ///
     /// let result: Result<String, Report<AppError, _, markers::Local>> =
     ///     std::fs::read_to_string("config.toml").local_context_transform(|e| AppError::Io(Rc::new(e)));
     /// ```
@@ -828,34 +772,26 @@ pub trait ResultExt<V, E>: sealed::Sealed {
         F: FnOnce(E::Context) -> C,
         C: core::fmt::Display + core::fmt::Debug;
 
-    /// Transforms the error's context while nesting the entire original
-    /// report structure as a child (non-thread-safe version).
+    /// Non-`Send + Sync` version of [`context_transform_nested`](ResultExt::context_transform_nested).
     ///
-    /// If the result is `Ok`, returns the value unchanged. If the result is
-    /// `Err`, converts the error into a local (non-thread-safe) [`Report`],
-    /// preformats it, and wraps the entire preformatted report as a child under
-    /// the new context created by the provided closure. Since this uses
-    /// [`local_context()`](ResultExt::local_context) internally, report
-    /// creation hooks run again.
-    ///
-    /// This is the non-thread-safe version of
-    /// [`context_transform_nested`](ResultExt::context_transform_nested),
-    /// allowing you to work with context types that are not `Send + Sync`.
-    ///
-    /// See also
-    /// [`context_transform_nested`](ResultExt::context_transform_nested)
-    /// for a thread-safe version.
+    /// Transforms the error's context while nesting the original report as a child.
+    /// Produces a local (non-thread-safe) [`Report`]. Report creation hooks run again.
     ///
     /// # Examples
     ///
     /// ```
-    /// # use std::{io, rc::Rc};
-    /// # use rootcause::prelude::*;
-    /// # #[derive(Debug)]
-    /// # enum AppError { Io(Rc<io::Error>) }
+    /// # use std::io;
+    /// use std::rc::Rc;
+    /// use rootcause::prelude::*;
+    ///
+    /// #[derive(Debug)]
+    /// enum AppError {
+    ///     Io(Rc<io::Error>)  // Rc is not Send + Sync
+    /// }
     /// # impl std::fmt::Display for AppError {
     /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
     /// # }
+    ///
     /// let result: Result<String, Report<AppError, _, markers::Local>> =
     ///     std::fs::read_to_string("config.toml").local_context_transform_nested(|e| AppError::Io(Rc::new(e)));
     /// ```

@@ -501,25 +501,10 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         self.as_mut().into_current_context_mut()
     }
 
-    /// Transforms the context type in-place by applying a function to the old
-    /// context value.
+    /// Transforms the context type by applying a function, preserving report structure.
     ///
-    /// This method extracts the current context value, transforms it via the
-    /// provided closure, then reconstructs the report with the new context
-    /// type while preserving all children and attachments. **No new report
-    /// node is created**—the structure remains identical except for the
-    /// context type change. Creation hooks are not run, preserving the
-    /// original hook data (backtraces, locations).
-    ///
-    /// Unlike [`context()`](Report::context) which creates a new parent
-    /// report with the original as a child, this performs an in-place type
-    /// transformation.
-    ///
-    /// See [`examples/context_methods.rs`] for guidance on choosing between
-    /// this, [`context_transform_nested()`](Report::context_transform_nested),
-    /// and [`context()`](Report::context).
-    ///
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+    /// Converts the context type in-place without creating new nodes. Children,
+    /// attachments, and hook data (backtraces, locations) are preserved.
     ///
     /// # Examples
     ///
@@ -539,19 +524,17 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// # }
     ///
     /// let lib_report: Report<LibError> = report!(LibError);
-    ///
-    /// // Transform to application error type (preserves structure and hooks)
     /// let app_report: Report<AppError> = lib_report.context_transform(AppError::Lib);
     /// ```
     ///
     /// # See Also
     ///
-    /// - [`context_transform_nested()`](Report::context_transform_nested) -
-    ///   Transforms while nesting the entire original report as a child
-    /// - [`context()`](Report::context) - Wraps the report as a child under new
-    ///   context
-    /// - [`context_to()`](Report::context_to) - Converts using a
-    ///   [`ReportConversion`](crate::ReportConversion) trait implementation
+    /// - [`context_transform_nested()`](Report::context_transform_nested) - Wraps original as preformatted child
+    /// - [`context()`](Report::context) - Adds new parent context
+    /// - [`context_to()`](Report::context_to) - Uses [`ReportConversion`](crate::ReportConversion) trait
+    /// - [`examples/context_methods.rs`] - Comparison guide
+    ///
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     pub fn context_transform<F, D>(self, f: F) -> Report<D, Mutable, T>
     where
         F: FnOnce(C) -> D,
@@ -563,30 +546,13 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         Report::from_parts_unhooked::<handlers::Display>(new_context, children, attachments)
     }
 
-    /// Transforms the context by creating a new report with the original as a
-    /// preformatted child.
+    /// Transforms the context and nests the original report as a preformatted child.
     ///
-    /// This method creates a **new report node** rather than transforming
-    /// in-place. The process:
-    /// 1. Extracts the old context value (type `C`)
-    /// 2. Preformats the entire original context (it becomes a
-    ///    [`PreformattedContext`]—a string representation of the original)
-    /// 3. Applies the transformation function to create new context (type `D`)
-    /// 4. Creates a new report with the new context as root, and the
-    ///    preformatted original as its child
-    ///
-    /// **Key trade-off:** Creation hooks run again (capturing fresh locations/
-    /// backtraces at the wrapping point), but the original typed context is
-    /// lost—it becomes [`PreformattedContext`], so you can't downcast or
-    /// pattern match on the child's original type.
+    /// Creates a new parent node with fresh hook data (location, backtrace), but the
+    /// original context type is lost—the child becomes [`PreformattedContext`] and
+    /// cannot be downcast.
     ///
     /// [`PreformattedContext`]: crate::preformatted::PreformattedContext
-    ///
-    /// See [`examples/context_methods.rs`] for guidance on choosing between
-    /// this, [`context_transform()`](Report::context_transform), and
-    /// [`context()`](Report::context).
-    ///
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
     /// # Examples
     ///
@@ -606,19 +572,17 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// # }
     ///
     /// let lib_report: Report<LibError> = report!(LibError);
-    ///
-    /// // Transform with fresh hooks; original becomes preformatted child
     /// let app_report: Report<AppError> = lib_report.context_transform_nested(AppError::Lib);
     /// ```
     ///
     /// # See Also
     ///
-    /// - [`context_transform()`](Report::context_transform) - Transforms
-    ///   without nesting (keeps same structure level)
-    /// - [`preformat_root()`](Report::preformat_root) - Extracts context and
-    ///   creates preformatted report
-    /// - [`context()`](Report::context) - Wraps the report as a child under new
-    ///   context
+    /// - [`context_transform()`](Report::context_transform) - Transforms without nesting
+    /// - [`context()`](Report::context) - Adds new parent, preserves child's type
+    /// - [`preformat_root()`](Report::preformat_root) - Lower-level operation used internally
+    /// - [`examples/context_methods.rs`] - Comparison guide
+    ///
+    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     pub fn context_transform_nested<F, D>(self, f: F) -> Report<D, Mutable, T>
     where
         F: FnOnce(C) -> D,
@@ -629,31 +593,19 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         report.context_custom::<handlers::Display, _>(f(context))
     }
 
-    /// Extracts the context and returns it along with a preformatted version of
-    /// the report.
+    /// Extracts the context and returns it with a preformatted version of the report.
     ///
-    /// This method decomposes the report into two parts:
-    /// 1. The original context value of type `C`
-    /// 2. A new report with a
-    ///    [`PreformattedContext`](crate::preformatted::PreformattedContext)
-    ///    that contains the string representation of the original context
+    /// Returns a tuple: the original typed context and a new report with [`PreformattedContext`](crate::preformatted::PreformattedContext)
+    /// containing the string representation. The preformatted report maintains the same structure (children and
+    /// attachments). Useful when you need the typed value for processing and the formatted version for display.
     ///
-    /// The preformatted report maintains the same structure (children and
-    /// attachments) as the original, but replaces the typed context with a
-    /// preformatted string version. This is useful when you need both the
-    /// original typed value for processing and a formatted version for display.
+    /// This is a lower-level method primarily for custom transformation logic. Most users should use
+    /// [`context_transform`](Self::context_transform), [`context_transform_nested`](Self::context_transform_nested),
+    /// or [`context_to`](Self::context_to) instead.
     ///
-    /// Unlike [`preformat()`](Report::preformat), which preformats the entire
-    /// report hierarchy, this method only preformats the root context and
-    /// returns it separately.
-    ///
-    /// This method is primarily useful for implementing custom transformation
-    /// logic similar to
-    /// [`context_transform_nested()`](Report::context_transform_nested).
-    /// Most users should use the higher-level transformation methods
-    /// ([`context_transform()`](Report::context_transform),
-    /// [`context_transform_nested()`](Report::context_transform_nested), or
-    /// [`context_to()`](Report::context_to)) instead.
+    /// See also: [`preformat`](Report::preformat) (formats entire hierarchy),
+    /// [`into_parts`](Report::into_parts) (extracts without formatting),
+    /// [`current_context`](crate::ReportRef::current_context) (reference without extraction).
     ///
     /// # Examples
     ///
@@ -672,17 +624,6 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///     // Use the preformatted report...
     /// }
     /// ```
-    ///
-    /// # See Also
-    ///
-    /// - [`context_transform_nested()`](Report::context_transform_nested) -
-    ///   Uses this method internally for standard preserving transformations
-    /// - [`preformat()`](Report::preformat) - Preformats the entire report
-    ///   hierarchy
-    /// - [`into_parts()`](Report::into_parts) - Extracts context without
-    ///   preformatting
-    /// - [`current_context()`](crate::ReportRef::current_context) - Gets a
-    ///   reference to the context without extraction
     pub fn preformat_root(self) -> (C, Report<PreformattedContext, Mutable, T>)
     where
         PreformattedContext: markers::ObjectMarkerFor<T>,
@@ -872,27 +813,17 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         )
     }
 
-    /// Converts this report to a different context type using a
-    /// [`ReportConversion`] implementation.
+    /// Converts this report to a different context type using [`ReportConversion`].
     ///
-    /// This is the **call-site API** for error conversion. You implement
-    /// [`ReportConversion`] once to define *how* errors convert, then use
-    /// `context_to()` throughout your code to *apply* that conversion. This
-    /// separation enables clean, consistent error handling across your
-    /// codebase.
+    /// Implement [`ReportConversion`] once to define conversion logic, then use `context_to()` at call sites.
+    /// Useful for consistent error type coercion across your codebase, especially when integrating with
+    /// external libraries. You typically need to specify the target type (`::<Type>`).
     ///
-    /// See [`examples/context_methods.rs`] for choosing transformation
-    /// strategies, and [`examples/thiserror_interop.rs`] for integration
-    /// patterns.
+    /// See also: [`context_transform`](Self::context_transform) for direct conversion,
+    /// [`context_transform_nested`](Self::context_transform_nested) for wrapping,
+    /// [`examples/thiserror_interop.rs`] for integration patterns.
     ///
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
-    ///
-    /// # Type Inference
-    ///
-    /// You typically need to specify the target type explicitly using the
-    /// turbofish syntax (`::<Type>`), as Rust cannot always infer it from
-    /// context.
     ///
     /// # Examples
     ///
