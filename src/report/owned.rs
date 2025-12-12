@@ -612,17 +612,15 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// ```rust
     /// # use rootcause::{preformatted::PreformattedContext, prelude::*};
     /// # #[derive(Debug)]
-    /// # struct MyError { severity: u8 }
-    /// # impl std::fmt::Display for MyError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
-    /// # }
-    /// let report: Report<MyError> = report!(MyError { severity: 8 });
-    ///
-    /// // Extract context for conditional logic
-    /// let (context, preformatted) = report.preformat_root();
-    /// if context.severity > 5 {
-    ///     // Use the preformatted report...
+    /// struct MyError {
+    ///     code: u32
     /// }
+    /// # impl std::fmt::Display for MyError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error {}", self.code) }
+    /// # }
+    ///
+    /// let report: Report<MyError> = report!(MyError { code: 500 });
+    /// let (context, preformatted): (MyError, Report<PreformattedContext>) = report.preformat_root();
     /// ```
     pub fn preformat_root(self) -> (C, Report<PreformattedContext, Mutable, T>)
     where
