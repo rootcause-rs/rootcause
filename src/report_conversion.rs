@@ -5,14 +5,17 @@ use crate::{
 
 /// Converts between [`Report`] instances with different context types.
 ///
-/// Enables type-safe conversion from one report context to another, preserving the thread-safety marker.
-/// Used as a trait bound for [`context_to`](crate::Report::context_to) and
-/// [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to), allowing ergonomic conversions
-/// between related error types. For one-off transformations, use [`context`](crate::Report::context) directly.
+/// Enables type-safe conversion from one report context to another, preserving
+/// the thread-safety marker. Used as a trait bound for
+/// [`context_to`](crate::Report::context_to) and
+/// [`ResultExt::context_to`](crate::result_ext::ResultExt::context_to),
+/// allowing ergonomic conversions between related error types. For one-off
+/// transformations, use [`context`](crate::Report::context) directly.
 ///
-/// Implementations typically use [`context_transform`](crate::Report::context_transform) or
-/// [`context`](crate::Report::context). See [`examples/context_methods.rs`] for comparison,
-/// and [`examples/thiserror_interop.rs`] for integration patterns.
+/// Implementations typically use
+/// [`context_transform`](crate::Report::context_transform) or
+/// [`context`](crate::Report::context). See [`examples/context_methods.rs`] for
+/// comparison, and [`examples/thiserror_interop.rs`] for integration patterns.
 ///
 /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
 /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs

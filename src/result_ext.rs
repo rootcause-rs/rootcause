@@ -223,14 +223,18 @@ pub trait ResultExt<V, E> {
         C: Send + Sync,
         H: handlers::ContextHandler<C>;
 
-    /// Converts the error to a different context type using [`ReportConversion`].
+    /// Converts the error to a different context type using
+    /// [`ReportConversion`].
     ///
-    /// If `Err`, converts the error into a [`Report`] and transforms it using the [`ReportConversion`]
-    /// implementation. Implement [`ReportConversion`] once to define conversions, then use `context_to()`
-    /// at call sites. The target type `C` is typically inferred from the return type.
+    /// If `Err`, converts the error into a [`Report`] and transforms it using
+    /// the [`ReportConversion`] implementation. Implement
+    /// [`ReportConversion`] once to define conversions, then use `context_to()`
+    /// at call sites. The target type `C` is typically inferred from the return
+    /// type.
     ///
-    /// See also: [`local_context_to`](ResultExt::local_context_to) (non-`Send + Sync` version),
-    /// [`examples/thiserror_interop.rs`] (integration patterns).
+    /// See also: [`local_context_to`](ResultExt::local_context_to) (non-`Send +
+    /// Sync` version), [`examples/thiserror_interop.rs`] (integration
+    /// patterns).
     ///
     /// [`ReportConversion`]: crate::ReportConversion
     /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
@@ -261,15 +265,19 @@ pub trait ResultExt<V, E> {
         E: IntoReport<SendSync>,
         C: ReportConversion<E::Context, E::Ownership, SendSync>;
 
-    /// Transforms the error's context using a closure, preserving the report structure.
+    /// Transforms the error's context using a closure, preserving the report
+    /// structure.
     ///
-    /// If `Err`, converts to a [`Report`] and applies the closure to transform the context in-place,
-    /// keeping all children and attachments. Bypasses the report creation hook.
-    /// See [`Report::context_transform`](crate::Report::context_transform) for details.
+    /// If `Err`, converts to a [`Report`] and applies the closure to transform
+    /// the context in-place, keeping all children and attachments. Bypasses
+    /// the report creation hook.
+    /// See [`Report::context_transform`](crate::Report::context_transform) for
+    /// details.
     ///
     /// See also: [`local_context_transform`](ResultExt::local_context_transform) (non-`Send + Sync` version),
-    /// [`context_transform_nested`](ResultExt::context_transform_nested) (creates new parent),
-    /// [`examples/context_methods.rs`] (comparison guide).
+    /// [`context_transform_nested`](ResultExt::context_transform_nested)
+    /// (creates new parent), [`examples/context_methods.rs`] (comparison
+    /// guide).
     ///
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
@@ -297,15 +305,17 @@ pub trait ResultExt<V, E> {
         F: FnOnce(E::Context) -> C,
         C: Send + Sync + core::fmt::Display + core::fmt::Debug;
 
-    /// Transforms the error's context while nesting the original report as a child.
+    /// Transforms the error's context while nesting the original report as a
+    /// child.
     ///
-    /// If `Err`, converts to a [`Report`], preformats it, and wraps it as a child under the new context.
-    /// Report creation hooks run again, capturing fresh hook data.
+    /// If `Err`, converts to a [`Report`], preformats it, and wraps it as a
+    /// child under the new context. Report creation hooks run again,
+    /// capturing fresh hook data.
     /// See [`Report::context_transform_nested`](crate::Report::context_transform_nested) for details.
     ///
     /// See also: [`local_context_transform_nested`](ResultExt::local_context_transform_nested) (non-`Send + Sync` version),
-    /// [`context_transform`](ResultExt::context_transform) (preserves structure),
-    /// [`examples/context_methods.rs`] (comparison guide).
+    /// [`context_transform`](ResultExt::context_transform) (preserves
+    /// structure), [`examples/context_methods.rs`] (comparison guide).
     ///
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     ///
@@ -711,8 +721,10 @@ pub trait ResultExt<V, E> {
 
     /// Non-`Send + Sync` version of [`context_to`](ResultExt::context_to).
     ///
-    /// Converts the error to a different context type using [`ReportConversion`], producing a local
-    /// (non-thread-safe) [`Report`]. Allows working with context types that are not `Send + Sync`.
+    /// Converts the error to a different context type using
+    /// [`ReportConversion`], producing a local (non-thread-safe)
+    /// [`Report`]. Allows working with context types that are not `Send +
+    /// Sync`.
     ///
     /// [`ReportConversion`]: crate::ReportConversion
     ///
@@ -741,10 +753,11 @@ pub trait ResultExt<V, E> {
         E: IntoReport<Local>,
         C: ReportConversion<E::Context, E::Ownership, Local>;
 
-    /// Non-`Send + Sync` version of [`context_transform`](ResultExt::context_transform).
+    /// Non-`Send + Sync` version of
+    /// [`context_transform`](ResultExt::context_transform).
     ///
-    /// Transforms the error's context using a closure, preserving the report structure.
-    /// Produces a local (non-thread-safe) [`Report`].
+    /// Transforms the error's context using a closure, preserving the report
+    /// structure. Produces a local (non-thread-safe) [`Report`].
     ///
     /// # Examples
     ///
@@ -772,10 +785,12 @@ pub trait ResultExt<V, E> {
         F: FnOnce(E::Context) -> C,
         C: core::fmt::Display + core::fmt::Debug;
 
-    /// Non-`Send + Sync` version of [`context_transform_nested`](ResultExt::context_transform_nested).
+    /// Non-`Send + Sync` version of
+    /// [`context_transform_nested`](ResultExt::context_transform_nested).
     ///
-    /// Transforms the error's context while nesting the original report as a child.
-    /// Produces a local (non-thread-safe) [`Report`]. Report creation hooks run again.
+    /// Transforms the error's context while nesting the original report as a
+    /// child. Produces a local (non-thread-safe) [`Report`]. Report
+    /// creation hooks run again.
     ///
     /// # Examples
     ///

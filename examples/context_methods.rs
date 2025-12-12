@@ -61,7 +61,8 @@ fn main() {
     println!("{report2}\n");
     assert_eq!(report2.iter_sub_reports().count(), 0);
 
-    // context_transform_nested() - Creates new parent node, child preformatted (type lost)
+    // context_transform_nested() - Creates new parent node, child preformatted
+    // (type lost)
     println!("Using context_transform_nested():");
     let report3: Report<AppError> =
         parse_error("not_a_number").context_transform_nested(AppError::Parse);
@@ -72,7 +73,8 @@ fn main() {
         std::any::TypeId::of::<PreformattedContext>()
     );
 
-    // context_to() - Uses ReportConversion impl (context_transform_nested in this example)
+    // context_to() - Uses ReportConversion impl (context_transform_nested in this
+    // example)
     println!("Using context_to():");
     let report4: Report<AppError> = parse_error("not_a_number").context_to::<AppError>();
     println!("{report4}\n");
