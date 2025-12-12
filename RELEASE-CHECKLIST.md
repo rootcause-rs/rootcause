@@ -1,6 +1,7 @@
 - Update version numbers in:
   - `Cargo.toml`
   - `rootcause-internals/Cargo.toml`
+  - `rootcause-backtrace/Cargo.toml`
   - `README.md`
 - Grep for the old version number
 - Update CHANGELOG.md, including the links at the bottom

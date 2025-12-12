@@ -1,6 +1,7 @@
 //! Programmatic error inspection and analysis.
 //!
-//! Traverse error trees and extract structured data for analytics and monitoring:
+//! Traverse error trees and extract structured data for analytics and
+//! monitoring:
 //! - `.iter_reports()` - traverse all nodes
 //! - `.downcast_current_context::<T>()` - extract typed context
 //! - `.downcast_inner::<T>()` - extract typed attachments
