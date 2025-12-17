@@ -538,6 +538,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// - [`examples/context_methods.rs`] - Comparison guide
     ///
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+    #[track_caller]
     pub fn context_transform<F, D>(self, f: F) -> Report<D, Mutable, T>
     where
         F: FnOnce(C) -> D,
@@ -590,6 +591,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// - [`examples/context_methods.rs`] - Comparison guide
     ///
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
+    #[track_caller]
     pub fn context_transform_nested<F, D>(self, f: F) -> Report<D, Mutable, T>
     where
         F: FnOnce(C) -> D,
