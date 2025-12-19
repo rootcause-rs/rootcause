@@ -36,6 +36,17 @@
 //! All methods have both thread-safe (`Send + Sync`) and local (non-thread-safe)
 //! variants. Use the `local_*` methods when working with types that cannot be
 //! sent across threads, such as `Rc` or `Cell`.
+//!
+//! # Usage Considerations
+//!
+//! Some developers prefer to keep `Option` and `Result` handling visually
+//! distinct in their code. Using [`OptionExt`] can make it less obvious when
+//! you're working with an `Option` versus a `Result`, since both can use
+//! similar error handling methods like `.context()`. If code clarity is a
+//! concern, consider using explicit conversion with
+//! [`.ok_or_report()`](OptionExt::ok_or_report) followed by standard `Result`
+//! methods, or using [`Option::ok_or`] or [`Option::ok_or_else`] with your own
+//! error types.
 
 use crate::{
     Report, ReportConversion, handlers,
