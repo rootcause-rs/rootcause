@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a `OptionExt` trait [#92](https://github.com/rootcause-rs/rootcause/pull/92)
+
 ## [0.11.0] - 2025-12-12
 
 ### Added
