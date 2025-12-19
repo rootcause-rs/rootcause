@@ -406,8 +406,7 @@ pub use self::{
 /// ```
 ///
 /// [`Dynamic`]: crate::markers::Dynamic
-pub type Result<T, C = markers::Dynamic> =
-    core::result::Result<T, Report<C>>;
+pub type Result<T, C = markers::Dynamic> = core::result::Result<T, Report<C>>;
 
 // Not public API. Referenced by macro-generated code and rootcause-backtrace.
 #[doc(hidden)]
