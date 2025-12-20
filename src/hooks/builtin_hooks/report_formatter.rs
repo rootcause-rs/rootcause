@@ -235,7 +235,8 @@ pub struct DefaultReportFormatter {
     /// Formatting for the last source chain item
     pub source_chain_item_last_formatting: ItemFormatting,
 
-    /// Formatting for the notice when source chain errors are omitted due to depth limit
+    /// Formatting for the notice when source chain errors are omitted due to
+    /// depth limit
     pub source_chain_omitted_formatting: LineFormatting,
 
     /// Optional separator between the source chain and attachments/children
@@ -960,7 +961,12 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             report.format_current_context(),
             context_style.function,
             |this, tmp_value_buffer| {
-                this.format_node_data(tmp_value_buffer, tmp_attachments_buffer, report, context_style)
+                this.format_node_data(
+                    tmp_value_buffer,
+                    tmp_attachments_buffer,
+                    report,
+                    context_style,
+                )
             },
         )?;
         Ok(())
@@ -1051,9 +1057,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             self.format_with_line_prefix(source_chain_separator)?;
         }
 
-        if has_children
-            && let Some(pre_child_separator) = self.config.pre_child_separator
-        {
+        if has_children && let Some(pre_child_separator) = self.config.pre_child_separator {
             self.format_with_line_prefix(pre_child_separator)?;
         }
 
@@ -1194,7 +1198,8 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 // Format each source
                 for (idx, err) in sources.iter().enumerate() {
                     let is_last_source = idx + 1 == sources.len();
-                    // Last item in the source chain only if it's the last source AND there's no omitted notice
+                    // Last item in the source chain only if it's the last source AND there's no
+                    // omitted notice
                     let is_last_in_chain = is_last_source && !has_omitted;
                     let item_formatting = if is_last_in_chain {
                         &this.config.source_chain_item_last_formatting
@@ -1222,7 +1227,10 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     // The omitted notice is always the last item in the source chain subtree,
                     // so we use a modified version with ╰ instead of ├
                     this.format_line(
-                        &this.config.source_chain_item_last_formatting.standalone_line,
+                        &this
+                            .config
+                            .source_chain_item_last_formatting
+                            .standalone_line,
                         format_args!(
                             "note: {} error(s) omitted from source chain.",
                             omitted_count

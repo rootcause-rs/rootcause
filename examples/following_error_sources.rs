@@ -1,13 +1,15 @@
 //! Demonstrates how to display error source chains in reports.
 //!
-//! By default, rootcause only displays the immediate error context. This example
-//! shows how to enable source chain traversal to display the full error chain,
-//! providing better diagnostic information.
+//! By default, rootcause only displays the immediate error context. This
+//! example shows how to enable source chain traversal to display the full error
+//! chain, providing better diagnostic information.
 
-use rootcause::ReportRef;
-use rootcause::hooks::{Hooks, context_formatter::ContextFormatterHook};
-use rootcause::markers::{Dynamic, Local, Uncloneable};
-use rootcause::prelude::*;
+use rootcause::{
+    ReportRef,
+    hooks::{Hooks, context_formatter::ContextFormatterHook},
+    markers::{Dynamic, Local, Uncloneable},
+    prelude::*,
+};
 use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
 
 // A simple error type that can chain to other errors
