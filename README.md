@@ -284,6 +284,7 @@ Once you're comfortable with the basics, rootcause offers powerful features for 
 - [`retry_with_collection.rs`](examples/retry_with_collection.rs) - Collecting multiple retry attempts
 - [`batch_processing.rs`](examples/batch_processing.rs) - Gathering errors from parallel operations
 - [`inspecting_errors.rs`](examples/inspecting_errors.rs) - Programmatic tree traversal and data extraction for analytics
+- [`following_error_sources.rs`](examples/following_error_sources.rs) - Displaying full error source chains for debugging third-party library errors
 - [`custom_handler.rs`](examples/custom_handler.rs) - Customizing error formatting and data collection
 - [`formatting_hooks.rs`](examples/formatting_hooks.rs) - Advanced formatting customization
 

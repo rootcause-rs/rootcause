@@ -48,6 +48,7 @@ Demonstrations of rootcause features and patterns.
 ## Hooks & Formatting
 
 - [`formatting_hooks.rs`](formatting_hooks.rs) - Global formatting overrides: placement, priority, custom context display
+- [`following_error_sources.rs`](following_error_sources.rs) - Display full error source chains: useful for debugging third-party library errors with deep cause chains
 - [`report_creation_hook.rs`](report_creation_hook.rs) - Automatic attachment on creation: simple collectors vs conditional logic
 - [`conditional_formatting.rs`](conditional_formatting.rs) - Conditional formatting based on runtime context (environment, feature flags, etc.)
 
