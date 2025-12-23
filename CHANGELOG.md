@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Add a `rootcause::Result` type alias [#91](https://github.com/rootcause-rs/rootcause/pull/91)
+
+### Fixed
+
+- Add `#[track_caller]` to two functions that were missing them [#89](https://github.com/rootcause-rs/rootcause/pull/89)
+
 ## [0.11.0] - 2025-12-12
 
 ### Added
