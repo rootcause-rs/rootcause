@@ -26,7 +26,7 @@
 //!
 //! ## Custom Formatting
 //!
-//! ```rust
+//! ```
 //! use core::fmt;
 //!
 //! use rootcause::{
@@ -83,7 +83,7 @@
 //!
 //! Control where attachments appear and in what order:
 //!
-//! ```rust
+//! ```
 //! use rootcause::{
 //!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
 //!     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
@@ -122,7 +122,7 @@
 //!
 //! Hide noisy or unnecessary information by setting placement to `Hidden`:
 //!
-//! ```rust
+//! ```
 //! use rootcause::{
 //!     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
 //!     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
@@ -254,7 +254,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use core::fmt;
 ///
 /// use rootcause::{
@@ -368,7 +368,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
 /// # Examples
 ///
 /// Basic custom Display formatting:
-/// ```rust
+/// ```
 /// use core::fmt;
 ///
 /// use rootcause::{
@@ -410,7 +410,7 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use core::fmt;
     ///
     /// use rootcause::{
@@ -453,6 +453,28 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// * `attachment` - Reference to the preformatted attachment
     /// * `attachment_parent` - Optional context about the parent report
     /// * `formatter` - The formatter to write output to
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
+    ///     preformatted::PreformattedAttachment,
+    ///     report_attachment::ReportAttachmentRef,
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl AttachmentFormatterHook<String> for MyFormatter {
+    ///     fn display_preformatted(
+    ///         &self,
+    ///         attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
+    ///         _parent: Option<AttachmentParent<'_>>,
+    ///         f: &mut core::fmt::Formatter<'_>,
+    ///     ) -> core::fmt::Result {
+    ///         write!(f, "[Preformatted] {}", attachment.format_inner_unhooked())
+    ///     }
+    /// }
+    /// ```
     fn display_preformatted(
         &self,
         attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
@@ -474,6 +496,27 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// * `attachment` - Reference to the attachment being formatted
     /// * `attachment_parent` - Optional context about the parent report
     /// * `formatter` - The formatter to write output to
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
+    ///     report_attachment::ReportAttachmentRef,
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl AttachmentFormatterHook<String> for MyFormatter {
+    ///     fn debug(
+    ///         &self,
+    ///         attachment: ReportAttachmentRef<'_, String>,
+    ///         _parent: Option<AttachmentParent<'_>>,
+    ///         f: &mut core::fmt::Formatter<'_>,
+    ///     ) -> core::fmt::Result {
+    ///         write!(f, "Debug: {:?}", attachment.inner())
+    ///     }
+    /// }
+    /// ```
     fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, A>,
@@ -495,6 +538,32 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// * `attachment` - Reference to the preformatted attachment
     /// * `attachment_parent` - Optional context about the parent report
     /// * `formatter` - The formatter to write output to
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
+    ///     preformatted::PreformattedAttachment,
+    ///     report_attachment::ReportAttachmentRef,
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl AttachmentFormatterHook<String> for MyFormatter {
+    ///     fn debug_preformatted(
+    ///         &self,
+    ///         attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
+    ///         _parent: Option<AttachmentParent<'_>>,
+    ///         f: &mut core::fmt::Formatter<'_>,
+    ///     ) -> core::fmt::Result {
+    ///         write!(
+    ///             f,
+    ///             "[Preformatted Debug] {:?}",
+    ///             attachment.format_inner_unhooked()
+    ///         )
+    ///     }
+    /// }
+    /// ```
     fn debug_preformatted(
         &self,
         attachment: ReportAttachmentRef<'_, PreformattedAttachment>,
@@ -518,6 +587,32 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     ///   be either `A` or a [`PreformattedAttachment`])
     /// * `report_formatting_function` - Whether the overall report uses Display
     ///   or Debug formatting
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
+    ///     hooks::attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
+    ///     markers::Dynamic,
+    ///     report_attachment::ReportAttachmentRef,
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl AttachmentFormatterHook<String> for MyFormatter {
+    ///     fn preferred_formatting_style(
+    ///         &self,
+    ///         _attachment: ReportAttachmentRef<'_, Dynamic>,
+    ///         _function: FormattingFunction,
+    ///     ) -> AttachmentFormattingStyle {
+    ///         AttachmentFormattingStyle {
+    ///             placement: AttachmentFormattingPlacement::InlineWithHeader { header: "Info" },
+    ///             function: FormattingFunction::Display,
+    ///             priority: 100,
+    ///         }
+    ///     }
+    /// }
+    /// ```
     fn preferred_formatting_style(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,

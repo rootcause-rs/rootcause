@@ -31,7 +31,7 @@
 //!
 //! The easiest way to attach data to all errors:
 //!
-//! ```rust
+//! ```
 //! use rootcause::hooks::Hooks;
 //!
 //! // Attach a request ID to every error
@@ -50,7 +50,7 @@
 //! When you need to attach structured data or use a custom handler, implement
 //! [`AttachmentCollector`]:
 //!
-//! ```rust
+//! ```
 //! use rootcause::{
 //!     hooks::{Hooks, report_creation::AttachmentCollector},
 //!     prelude::*,
@@ -92,7 +92,7 @@
 //! When you need conditional logic based on the error type, implement
 //! [`ReportCreationHook`]:
 //!
-//! ```rust
+//! ```
 //! use rootcause::{
 //!     ReportMut,
 //!     hooks::{Hooks, report_creation::ReportCreationHook},
@@ -177,7 +177,7 @@ pub(crate) trait StoredReportCreationHook: 'static + Send + Sync + core::fmt::De
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause::{
 ///     ReportMut,
 ///     hooks::{Hooks, report_creation::ReportCreationHook},
@@ -209,10 +209,56 @@ pub(crate) trait StoredReportCreationHook: 'static + Send + Sync + core::fmt::De
 /// ```
 pub trait ReportCreationHook: 'static + Send + Sync {
     /// Called when a [`Local`] report is created.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     ReportMut,
+    ///     hooks::report_creation::ReportCreationHook,
+    ///     markers::{Dynamic, Local, SendSync},
+    ///     report_attachment,
+    /// };
+    ///
+    /// struct ThreadInfoHook;
+    /// impl ReportCreationHook for ThreadInfoHook {
+    ///     fn on_local_creation(&self, mut report: ReportMut<'_, Dynamic, Local>) {
+    ///         let thread_id = format!("Thread: {:?}", std::thread::current().id());
+    ///         report
+    ///             .attachments_mut()
+    ///             .push(report_attachment!(thread_id).into());
+    ///     }
+    ///
+    ///     fn on_sendsync_creation(&self, _report: ReportMut<'_, Dynamic, SendSync>) {}
+    /// }
+    /// ```
     #[track_caller]
     fn on_local_creation(&self, report: ReportMut<'_, Dynamic, Local>);
 
     /// Called when a [`SendSync`] report is created.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     ReportMut,
+    ///     hooks::report_creation::ReportCreationHook,
+    ///     markers::{Dynamic, Local, SendSync},
+    ///     report_attachment,
+    /// };
+    ///
+    /// struct ProcessInfoHook;
+    /// impl ReportCreationHook for ProcessInfoHook {
+    ///     fn on_local_creation(&self, _report: ReportMut<'_, Dynamic, Local>) {}
+    ///
+    ///     fn on_sendsync_creation(&self, mut report: ReportMut<'_, Dynamic, SendSync>) {
+    ///         let process_id = format!("Process ID: {}", std::process::id());
+    ///         report
+    ///             .attachments_mut()
+    ///             .push(report_attachment!(process_id).into());
+    ///     }
+    /// }
+    /// ```
     #[track_caller]
     fn on_sendsync_creation(&self, report: ReportMut<'_, Dynamic, SendSync>);
 }
@@ -324,7 +370,7 @@ where
 /// [`Display`]: core::fmt::Display
 /// [`Debug`]: core::fmt::Debug
 ///
-/// ```rust
+/// ```
 /// use rootcause::hooks::Hooks;
 ///
 /// // This closure automatically implements AttachmentCollector<String>
@@ -338,7 +384,7 @@ where
 ///
 /// ## Custom Collector Implementation
 ///
-/// ```rust
+/// ```
 /// use rootcause::{
 ///     hooks::{Hooks, report_creation::AttachmentCollector},
 ///     prelude::*,
@@ -367,7 +413,7 @@ where
 ///
 /// ## Using a Closure
 ///
-/// ```rust
+/// ```
 /// use rootcause::hooks::Hooks;
 ///
 /// // Install a closure that collects the current working directory
@@ -389,6 +435,27 @@ pub trait AttachmentCollector<A>: 'static + Send + Sync {
     /// This method is called once for each report creation and should return
     /// the data that will be attached to the report. The data will be formatted
     /// using the associated [`Handler`](Self::Handler) type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::time::SystemTime;
+    ///
+    /// use rootcause::hooks::report_creation::AttachmentCollector;
+    ///
+    /// struct TimestampCollector;
+    /// impl AttachmentCollector<String> for TimestampCollector {
+    ///     type Handler = rootcause::handlers::Display;
+    ///
+    ///     fn collect(&self) -> String {
+    ///         // Collect current timestamp to attach to reports
+    ///         match SystemTime::now().duration_since(SystemTime::UNIX_EPOCH) {
+    ///             Ok(duration) => format!("Timestamp: {}s", duration.as_secs()),
+    ///             Err(_) => "Timestamp: unknown".to_string(),
+    ///         }
+    ///     }
+    /// }
+    /// ```
     #[track_caller]
     fn collect(&self) -> A;
 }

@@ -42,7 +42,7 @@
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use std::error::Error;
 ///
 /// use rootcause_internals::handlers::{
@@ -93,7 +93,7 @@ pub trait ContextHandler<C>: 'static {
     /// For types implementing `std::error::Error`, delegate to their `source`
     /// method:
     ///
-    /// ```rust
+    /// ```
     /// use std::error::Error;
     ///
     /// use rootcause_internals::handlers::ContextHandler;
@@ -122,7 +122,7 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause_internals::handlers::ContextHandler;
     ///
     /// struct DisplayHandler;
@@ -150,7 +150,7 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause_internals::handlers::ContextHandler;
     ///
     /// struct DebugHandler;
@@ -197,7 +197,7 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// Custom handler that mirrors the report's formatting:
     ///
-    /// ```rust
+    /// ```
     /// use rootcause_internals::handlers::{
     ///     ContextFormattingStyle, ContextHandler, FormattingFunction,
     /// };
@@ -268,7 +268,7 @@ pub trait ContextHandler<C>: 'static {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause_internals::handlers::{
 ///     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
 ///     FormattingFunction,
@@ -320,7 +320,7 @@ pub trait AttachmentHandler<A>: 'static {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause_internals::handlers::AttachmentHandler;
     ///
     /// struct ConfigData {
@@ -364,7 +364,7 @@ pub trait AttachmentHandler<A>: 'static {
     ///
     /// Attachment that hides sensitive data:
     ///
-    /// ```rust
+    /// ```
     /// use rootcause_internals::handlers::{
     ///     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
     ///     FormattingFunction,
@@ -423,7 +423,7 @@ pub trait AttachmentHandler<A>: 'static {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 ///
 /// // Prefer display formatting (the default)
@@ -462,7 +462,7 @@ pub struct ContextFormattingStyle {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause_internals::handlers::{
 ///     AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
 /// };
@@ -507,7 +507,7 @@ pub struct AttachmentFormattingStyle {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause_internals::handlers::FormattingFunction;
 ///
 /// let display_formatting = FormattingFunction::Display;
@@ -543,7 +543,7 @@ pub enum FormattingFunction {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause_internals::handlers::AttachmentFormattingPlacement;
 ///
 /// // Default is inline

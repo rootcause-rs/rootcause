@@ -20,7 +20,7 @@
 //! Register a backtrace collector as a hook to automatically capture backtraces
 //! for all errors:
 //!
-//! ```rust
+//! ```
 //! use rootcause::hooks::Hooks;
 //! use rootcause_backtrace::BacktraceCollector;
 //!
@@ -59,7 +59,7 @@
 //!
 //! Attach backtraces to specific errors using the extension trait:
 //!
-//! ```rust
+//! ```
 //! use std::io;
 //!
 //! use rootcause::{Report, report};
@@ -115,7 +115,7 @@
 //!
 //! Control which frames appear in backtraces:
 //!
-//! ```rust
+//! ```
 //! use rootcause_backtrace::{BacktraceCollector, BacktraceFilter};
 //!
 //! let collector = BacktraceCollector {
@@ -153,7 +153,7 @@ use rootcause::{
 ///
 /// Capture a backtrace manually:
 ///
-/// ```rust
+/// ```
 /// use rootcause_backtrace::{Backtrace, BacktraceFilter};
 ///
 /// let backtrace = Backtrace::capture(&BacktraceFilter::DEFAULT);
@@ -382,7 +382,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
 ///
 /// Basic usage with default settings:
 ///
-/// ```rust
+/// ```
 /// use rootcause::hooks::Hooks;
 /// use rootcause_backtrace::BacktraceCollector;
 ///
@@ -394,7 +394,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
 ///
 /// Custom configuration:
 ///
-/// ```rust
+/// ```
 /// use rootcause::hooks::Hooks;
 /// use rootcause_backtrace::{BacktraceCollector, BacktraceFilter};
 ///
@@ -433,7 +433,7 @@ pub struct BacktraceCollector {
 ///
 /// Use default filtering:
 ///
-/// ```rust
+/// ```
 /// use rootcause_backtrace::BacktraceFilter;
 ///
 /// let filter = BacktraceFilter::DEFAULT;
@@ -441,7 +441,7 @@ pub struct BacktraceCollector {
 ///
 /// Custom filtering to focus on application code:
 ///
-/// ```rust
+/// ```
 /// use rootcause_backtrace::BacktraceFilter;
 ///
 /// let filter = BacktraceFilter {
@@ -552,7 +552,7 @@ impl BacktraceCollector {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::Hooks;
     /// use rootcause_backtrace::BacktraceCollector;
     ///
@@ -912,7 +912,7 @@ impl FramePath {
 ///
 /// Attach backtrace to a report:
 ///
-/// ```rust
+/// ```
 /// use std::io;
 ///
 /// use rootcause::report;
@@ -923,7 +923,7 @@ impl FramePath {
 ///
 /// Attach backtrace to a `Result`:
 ///
-/// ```rust
+/// ```
 /// use std::io;
 ///
 /// use rootcause::{Report, report};
@@ -938,7 +938,7 @@ impl FramePath {
 ///
 /// Use a custom filter:
 ///
-/// ```rust
+/// ```
 /// use std::io;
 ///
 /// use rootcause::report;
@@ -959,7 +959,7 @@ pub trait BacktraceExt: Sized {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::io;
     ///
     /// use rootcause::report;
@@ -975,7 +975,7 @@ pub trait BacktraceExt: Sized {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::io;
     ///
     /// use rootcause::report;
@@ -996,7 +996,7 @@ where
     Backtrace: ObjectMarkerFor<T>,
 {
     fn attach_backtrace_with_filter(mut self, filter: &BacktraceFilter) -> Self {
-        if let Some(backtrace) = Backtrace::capture(&filter) {
+        if let Some(backtrace) = Backtrace::capture(filter) {
             if filter.show_full_path {
                 self = self.attach_custom::<BacktraceHandler<true>, _>(backtrace);
             } else {

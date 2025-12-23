@@ -6,7 +6,7 @@
 //!
 //! # Usage
 //!
-//! ```rust
+//! ```
 //! use rootcause::prelude::*;
 //!
 //! fn divide(a: i32, b: i32) -> Result<i32, Report> {

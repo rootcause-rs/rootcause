@@ -151,6 +151,15 @@ use crate::{Report, compat::ReportAsError, markers};
 ///   chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::{Report, compat::anyhow1::AnyhowHandler};
+///
+/// let anyhow_err = anyhow::anyhow!("operation failed");
+/// let report = Report::new_sendsync_custom::<AnyhowHandler>(anyhow_err);
+/// ```
 #[derive(Copy, Clone, Debug)]
 pub struct AnyhowHandler;
 

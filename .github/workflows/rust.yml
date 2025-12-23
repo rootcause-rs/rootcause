@@ -34,16 +34,19 @@ jobs:
         run: cargo fmt --check
 
       - name: Run clippy
-        run: cargo clippy --all-targets -- -D warnings && cargo clippy --all-targets --all-features -- -D warnings
+        run: |
+          cargo clippy -p rootcause -p rootcause-backtrace --all-targets -- -D warnings
+          cargo clippy -p rootcause -p rootcause-backtrace --all-targets --all-features -- -D warnings
+          cargo clippy -p rootcause-internals -- -D warnings
 
       - name: Run tests
-        run: cargo test --all-targets && cargo test --all-targets --all-features
+        run: cargo test --workspace --all-targets && cargo test --workspace --all-targets --all-features
 
       - name: Run doctests
-        run: cargo test --doc && cargo test --doc --all-features
+        run: cargo test --workspace --doc && cargo test --workspace --doc --all-features
 
       - name: Run docs
-        run: cargo doc --no-deps -p rootcause-backtrace -p rootcause-internals -p rootcause --all-features
+        run: cargo doc --no-deps -p rootcause -p rootcause-internals -p rootcause-backtrace --all-features
 
       - name: Run cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -66,8 +69,17 @@ jobs:
         run: |
           export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
 
-          cargo miri test --all-targets
-          cargo miri test --all-features --all-targets
+          cargo miri test -p rootcause -p rootcause-internals --all-targets
+          cargo miri test -p rootcause -p rootcause-internals --all-features --all-targets
 
-          cargo miri test --doc
-          cargo miri test --doc --all-features
+          cargo miri test -p rootcause -p rootcause-internals --doc
+          cargo miri test -p rootcause -p rootcause-internals --doc --all-features
+
+          # Only run rootcause-backtrace tests on scheduled runs or manual dispatch (slow)
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "Running rootcause-backtrace miri tests (scheduled/manual run)"
+            cargo miri test -p rootcause-backtrace --all-targets
+            cargo miri test -p rootcause-backtrace --doc
+          else
+            echo "Skipping rootcause-backtrace miri tests (too slow for push/PR events)"
+          fi

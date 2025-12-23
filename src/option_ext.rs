@@ -1,4 +1,5 @@
-//! Extension traits for `Option` types to integrate with rootcause error reporting.
+//! Extension traits for `Option` types to integrate with rootcause error
+//! reporting.
 //!
 //! This module provides the [`OptionExt`] trait, which adds error handling
 //! methods to `Option` types. When an `Option` is `None`, these methods
@@ -8,8 +9,7 @@
 //! # Quick Start
 //!
 //! ```
-//! use rootcause::option_ext::OptionExt;
-//! use rootcause::prelude::*;
+//! use rootcause::{option_ext::OptionExt, prelude::*};
 //!
 //! fn get_config_value() -> Option<String> {
 //!     None
@@ -17,25 +17,26 @@
 //!
 //! # fn example() -> Result<String, Report<&'static str>> {
 //! // Convert None to a Report
-//! let result = get_config_value()
-//!     .context("Failed to load configuration")?;
+//! let result = get_config_value().context("Failed to load configuration")?;
 //! # Ok(result)
 //! # }
 //! ```
 //!
 //! # Available Methods
 //!
-//! The [`OptionExt`] trait provides methods similar to [`ResultExt`](crate::prelude::ResultExt), including:
+//! The [`OptionExt`] trait provides methods similar to
+//! [`ResultExt`](crate::prelude::ResultExt), including:
 //!
-//! - **[`ok_or_report()`](OptionExt::ok_or_report)** - Convert `None` to `Report<NoneError>`
+//! - **[`ok_or_report()`](OptionExt::ok_or_report)** - Convert `None` to
+//!   `Report<NoneError>`
 //! - **[`context()`](OptionExt::context)** - Add context when `None`
 //! - **Local variants** - `local_*` methods for non-`Send + Sync` types
 //!
 //! # Thread Safety
 //!
-//! All methods have both thread-safe (`Send + Sync`) and local (non-thread-safe)
-//! variants. Use the `local_*` methods when working with types that cannot be
-//! sent across threads, such as `Rc` or `Cell`.
+//! All methods have both thread-safe (`Send + Sync`) and local
+//! (non-thread-safe) variants. Use the `local_*` methods when working with
+//! types that cannot be sent across threads, such as `Rc` or `Cell`.
 //!
 //! # Usage Considerations
 //!
@@ -58,6 +59,15 @@ use crate::{
 /// This error is automatically created when using [`OptionExt`] methods on a
 /// `None` value. It captures the type name of the expected value for
 /// better debugging.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::option_ext::NoneError;
+///
+/// let error = NoneError::new::<String>();
+/// assert!(format!("{error}").contains("String"));
+/// ```
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NoneError {
     /// The type name of the expected value.
@@ -66,6 +76,16 @@ pub struct NoneError {
 
 impl NoneError {
     /// Creates a new `NoneError` for the given type.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::option_ext::NoneError;
+    ///
+    /// let error = NoneError::new::<String>();
+    /// let message = format!("{error}");
+    /// assert!(message.contains("String"));
+    /// ```
     #[must_use]
     pub fn new<T: ?Sized>() -> Self {
         Self {
@@ -106,8 +126,8 @@ impl core::error::Error for NoneError {}
 /// both thread-safe (`Send + Sync`) and local-only variants of each method.
 ///
 /// When a `None` value is encountered, a [`NoneError`] is automatically
-/// created to represent the missing value, capturing type information for better
-/// debugging.
+/// created to represent the missing value, capturing type information for
+/// better debugging.
 ///
 /// The methods in this trait fall into several categories:
 ///
@@ -119,6 +139,16 @@ impl core::error::Error for NoneError {}
 ///
 /// Each context method has a `local_*` variant for working with types that are
 /// not `Send + Sync`.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::option_ext::OptionExt;
+///
+/// let value: Option<String> = None;
+/// let result = value.ok_or_report();
+/// assert!(result.is_err());
+/// ```
 pub trait OptionExt<V> {
     /// Converts `None` into a [`Report<NoneError>`].
     ///
@@ -129,8 +159,10 @@ pub trait OptionExt<V> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::option_ext::{OptionExt, NoneError};
-    /// use rootcause::prelude::*;
+    /// use rootcause::{
+    ///     option_ext::{NoneError, OptionExt},
+    ///     prelude::*,
+    /// };
     ///
     /// let value: Option<String> = None;
     /// let result: Result<String, Report<NoneError>> = value.ok_or_report();
@@ -154,15 +186,13 @@ pub trait OptionExt<V> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::option_ext::OptionExt;
-    /// use rootcause::prelude::*;
+    /// use rootcause::{option_ext::OptionExt, prelude::*};
     ///
     /// fn get_user_id() -> Option<u64> {
     ///     None
     /// }
     ///
-    /// let result: Result<u64, Report<&str>> =
-    ///     get_user_id().context("Failed to get user ID");
+    /// let result: Result<u64, Report<&str>> = get_user_id().context("Failed to get user ID");
     /// ```
     #[track_caller]
     fn context<C>(self, context: C) -> Result<V, Report<C, Mutable, SendSync>>
@@ -185,16 +215,14 @@ pub trait OptionExt<V> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::option_ext::OptionExt;
-    /// use rootcause::prelude::*;
+    /// use rootcause::{option_ext::OptionExt, prelude::*};
     ///
     /// fn expensive_context_computation() -> String {
     ///     format!("Failed at {}", "12:34:56")
     /// }
     ///
     /// let value: Option<u64> = None;
-    /// let result: Result<u64, Report<String>> =
-    ///     value.context_with(expensive_context_computation);
+    /// let result: Result<u64, Report<String>> = value.context_with(expensive_context_computation);
     /// ```
     #[track_caller]
     fn context_with<C, F>(self, context: F) -> Result<V, Report<C, Mutable, SendSync>>
@@ -219,8 +247,7 @@ pub trait OptionExt<V> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{handlers, option_ext::OptionExt};
-    /// use rootcause::prelude::*;
+    /// use rootcause::{handlers, option_ext::OptionExt, prelude::*};
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
@@ -258,8 +285,7 @@ pub trait OptionExt<V> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{handlers, option_ext::OptionExt};
-    /// use rootcause::prelude::*;
+    /// use rootcause::{handlers, option_ext::OptionExt, prelude::*};
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
@@ -333,9 +359,9 @@ pub trait OptionExt<V> {
     /// the provided context. The [`NoneError`] is set as a child of the new
     /// [`Report`].
     ///
-    /// This is the non-`Send + Sync` version of [`context`](OptionExt::context).
-    /// Use this when working with context types that cannot be sent across
-    /// thread boundaries.
+    /// This is the non-`Send + Sync` version of
+    /// [`context`](OptionExt::context). Use this when working with context
+    /// types that cannot be sent across thread boundaries.
     ///
     /// See also [`context`](OptionExt::context) for a thread-safe version that
     /// returns a [`Report`] that can be sent across thread boundaries.
@@ -345,8 +371,7 @@ pub trait OptionExt<V> {
     /// ```
     /// use std::rc::Rc;
     ///
-    /// use rootcause::option_ext::OptionExt;
-    /// use rootcause::prelude::*;
+    /// use rootcause::{option_ext::OptionExt, prelude::*};
     ///
     /// let value: Option<String> = None;
     /// let result: Result<String, Report<Rc<&str>, _, markers::Local>> =
@@ -374,8 +399,7 @@ pub trait OptionExt<V> {
     /// ```
     /// use std::rc::Rc;
     ///
-    /// use rootcause::option_ext::OptionExt;
-    /// use rootcause::prelude::*;
+    /// use rootcause::{option_ext::OptionExt, prelude::*};
     ///
     /// fn expensive_computation() -> Rc<String> {
     ///     Rc::new(format!("Failed at {}", "12:34:56"))
@@ -396,8 +420,8 @@ pub trait OptionExt<V> {
     /// child of the new [`Report`].
     ///
     /// This is the non-`Send + Sync` version of
-    /// [`context_custom`](OptionExt::context_custom). Use this when working with
-    /// context types that cannot be sent across thread boundaries.
+    /// [`context_custom`](OptionExt::context_custom). Use this when working
+    /// with context types that cannot be sent across thread boundaries.
     ///
     /// See also [`context_custom`](OptionExt::context_custom) for a thread-safe
     /// version that returns a [`Report`] that can be sent across thread
@@ -410,8 +434,7 @@ pub trait OptionExt<V> {
     /// ```
     /// use std::rc::Rc;
     ///
-    /// use rootcause::{handlers, option_ext::OptionExt};
-    /// use rootcause::prelude::*;
+    /// use rootcause::{handlers, option_ext::OptionExt, prelude::*};
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {
@@ -419,8 +442,8 @@ pub trait OptionExt<V> {
     /// }
     ///
     /// let value: Option<String> = None;
-    /// let result: Result<String, Report<ErrorContext, _, markers::Local>> =
-    ///     value.local_context_custom::<handlers::Debug, _>(ErrorContext {
+    /// let result: Result<String, Report<ErrorContext, _, markers::Local>> = value
+    ///     .local_context_custom::<handlers::Debug, _>(ErrorContext {
     ///         data: Rc::new("context".to_string()),
     ///     });
     /// ```
@@ -449,8 +472,7 @@ pub trait OptionExt<V> {
     /// ```
     /// use std::rc::Rc;
     ///
-    /// use rootcause::{handlers, option_ext::OptionExt};
-    /// use rootcause::prelude::*;
+    /// use rootcause::{handlers, option_ext::OptionExt, prelude::*};
     ///
     /// #[derive(Debug)]
     /// struct ErrorContext {

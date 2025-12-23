@@ -25,7 +25,7 @@
 //!
 //! ## Custom formatting for your own types
 //!
-//! ```rust
+//! ```
 //! use core::fmt;
 //!
 //! use rootcause::{
@@ -71,7 +71,7 @@
 //! by default (see [`crate::handlers::Debug`]). Use a context formatter to
 //! provide simplified, user-friendly output:
 //!
-//! ```rust
+//! ```
 //! use core::fmt;
 //!
 //! use rootcause::{
@@ -265,7 +265,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
 /// # Examples
 ///
 /// Custom Display formatting for a business logic error:
-/// ```rust
+/// ```
 /// use core::fmt;
 ///
 /// use rootcause::{
@@ -311,7 +311,7 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use core::fmt;
     ///
     /// use rootcause::{
@@ -357,6 +357,32 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     ///
     /// * `report` - Reference to the report containing the preformatted context
     /// * `formatter` - The formatter to write output to
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     hooks::context_formatter::ContextFormatterHook,
+    ///     markers::{Local, Uncloneable},
+    ///     preformatted::PreformattedContext,
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl ContextFormatterHook<String> for MyFormatter {
+    ///     fn display_preformatted(
+    ///         &self,
+    ///         report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
+    ///         f: &mut core::fmt::Formatter<'_>,
+    ///     ) -> core::fmt::Result {
+    ///         write!(
+    ///             f,
+    ///             "[Preformatted] {}",
+    ///             report.format_current_context_unhooked()
+    ///         )
+    ///     }
+    /// }
+    /// ```
     fn display_preformatted(
         &self,
         report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
@@ -375,6 +401,27 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     ///
     /// * `report` - Reference to the report containing the context to format
     /// * `formatter` - The formatter to write output to
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     hooks::context_formatter::ContextFormatterHook,
+    ///     markers::{Local, Uncloneable},
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl ContextFormatterHook<String> for MyFormatter {
+    ///     fn debug(
+    ///         &self,
+    ///         report: ReportRef<'_, String, Uncloneable, Local>,
+    ///         f: &mut core::fmt::Formatter<'_>,
+    ///     ) -> core::fmt::Result {
+    ///         write!(f, "Debug: {:?}", report.current_context())
+    ///     }
+    /// }
+    /// ```
     fn debug(
         &self,
         report: ReportRef<'_, C, Uncloneable, Local>,
@@ -393,6 +440,32 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     ///
     /// * `report` - Reference to the report containing the preformatted context
     /// * `formatter` - The formatter to write output to
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     hooks::context_formatter::ContextFormatterHook,
+    ///     markers::{Local, Uncloneable},
+    ///     preformatted::PreformattedContext,
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl ContextFormatterHook<String> for MyFormatter {
+    ///     fn debug_preformatted(
+    ///         &self,
+    ///         report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
+    ///         f: &mut core::fmt::Formatter<'_>,
+    ///     ) -> core::fmt::Result {
+    ///         write!(
+    ///             f,
+    ///             "[Preformatted Debug] {:?}",
+    ///             report.format_current_context_unhooked()
+    ///         )
+    ///     }
+    /// }
+    /// ```
     fn debug_preformatted(
         &self,
         report: ReportRef<'_, PreformattedContext, Uncloneable, Local>,
@@ -415,10 +488,29 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     /// * `report_formatting_function` - Whether the overall report uses Display
     ///   or Debug formatting
     ///
-    /// # Returns
+    /// # Examples
     ///
-    /// A `ContextFormattingStyle` that specifies the preferred formatting
-    /// approach
+    /// ```
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     handlers::{ContextFormattingStyle, FormattingFunction},
+    ///     hooks::context_formatter::ContextFormatterHook,
+    ///     markers::{Dynamic, Local, Uncloneable},
+    /// };
+    ///
+    /// struct MyFormatter;
+    /// impl ContextFormatterHook<String> for MyFormatter {
+    ///     fn preferred_context_formatting_style(
+    ///         &self,
+    ///         _report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+    ///         _function: FormattingFunction,
+    ///     ) -> ContextFormattingStyle {
+    ///         ContextFormattingStyle {
+    ///             function: FormattingFunction::Display,
+    ///         }
+    ///     }
+    /// }
+    /// ```
     fn preferred_context_formatting_style(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,

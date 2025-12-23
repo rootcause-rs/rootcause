@@ -156,6 +156,15 @@ use crate::{
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
 ///
+/// # Examples
+///
+/// ```
+/// use rootcause::{Report, compat::error_stack06::ErrorStackHandler};
+///
+/// let es_report = error_stack::Report::new(std::io::Error::from(std::io::ErrorKind::NotFound));
+/// let report: Report<_> = Report::new_custom::<ErrorStackHandler<_>>(es_report);
+/// ```
+///
 /// # Type Parameters
 ///
 /// - `C`: The context type of the error-stack report, which must implement

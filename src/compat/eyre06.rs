@@ -151,6 +151,15 @@ use crate::{Report, compat::ReportAsError, markers};
 ///   chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::{Report, compat::eyre06::EyreHandler};
+///
+/// let eyre_error = eyre::eyre!("connection timeout");
+/// let report = Report::new_sendsync_custom::<EyreHandler>(eyre_error);
+/// ```
 #[derive(Copy, Clone, Debug)]
 pub struct EyreHandler;
 
