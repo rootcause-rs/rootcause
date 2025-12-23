@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added a `OptionExt` trait [#92](https://github.com/rootcause-rs/rootcause/pull/92)
 - Add a `rootcause::Result` type alias [#91](https://github.com/rootcause-rs/rootcause/pull/91)
 
 ### Fixed
