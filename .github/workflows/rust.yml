@@ -34,7 +34,7 @@ jobs:
         run: cargo fmt --check
 
       - name: Run clippy
-        run:
+        run: |
           cargo clippy -p rootcause -p rootcause-backtrace --all-targets -- -D warnings
           cargo clippy -p rootcause -p rootcause-backtrace --all-targets --all-features -- -D warnings
           cargo clippy -p rootcause-internals -- -D warnings
