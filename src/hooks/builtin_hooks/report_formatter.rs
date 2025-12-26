@@ -215,11 +215,32 @@ pub struct DefaultReportFormatter {
     /// [`Opaque`]: AttachmentFormattingPlacement::Opaque
     pub notice_opaque_last_formatting: LineFormatting,
 
-    /// Optional separator inserted between attachments and child contexts
-    pub attachment_child_separator: Option<&'static str>,
+    /// Optional separator inserted before child contexts
+    pub pre_child_separator: Option<&'static str>,
 
     /// Optional separator inserted between sibling child contexts
     pub child_child_separator: Option<&'static str>,
+
+    /// Formatting for the "Following the error chain" header when it's not the
+    /// last piece of data for the report node
+    pub source_chain_header_middle_formatting: NodeConfig,
+
+    /// Formatting for the "Following the error chain" header when it's the
+    /// last piece of data for the report node
+    pub source_chain_header_last_formatting: NodeConfig,
+
+    /// Formatting for individual source chain items that are not the last item
+    pub source_chain_item_middle_formatting: ItemFormatting,
+
+    /// Formatting for the last source chain item
+    pub source_chain_item_last_formatting: ItemFormatting,
+
+    /// Formatting for the notice when source chain errors are omitted due to
+    /// depth limit
+    pub source_chain_omitted_formatting: LineFormatting,
+
+    /// Optional separator between the source chain and attachments/children
+    pub source_chain_separator: Option<&'static str>,
 
     /// Separator text inserted between multiple reports
     pub report_report_separator: &'static str,
@@ -326,8 +347,36 @@ impl DefaultReportFormatter {
         notice_see_also_last_formatting: LineFormatting::new(r"|- See ", " below\n"),
         notice_opaque_middle_formatting: LineFormatting::new("|- ", "\n"),
         notice_opaque_last_formatting: LineFormatting::new(r"|- ", "\n"),
-        attachment_child_separator: None,
+        pre_child_separator: None,
         child_child_separator: None,
+        source_chain_header_middle_formatting: NodeConfig::new(
+            ("| > ", "\n"),
+            ("| > ", "\n"),
+            ("|   ", "\n"),
+            ("|   ", "\n"),
+            "|   ",
+        ),
+        source_chain_header_last_formatting: NodeConfig::new(
+            ("  > ", "\n"),
+            ("  > ", "\n"),
+            ("    ", "\n"),
+            ("    ", "\n"),
+            "    ",
+        ),
+        source_chain_item_middle_formatting: ItemFormatting::new(
+            ("|- ", "\n"),
+            ("|- ", "\n"),
+            ("|  ", "\n"),
+            ("|  ", "\n"),
+        ),
+        source_chain_item_last_formatting: ItemFormatting::new(
+            (r"|- ", "\n"),
+            (r"|- ", "\n"),
+            ("   ", "\n"),
+            ("   ", "\n"),
+        ),
+        source_chain_omitted_formatting: LineFormatting::new("|- note: ", "\n"),
+        source_chain_separator: None,
         report_report_separator: "--\n",
         report_appendix_separator: "----------------------------------------\n",
         appendix_appendix_separator: "----------------------------------------\n",
@@ -413,8 +462,36 @@ impl DefaultReportFormatter {
         notice_see_also_last_formatting: LineFormatting::new("╰ See ", " below\n"),
         notice_opaque_middle_formatting: LineFormatting::new("├ ", "\n"),
         notice_opaque_last_formatting: LineFormatting::new("╰ ", "\n"),
-        attachment_child_separator: Some("│\n"),
+        pre_child_separator: Some("│\n"),
         child_child_separator: Some("│\n"),
+        source_chain_header_middle_formatting: NodeConfig::new(
+            ("│ ╰ ", "\n"),
+            ("│ ╰ ", "\n"),
+            ("│   ", "\n"),
+            ("│   ", "\n"),
+            "│   ",
+        ),
+        source_chain_header_last_formatting: NodeConfig::new(
+            ("  ╰ ", "\n"),
+            ("  ╰ ", "\n"),
+            ("    ", "\n"),
+            ("    ", "\n"),
+            "    ",
+        ),
+        source_chain_item_middle_formatting: ItemFormatting::new(
+            ("├ ", "\n"),
+            ("├ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+        ),
+        source_chain_item_last_formatting: ItemFormatting::new(
+            ("╰ ", "\n"),
+            ("╰ ", "\n"),
+            ("  ", "\n"),
+            ("  ", "\n"),
+        ),
+        source_chain_omitted_formatting: LineFormatting::new("│ note: ", "\n"),
+        source_chain_separator: None,
         report_report_separator: "━━\n",
         report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
@@ -493,8 +570,36 @@ impl DefaultReportFormatter {
         notice_see_also_last_formatting: LineFormatting::new("╰ See \x1b[4m", "\x1b[0m below\n"),
         notice_opaque_middle_formatting: LineFormatting::new("├ ", "\n"),
         notice_opaque_last_formatting: LineFormatting::new("╰ ", "\n"),
-        attachment_child_separator: Some("│\n"),
+        pre_child_separator: Some("│\n"),
         child_child_separator: Some("│\n"),
+        source_chain_header_middle_formatting: NodeConfig::new(
+            ("│ ╰ ", "\n"),
+            ("│ ╰ ", "\n"),
+            ("│   ", "\n"),
+            ("│   ", "\n"),
+            "│   ",
+        ),
+        source_chain_header_last_formatting: NodeConfig::new(
+            ("  ╰ ", "\n"),
+            ("  ╰ ", "\n"),
+            ("    ", "\n"),
+            ("    ", "\n"),
+            "    ",
+        ),
+        source_chain_item_middle_formatting: ItemFormatting::new(
+            ("├ ", "\n"),
+            ("├ ", "\n"),
+            ("│ ", "\n"),
+            ("│ ", "\n"),
+        ),
+        source_chain_item_last_formatting: ItemFormatting::new(
+            ("╰ ", "\n"),
+            ("╰ ", "\n"),
+            ("  ", "\n"),
+            ("  ", "\n"),
+        ),
+        source_chain_omitted_formatting: LineFormatting::new("│ note: ", "\n"),
+        source_chain_separator: None,
         report_report_separator: "━━\n",
         report_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
         appendix_appendix_separator: "\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n",
@@ -860,15 +965,20 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         } else {
             &self.config.report_node_middle_formatting
         };
+        let context_style =
+            report.preferred_context_formatting_style(self.report_formatting_function);
         self.format_node(
             tmp_value_buffer,
             formatting,
             report.format_current_context(),
-            report
-                .preferred_context_formatting_style(self.report_formatting_function)
-                .function,
+            context_style.function,
             |this, tmp_value_buffer| {
-                this.format_node_data(tmp_value_buffer, tmp_attachments_buffer, report)
+                this.format_node_data(
+                    tmp_value_buffer,
+                    tmp_attachments_buffer,
+                    report,
+                    context_style,
+                )
             },
         )?;
         Ok(())
@@ -879,9 +989,22 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         tmp_value_buffer: &mut TmpValueBuffer,
         tmp_attachments_buffer: &mut TmpAttachmentsBuffer<'a>,
         report: ReportRef<'a, Dynamic, Uncloneable, Local>,
+        context_style: rootcause_internals::handlers::ContextFormattingStyle,
     ) -> fmt::Result {
         let has_children = !report.children().is_empty();
         let has_attachments = !report.attachments().is_empty();
+
+        // Format source chain if enabled
+        let has_source_chain = if context_style.follow_source {
+            self.format_source_chain(
+                tmp_value_buffer,
+                report,
+                context_style,
+                has_attachments || has_children,
+            )?
+        } else {
+            false
+        };
 
         let mut opaque_attachment_count = 0;
         tmp_attachments_buffer.clear();
@@ -939,11 +1062,15 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             )?;
         }
 
-        if has_attachments
-            && has_children
-            && let Some(attachment_child_separator) = self.config.attachment_child_separator
+        if has_source_chain
+            && (has_attachments || has_children)
+            && let Some(source_chain_separator) = self.config.source_chain_separator
         {
-            self.format_with_line_prefix(attachment_child_separator)?;
+            self.format_with_line_prefix(source_chain_separator)?;
+        }
+
+        if has_children && let Some(pre_child_separator) = self.config.pre_child_separator {
+            self.format_with_line_prefix(pre_child_separator)?;
         }
 
         for (report_index, child) in report.children().iter().enumerate() {
@@ -1036,6 +1163,98 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             AttachmentFormattingPlacement::Opaque | AttachmentFormattingPlacement::Hidden => {}
         }
         Ok(())
+    }
+
+    fn format_source_chain(
+        &mut self,
+        tmp_value_buffer: &mut TmpValueBuffer,
+        report: ReportRef<'a, Dynamic, Uncloneable, Local>,
+        context_style: rootcause_internals::handlers::ContextFormattingStyle,
+        has_more_data: bool,
+    ) -> Result<bool, fmt::Error> {
+        // Collect sources up to depth limit
+        let max_depth = context_style.follow_source_depth.unwrap_or(usize::MAX);
+        let mut sources = Vec::new();
+        let mut source = report.current_context_error_source();
+        let mut depth = 0;
+
+        while let Some(err) = source {
+            if depth >= max_depth {
+                break;
+            }
+            sources.push(err);
+            source = err.source();
+            depth += 1;
+        }
+
+        if sources.is_empty() {
+            return Ok(false);
+        }
+
+        // Check if we have omitted errors
+        let has_omitted = source.is_some();
+
+        // Format using format_node to get proper tree structure
+        let header_formatting = if has_more_data {
+            &self.config.source_chain_header_middle_formatting
+        } else {
+            &self.config.source_chain_header_last_formatting
+        };
+
+        self.format_node(
+            tmp_value_buffer,
+            header_formatting,
+            "Following the error chain for the context:",
+            FormattingFunction::Display,
+            |this, tmp_value_buffer| {
+                // Format each source
+                for (idx, err) in sources.iter().enumerate() {
+                    let is_last_source = idx + 1 == sources.len();
+                    // Last item in the source chain only if it's the last source AND there's no
+                    // omitted notice
+                    let is_last_in_chain = is_last_source && !has_omitted;
+                    let item_formatting = if is_last_in_chain {
+                        &this.config.source_chain_item_last_formatting
+                    } else {
+                        &this.config.source_chain_item_middle_formatting
+                    };
+
+                    this.format_item(
+                        tmp_value_buffer,
+                        item_formatting,
+                        err,
+                        context_style.function,
+                    )?;
+                }
+
+                // Count and report omitted errors if we hit depth limit
+                if has_omitted {
+                    let mut omitted_count = 0;
+                    let mut remaining = source;
+                    while remaining.is_some() {
+                        omitted_count += 1;
+                        remaining = remaining.and_then(|e| e.source());
+                    }
+
+                    // The omitted notice is always the last item in the source chain subtree,
+                    // so we use a modified version with ╰ instead of ├
+                    this.format_line(
+                        &this
+                            .config
+                            .source_chain_item_last_formatting
+                            .standalone_line,
+                        format_args!(
+                            "note: {} error(s) omitted from source chain.",
+                            omitted_count
+                        ),
+                    )?;
+                }
+
+                Ok(())
+            },
+        )?;
+
+        Ok(true)
     }
 
     fn format_appendices(&mut self, tmp_value_buffer: &mut TmpValueBuffer) -> fmt::Result {
