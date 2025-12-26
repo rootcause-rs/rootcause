@@ -21,20 +21,25 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
-//!
-//! <img src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png" width="192">
+//! 
+//! <img
+//!     src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png"
+//!     width="192"
+//!     title="Rootcause logo, courtesy of ARTIST CREDIT"
+//!     alt="A stylized image of a magnifying glass examining a root system, the logo of Rootcause">
 //!
 //! ## Overview
 //!
-//! This crate provides a structured way to represent and work with errors and
-//! their context. The main goal is to enable you to build rich, structured
-//! error reports that automatically capture not just what went wrong, but also
-//! the context and supporting data at each step in the error's propagation.
+//! This crate provides a structured way to represent errors. The main goal of
+//! this library is is to enable you to build rich error reports that
+//! automatically capture not just what went wrong, but also the higher-level
+//! context and supporting data at each step in the error's propagation.
 //!
 //! Unlike simple string-based error messages, rootcause allows you to attach
 //! typed data to errors, build error chains, and inspect error contents
-//! programmatically. This makes debugging easier while still providing
-//! beautiful, human-readable error messages.
+//! programmatically. This makes debugging easier while providing beautiful,
+//! human-readable error messages, with no loss of clarity in error-recovery
+//! code.
 //!
 //! ## Quick Example
 //!
@@ -55,18 +60,32 @@
 //!
 //! ## Core Concepts
 //!
-//! At a high level, rootcause helps you build a tree of error reports. Each
-//! node in the tree represents a step in the error's history - you start with a
-//! root error, then add context and attachments as it propagates up through
-//! your code.
+//! On a mechanical level, an error report in rootcause is a node in a tree data
+//! structure. Each report contains three things:
+//! - A single piece of data, called the **context**. 
+//! - Any number of pieces of metadata, called the **attachments**.
+//! - Any number of **child reports**, which are the child nodes in the tree.
 //!
-//! Most error reports are linear chains (just like anyhow), but the tree
-//! structure lets you collect multiple related errors when needed.
+//! The **context** is intended to be the most concise part of the report, such
+//! as an error code that can be used in error recovery code, or a
+//! human-readable error that is short and descriptive. (All the better if the
+//! error code has a good `Display` implementation to get the best of both.)
 //!
-//! Each report has:
-//! - A **context** (the error itself)
-//! - Optional **attachments** (debugging data)
-//! - Optional **children** (one or more errors that caused this error)
+//! Meanwhile the **attachments** are intended to be useful metadata for the
+//! purpose of error analysis when debugging, logging, or instrumenting a
+//! program. This can be things like operation IDs in an asynchronous REST call,
+//! the username of the logged-in user for whom the error occurred, or similar.
+//! These are rarely relevant in error recovery.
+//!
+//! Finally the **child reports** are intended to be a collection of the
+//! lower-level reports of errors that led to the current error report. In most
+//! cases this is just one child report: when the loading of a configuration
+//! file fails, the top-level report expresses this fact, but the child report
+//! might distinguish whether the file was not found, or if there was a parse
+//! error. In other cases there can be a use for multiple child reports: during
+//! a polling operation on a REST api that automatically retries some number of
+//! times, collecting the multiple failed responses as child reports of the
+//! final error report.
 //!
 //! For implementation details, see the [`rootcause-internals`] crate.
 //!
@@ -147,7 +166,7 @@
 //! type parameters. Come back to these when you need them - they solve specific
 //! problems you'll recognize when you encounter them.
 //!
-//! ---
+//! ------------------
 //!
 //! ## Type Parameters
 //!
@@ -155,9 +174,9 @@
 //! these variants immediately - but if you do need cloning, thread-local
 //! errors, or want to understand what's possible, read on.*
 //!
-//! The [`Report`] type has three type parameters: `Report<Context, Ownership,
-//! ThreadSafety>`. This section explains all the options and when you'd use
-//! them.
+//! The [`Report`] type has three type parameters:
+//! `Report<Context, Ownership, ThreadSafety>`.
+//! This section explains all the options and when you'd use them.
 //!
 //! ### Context Type: Typed vs Dynamic Errors
 //!
@@ -209,6 +228,7 @@
 //! ### Ownership: Mutable vs Cloneable
 //!
 //! **Use the default ([`Mutable`])** when errors just propagate with `?`.
+//!
 //! **Use [`.into_cloneable()`]** when you need to store errors in collections
 //! or use them multiple times.
 //!
