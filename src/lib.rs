@@ -31,7 +31,7 @@
 //! ## Overview
 //!
 //! This crate provides a structured way to represent errors. The main goal of
-//! this library is is to enable you to build rich error reports that
+//! this library is to enable you to build rich error reports that
 //! automatically capture not just what went wrong, but also the higher-level
 //! context and supporting data at each step in the error's propagation.
 //!
