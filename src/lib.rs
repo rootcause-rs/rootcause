@@ -25,7 +25,7 @@
 //! <img
 //!     src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png"
 //!     width="192"
-//!     title="Rootcause logo, courtesy of ARTIST CREDIT"
+//!     title="Rootcause logo, created by lead designer Tethys Svensson"
 //!     alt="A stylized image of a magnifying glass examining a root system, the logo of Rootcause">
 //!
 //! ## Overview
