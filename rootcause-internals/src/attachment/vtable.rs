@@ -17,7 +17,10 @@
 //! with specific types `A` and `H` at compile time.
 
 use alloc::boxed::Box;
-use core::{any::{self, TypeId}, ptr::NonNull};
+use core::{
+    any::{self, TypeId},
+    ptr::NonNull,
+};
 
 use crate::{
     attachment::{data::AttachmentData, raw::RawAttachmentRef},
@@ -317,5 +320,11 @@ mod tests {
     fn test_attachment_type_id() {
         let vtable = AttachmentVtable::new::<i32, HandlerI32>();
         assert_eq!(vtable.type_id(), TypeId::of::<i32>());
+    }
+
+    #[test]
+    fn test_attachment_type_name() {
+        let vtable = AttachmentVtable::new::<i32, HandlerI32>();
+        assert_eq!(vtable.type_name(), core::any::type_name::<i32>());
     }
 }

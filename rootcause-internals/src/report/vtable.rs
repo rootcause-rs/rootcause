@@ -16,7 +16,10 @@
 //! references via [`ReportVtable::new`], which pairs the function pointers
 //! with specific types `C` and `H` at compile time.
 
-use core::{any::{self, TypeId}, ptr::NonNull};
+use core::{
+    any::{self, TypeId},
+    ptr::NonNull,
+};
 
 use crate::{
     handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction},
@@ -488,6 +491,12 @@ mod tests {
     fn test_report_type_id() {
         let vtable = ReportVtable::new::<i32, HandlerI32>();
         assert_eq!(vtable.type_id(), TypeId::of::<i32>());
+    }
+
+    #[test]
+    fn test_report_type_name() {
+        let vtable = ReportVtable::new::<i32, HandlerI32>();
+        assert_eq!(vtable.type_name(), core::any::type_name::<i32>());
     }
 
     #[test]
