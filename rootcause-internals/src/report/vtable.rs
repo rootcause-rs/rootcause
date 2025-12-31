@@ -16,7 +16,7 @@
 //! references via [`ReportVtable::new`], which pairs the function pointers
 //! with specific types `C` and `H` at compile time.
 
-use core::{any::TypeId, ptr::NonNull};
+use core::{any::{self, TypeId}, ptr::NonNull};
 
 use crate::{
     handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction},
@@ -46,6 +46,9 @@ pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].
     type_id: fn() -> TypeId,
+    /// Gets the [`any::type_name`] of the context type that was used to
+    /// create this [`ReportVtable`].
+    type_name: fn() -> &'static str,
     /// Gets the [`TypeId`] of the handler that was used to create this
     /// [`ReportVtable`].
     handler_type_id: fn() -> TypeId,
@@ -77,6 +80,7 @@ impl ReportVtable {
         const {
             &Self {
                 type_id: TypeId::of::<C>,
+                type_name: any::type_name::<C>,
                 handler_type_id: TypeId::of::<H>,
                 drop: drop::<C>,
                 clone_arc: clone_arc::<C>,
@@ -94,6 +98,13 @@ impl ReportVtable {
     #[inline]
     pub(super) fn type_id(&self) -> TypeId {
         (self.type_id)()
+    }
+
+    /// Gets the [`any::type_name`] of the context type that was used to create this
+    /// [`ReportVtable`].
+    #[inline]
+    pub(super) fn type_name(&self) -> &'static str {
+        (self.type_name)()
     }
 
     /// Gets the [`TypeId`] of the handler that was used to create this

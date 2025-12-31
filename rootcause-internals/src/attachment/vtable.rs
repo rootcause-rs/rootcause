@@ -17,7 +17,7 @@
 //! with specific types `A` and `H` at compile time.
 
 use alloc::boxed::Box;
-use core::{any::TypeId, ptr::NonNull};
+use core::{any::{self, TypeId}, ptr::NonNull};
 
 use crate::{
     attachment::{data::AttachmentData, raw::RawAttachmentRef},
@@ -40,6 +40,9 @@ pub(crate) struct AttachmentVtable {
     /// Gets the [`TypeId`] of the attachment type that was used to create this
     /// [`AttachmentVtable`].
     type_id: fn() -> TypeId,
+    /// Gets the [`any::type_name`] of the attachment type that was used to
+    /// create this [`AttachmentVtable`].
+    type_name: fn() -> &'static str,
     /// Gets the [`TypeId`] of the handler that was used to create this
     /// [`AttachmentVtable`].
     handler_type_id: fn() -> TypeId,
@@ -63,6 +66,7 @@ impl AttachmentVtable {
         const {
             &Self {
                 type_id: TypeId::of::<A>,
+                type_name: any::type_name::<A>,
                 handler_type_id: TypeId::of::<H>,
                 drop: drop::<A>,
                 display: display::<A, H>,
@@ -77,6 +81,13 @@ impl AttachmentVtable {
     #[inline]
     pub(super) fn type_id(&self) -> TypeId {
         (self.type_id)()
+    }
+
+    /// Gets the [`any::type_name`] of the attachment type that was used to create this
+    /// [`AttachmentVtable`].
+    #[inline]
+    pub(super) fn type_name(&self) -> &'static str {
+        (self.type_name)()
     }
 
     /// Gets the [`TypeId`] of the handler that was used to create this
