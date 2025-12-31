@@ -21,7 +21,7 @@
 #![cfg_attr(docsrs, feature(doc_cfg))]
 
 //! A flexible, ergonomic, and inspectable error reporting library for Rust.
-//! 
+//!
 //! <img
 //!     src="https://github.com/rootcause-rs/rootcause/raw/main/rootcause.png"
 //!     width="192"
@@ -62,7 +62,7 @@
 //!
 //! On a mechanical level, an error report in rootcause is a node in a tree data
 //! structure. Each report contains three things:
-//! - A single piece of data, called the **context**. 
+//! - A single piece of data, called the **context**.
 //! - Any number of pieces of metadata, called the **attachments**.
 //! - Any number of **child reports**, which are the child nodes in the tree.
 //!
