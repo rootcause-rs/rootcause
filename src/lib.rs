@@ -35,11 +35,11 @@
 //! automatically capture not just what went wrong, but also the higher-level
 //! context and supporting data at each step in the error's propagation.
 //!
-//! Unlike simple string-based error messages, rootcause allows you to attach
-//! typed data to errors, build error chains, and inspect error contents
-//! programmatically. This makes debugging easier while providing beautiful,
-//! human-readable error messages, with no loss of clarity in error-recovery
-//! code.
+//! Unlike simple enum or string-based error messages, rootcause allows you to
+//! attach typed data to errors, cain errors together to indicate causality,
+//! and inspect error contents programmatically in a strongly typed fashion.
+//! This makes debugging easier and while providing beautiful, human-readable
+//! error messages, with no loss of clarity in error-recovery code.
 //!
 //! ## Quick Example
 //!
@@ -60,32 +60,41 @@
 //!
 //! ## Core Concepts
 //!
-//! On a mechanical level, an error report in rootcause is a node in a tree data
-//! structure. Each report contains three things:
+//! On a mechanical level, an error report in rootcause is a node in a tree
+//! data structure. Each report contains three things:
 //! - A single piece of data, called the **context**.
 //! - Any number of pieces of metadata, called the **attachments**.
 //! - Any number of **child reports**, which are the child nodes in the tree.
 //!
 //! The **context** is intended to be the most concise part of the report, such
-//! as an error code that can be used in error recovery code, or a
-//! human-readable error that is short and descriptive. (All the better if the
-//! error code has a good `Display` implementation to get the best of both.)
+//! as a numeric error code that can be used in error recovery, or a
+//! human-readable error that is short and descriptive. When wrapping a type
+//! implementing `std::error::Error` in a Report, that error becomes the
+//! context.
 //!
 //! Meanwhile the **attachments** are intended to be useful metadata for the
 //! purpose of error analysis when debugging, logging, or instrumenting a
-//! program. This can be things like operation IDs in an asynchronous REST call,
-//! the username of the logged-in user for whom the error occurred, or similar.
-//! These are rarely relevant in error recovery.
+//! program. These can both be attached by user code, but can also be
+//! configured to happen automatically upon report creation.
+//!
+//! Rootcause has support for storing backtraces and other code location data
+//! as attachments on reports. Other examples of attachments can be things like
+//! timestamps, operation IDs in an asynchronous REST call, the username of the
+//! logged-in user for whom the error occurred, or similar. These are rarely
+//! relevant in error recovery.
 //!
 //! Finally the **child reports** are intended to be a collection of the
 //! lower-level reports of errors that led to the current error report. In most
 //! cases this is just one child report: when the loading of a configuration
 //! file fails, the top-level report expresses this fact, but the child report
 //! might distinguish whether the file was not found, or if there was a parse
-//! error. In other cases there can be a use for multiple child reports: during
+//! error. This is usually accomplieshed with the [`Report::context`] function.
+//!
+//! In other cases there can be a use for multiple child reports: during
 //! a polling operation on a REST api that automatically retries some number of
 //! times, collecting the multiple failed responses as child reports of the
 //! final error report.
+//!
 //!
 //! For implementation details, see the [`rootcause-internals`] crate.
 //!
@@ -97,9 +106,9 @@
 //! provides essential error handling, while optional companion crates add
 //! specialized capabilities:
 //!
-//! - **[`rootcause-backtrace`]** - Automatic stack trace capture for debugging.
-//!   Install hooks to attach backtraces to all errors, or use the extension
-//!   trait to add them selectively.
+//! - **[`rootcause-backtrace`]** - Automatic stack trace capture for
+//!   debugging. Install hooks to attach backtraces to all errors, or use the
+//!   extension trait to add them selectively.
 //!
 //! [`rootcause-backtrace`]: https://docs.rs/rootcause-backtrace
 //!
@@ -130,8 +139,8 @@
 //!
 //! ## Report Type Parameters
 //!
-//! The [`Report`] type is generic over three parameters, but for most users the
-//! defaults work fine.
+//! The [`Report`] type is generic over three parameters, but for most users
+//! the defaults work fine.
 //!
 //! **Most common usage:**
 //!
@@ -163,8 +172,8 @@
 //! ```
 //!
 //! **Need cloning or thread-local data?** The sections below explain the other
-//! type parameters. Come back to these when you need them - they solve specific
-//! problems you'll recognize when you encounter them.
+//! type parameters. Come back to these when you need them - they solve
+//! specific problems you'll recognize when you encounter them.
 //!
 //! ------------------
 //!
@@ -174,9 +183,9 @@
 //! these variants immediately - but if you do need cloning, thread-local
 //! errors, or want to understand what's possible, read on.*
 //!
-//! The [`Report`] type has three type parameters:
-//! `Report<Context, Ownership, ThreadSafety>`.
-//! This section explains all the options and when you'd use them.
+//! The [`Report`] type has three type parameters: `Report<Context, Ownership,
+//! ThreadSafety>`. This section explains all the options and when you'd use
+//! them.
 //!
 //! ### Context Type: Typed vs Dynamic Errors
 //!
@@ -186,10 +195,11 @@
 //!
 //! **`Report<Dynamic>`** (or just [`Report`]) — Flexible, like [`anyhow`]
 //!
-//! Can hold any error type at the root. The `?` operator automatically converts
-//! any error into a [`Report`]. Note: [`Dynamic`] is just a marker signaling
-//! that the actual type is unknown. No actual instance of [`Dynamic`] is
-//! stored. Converting between typed and dynamic reports is zero-cost.
+//! Can hold any error type at the root. The `?` operator automatically
+//! converts any error into a [`Report`]. Note: [`Dynamic`] is just a marker
+//! signaling that the actual type is unknown. No actual instance of
+//! [`Dynamic`] is stored. Converting between typed and dynamic reports is
+//! zero-cost.
 //!
 //! [`Dynamic`]: crate::markers::Dynamic
 //!
@@ -324,9 +334,10 @@
 //!
 //! - From `Report<Dynamic, *, *>` to `Report<SomeContextType, *, *>`:
 //!   - You can check if the type of the root node matches a specific type by
-//!     using [`Report::downcast_report`]. This will return either the requested
-//!     report type or the original report depending on whether the types match.
-//!     See [`examples/inspecting_errors.rs`] for downcasting techniques.
+//!     using [`Report::downcast_report`]. This will return either the
+//!     requested report type or the original report depending on whether the
+//!     types match. See [`examples/inspecting_errors.rs`] for downcasting
+//!     techniques.
 //! - From `Report<*, Cloneable, *>` to `Report<*, Mutable, *>`:
 //!   - You can check if the root node only has a single owner using
 //!     [`Report::try_into_mutable`]. This will check the number of references
