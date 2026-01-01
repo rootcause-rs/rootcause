@@ -120,7 +120,7 @@ impl AttachmentHandler<Span> for SpanHandler {
                 return Ok(());
             };
 
-            let Some(span_ref) = subscriber.span(&span_id) else {
+            let Some(span_ref) = subscriber.span(span_id) else {
                 write!(f, "No span found for ID")?;
                 return Ok(());
             };
