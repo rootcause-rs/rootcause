@@ -57,7 +57,7 @@ impl Location {
 }
 
 /// Implementation of [`Display`] for [`Location`]
-/// 
+///
 /// Uses the formatting convetion of `filename:line`
 impl fmt::Display for Location {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -91,7 +91,7 @@ impl AttachmentHandler<Location> for LocationHandler {
     }
 
     fn debug(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        Self::display(value, formatter)
+        fmt::Display::fmt(value, formatter)
     }
 
     fn preferred_formatting_style(
