@@ -56,7 +56,7 @@ impl Location {
     }
 }
 
-/// Implementation of [`Display`] for [`Location`]
+/// Implementation of [`fmt::Display`] for [`Location`]
 ///
 /// Uses the formatting convetion of `filename:line`
 impl fmt::Display for Location {
