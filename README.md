@@ -250,6 +250,7 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 rootcause is designed to be lightweight and extensible. The core library provides essential error handling functionality, while optional companion crates add specialized capabilities:
 
 - **[`rootcause-backtrace`](https://docs.rs/rootcause-backtrace)** - Automatic stack trace capture for debugging. Install hooks to attach backtraces to all errors, or use the extension trait to add them selectively.
+- **[`rootcause-tracing`](https://docs.rs/rootcause-tracing)** - Tracing span capture for error reports. Automatically capture and display the active tracing spans when errors occur, providing operation context especially useful in async code.
 
 ## Next Steps
 
@@ -297,6 +298,7 @@ The rootcause ecosystem consists of multiple crates:
 
 **Extensions:**
 - **`rootcause-backtrace`** - Optional backtrace capture support. Provides hooks for automatic stack trace collection.
+- **`rootcause-tracing`** - Optional tracing span capture. Provides hooks to attach active tracing spans to error reports.
 
 The split between `rootcause` and `rootcause-internals` provides a clean API boundary: internals define how data is stored, while the main crate ensures that storage is accessed safely through Rust's type system. This makes it easy to understand the underlying representation while keeping the safe API ergonomic. Extensions integrate via the hook system without requiring changes to core.
 
