@@ -4,6 +4,8 @@
 //! source code location information (file, line, column) to reports when they
 //! are created.
 
+use core::fmt;
+
 use rootcause_internals::handlers::{AttachmentFormattingStyle, AttachmentHandler};
 
 use crate::hooks::report_creation::AttachmentCollector;
@@ -54,6 +56,15 @@ impl Location {
     }
 }
 
+/// Implementation of [`fmt::Display`] for [`Location`]
+///
+/// Uses the formatting convetion of `filename:line`
+impl fmt::Display for Location {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}:{}", self.file, self.line)
+    }
+}
+
 /// Handler for formatting [`Location`] attachments.
 ///
 /// This handler formats location information as `filename:line` for both
@@ -76,11 +87,11 @@ impl Location {
 pub struct LocationHandler;
 impl AttachmentHandler<Location> for LocationHandler {
     fn display(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        write!(formatter, "{}:{}", value.file, value.line)
+        fmt::Display::fmt(value, formatter)
     }
 
     fn debug(value: &Location, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        Self::display(value, formatter)
+        fmt::Display::fmt(value, formatter)
     }
 
     fn preferred_formatting_style(

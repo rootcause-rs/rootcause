@@ -161,7 +161,7 @@ use rootcause::{
 ///     println!("Captured {} frames", bt.entries.len());
 /// }
 /// ```
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Backtrace {
     /// The entries in the backtrace, ordered from most recent to oldest.
     pub entries: Vec<BacktraceEntry>,
@@ -170,7 +170,7 @@ pub struct Backtrace {
 }
 
 /// A single entry in a stack backtrace.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum BacktraceEntry {
     /// A normal stack frame.
     Frame(Frame),
@@ -187,7 +187,7 @@ pub enum BacktraceEntry {
 ///
 /// Represents one function call in the call stack, including symbol information
 /// and source location if available.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Frame {
     /// The demangled symbol name for this frame.
     pub sym_demangled: String,
@@ -201,7 +201,7 @@ pub struct Frame {
 ///
 /// Contains the raw path and processed components for better display
 /// formatting.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FramePath {
     /// The raw file path from the debug information.
     pub raw_path: String,
@@ -215,7 +215,7 @@ pub struct FramePath {
 ///
 /// This struct represents a decomposed file path where a known prefix
 /// has been identified and separated from the rest of the path.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct FramePrefix {
     /// The kind of prefix used to identify this prefix.
     ///

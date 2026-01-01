@@ -229,6 +229,12 @@ impl<'a> RawReportRef<'a> {
         self.vtable().type_id()
     }
 
+    /// Returns the [`core::any::type_name`] of the context.
+    #[inline]
+    pub fn context_type_name(self) -> &'static str {
+        self.vtable().type_name()
+    }
+
     /// Returns the [`TypeId`] of the context.
     #[inline]
     pub fn context_handler_type_id(self) -> TypeId {
