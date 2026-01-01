@@ -371,7 +371,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         self.as_mut().into_attachments_mut()
     }
 
-    /// Adds a new attachment to this [`ReportMut`].
+    /// Adds a new attachment.
     ///
     /// This is a convenience method used for chaining method calls; it consumes
     /// the [`ReportMut`] and returns it.
@@ -396,7 +396,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         self
     }
 
-    /// Adds a new attachment to the [`Report`].
+    /// Adds a new attachment.
     ///
     /// This is a convenience method used for chaining method calls; it consumes
     /// the [`Report`] and returns it.
