@@ -53,7 +53,7 @@ Demonstrations of rootcause features and patterns.
 
 ## Tracing Integration
 
-- [`tracing_spans.rs`](tracing_spans.rs) - Automatic span capture with full hierarchy and field values
+- [`tracing_spans.rs`](../rootcause-tracing/examples/tracing_spans.rs) - Automatic span capture with full hierarchy and field values
 
 ## Running Examples
 
