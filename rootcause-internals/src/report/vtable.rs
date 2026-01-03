@@ -103,8 +103,8 @@ impl ReportVtable {
         (self.type_id)()
     }
 
-    /// Gets the [`any::type_name`] of the context type that was used to create this
-    /// [`ReportVtable`].
+    /// Gets the [`any::type_name`] of the context type that was used to create
+    /// this [`ReportVtable`].
     #[inline]
     pub(super) fn type_name(&self) -> &'static str {
         (self.type_name)()

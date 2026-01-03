@@ -95,74 +95,26 @@ use tracing::{
     Span,
     field::{Field, Visit},
 };
+use tracing_subscriber::{
+    Registry,
+    registry::{LookupSpan, SpanRef},
+};
 
 /// Handler for formatting [`Span`] attachments.
 #[derive(Copy, Clone)]
 pub struct SpanHandler;
 
 /// Captured field values for a span.
-#[derive(Clone)]
 struct CapturedFields(String);
 
-impl fmt::Display for CapturedFields {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.0)
-    }
-}
-
 impl AttachmentHandler<Span> for SpanHandler {
-    fn display(value: &Span, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        use tracing_subscriber::registry::LookupSpan;
-
-        let result = value.with_subscriber(|(span_id, dispatch)| -> fmt::Result {
-            let Some(subscriber) = dispatch.downcast_ref::<tracing_subscriber::Registry>() else {
-                write!(f, "No tracing registry subscriber found")?;
-                return Ok(());
-            };
-
-            let Some(span_ref) = subscriber.span(span_id) else {
-                write!(f, "No span found for ID")?;
-                return Ok(());
-            };
-
-            let mut first = true;
-
-            for ancestor in span_ref.scope() {
-                if !first {
-                    writeln!(f)?;
-                }
-                first = false;
-                write!(f, "{}", ancestor.name())?;
-
-                let extensions = ancestor.extensions();
-                if let Some(fields) = extensions.get::<CapturedFields>() {
-                    if !fields.0.is_empty() {
-                        write!(f, "{{{}}}", fields.0)?;
-                    }
-                } else if let Some(metadata) = value.metadata() {
-                    let fields = metadata.fields();
-                    if !fields.is_empty() {
-                        write!(f, "{{")?;
-                        let mut first_field = true;
-                        for field in fields {
-                            if !first_field {
-                                write!(f, " ")?;
-                            }
-                            write!(f, "{}", field.name())?;
-                            first_field = false;
-                        }
-                        write!(f, "}}")?;
-                    }
-                }
-            }
-
-            Ok(())
-        });
-
-        if let Some(result) = result {
-            result
-        } else {
-            write!(f, "Span disabled")
+    fn display(value: &Span, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match value
+            .with_subscriber(|(span_id, dispatch)| display_span_chain(span_id, dispatch, formatter))
+        {
+            Some(Ok(())) => Ok(()),
+            Some(Err(e)) => Err(e),
+            None => write!(formatter, "No tracing subscriber available"),
         }
     }
 
@@ -185,6 +137,57 @@ impl AttachmentHandler<Span> for SpanHandler {
             priority: 9, // Slightly lower priority than backtraces (10)
             ..Default::default()
         }
+    }
+}
+
+fn display_span_chain(
+    span_id: &tracing::span::Id,
+    dispatch: &tracing::Dispatch,
+    formatter: &mut fmt::Formatter<'_>,
+) -> fmt::Result {
+    let Some(registry) = dispatch.downcast_ref::<Registry>() else {
+        write!(formatter, "No tracing registry subscriber found")?;
+        return Ok(());
+    };
+
+    let Some(span) = registry.span(span_id) else {
+        write!(formatter, "No span found for ID")?;
+        return Ok(());
+    };
+
+    let mut first_span = true;
+
+    for ancestor_span in span.scope() {
+        if first_span {
+            first_span = false;
+        } else {
+            writeln!(formatter)?;
+        }
+        display_span(ancestor_span, formatter)?;
+    }
+
+    Ok(())
+}
+
+fn display_span(
+    span: SpanRef<'_, Registry>,
+    formatter: &mut fmt::Formatter<'_>,
+) -> Result<(), fmt::Error> {
+    write!(formatter, "{}", span.name())?;
+
+    let extensions = span.extensions();
+    let Some(captured_fields) = extensions.get::<CapturedFields>() else {
+        write!(
+            formatter,
+            "{{ Span values missing. Was the RootcauseLayer installed correctly? }}"
+        )?;
+        return Ok(());
+    };
+
+    if captured_fields.0.is_empty() {
+        Ok(())
+    } else {
+        write!(formatter, "{{{}}}", captured_fields.0)
     }
 }
 
@@ -223,30 +226,22 @@ where
         let span = ctx.span(id).expect("span not found");
         let mut extensions = span.extensions_mut();
 
-        // Use a simple visitor to format field values
-        struct FieldVisitor<'a> {
-            output: &'a mut String,
-            first: bool,
-        }
+        struct Visitor(String);
 
-        impl<'a> Visit for FieldVisitor<'a> {
+        impl Visit for Visitor {
             fn record_debug(&mut self, field: &Field, value: &dyn fmt::Debug) {
                 use std::fmt::Write;
-                if !self.first {
-                    let _ = write!(self.output, " ");
+                if self.0.is_empty() {
+                    let _ = write!(self.0, "{}={value:?}", field.name());
+                } else {
+                    let _ = write!(self.0, " {}={value:?}", field.name());
                 }
-                self.first = false;
-                let _ = write!(self.output, "{}={:?}", field.name(), value);
             }
         }
 
-        let mut buf = String::new();
-        let mut visitor = FieldVisitor {
-            output: &mut buf,
-            first: true,
-        };
+        let mut visitor = Visitor(String::new());
         attrs.record(&mut visitor);
-        extensions.insert(CapturedFields(buf));
+        extensions.insert(CapturedFields(visitor.0));
     }
 }
 

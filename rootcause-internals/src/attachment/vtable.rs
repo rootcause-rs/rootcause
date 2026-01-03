@@ -86,8 +86,8 @@ impl AttachmentVtable {
         (self.type_id)()
     }
 
-    /// Gets the [`any::type_name`] of the attachment type that was used to create this
-    /// [`AttachmentVtable`].
+    /// Gets the [`any::type_name`] of the attachment type that was used to
+    /// create this [`AttachmentVtable`].
     #[inline]
     pub(super) fn type_name(&self) -> &'static str {
         (self.type_name)()
