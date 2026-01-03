@@ -35,8 +35,8 @@ jobs:
 
       - name: Run clippy
         run: |
-          cargo clippy -p rootcause -p rootcause-backtrace --all-targets -- -D warnings
-          cargo clippy -p rootcause -p rootcause-backtrace --all-targets --all-features -- -D warnings
+          cargo clippy -p rootcause -p rootcause-backtrace -p rootcause-tracing --all-targets -- -D warnings
+          cargo clippy -p rootcause -p rootcause-backtrace -p rootcause-tracing --all-targets --all-features -- -D warnings
           cargo clippy -p rootcause-internals -- -D warnings
 
       - name: Run tests
@@ -46,7 +46,7 @@ jobs:
         run: cargo test --workspace --doc && cargo test --workspace --doc --all-features
 
       - name: Run docs
-        run: cargo doc --no-deps -p rootcause -p rootcause-internals -p rootcause-backtrace --all-features
+        run: cargo doc --no-deps -p rootcause -p rootcause-internals -p rootcause-backtrace -p rootcause-tracing --all-features
 
       - name: Run cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -69,11 +69,11 @@ jobs:
         run: |
           export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
 
-          cargo miri test -p rootcause -p rootcause-internals --all-targets
-          cargo miri test -p rootcause -p rootcause-internals --all-features --all-targets
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-targets
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-features --all-targets
 
-          cargo miri test -p rootcause -p rootcause-internals --doc
-          cargo miri test -p rootcause -p rootcause-internals --doc --all-features
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc --all-features
 
           # Only run rootcause-backtrace tests on scheduled runs or manual dispatch (slow)
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then

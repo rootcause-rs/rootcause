@@ -51,6 +51,10 @@ Demonstrations of rootcause features and patterns.
 - [`report_creation_hook.rs`](report_creation_hook.rs) - Automatic attachment on creation: simple collectors vs conditional logic
 - [`conditional_formatting.rs`](conditional_formatting.rs) - Conditional formatting based on runtime context (environment, feature flags, etc.)
 
+## Tracing Integration
+
+- [`tracing_spans.rs`](tracing_spans.rs) - Automatic span capture with full hierarchy and field values
+
 ## Running Examples
 
 ```bash

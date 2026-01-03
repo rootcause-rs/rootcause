@@ -1,0 +1,25 @@
+[package]
+name = "rootcause-tracing"
+version = "0.11.0"
+edition = "2024"
+license = "MIT/Apache-2.0"
+categories = ["rust-patterns", "development-tools::debugging"]
+keywords = ["error", "error-handling", "tracing", "spans", "observability"]
+description = "Tracing span support for the rootcause error reporting library"
+repository = "https://github.com/rootcause-rs/rootcause"
+documentation = "https://docs.rs/rootcause-tracing"
+rust-version = "1.89"
+
+[dependencies]
+tracing = { version = "0.1.44", default-features = false }
+tracing-subscriber = { version = "0.3.22", default-features = false, features = [
+  "registry",
+] }
+
+# Internal dependencies
+rootcause = { path = "../", version = "=0.11.0" }
+
+[dev-dependencies]
+tracing = { version = "0.1.44", default-features = true, features = [
+  "attributes",
+] }
