@@ -1,16 +1,10 @@
 [package]
 name = "rootcause-backtrace"
-version = "0.11.0"
+version = "0.11.1"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns"]
-keywords = [
-  "error",
-  "error-handling",
-  "ergonomic",
-  "library",
-  "backtrace",
-]
+keywords = ["error", "error-handling", "ergonomic", "library", "backtrace"]
 description = "Backtraces support for the rootcause error reporting library"
 repository = "https://github.com/rootcause-rs/rootcause"
 documentation = "https://docs.rs/rootcause-backtrace"
@@ -25,4 +19,4 @@ regex = { version = "1.12.2", default-features = false }
 unicode-ident = "1.0.22"
 
 # Internal dependencies
-rootcause = { path = "../", version = "=0.11.0" }
+rootcause = { path = "../", version = "=0.11.1" }

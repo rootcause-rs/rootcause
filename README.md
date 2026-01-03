@@ -226,7 +226,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.11.0"
+rootcause = "0.11.1"
 ```
 
 Use `Report` as your error type:
@@ -293,10 +293,12 @@ Once you're comfortable with the basics, rootcause offers powerful features for 
 The rootcause ecosystem consists of multiple crates:
 
 **Core:**
+
 - **`rootcause`** - The main user-facing API with type-safe abstractions. Uses type markers to ensure the underlying data structures are used safely.
 - **`rootcause-internals`** - Low-level data structures and memory management. Handles the actual report storage, allocations, and pointer manipulation.
 
 **Extensions:**
+
 - **`rootcause-backtrace`** - Optional backtrace capture support. Provides hooks for automatic stack trace collection.
 - **`rootcause-tracing`** - Optional tracing span capture. Provides hooks to attach active tracing spans to error reports.
 
@@ -304,7 +306,7 @@ The split between `rootcause` and `rootcause-internals` provides a clean API bou
 
 ## Stability and Roadmap
 
-**Current status:** Pre-1.0 (v0.11.0)
+**Current status:** Pre-1.0 (v0.11.1)
 
 rootcause follows semantic versioning. As a 0.x library, breaking changes may occur in minor version bumps (0.x → 0.x+1). We're actively refining the API based on real-world usage and focused on reaching 1.0.
 
