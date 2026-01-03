@@ -20,6 +20,7 @@ tracing-subscriber = { version = "0.3.22", default-features = false, features = 
 rootcause = { path = "../", version = "=0.11.1" }
 
 [dev-dependencies]
+thiserror = "2.0.17"
 tracing = { version = "0.1.44", default-features = true, features = [
   "attributes",
 ] }

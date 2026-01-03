@@ -154,7 +154,7 @@ With nested instrumented functions, each error captures the full span hierarchy 
   ╰─
 ```
 
-Spans are ordered innermost to outermost. See [`examples/tracing_spans.rs`](../examples/tracing_spans.rs) for a complete example.
+Spans are ordered innermost to outermost. See [`examples/tracing_spans.rs`](examples/tracing_spans.rs) for a complete example.
 
 ## Configuration
 

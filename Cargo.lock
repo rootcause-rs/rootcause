@@ -272,7 +272,6 @@ dependencies = [
  "hashbrown",
  "indexmap",
  "rootcause-internals",
- "rootcause-tracing",
  "rustc-hash",
  "serde_json",
  "static_assertions",
@@ -305,6 +304,7 @@ name = "rootcause-tracing"
 version = "0.11.1"
 dependencies = [
  "rootcause",
+ "thiserror",
  "tracing",
  "tracing-subscriber",
 ]
