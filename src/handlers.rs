@@ -220,7 +220,7 @@ where
     }
 
     fn preferred_formatting_style(
-        value: &C,
+        _value: &C,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         ContextFormattingStyle {
@@ -672,7 +672,7 @@ impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<T> for Opaque<H> {
 ///
 /// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
 ///     Report::new_custom::<handlers::Display>("I am a normal error!")
-///         .attach_custom::<handlers::Header, _>(("Funny number", 42069));
+///         .attach_custom::<handlers::WithHeader, _>(("Funny number", 42069));
 ///
 /// let output = format!("{}", report);
 /// assert!(output.contains("Funny number"));
@@ -872,7 +872,7 @@ impl<T: 'static, H: AttachmentHandler<T>, const N: i32> AttachmentHandler<T>
 ///
 /// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
 ///     Report::new_custom::<handlers::Display>("I am a normal error!")
-///         .attach_custom::<AlwaysDebug, _>(Some(42));
+///         .attach_custom::<handlers::AlwaysDebug, _>(Some(42));
 ///
 /// let output = format!("{}", report);
 /// assert!(output.contains("Some(42)"));
