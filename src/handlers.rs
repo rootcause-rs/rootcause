@@ -846,7 +846,7 @@ impl<T: 'static, H: AttachmentHandler<T>, const N: i32> AttachmentHandler<T>
     }
 }
 
-/// Attachment and context handler combinator for forcing [`fmt::Debug`]-based
+/// Attachment and context handler combinator for forcing [`derive@Debug`]-based
 /// formatting.
 ///
 /// # When to Use
@@ -864,7 +864,7 @@ impl<T: 'static, H: AttachmentHandler<T>, const N: i32> AttachmentHandler<T>
 /// - **Debug output:** delegates to the wrapped handler's debug implementation
 /// - **Source
 ///
-/// The default wrapped handler is [`Debug`].
+/// The default wrapped handler is [`struct@Debug`].
 ///
 /// # Example
 /// ```
