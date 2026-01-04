@@ -93,6 +93,8 @@
 //! let report2: Report<String> = report!(msg);
 //! ```
 
+use core::marker::PhantomData;
+
 pub use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
     ContextFormattingStyle, ContextHandler, FormattingFunction,
@@ -369,5 +371,259 @@ impl<C> ContextHandler<C> for Any {
 
     fn debug(_context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "An object of type {}", core::any::type_name::<C>())
+    }
+}
+
+/// Attachment handler for attachments that are not human-facing/exclusively acessed programmatically.
+///
+/// This is also a universally applicable handler, since it literally implements no functionality. It both displays and debugs as the empty string. However, in the preferred formatting options it specifies the [`AttachmentFormattingPlacement::Hidden`] so as to never actually show up in a formatted report.
+///
+/// # When to Use
+///
+/// For attaching arbitrary non-human-interpretable data to a report, such as a marker type, a timestamp (i.e. an integer number of nanoseconds or similar), or some kind of internal identifier that is meaningless for humans.
+///
+/// It is not useful as a context handler, and thus does not implement its use as one.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** empty string
+/// - **Debug output:** empty string
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report : Report<&'static str, markers::Mutable, markers::SendSync>
+///   = Report::new_custom::<handlers::Display>("I am a normal error!")
+///   .attach_custom::<handlers::Hidden, &'static str>("Internal data");
+///
+/// // Does not show
+/// let output = format!("{}", report);
+/// assert!(!output.contains("Internal data"));
+/// ```
+#[derive(Copy, Clone)]
+pub struct Hidden;
+
+impl<T: 'static> AttachmentHandler<T> for Hidden {
+    fn display(_value: &T, _formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Ok(())
+    }
+
+    fn debug(_value: &T, _formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Ok(())
+    }
+
+    fn preferred_formatting_style(
+        _value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        AttachmentFormattingStyle {
+            placement: AttachmentFormattingPlacement::Hidden,
+            function: report_formatting_function,
+            priority: i32::MIN,
+        }
+    }
+}
+
+/// Attachment handler for attachments that are not human-facing, but not quite as strictly as for the [`Hidden`] handler.
+///
+/// Much like [`Hidden`], in the preferred formatting options it specifies the [`AttachmentFormattingPlacement::Opaque`] so it shows up as a count of opaque attachments.
+///
+/// # When to Use
+///
+/// Same usecases as [`Hidden`] but for when you want humans to be aware of the existence of the attachment.
+///
+/// It is not useful as a context handler, and thus does not implement its use as one.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** context type name
+/// - **Debug output:** context type name
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report : Report<&'static str, markers::Mutable, markers::SendSync>
+///   = Report::new_custom::<handlers::Display>("I am a normal error!")
+///     .attach_custom::<handlers::Opaque, i32>(69);
+///
+/// // Does not show
+/// let output = format!("{}", report);
+/// assert!(output.contains("1 additional opaque attachment"));
+/// ```
+#[derive(Copy, Clone)]
+pub struct Opaque;
+
+impl<T: 'static> AttachmentHandler<T> for Opaque {
+    fn display(_value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str(core::any::type_name::<T>())
+    }
+
+    fn debug(_value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        formatter.write_str(core::any::type_name::<T>())
+    }
+
+    fn preferred_formatting_style(
+        _value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        AttachmentFormattingStyle {
+            placement: AttachmentFormattingPlacement::Opaque,
+            function: report_formatting_function,
+            priority: i32::MIN,
+        }
+    }
+}
+
+/// placeholder
+#[allow(dead_code)]
+pub struct AppendixByType<H>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<T> for AppendixByType<H> {
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::Appendix {
+            appendix_name: core::any::type_name::<T>(),
+        };
+        res
+    }
+}
+
+/// placeholder
+#[allow(dead_code)]
+pub struct HeaderByType<H>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<T> for HeaderByType<H> {
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::InlineWithHeader {
+            header: core::any::type_name::<T>(),
+        };
+        res
+    }
+}
+
+/// placeholder
+#[allow(dead_code)]
+pub struct Appendix<H>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<(&'static str, T)> for Appendix<H> {
+    fn display(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::display(&value.1, formatter)
+    }
+
+    fn debug(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::debug(&value.1, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &(&'static str, T),
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(&value.1, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::Appendix {
+            appendix_name: value.0,
+        };
+        res
+    }
+}
+
+/// placeholder
+#[allow(dead_code)]
+pub struct Header<H>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<(&'static str, T)> for Header<H> {
+    fn display(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::display(&value.1, formatter)
+    }
+
+    fn debug(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::debug(&value.1, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &(&'static str, T),
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(&value.1, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::InlineWithHeader { header: value.0 };
+        res
+    }
+}
+
+/// placeholder
+pub struct Priority<H, const N: i32>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>, const N: i32> AttachmentHandler<T>
+    for Priority<H, { N }>
+{
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.priority = N;
+        res
+    }
+}
+
+/// placeholder
+pub struct AdjustPriority<H, const N: i32>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>, const N: i32> AttachmentHandler<T>
+    for AdjustPriority<H, { N }>
+{
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.priority += N;
+        res
     }
 }
