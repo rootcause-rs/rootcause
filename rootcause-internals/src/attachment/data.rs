@@ -19,8 +19,13 @@
 //! pointer to `AttachmentData<Erased>` without constructing an invalid
 //! reference to the full struct.
 
+use core::any::TypeId;
+
 use crate::{
-    attachment::{raw::RawAttachmentRef, vtable::AttachmentVtable},
+    attachment::{
+        raw::{RawAttachmentMut, RawAttachmentRef},
+        vtable::AttachmentVtable,
+    },
     handlers::AttachmentHandler,
 };
 
@@ -109,6 +114,28 @@ impl<'a> RawAttachmentRef<'a> {
             self.cast_inner::<A>()
         };
         &this.attachment
+    }
+}
+
+impl<'a> RawAttachmentMut<'a> {
+    /// Accesses the inner attachment of the [`AttachmentData`] instance as a
+    /// reference to the specified type.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` matches the actual attachment type stored in the
+    ///    [`AttachmentData`].
+    #[inline]
+    pub unsafe fn into_attachment_downcast_unchecked<A: 'static>(self) -> &'a mut A {
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        let this = unsafe {
+            // @add-unsafe-context: AttachmentData
+            self.cast_inner::<A>()
+        };
+        &mut this.attachment
     }
 }
 

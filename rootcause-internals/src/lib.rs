@@ -86,5 +86,5 @@ pub mod handlers;
 mod report;
 mod util;
 
-pub use attachment::{RawAttachment, RawAttachmentRef};
+pub use attachment::{RawAttachment, RawAttachmentMut, RawAttachmentRef};
 pub use report::{RawReport, RawReportMut, RawReportRef};

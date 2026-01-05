@@ -153,6 +153,7 @@
 //! [`Display`]: crate::handlers::Display
 //! [`Debug`]: crate::handlers::Debug
 
+mod mut_;
 mod owned;
 mod ref_;
 

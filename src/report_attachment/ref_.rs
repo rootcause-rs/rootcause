@@ -85,6 +85,7 @@ mod limit_field_access {
     // 2. This remains true for both the original and the copy
     impl<'a, A: ?Sized> Copy for ReportAttachmentRef<'a, A> {}
 }
+
 pub use limit_field_access::ReportAttachmentRef;
 
 impl<'a, A: ?Sized> Clone for ReportAttachmentRef<'a, A> {
