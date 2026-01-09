@@ -93,6 +93,8 @@
 //! let report2: Report<String> = report!(msg);
 //! ```
 
+use core::marker::PhantomData;
+
 pub use rootcause_internals::handlers::{
     AttachmentFormattingPlacement, AttachmentFormattingStyle, AttachmentHandler,
     ContextFormattingStyle, ContextHandler, FormattingFunction,
@@ -141,6 +143,15 @@ where
 
     fn debug(context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(context, f)
+    }
+
+    fn preferred_formatting_style(
+        _value: &C,
+        report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        ContextFormattingStyle {
+            function: report_formatting_function,
+        }
     }
 }
 
@@ -207,6 +218,15 @@ where
     fn debug(context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(context, f)
     }
+
+    fn preferred_formatting_style(
+        _value: &C,
+        report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        ContextFormattingStyle {
+            function: report_formatting_function,
+        }
+    }
 }
 
 impl<A> AttachmentHandler<A> for Display
@@ -220,29 +240,35 @@ where
     fn debug(context: &A, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(context, f)
     }
+
+    fn preferred_formatting_style(
+        _value: &A,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        AttachmentFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
+    }
 }
 
-/// Handler for types implementing [`Debug`](core::fmt::Debug).
+/// Handler for types implementing [`Debug`](core::fmt::Debug) but not
+/// [`Display`](core::fmt::Display).
 ///
 /// This handler uses the type's `Debug` implementation for the `debug` method,
-/// but shows a generic message like "Context of type `TypeName`" for the
-/// `display` method. This is useful for types that have debug information but
-/// don't implement `Display`.
+/// but shows a generic message for the `display` method. This is useful for
+/// types that have debug information but don't implement `Display`.
 ///
 /// # When to Use
 ///
 /// This handler is automatically selected for types that implement `Debug` but
-/// not `Display`. This is useful for internal data structures or types where
-/// displaying the full debug output as the primary message would be too
-/// verbose.
+/// not `Display`.
 ///
 /// # Formatting Behavior
 ///
-/// - **`display` method**: Shows "Context of type `TypeName`"
-/// - **`debug` method**: Uses the type's `Debug` implementation
-/// - **`source` method**: Always returns `None`
-/// - **Preferred formatting**: Uses `Display` by default, so contexts show the
-///   generic type name message even when the report is formatted with `{:?}`
+/// - **Display output**: Shows "Context/Attachment of type `TypeName`"
+/// - **Debug output**: Uses the type's `Debug` implementation
+/// - **Source**: Always returns `None`
 ///
 /// # Example
 ///
@@ -289,6 +315,15 @@ where
     fn debug(context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(context, f)
     }
+
+    fn preferred_formatting_style(
+        _value: &C,
+        report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        ContextFormattingStyle {
+            function: report_formatting_function,
+        }
+    }
 }
 
 impl<A> AttachmentHandler<A> for Debug
@@ -301,6 +336,113 @@ where
 
     fn debug(context: &A, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(context, f)
+    }
+
+    fn preferred_formatting_style(
+        _value: &A,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        AttachmentFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
+    }
+}
+
+/// Handler for types implementing [`Debug`](core::fmt::Debug) but not
+/// [`Display`](core::fmt::Display), and preventing debug output in report
+/// formatting.
+///
+/// # When to Use
+///
+/// When having reports with contexts or attachments where displaying them as
+/// debug in the report printout may lead to security issues, but where
+/// accessing the debug formatting is still useful programatically.
+///
+/// # Formatting Behavior
+///
+/// - **Display output**: Shows "Context/Attachment of type `TypeName`"
+/// - **Debug output**: Uses the type's `Debug` implementation
+/// - **Source**: Always returns `None`
+/// - **Preferred formatting**: Always `Display`, so contexts show the generic
+///   type name message even when the report is formatted with `{:?}`
+///
+/// # Example
+///
+/// ```
+/// use rootcause::prelude::*;
+///
+/// #[derive(Debug)]
+/// struct InternalState {
+///     connection_count: usize,
+///     buffer: Vec<u8>,
+/// }
+///
+/// let state = InternalState {
+///     connection_count: 42,
+///     buffer: vec![1, 2, 3],
+/// };
+///
+/// let report: Report<InternalState> = report!(state);
+///
+/// // Display formatting shows a generic message with the type name
+/// let display_output = format!("{}", report);
+/// assert!(display_output.contains("InternalState"));
+/// assert!(!display_output.contains("connection_count")); // Details not shown
+///
+/// // Debug formatting also uses the handler's Display method (the default behavior)
+/// let debug_output = format!("{:?}", report);
+/// assert!(debug_output.contains("InternalState"));
+/// ```
+#[derive(Copy, Clone)]
+pub struct RedactDebug;
+
+impl<C> ContextHandler<C> for RedactDebug
+where
+    C: core::fmt::Debug,
+{
+    fn source(_context: &C) -> Option<&(dyn core::error::Error + 'static)> {
+        None
+    }
+
+    fn display(_context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Context of type `{}`", core::any::type_name::<C>())
+    }
+
+    fn debug(context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(context, f)
+    }
+
+    fn preferred_formatting_style(
+        _value: &C,
+        _report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        ContextFormattingStyle {
+            function: FormattingFunction::Display,
+        }
+    }
+}
+
+impl<A> AttachmentHandler<A> for RedactDebug
+where
+    A: core::fmt::Debug,
+{
+    fn display(_context: &A, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "Attachment of type `{}`", core::any::type_name::<A>())
+    }
+
+    fn debug(context: &A, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(context, f)
+    }
+
+    fn preferred_formatting_style(
+        _value: &A,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        AttachmentFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 
@@ -369,5 +511,411 @@ impl<C> ContextHandler<C> for Any {
 
     fn debug(_context: &C, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         write!(f, "An object of type {}", core::any::type_name::<C>())
+    }
+}
+
+/// Attachment handler for attachments that are not human-facing and/or
+/// exclusively acessed programmatically.
+///
+/// This is also a universally applicable handler, since it literally implements
+/// no functionality. It both displays and debugs as the empty string. However,
+/// in the preferred formatting options it specifies the attachment as
+/// [`Hidden`](AttachmentFormattingPlacement::Hidden) so as to never actually
+/// show up in a formatted report.
+///
+/// # When to Use
+///
+/// For attaching arbitrary non-human-interpretable data to a report, such as
+/// marker types, a timestamp (i.e. an integer number of nanoseconds, not a
+/// human-readable date), or some kind of internal identifier that is
+/// meaningless for humans.
+///
+/// It is not useful as a context handler, and thus does not implement its use
+/// as one.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** empty string
+/// - **Debug output:** empty string
+/// - **Formatting placement:** hidden
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
+///     Report::new_custom::<handlers::Display>("I am a normal error!")
+///         .attach_custom::<handlers::Hidden, &'static str>("Internal data");
+///
+/// // Does not show
+/// let output = format!("{}", report);
+/// assert!(!output.contains("Internal data"));
+/// ```
+#[derive(Copy, Clone)]
+pub struct Hidden;
+
+impl<T: 'static> AttachmentHandler<T> for Hidden {
+    fn display(_value: &T, _formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Ok(())
+    }
+
+    fn debug(_value: &T, _formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        Ok(())
+    }
+
+    fn preferred_formatting_style(
+        _value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        AttachmentFormattingStyle {
+            placement: AttachmentFormattingPlacement::Hidden,
+            function: report_formatting_function,
+            priority: i32::MIN,
+        }
+    }
+}
+
+/// Attachment handler combinator for attachments that are intended to be hidden
+/// from view by default, but still inspectable.
+///
+/// The preferred formatting options of the wrapped handler are preserved,
+/// exception the formatting placement is changed so the attachment only shows
+/// up as a summary count.
+///
+/// # When to Use
+///
+/// Same usecases as [`Hidden`] but for when you want humans to be aware of the
+/// existence of the attachment, and possibly still want to be able to format
+/// the wrapped attachment. The default wrapped handler is [`Display`].
+///
+/// It is not useful as a context handler, and thus does not implement its use
+/// as one.
+///
+/// **Be aware:** if your find yourself chaining multiple attachment handler
+/// combinators, consider writing your own instead.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** delegates to the wrapped handler
+/// - **Debug output:** delegates to the wrapped handler
+/// - **Formatting placement:** delegates to wrapped handler but changes the
+///   `placement` to [`Opaque`](AttachmentFormattingPlacement::Hidden)
+///
+/// The default wrapped handler is [`Display`].
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
+///     Report::new_custom::<handlers::Display>("I am a normal error!")
+///         .attach_custom::<handlers::Opaque, i32>(42069);
+///
+/// // Does not show
+/// let output = format!("{}", report);
+/// assert!(output.contains("1 additional opaque attachment"));
+/// assert!(!output.contains("42069"));
+/// ```
+#[derive(Copy, Clone)]
+pub struct Opaque<H = Display>(PhantomData<H>);
+
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<T> for Opaque<H> {
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::Opaque;
+        res
+    }
+}
+
+/// Attachment handler combinator for rendering attachments with a customizable
+/// header in the formatting, useful to annotate free-form data with distinct
+/// semantic meaning.
+///
+/// # When to Use
+///
+/// For the case of attaching multiple data that are all the same type or could
+/// be confused for one another, but which are semantically distinct and needs a
+/// human-readable indicator of what is what.
+///
+/// It is not useful as a context handler, and thus does not implement its use
+/// as one.
+///
+/// **Be aware:** if your find yourself chaining multiple attachment handler
+/// combinators, consider writing your own instead.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** second element of the attachment tuple delegated to
+///   wrapped handler
+/// - **Debug output:** second element of the attachment tuple delegated to
+///   wrapped handler
+/// - **Formatting placement:** delegates to wrapped hander but as
+///   `InlineWithHeader` and header title given by the first element of the
+///   attachment tuple
+///
+/// The default wrapped handler is [`Display`].
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
+///     Report::new_custom::<handlers::Display>("I am a normal error!")
+///         .attach_custom::<handlers::WithHeader, _>(("Funny number", 42069));
+///
+/// let output = format!("{}", report);
+/// assert!(output.contains("Funny number"));
+/// assert!(output.contains("42069"));
+/// ```
+#[allow(dead_code)]
+pub struct WithHeader<H = Display>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<(&'static str, T)> for WithHeader<H> {
+    fn display(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::display(&value.1, formatter)
+    }
+
+    fn debug(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::debug(&value.1, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &(&'static str, T),
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(&value.1, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::InlineWithHeader { header: value.0 };
+        res
+    }
+}
+
+/// Attachment handler combinator for rendering attachments as appendices with a
+/// customizable header, useful to annotate large free-form data with distinct
+/// semantic meaning.
+///
+/// # When to Use
+///
+/// For the case of attaching multiple data that are all the same type or could
+/// be confused for one another, but which are semantically distinct and needs a
+/// human-readable indicator of what is what.
+///
+/// It is not useful as a context handler, and thus does not implement its use
+/// as one.
+///
+/// **Be aware:** if your find yourself chaining multiple attachment handler
+/// combinators, consider writing your own instead.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** second element of the attachment tuple delegated to
+///   wrapped handler
+/// - **Debug output:** second element of the attachment tuple delegated to
+///   wrapped handler
+/// - **Formatting placement:** delegates to wrapped hander but as
+///   [`Appendix`](AttachmentFormattingPlacement::Appendix) and with
+///   `appendix_name`` given by the first element of the attachment tuple
+///
+/// The default wrapped handler is [`Display`].
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
+///     Report::new_custom::<handlers::Display>("I am a normal error!")
+///         .attach_custom::<handlers::Appendix, _>((
+///             "Placeholder text",
+///             "Lorem ipsum dolor sit amet, consectetur adipiscing elit.
+/// Aliquam eu lobortis enim. Quisque tempus ligula vehicula leo viverra efficitur.
+/// Ut id rhoncus lectus, maximus tristique nibh. Ut non orci justo.
+/// Nunc non iaculis lorem. Phasellus nibh mi, feugiat sed diam a, venenatis posuere metus.
+/// Sed pharetra dapibus odio in ultricies.",
+///         ));
+///
+/// let output = format!("{}", report);
+/// assert!(output.contains("See Placeholder text #1 below"));
+/// assert!(output.contains("Lorem ipsum"));
+/// ```
+#[allow(dead_code)]
+pub struct Appendix<H = Display>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<(&'static str, T)> for Appendix<H> {
+    fn display(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::display(&value.1, formatter)
+    }
+
+    fn debug(
+        value: &(&'static str, T),
+        formatter: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        H::debug(&value.1, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &(&'static str, T),
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(&value.1, report_formatting_function);
+        res.placement = AttachmentFormattingPlacement::Appendix {
+            appendix_name: value.0,
+        };
+        res
+    }
+}
+
+/// Attachment handler combinator for reordering attachments.
+///
+/// # When to Use
+///
+/// For any case where an attachment is dramaticall more or less important than
+/// the other attachments. Positive priorities come earlier in the report
+/// printout.
+///
+/// Note that the base priority of an attachment is zero, while the common
+/// [`Location`](crate::hooks::builtin_hooks::location::Location) has a priority
+/// of 20. By default this combinator sets the priority to 10.
+///
+/// It is not useful as a context handler, and thus does not implement its use
+/// as one.
+///
+/// **Be aware:** if your find yourself chaining multiple attachment handler
+/// combinators, consider writing your own instead.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** delegates to the wrapped handler
+/// - **Debug output:** delegates to the wrapped handler
+/// - **Formatting placement:** delegates to wrapped handler but changes the
+///   priority
+///
+/// The default wrapped handler is [`Display`].
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
+///     Report::new_custom::<handlers::Display>("I am a normal error!")
+///         .attach("Less important")
+///         .attach("Less important 2")
+///         .attach_custom::<handlers::Priority, _>("More important");
+///
+/// let output = format!("{}", report);
+/// // same priority = order of attachment
+/// assert!(output.find("Less important").unwrap() < output.find("Less important 2").unwrap());
+/// // different priority = highest first
+/// assert!(output.find("More important").unwrap() < output.find("Less important").unwrap());
+/// ```
+pub struct Priority<H = Display, const N: i32 = 10>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>, const N: i32> AttachmentHandler<T>
+    for Priority<H, { N }>
+{
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.priority = N;
+        res
+    }
+}
+
+/// Attachment and context handler combinator for forcing [`derive@Debug`]-based
+/// formatting.
+///
+/// # When to Use
+///
+/// For any case where an attachment needs to be shown in debug-view form even
+/// if the report is printed as display.
+///
+/// **Be aware:** if your find yourself chaining multiple handler combinators,
+/// consider writing your own instead.
+///
+/// # Formatting Behavior
+///
+/// - **Display output:** delegates to the wrapped handler's debug
+///   implementation
+/// - **Debug output:** delegates to the wrapped handler's debug implementation
+/// - **Source
+///
+/// The default wrapped handler is [`struct@Debug`].
+///
+/// # Example
+/// ```
+/// use rootcause::{handlers, prelude::*};
+///
+/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
+///     Report::new_custom::<handlers::Display>("I am a normal error!")
+///         .attach_custom::<handlers::AlwaysDebug, _>(Some(42));
+///
+/// let output = format!("{}", report);
+/// assert!(output.contains("Some(42)"));
+/// ```
+pub struct AlwaysDebug<H = Debug>(PhantomData<H>);
+impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<T> for AlwaysDebug<H> {
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        value: &T,
+        report_formatting_function: FormattingFunction,
+    ) -> AttachmentFormattingStyle {
+        let mut res = H::preferred_formatting_style(value, report_formatting_function);
+        res.function = FormattingFunction::Debug;
+        res
+    }
+}
+
+impl<T: 'static, H: ContextHandler<T>> ContextHandler<T> for AlwaysDebug<H> {
+    fn source(value: &T) -> Option<&(dyn core::error::Error + 'static)> {
+        H::source(value)
+    }
+
+    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::display(value, formatter)
+    }
+
+    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        H::debug(value, formatter)
+    }
+
+    fn preferred_formatting_style(
+        _value: &T,
+        _report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        ContextFormattingStyle {
+            function: FormattingFunction::Debug,
+        }
     }
 }
