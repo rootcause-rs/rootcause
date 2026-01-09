@@ -562,7 +562,7 @@ impl Hooks {
     /// // Replace with different hooks
     /// let hooks2 = Hooks::new().attachment_collector(|| "second".to_string());
     /// let previous = hooks2.replace();
-    /// # unsafe { previous.unwrap().reclaim(); } // Clean up as miri does not like memory leaks
+    /// # unsafe { previous.unwrap().reclaim(); } // Clean up as Miri does not like memory leaks
     /// ```
     pub fn replace(self) -> Option<HooksHandle> {
         self.leak().replace()
@@ -617,7 +617,7 @@ impl Hooks {
 /// let old_hooks = Hooks::new().attachment_collector(|| "v2").replace();
 ///
 /// // Option 1: Drop and leak (typical case)
-/// # // We don't want to leak in the doctest, as miri will complain about a memory leak
+/// # // We don't want to leak in the doctest, as Miri will complain about a memory leak
 /// # let saved_old_hooks = old_hooks;
 /// # let old_hooks = ();
 /// let _ = old_hooks;
