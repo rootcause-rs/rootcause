@@ -25,10 +25,10 @@ mod limit_field_access {
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         raw: RawAttachmentMut<'a>,
-        _attachment: PhantomData<Attachment>,
+        _attachment: PhantomData<&'a mut Attachment>,
     }
 
-    impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
+    impl<'a, A: ?Sized + 'static> ReportAttachmentMut<'a, A> {
         /// Creates a new AttachmentRef from a raw attachment reference
         ///
         /// # Safety
@@ -51,7 +51,7 @@ mod limit_field_access {
 
         /// Returns the underlying raw attachment reference
         #[must_use]
-        pub(crate) fn into_raw_ref(self) -> RawAttachmentMut<'a> {
+        pub(crate) fn into_raw_mut(self) -> RawAttachmentMut<'a> {
             // We are destroying `self`, so we no longer
             // need to uphold any safety invariants.
             self.raw
@@ -61,7 +61,7 @@ mod limit_field_access {
 
 pub use limit_field_access::ReportAttachmentMut;
 
-impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
+impl<'a, A: Sized + 'static> ReportAttachmentMut<'a, A> {
     /// Obtain the reference to the inner attachment data.
     ///
     /// This method provides direct access to the attachment's data when the
@@ -98,5 +98,53 @@ impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
         unsafe { raw.into_attachment_downcast_unchecked() }
+    }
+
+    /// Changes the context type of the [`ReportAttachmentMut`] to [`Dynamic`].
+    ///
+    /// Calling this method is equivalent to calling `report.into()`, however
+    /// this method has been restricted to only change the context mode to
+    /// [`Dynamic`].
+    ///
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
+    ///
+    /// This method does not actually modify the report in any way. It only has
+    /// the effect of "forgetting" that the context actually has the
+    /// type `C`.
+    ///
+    /// To get back the report with a concrete `C` you can use the method
+    /// [`ReportMut::downcast_report`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut, markers::Dynamic};
+    /// # struct MyError;
+    /// # let mut report = report!(MyError);
+    /// let report: ReportMut<'_, MyError> = report.as_mut();
+    /// let local_report: ReportMut<'_, Dynamic> = report.into_dynamic();
+    /// ```
+    #[must_use]
+    pub fn into_dynamic(self) -> ReportAttachmentMut<'a, Dynamic> {
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw attachmenht in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the attachment here and the
+        //    invariants of the created `ReportAttachmentMut` guarantee that no such mutation can
+        //    occur in the future either.
+        let raw = unsafe { self.into_raw_mut() };
+
+        // SAFETY:
+        // 1. `C=Dynamic`, so this is trivially true.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. `C=Dynamic`, so this is trivially true.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
+        // 6. This is guaranteed by the invariants of this type.
+        // 7. This is guaranteed by the invariants of this type.
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentMut::<Dynamic>::from_raw(raw)
+        }
     }
 }

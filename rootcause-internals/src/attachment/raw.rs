@@ -275,8 +275,6 @@ pub struct RawAttachmentMut<'a> {
     ///    for some `A` using `Box::into_raw`.
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
-    /// 3. The pointer provides mutable access to the `AttachmentData<A>` it
-    ///    points to, no other pointers to this data exists except the owner(?).
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -321,19 +319,19 @@ impl<'a> RawAttachmentMut<'a> {
         }
     }
 
-    /// Consumes the mutable reference and returns an immutable one with the
-    /// same lifetime.
+    /// Returns a reference to the [`AttachmentData`] instance.
     #[inline]
-    pub(super) fn into_ref(self) -> RawAttachmentRef<'a> {
+    pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
         RawAttachmentRef {
             ptr: self.ptr,
             _marker: PhantomData,
         }
     }
 
-    /// Returns a reference to the [`AttachmentData`] instance.
+    /// Consumes the mutable reference and returns an immutable one with the
+    /// same lifetime.
     #[inline]
-    pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
+    pub(super) fn into_ref(self) -> RawAttachmentRef<'a> {
         RawAttachmentRef {
             ptr: self.ptr,
             _marker: PhantomData,
