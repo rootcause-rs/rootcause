@@ -1,7 +1,10 @@
 use alloc::fmt;
 use core::any::TypeId;
 
-use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
+use rootcause_internals::{
+    RawAttachmentMut,
+    handlers::{AttachmentFormattingStyle, FormattingFunction},
+};
 
 use crate::{markers::Dynamic, util::format_helper};
 
@@ -23,7 +26,7 @@ mod limit_field_access {
         ///
         /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
-        ///    [`RawAttachmentRef`] must be of type `A`.
+        ///    [`RawAttachmentMut`] must be of type `A`.
         raw: RawAttachmentMut<'a>,
         _attachment: PhantomData<&'a mut Attachment>,
     }
@@ -62,7 +65,22 @@ mod limit_field_access {
 pub use limit_field_access::ReportAttachmentMut;
 
 impl<'a, A: Sized + 'static> ReportAttachmentMut<'a, A> {
-    /// Obtain the reference to the inner attachment data.
+    /// Returns a mutable reference to the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut};
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let mut report_mut: ReportMut<'_, String> = report.as_mut();
+    /// let context: &mut String = report_mut.current_context_mut();
+    /// context.push_str(" and that's bad");
+    /// ```
+    #[must_use]
+    pub fn inner_mut(&mut self) -> &mut A {
+        self.as_mut().into_inner_mut()
+    }
+
+    /// Obtain the mutable reference to the inner attachment data.
     ///
     /// This method provides direct access to the attachment's data when the
     /// concrete type `A` is known at compile time. The attachment type must
@@ -92,12 +110,52 @@ impl<'a, A: Sized + 'static> ReportAttachmentMut<'a, A> {
     ///
     /// [`downcast_inner`]: Self::downcast_inner
     #[must_use]
-    pub fn into_inner(self) -> &'a mut A {
-        let raw = self.into_raw_ref();
+    pub fn into_inner_mut(self) -> &'a mut A {
+        let raw = self.into_raw_mut();
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
         unsafe { raw.into_attachment_downcast_unchecked() }
+    }
+}
+
+impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
+    /// Reborrows the [`ReportAttachmentMut`] to return a new [`ReportAttachmentMut`] with a shorter
+    /// lifetime
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut};
+    /// # struct MyError;
+    /// # let mut report = report!(MyError);
+    /// let mut report_mut: ReportMut<'_, MyError> = report.as_mut();
+    /// {
+    ///     // Create a new mutable reference with a shorter lifetime
+    ///     let mut borrowed_report_mut: ReportMut<'_, MyError> = report_mut.as_mut();
+    /// }
+    /// // After dropping the inner reference report, we can still use the outer one
+    /// let _context: &MyError = report_mut.current_context();
+    /// ```
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportMut<'_, C, T> {
+        // SAFETY:
+        // 1. If `T=Local`, then this is trivially true. If `T=SendSync`, then we are
+        //    not allowed to mutate the returned raw report in a way that adds
+        //    non-`Send+Sync` objects. We do not mutate the report here and the
+        //    invariants of the created `ReportMut` guarantee that no such mutation can
+        //    occur in the future either.
+        let raw = unsafe { self.as_raw_mut() };
+
+        // SAFETY:
+        // 1. This is guaranteed by the invariants of this type.
+        // 2. This is guaranteed by the invariants of this type.
+        // 3. If `C` is a `Sized` type: This is guaranteed by the invariants of this
+        //    type.
+        // 4. This is guaranteed by the invariants of this type.
+        // 5. This is guaranteed by the invariants of this type.
+        // 6. If `T = SendSync`: This is guaranteed by the invariants of this type.
+        // 7. If `T = Local`: This is guaranteed by the invariants of this type.
+        unsafe { ReportMut::from_raw(raw) }
     }
 
     /// Changes the context type of the [`ReportAttachmentMut`] to [`Dynamic`].

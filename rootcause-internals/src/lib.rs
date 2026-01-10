@@ -35,7 +35,7 @@
 //!
 //! - **[`attachment`]**: Type-erased attachment storage
 //!   - [`RawAttachment`]: Owned attachment with [`Box`]-based allocation
-//!   - [`RawAttachmentRef`]: Borrowed reference to an attachment
+//!   - [`RawAttachmentRef`]/[`RawAttachmentMut`]: Borrowed reference to an attachment (shared/mutable)
 //!   - [`AttachmentData`]: `#[repr(C)]` wrapper enabling field access on erased
 //!     types
 //!   - [`AttachmentVtable`]: Function pointers for type-erased dispatch

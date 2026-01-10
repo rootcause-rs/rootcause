@@ -254,7 +254,7 @@ impl<'a> RawAttachmentRef<'a> {
     }
 }
 
-/// A lifetime-bound non-shared(?) pointer to an [`AttachmentData`] that is guaranteed to
+/// A mutable lifetime-bound pointer to an [`AttachmentData`] that is guaranteed to
 /// be the sole mutable(?) pointer to an initialized instance of an [`AttachmentData<A>`] for some
 /// specific `A`, though we do not know which actual `A` it is.
 ///
@@ -309,7 +309,7 @@ impl<'a> RawAttachmentMut<'a> {
         unsafe { this.as_mut() }
     }
 
-    /// Reborrows the mutable reference to the [`ReportData`] with a shorter
+    /// Reborrows the mutable reference to the [`AttachmentData`] with a shorter
     /// lifetime.
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawAttachmentMut<'b> {
