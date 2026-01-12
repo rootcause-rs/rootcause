@@ -89,6 +89,17 @@ impl RawAttachment {
     #[inline]
     pub fn as_ref(&self) -> RawAttachmentRef<'_> {
         RawAttachmentRef {
+            // Safety???
+            ptr: self.ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
+    /// Returns a mutable reference to the [`AttachmentData`] instance.
+    #[inline]
+    pub fn as_mut(&mut self) -> RawAttachmentMut<'_> {
+        RawAttachmentMut {
+            // Safety???
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -275,6 +286,7 @@ pub struct RawAttachmentMut<'a> {
     ///    for some `A` using `Box::into_raw`.
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
+    /// 3. This pointer represents exclusive mutable access to the `AttachmentData`.
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -323,6 +335,7 @@ impl<'a> RawAttachmentMut<'a> {
     #[inline]
     pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
         RawAttachmentRef {
+            // Safety???
             ptr: self.ptr,
             _marker: PhantomData,
         }
@@ -331,17 +344,12 @@ impl<'a> RawAttachmentMut<'a> {
     /// Consumes the mutable reference and returns an immutable one with the
     /// same lifetime.
     #[inline]
-    pub(super) fn into_ref(self) -> RawAttachmentRef<'a> {
+    pub fn into_ref(self) -> RawAttachmentRef<'a> {
         RawAttachmentRef {
+            // Safety???
             ptr: self.ptr,
             _marker: PhantomData,
         }
-    }
-
-    /// Returns a [`NonNull`] pointer to the [`AttachmentData`] instance.
-    #[inline]
-    pub(super) fn into_mut_ptr(self) -> *mut AttachmentData<Erased> {
-        self.ptr.as_ptr()
     }
 }
 

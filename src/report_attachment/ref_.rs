@@ -3,7 +3,12 @@ use core::any::TypeId;
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::{markers::Dynamic, util::format_helper};
+use crate::{
+    markers::{Dynamic, SendSync},
+    preformatted::{self, PreformattedAttachment},
+    report_attachment::ReportAttachment,
+    util::format_helper,
+};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -36,7 +41,7 @@ mod limit_field_access {
     ///
     /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
     #[repr(transparent)]
-    pub struct ReportAttachmentRef<'a, Attachment: ?Sized + 'static = Dynamic> {
+    pub struct ReportAttachmentRef<'a, A: ?Sized + 'static = Dynamic> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
@@ -46,7 +51,7 @@ mod limit_field_access {
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         raw: RawAttachmentRef<'a>,
-        _attachment: PhantomData<Attachment>,
+        _attachment: PhantomData<A>,
     }
 
     impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
@@ -190,7 +195,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
     #[must_use]
-    pub fn inner_handler_type_id(&self) -> TypeId {
+    pub fn inner_handler_type_id(self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
@@ -292,7 +297,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Debug`]: core::fmt::Debug
     #[must_use]
     pub fn preferred_formatting_style(
-        &self,
+        self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         crate::hooks::attachment_formatter::get_preferred_formatting_style(
@@ -320,11 +325,19 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
     #[must_use]
     pub fn preferred_formatting_style_unhooked(
-        &self,
+        self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
             .preferred_formatting_style(report_formatting_function)
+    }
+
+    /// TODO [`crate::report::ref_::ReportRef::preformat`]
+    #[must_use]
+    pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
+        ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
+            PreformattedAttachment::new_from_attachment(self),
+        )
     }
 }
 
