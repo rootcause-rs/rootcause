@@ -3,7 +3,9 @@ use alloc::vec::Vec;
 use crate::{
     markers::{Dynamic, Local, SendSync},
     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
+    report_attachments::{
+        ReportAttachmentsIntoIter, ReportAttachmentsIter, ReportAttachmentsIterMut,
+    },
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -354,6 +356,40 @@ impl<T> ReportAttachments<T> {
     /// [`into_iter()`]: Self::into_iter
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
         ReportAttachmentsIter::from_raw(self.as_raw().iter())
+    }
+    /// Returns an iterator over references to the attachments in the
+    /// collection.
+    ///
+    /// The iterator yields [`ReportAttachmentMut`] items, which provide
+    /// non-owning mutable access to the attachments. For owning iteration, use
+    /// [`into_iter()`] instead.
+    ///
+    /// # Examples
+    /// TODO
+    /// ```
+    /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
+    ///
+    /// let mut attachments = ReportAttachments::new_sendsync();
+    /// attachments.push(ReportAttachment::new("first").into_dynamic());
+    /// attachments.push(ReportAttachment::new("second").into_dynamic());
+    ///
+    /// for attachment in attachments.iter() {
+    ///     println!("Attachment type: {:?}", attachment.inner_type_id());
+    /// }
+    /// ```
+    ///
+    /// [`into_iter()`]: Self::into_iter
+    pub fn iter_mut(&mut self) -> ReportAttachmentsIterMut<'_> {
+        // SAFETY:
+        //
+        // 1. Mutation of the collection is not possible through the iterator.
+        // 2. Mutation of the individual attachments are only possible in a type-preserving manner,
+        //    meaning it is not possible to alter any of the attachments to be non-`Send + Sync`
+        let raw = unsafe {
+            // @add-unsafe-context: ???
+            self.as_raw_mut()
+        };
+        ReportAttachmentsIterMut::from_raw(raw.iter_mut())
     }
 
     /// Converts this collection to use the [`Local`] thread safety marker.

@@ -4,7 +4,7 @@ use rootcause_internals::RawAttachment;
 
 use crate::{
     markers::Dynamic,
-    report_attachment::{ReportAttachment, ReportAttachmentRef},
+    report_attachment::{ReportAttachment, ReportAttachmentMut, ReportAttachmentRef},
 };
 
 /// An iterator over references to report attachments.
@@ -86,6 +86,84 @@ impl<'a> ExactSizeIterator for ReportAttachmentsIter<'a> {
 }
 
 impl<'a> FusedIterator for ReportAttachmentsIter<'a> {}
+
+/// An iterator over references to report attachments.
+///
+/// This iterator yields [`ReportAttachmentMut`] items and is created by calling
+/// [`ReportAttachments::iter_mut`].
+///
+/// [`ReportAttachmentMut`]: crate::report_attachment::ReportAttachmentMut
+/// [`ReportAttachments::iter_mut`]: crate::report_attachments::ReportAttachments::iter_mut
+///
+/// # Examples
+/// TODO
+/// ```
+/// use rootcause::{
+///     report_attachment::ReportAttachment,
+///     report_attachments::{ReportAttachments, ReportAttachmentsIter},
+/// };
+///
+/// let mut attachments = ReportAttachments::new_sendsync();
+/// attachments.push(ReportAttachment::new("debug info").into_dynamic());
+/// attachments.push(ReportAttachment::new(42).into_dynamic());
+///
+/// let iterator: ReportAttachmentsIter<'_> = attachments.iter();
+/// ```
+#[must_use]
+pub struct ReportAttachmentsIterMut<'a> {
+    raw: core::slice::IterMut<'a, RawAttachment>,
+}
+
+impl<'a> ReportAttachmentsIterMut<'a> {
+    /// Creates a new `AttachmentsIter` from an iterator of raw attachments
+    pub(crate) fn from_raw(raw: core::slice::IterMut<'a, RawAttachment>) -> Self {
+        Self { raw }
+    }
+}
+
+impl<'a> Iterator for ReportAttachmentsIterMut<'a> {
+    type Item = ReportAttachmentMut<'a, Dynamic>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let raw = self.raw.next()?.as_mut();
+
+        // SAFETY:
+        // 1. `A = Dynamic`, so this is trivially satisfied.
+        // 2. `A = Dynamic`, so this is trivially satisfied.
+        let attachment = unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentMut::<'a, Dynamic>::from_raw(raw)
+        };
+
+        Some(attachment)
+    }
+
+    fn size_hint(&self) -> (usize, Option<usize>) {
+        self.raw.size_hint()
+    }
+}
+
+impl<'a> ExactSizeIterator for ReportAttachmentsIterMut<'a> {
+    fn len(&self) -> usize {
+        self.raw.len()
+    }
+}
+
+impl<'a> DoubleEndedIterator for ReportAttachmentsIterMut<'a> {
+    fn next_back(&mut self) -> Option<Self::Item> {
+        let raw = self.raw.next_back()?.as_mut();
+
+        // SAFETY:
+        // 1. `A = Dynamic`, so this is trivially satisfied.
+        // 2. `A = Dynamic`, so this is trivially satisfied.
+        let attachment = unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentMut::<'a, Dynamic>::from_raw(raw)
+        };
+
+        Some(attachment)
+    }
+}
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.

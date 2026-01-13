@@ -19,8 +19,6 @@
 //! pointer to `AttachmentData<Erased>` without constructing an invalid
 //! reference to the full struct.
 
-use core::any::TypeId;
-
 use crate::{
     attachment::{
         raw::{RawAttachmentMut, RawAttachmentRef},

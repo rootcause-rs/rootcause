@@ -362,6 +362,13 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         unsafe { ReportAttachmentMut::from_raw(raw) }
     }
 
+    /// Creates a new attachment, with the inner attachment data preformatted.
+    ///
+    /// This can be useful, as the preformatted attachment is a newly allocated object
+    /// and additionally is [`Send`]+[`Sync`].
+    ///
+    /// # Examples
+    ///
     /// TODO
     #[must_use]
     pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
@@ -467,6 +474,41 @@ impl<T> ReportAttachment<Dynamic, T> {
         // SAFETY:
         // 1. Guaranteed by the caller
         unsafe { raw.attachment_downcast_unchecked() }
+    }
+
+    /// Attempts to downcast the inner attachment to a specific type.
+    ///
+    /// Returns `Some(&mut A)` if the inner attachment is of type `A`, otherwise
+    /// returns `None`.
+    #[must_use]
+    pub fn downcast_inner_mut<A>(&mut self) -> Option<&mut A>
+    where
+        A: Sized + 'static,
+    {
+        let mut_ = self.as_mut().downcast_attachment().ok()?;
+        Some(mut_.into_inner_mut())
+    }
+
+    /// Downcasts the inner attachment to a specific type without checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A` (can be verified by
+    ///    calling [`inner_type_id()`] first)
+    ///
+    /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    #[must_use]
+    pub unsafe fn downcast_inner_mut_unchecked<A>(&mut self) -> &mut A
+    where
+        A: Sized + 'static,
+    {
+        let raw = self.as_raw_mut();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        unsafe { raw.into_attachment_downcast_unchecked() }
     }
 
     /// Attempts to downcast the [`ReportAttachment`] to a specific attachment

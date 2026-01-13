@@ -238,9 +238,8 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
     #[must_use]
     pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'a, Dynamic> = self.into_dynamic();
         format_helper(
-            attachment,
+            self.into_dynamic(),
             |attachment, formatter| {
                 crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
             },
@@ -332,7 +331,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
             .preferred_formatting_style(report_formatting_function)
     }
 
-    /// TODO [`crate::report::ref_::ReportRef::preformat`]
+    /// See [`crate::report_attachment::owned::ReportAttachment::preformat`]
     #[must_use]
     pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
         ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
