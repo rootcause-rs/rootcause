@@ -129,6 +129,7 @@ impl RawReport {
     #[inline]
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
         RawReportMut {
+            // Safety???
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -412,6 +413,7 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawReportMut<'b> {
         RawReportMut {
+            // Safety???
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -421,6 +423,7 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
         RawReportRef {
+            // Safety???
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -431,6 +434,7 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub fn into_ref(self) -> RawReportRef<'a> {
         RawReportRef {
+            // Safety???
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }

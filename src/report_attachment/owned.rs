@@ -8,7 +8,8 @@ use rootcause_internals::{
 use crate::{
     handlers::{self, AttachmentHandler},
     markers::{self, Dynamic, Local, SendSync},
-    report_attachment::ReportAttachmentRef,
+    preformatted::PreformattedAttachment,
+    report_attachment::{ReportAttachmentMut, ReportAttachmentRef},
     util::format_helper,
 };
 
@@ -17,7 +18,7 @@ use crate::{
 mod limit_field_access {
     use core::marker::PhantomData;
 
-    use rootcause_internals::{RawAttachment, RawAttachmentRef};
+    use rootcause_internals::{RawAttachment, RawAttachmentMut, RawAttachmentRef};
 
     use crate::markers::{Dynamic, SendSync};
 
@@ -105,6 +106,19 @@ mod limit_field_access {
             let raw = &self.raw;
 
             raw.as_ref()
+        }
+
+        /// Creates a lifetime-bound [`RawAttachmentMut`] from the inner [`RawAttachment`]
+        #[must_use]
+        pub(crate) fn as_raw_mut(&mut self) -> RawAttachmentMut<'_> {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. Guaranteed by safety invariant #2 of [`RawAttachmentMut`]
+            // 4. Guaranteed by safety invariant #2 of [`RawAttachmentMut`]
+            let raw = &mut self.raw;
+
+            raw.as_mut()
         }
     }
 }
@@ -337,6 +351,29 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         // 2. Guaranteed by the invariants of this type.
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
+
+    /// Returns a mutable reference to the attachment.
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
+        let raw = self.as_raw_mut();
+        // SAFETY:
+        // 1. Guaranteed by the invariants of this type.
+        // 2. Guaranteed by the invariants of this type.
+        unsafe { ReportAttachmentMut::from_raw(raw) }
+    }
+
+    /// Creates a new attachment, with the inner attachment data preformatted.
+    ///
+    /// This can be useful, as the preformatted attachment is a newly allocated object
+    /// and additionally is [`Send`]+[`Sync`].
+    ///
+    /// # Examples
+    ///
+    /// TODO
+    #[must_use]
+    pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
+        self.as_ref().preformat()
+    }
 }
 
 impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
@@ -437,6 +474,41 @@ impl<T> ReportAttachment<Dynamic, T> {
         // SAFETY:
         // 1. Guaranteed by the caller
         unsafe { raw.attachment_downcast_unchecked() }
+    }
+
+    /// Attempts to downcast the inner attachment to a specific type.
+    ///
+    /// Returns `Some(&mut A)` if the inner attachment is of type `A`, otherwise
+    /// returns `None`.
+    #[must_use]
+    pub fn downcast_inner_mut<A>(&mut self) -> Option<&mut A>
+    where
+        A: Sized + 'static,
+    {
+        let mut_ = self.as_mut().downcast_attachment().ok()?;
+        Some(mut_.into_inner_mut())
+    }
+
+    /// Downcasts the inner attachment to a specific type without checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A` (can be verified by
+    ///    calling [`inner_type_id()`] first)
+    ///
+    /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    #[must_use]
+    pub unsafe fn downcast_inner_mut_unchecked<A>(&mut self) -> &mut A
+    where
+        A: Sized + 'static,
+    {
+        let raw = self.as_raw_mut();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        unsafe { raw.into_attachment_downcast_unchecked() }
     }
 
     /// Attempts to downcast the [`ReportAttachment`] to a specific attachment

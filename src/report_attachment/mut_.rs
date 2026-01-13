@@ -1,12 +1,12 @@
-use alloc::fmt;
 use core::any::TypeId;
 
+use alloc::fmt;
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
 use crate::{
     markers::{Dynamic, SendSync},
-    preformatted::{self, PreformattedAttachment},
-    report_attachment::ReportAttachment,
+    preformatted::PreformattedAttachment,
+    report_attachment::{ReportAttachment, ReportAttachmentRef},
     util::format_helper,
 };
 
@@ -15,33 +15,13 @@ use crate::{
 mod limit_field_access {
     use core::marker::PhantomData;
 
-    use rootcause_internals::RawAttachmentRef;
+    use rootcause_internals::{RawAttachmentMut, RawAttachmentRef};
 
     use crate::markers::Dynamic;
 
-    /// A reference to a [`ReportAttachment`].
-    ///
-    /// # Examples
-    /// ```
-    /// use rootcause::{
-    ///     markers::Dynamic,
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
-    ///
-    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("An important attachment");
-    /// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
-    ///
-    /// let mut report = report!("An error occurred");
-    /// report.attachments_mut().push(attachment.into_dynamic());
-    ///
-    /// // You can also get an attachment reference through the attachments on a report
-    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = report.attachments().get(0).unwrap();
-    /// ```
-    ///
-    /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
+    /// TODO see [`ReportMut`](crate::report::mut_::ReportMut)
     #[repr(transparent)]
-    pub struct ReportAttachmentRef<'a, A: ?Sized + 'static = Dynamic> {
+    pub struct ReportAttachmentMut<'a, A: ?Sized + 'static = Dynamic> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
@@ -49,12 +29,13 @@ mod limit_field_access {
         ///
         /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
-        ///    [`RawAttachmentRef`] must be of type `A`.
-        raw: RawAttachmentRef<'a>,
-        _attachment: PhantomData<A>,
+        ///    [`RawAttachmentMut`] must be of type `A`.
+        /// 3. This reference represents exclusive mutable access to the underlying [`AttachmentData`](rootcause_internals::attachment::data::AttachmentData).
+        raw: RawAttachmentMut<'a>,
+        _attachment: PhantomData<&'a mut A>,
     }
 
-    impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
+    impl<'a, A: ?Sized + 'static> ReportAttachmentMut<'a, A> {
         /// Creates a new AttachmentRef from a raw attachment reference
         ///
         /// # Safety
@@ -63,44 +44,85 @@ mod limit_field_access {
         ///
         /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
-        ///    [`RawAttachmentRef`] must be of type `A`.
+        ///    [`RawAttachmentMut`] must be of type `A`.
         #[must_use]
-        pub(crate) unsafe fn from_raw(raw: RawAttachmentRef<'a>) -> Self {
+        pub(crate) unsafe fn from_raw(raw: RawAttachmentMut<'a>) -> Self {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
-            ReportAttachmentRef {
+            // 3. Guaranteed by safety invariant #3 of [`RawAttachmentMut`]
+            ReportAttachmentMut {
                 raw,
                 _attachment: PhantomData,
             }
         }
 
+        // Creates a raw reference to the underlying report.
+        #[must_use]
+        pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. Upheld as the type parameter does not change.
+            // 2. Upheld as the type parameter does not change.
+            // 3. Upheld since `self` is borrowed as shared and no mutable access can happen through the reference.
+            let raw: &RawAttachmentMut<'_> = &self.raw;
+
+            raw.as_ref()
+        }
+
         /// Returns the underlying raw attachment reference
         #[must_use]
-        pub(crate) fn as_raw_ref(self) -> RawAttachmentRef<'a> {
+        pub(crate) fn into_raw_mut(self) -> RawAttachmentMut<'a> {
             // We are destroying `self`, so we no longer
             // need to uphold any safety invariants.
             self.raw
         }
-    }
 
-    // SAFETY: We must uphold the safety invariants of the raw field for both the
-    // original and the copy:
-    // 1. This remains true for both the original and the copy
-    // 2. This remains true for both the original and the copy
-    impl<'a, A: ?Sized> Copy for ReportAttachmentRef<'a, A> {}
-}
+        /// Creates a raw reference to the underlying report.
+        pub(crate) fn as_raw_mut<'b>(&'b mut self) -> RawAttachmentMut<'b> {
+            // SAFETY: We need to uphold the safety invariants of the raw field:
+            // 1. Upheld as the type parameter does not change.
+            // 2. Upheld as the type parameter does not change.
+            // 3. Upheld since `self` is borrowed mutably transfers exclusive access by futher mutable borrow.
+            let raw = &mut self.raw;
 
-pub use limit_field_access::ReportAttachmentRef;
-
-impl<'a, A: ?Sized> Clone for ReportAttachmentRef<'a, A> {
-    fn clone(&self) -> Self {
-        *self
+            raw.reborrow()
+        }
     }
 }
 
-impl<'a, A: Sized> ReportAttachmentRef<'a, A> {
-    /// Returns a reference to the inner attachment data.
+pub use limit_field_access::ReportAttachmentMut;
+
+impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
+    /// Returns a reference to the attachment data.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportAttachmentMut};
+    /// let mut attachment = ReportAttacment::new(41);
+    /// let attachment_mut = attachment.as_mut();
+    /// let data = attachment_mut.inner();
+    /// println!("The answer: {}", *data + 1); // => 42
+    /// ```
+    #[must_use]
+    pub fn inner(&self) -> &A {
+        self.as_ref().inner()
+    }
+
+    /// Returns a reference to the attachment data.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportAttachmentMut};
+    /// let mut attachment = ReportAttacment::new(41);
+    /// let attachment_mut = attachment.as_mut();
+    /// let data = attachment_mut.inner_mut();
+    /// ```
+    #[must_use]
+    pub fn inner_mut(&mut self) -> &mut A {
+        self.as_mut().into_inner_mut()
+    }
+
+    /// Obtain the mutable reference to the inner attachment data.
     ///
     /// This method provides direct access to the attachment's data when the
     /// concrete type `A` is known at compile time. The attachment type must
@@ -115,28 +137,87 @@ impl<'a, A: Sized> ReportAttachmentRef<'a, A> {
     /// ```
     /// use rootcause::{
     ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    ///     report_attachment::{ReportAttachment, ReportAttachmentMut},
     /// };
     ///
-    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment_ref: ReportAttachmentRef<'_, &str> = attachment.as_ref();
+    /// let mut attachment: ReportAttachment<i32> = ReportAttachment::new(40i32);
+    /// {
+    ///   let attachment_mut: ReportAttachmentMut<'_, i32> = attachment.as_mut();
+    ///   let number: &mut i32 = attachment_ref.into_inner();
+    ///   *number += 2;
+    /// }
     ///
-    /// let text: &&str = attachment_ref.inner();
-    /// assert_eq!(*text, "text data");
+    /// assert_eq!(attachment.as_ref().inner(), &42i32);
     /// ```
     ///
     /// [`downcast_inner`]: Self::downcast_inner
     #[must_use]
-    pub fn inner(self) -> &'a A {
-        let raw = self.as_raw_ref();
+    pub fn into_inner_mut(self) -> &'a mut A {
+        let raw = self.into_raw_mut();
 
         // SAFETY:
         // 1. Guaranteed by the invariants of this type.
-        unsafe { raw.attachment_downcast_unchecked() }
+        unsafe { raw.into_attachment_downcast_unchecked() }
     }
 }
 
-impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
+impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
+    /// Changes the context type of the [`ReportAttachmentMut`] to [`Dynamic`].
+    ///
+    /// TODO
+    #[must_use]
+    pub fn into_dynamic(self) -> ReportAttachmentMut<'a, Dynamic> {
+        let raw = self.into_raw_mut();
+
+        // SAFETY:
+        // 1. Trivially true.
+        // 2. Not `Sized`.
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentMut::<Dynamic>::from_raw(raw)
+        }
+    }
+
+    /// TODO
+    #[must_use]
+    pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
+        let raw = self.as_raw_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by invariants of this type.
+        // 2. Guaranteed by invariants of this type.
+        unsafe { ReportAttachmentRef::<A>::from_raw(raw) }
+    }
+
+    /// TODO
+    #[must_use]
+    pub fn into_ref(self) -> ReportAttachmentRef<'a, A> {
+        let raw = self.into_raw_mut();
+
+        let raw = raw.into_ref();
+
+        // SAFETY:
+        // 1. Guaranteed by invariants of this type.
+        // 2. Guaranteed by invariants of this type.
+        unsafe { ReportAttachmentRef::<A>::from_raw(raw) }
+    }
+
+    /// Reborrows the [`ReportAttachmentMut`] to return a new [`ReportAttachmentMut`] with a shorter
+    /// lifetime
+    ///
+    /// # Examples
+    ///
+    /// TODO, see [`ReportMut::as_mut`](crate::report::mut_::ReportMut::as_mut)
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
+        let raw = self.as_raw_mut();
+
+        // SAFETY:
+        // 1. Guaranteed by invariants of this type.
+        // 2. Guaranteed by invariants of this type.
+        unsafe { ReportAttachmentMut::from_raw(raw) }
+    }
+
     /// Returns the [`TypeId`] of the inner attachment.
     ///
     /// # Examples
@@ -155,7 +236,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// assert_eq!(attachment_ref.inner_type_id(), TypeId::of::<&str>());
     /// ```
     #[must_use]
-    pub fn inner_type_id(self) -> TypeId {
+    pub fn inner_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
 
@@ -180,7 +261,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// );
     /// ```
     #[must_use]
-    pub fn inner_type_name(self) -> &'static str {
+    pub fn inner_type_name(&self) -> &'static str {
         self.as_raw_ref().attachment_type_name()
     }
 
@@ -195,7 +276,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
     #[must_use]
-    pub fn inner_handler_type_id(self) -> TypeId {
+    pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
@@ -214,7 +295,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner`]: Self::format_inner
     #[must_use]
-    pub fn format_inner_unhooked(self) -> impl core::fmt::Display + core::fmt::Debug {
+    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
             self.as_raw_ref(),
             |attachment, formatter| attachment.attachment_display(formatter),
@@ -237,9 +318,9 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
     #[must_use]
-    pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
+    pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
-            self.into_dynamic(),
+            self.as_ref().into_dynamic(),
             |attachment, formatter| {
                 crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
             },
@@ -247,35 +328,6 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
                 crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
             },
         )
-    }
-
-    /// Changes the inner attachment type of the [`ReportAttachmentRef`] to
-    /// [`Dynamic`].
-    ///
-    /// Calling this method is equivalent to calling `attachment.into()`,
-    /// however this method has been restricted to only change the
-    /// attachment type to [`Dynamic`].
-    ///
-    /// This method can be useful to help with type inference or to improve code
-    /// readability, as it more clearly communicates intent.
-    ///
-    /// This method does not actually modify the attachment in any way. It only
-    /// has the effect of "forgetting" that the inner attachment
-    /// actually has the type `A`.
-    ///
-    /// To get back the attachment with a concrete `A` you can use the method
-    /// [`ReportAttachmentRef::downcast_attachment`].
-    #[must_use]
-    pub fn into_dynamic(self) -> ReportAttachmentRef<'a, Dynamic> {
-        let raw = self.as_raw_ref();
-
-        // SAFETY:
-        // 1. `A=Dynamic`, so this is trivially satisfied
-        // 2. `A=Dynamic`, so this is trivially satisfied
-        unsafe {
-            // @add-unsafe-context: Dynamic
-            ReportAttachmentRef::<Dynamic>::from_raw(raw)
-        }
     }
 
     /// Returns the preferred formatting style for this attachment with
@@ -296,11 +348,11 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Debug`]: core::fmt::Debug
     #[must_use]
     pub fn preferred_formatting_style(
-        self,
+        &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         crate::hooks::attachment_formatter::get_preferred_formatting_style(
-            self.into_dynamic(),
+            self.as_ref().into_dynamic(),
             report_formatting_function,
         )
     }
@@ -331,26 +383,26 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
             .preferred_formatting_style(report_formatting_function)
     }
 
-    /// See [`crate::report_attachment::owned::ReportAttachment::preformat`]
+    /// TODO See [`crate::report_attachment::owned::ReportAttachment::preformat`]
+    #[track_caller]
     #[must_use]
-    pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
-        ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
-            PreformattedAttachment::new_from_attachment(self),
-        )
+    pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
+        self.as_ref().preformat()
     }
 }
 
-impl<'a> ReportAttachmentRef<'a, Dynamic> {
+impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// Attempts to downcast the attachment reference to a different type `A`.
     ///
-    /// This method performs a safe type cast, returning [`Some`] if the
-    /// attachment actually contains data of type `A`, or [`None`] if the
-    /// types don't match.
+    /// This method performs a safe type cast, returning [`Ok`] if the
+    /// attachment actually contains data of type `A`, or [`Err`] with the original
+    /// reference if the types don't match.
     ///
     /// This method is most useful when going from a [`Dynamic`] to a concrete
     /// `A`.
     ///
     /// # Examples
+    /// TODO
     /// ```
     /// use rootcause::{
     ///     markers::Dynamic,
@@ -371,7 +423,7 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
     /// assert!(wrong_ref.is_none());
     /// ```
     #[must_use]
-    pub fn downcast_attachment<A>(self) -> Option<ReportAttachmentRef<'a, A>>
+    pub fn downcast_attachment<A>(self) -> Result<ReportAttachmentMut<'a, A>, Self>
     where
         A: Sized + 'static,
     {
@@ -379,10 +431,9 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
             // SAFETY:
             // 1. We just checked that the types match
             let attachment = unsafe { self.downcast_attachment_unchecked() };
-
-            Some(attachment)
+            Ok(attachment)
         } else {
-            None
+            Err(self)
         }
     }
 
@@ -399,7 +450,7 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
     /// 1. The inner attachment is actually of type `A`. This can be verified by
     ///    calling [`inner_type_id()`] first.
     ///
-    /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
+    /// [`inner_type_id()`]: ReportAttachmentMut::inner_type_id
     ///
     /// # Examples
     /// ```
@@ -418,16 +469,16 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
     ///     unsafe { attachment_ref.downcast_attachment_unchecked() };
     /// ```
     #[must_use]
-    pub unsafe fn downcast_attachment_unchecked<A>(self) -> ReportAttachmentRef<'a, A>
+    pub unsafe fn downcast_attachment_unchecked<A>(self) -> ReportAttachmentMut<'a, A>
     where
         A: Sized + 'static,
     {
-        let raw = self.as_raw_ref();
+        let raw = self.into_raw_mut();
 
         // SAFETY:
         // 1. `A` is bounded by `Sized` in the function signature, so this is satisfied.
         // 2. Guaranteed by the caller
-        unsafe { ReportAttachmentRef::from_raw(raw) }
+        unsafe { ReportAttachmentMut::from_raw(raw) }
     }
 
     /// Attempts to downcast the inner attachment data to a reference of type
@@ -462,11 +513,11 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
     ///
     /// [`downcast_attachment`]: Self::downcast_attachment
     #[must_use]
-    pub fn downcast_inner<A>(self) -> Option<&'a A>
+    pub fn downcast_inner<A>(&self) -> Option<&A>
     where
         A: Sized + 'static,
     {
-        Some(self.downcast_attachment()?.inner())
+        self.as_ref().downcast_inner()
     }
 
     /// Performs an unchecked downcast of the inner attachment data to a
@@ -498,36 +549,71 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
     /// assert_eq!(*data, "text data");
     /// ```
     #[must_use]
-    pub unsafe fn downcast_inner_unchecked<A>(self) -> &'a A
+    pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
     where
         A: Sized + 'static,
     {
-        let raw = self.as_raw_ref();
-
+        let ref_ = self.as_ref();
         // SAFETY:
         // 1. Guaranteed by the caller
-        unsafe { raw.attachment_downcast_unchecked() }
+        unsafe { ref_.downcast_inner_unchecked() }
+    }
+
+    /// TODO
+    #[must_use]
+    pub fn downcast_inner_mut<A>(&mut self) -> Option<&mut A>
+    where
+        A: Sized + 'static,
+    {
+        if TypeId::of::<A>() == self.inner_type_id() {
+            // SAFETY:
+            // 1. We just checked that the types match
+            let attachment = unsafe { self.downcast_inner_mut_unchecked() };
+            Some(attachment)
+        } else {
+            None
+        }
+    }
+
+    /// TODO
+    ///
+    /// #Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A`. This can be verified by
+    ///    calling [`inner_type_id()`] first.
+    #[must_use]
+    pub unsafe fn downcast_inner_mut_unchecked<A>(&mut self) -> &mut A
+    where
+        A: Sized + 'static,
+    {
+        let raw = self.as_raw_mut();
+
+        // SAFETY:
+        // 1. Ensured by the caller.
+        unsafe { raw.into_attachment_downcast_unchecked() }
     }
 }
 
-impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentRef<'a, A> {
+impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentMut<'a, A> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
+        let report: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
         crate::hooks::attachment_formatter::display_attachment(report, None, formatter)
     }
 }
 
-impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentRef<'a, A> {
+impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentMut<'a, A> {
     fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
+        let report: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
         crate::hooks::attachment_formatter::debug_attachment(report, None, formatter)
     }
 }
 
-impl<'a, A: ?Sized> Unpin for ReportAttachmentRef<'a, A> {}
+impl<'a, A: ?Sized> Unpin for ReportAttachmentMut<'a, A> {}
 
-impl<'a, A: Sized> From<ReportAttachmentRef<'a, A>> for ReportAttachmentRef<'a, Dynamic> {
-    fn from(value: ReportAttachmentRef<'a, A>) -> Self {
+impl<'a, A: Sized> From<ReportAttachmentMut<'a, A>> for ReportAttachmentMut<'a, Dynamic> {
+    fn from(value: ReportAttachmentMut<'a, A>) -> Self {
         value.into_dynamic()
     }
 }
@@ -543,26 +629,26 @@ mod tests {
     static_assertions::assert_not_impl_any!(NonSend: Send, Sync);
 
     #[test]
-    fn test_attachment_ref_send_sync() {
-        static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, ()>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, String>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, NonSend>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportAttachmentRef<'static, Dynamic>: Send, Sync);
+    fn report_attachment_mut_is_never_send_sync() {
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, ()>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, String>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, NonSend>: Send, Sync);
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, Dynamic>: Send, Sync);
     }
 
     #[test]
-    fn test_attachment_ref_unpin() {
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, ()>: Unpin);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, String>: Unpin);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, NonSend>: Unpin);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, Dynamic>: Unpin);
+    fn report_attachment_mut_is_always_unpin() {
+        static_assertions::assert_impl_all!(ReportAttachmentMut<'static, ()>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentMut<'static, String>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentMut<'static, NonSend>: Unpin);
+        static_assertions::assert_impl_all!(ReportAttachmentMut<'static, Dynamic>: Unpin);
     }
 
     #[test]
-    fn test_attachment_ref_copy_clone() {
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, ()>: Copy, Clone);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, String>: Copy, Clone);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, NonSend>: Copy, Clone);
-        static_assertions::assert_impl_all!(ReportAttachmentRef<'static, Dynamic>: Copy, Clone);
+    fn test_report_mut_is_never_copy_clone() {
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, ()>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, String>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, NonSend>: Copy, Clone);
+        static_assertions::assert_not_impl_any!(ReportAttachmentMut<'static, Dynamic>: Copy, Clone);
     }
 }
