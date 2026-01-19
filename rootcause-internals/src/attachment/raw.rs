@@ -88,21 +88,16 @@ impl RawAttachment {
     /// Returns a reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_ref(&self) -> RawAttachmentRef<'_> {
-        RawAttachmentRef {
-            // Safety???
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        //
+        // 1. Upheld by invariant `self`
+        unsafe { RawAttachmentRef::new(self.ptr) }
     }
 
     /// Returns a mutable reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_mut(&mut self) -> RawAttachmentMut<'_> {
-        RawAttachmentMut {
-            // Safety???
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        RawAttachmentMut::new(self.ptr)
     }
 }
 
@@ -157,6 +152,23 @@ pub struct RawAttachmentRef<'a> {
 }
 
 impl<'a> RawAttachmentRef<'a> {
+    /// Creates a new [`RawAttachmentRef`] from a pointer
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. That `ptr` has been created from a `Box<AttacnmentData<A>>`.
+    ///
+    pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
+        RawAttachmentRef {
+            // SAFETY:
+            // 1. Guaranteed by caller
+            ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
     /// Casts the [`RawAttachmentRef`] to an [`AttachmentData<A>`] reference.
     ///
     /// # Safety
