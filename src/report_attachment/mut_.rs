@@ -19,7 +19,14 @@ mod limit_field_access {
 
     use crate::markers::Dynamic;
 
-    /// TODO see [`ReportMut`](crate::report::mut_::ReportMut)
+    /// A mutable reference to a [`ReportAttachment`], enabling mutation of the underlying attachment.
+    ///
+    /// # Examples
+    /// ```
+    /// todo!()
+    /// ```
+    ///
+    /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
     #[repr(transparent)]
     pub struct ReportAttachmentMut<'a, A: ?Sized + 'static = Dynamic> {
         /// # Safety
@@ -162,9 +169,21 @@ impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
 }
 
 impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
-    /// Changes the context type of the [`ReportAttachmentMut`] to [`Dynamic`].
+    /// Changes the attachment type of the [`ReportAttachmentMut`] to [`Dynamic`].
     ///
-    /// TODO
+    /// Calling this method is equivalent to calling `attachment.into()`, however
+    /// this method has been restricted to only change the attachment to
+    /// [`Dynamic`].
+    ///
+    /// This method can be useful to help with type inference or to improve code
+    /// readability, as it more clearly communicates intent.
+    ///
+    /// This method does not actually modify the attachment in any way. It only has
+    /// the effect of "forgetting" that the context actually has the
+    /// type `A`.
+    ///
+    /// To get back the report with a concrete `A` you can use the method
+    /// [`ReportMut::downcast_report`].
     #[must_use]
     pub fn into_dynamic(self) -> ReportAttachmentMut<'a, Dynamic> {
         let raw = self.into_raw_mut();
@@ -178,7 +197,12 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         }
     }
 
-    /// TODO
+    /// Returns an immutable reference to the attachment.
+    ///
+    /// # Examples
+    /// ```
+    /// todo!()
+    /// ```
     #[must_use]
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         let raw = self.as_raw_ref();
@@ -189,7 +213,13 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         unsafe { ReportAttachmentRef::<A>::from_raw(raw) }
     }
 
-    /// TODO
+    /// Consumes the [`ReportAttachmentMut`] and returns a [`ReportAttachmentRef`] with same
+    /// lifetime.
+    ///
+    /// # Examples
+    /// ```
+    /// todo!()
+    /// ```
     #[must_use]
     pub fn into_ref(self) -> ReportAttachmentRef<'a, A> {
         let raw = self.into_raw_mut();
