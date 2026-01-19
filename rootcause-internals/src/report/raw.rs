@@ -128,11 +128,10 @@ impl RawReport {
     ///    [`triomphe::Arc`] must be `1`.
     #[inline]
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
-        RawReportMut {
-            // Safety???
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        // 2. Upheld by mutable borrow on `self`
+        unsafe { RawReportMut::new(self.ptr) }
     }
 }
 

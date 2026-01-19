@@ -307,6 +307,26 @@ pub struct RawAttachmentMut<'a> {
 }
 
 impl<'a> RawAttachmentMut<'a> {
+    /// Create a new [`RawAttachmentMut`] directly from a pointer
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. `ptr` must have been created from a `Box<AttachmentData<A>>`
+    ///    for some `A` using `Box::into_raw`.
+    /// 2. This pointer represents exclusive mutable access to the `AttachmentData`.
+    pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
+        RawAttachmentMut {
+            // SAFETY:
+            // 1. Guaranteed by caller
+            // 2. N/A
+            // 3. Guaranteed by caller
+            ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
     /// Casts the [`RawAttachmentMut`] to an [`AttachmentData<A>`] mutable reference.
     ///
     /// # Safety
@@ -337,31 +357,27 @@ impl<'a> RawAttachmentMut<'a> {
     /// lifetime.
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawAttachmentMut<'b> {
-        RawAttachmentMut {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by `self`
+        // 2. Guaranteed by mutable borrow of `self`
+        unsafe { RawAttachmentMut::new(self.ptr) }
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
-        RawAttachmentRef {
-            // Safety???
-            ptr: self.ptr,
-            _marker: PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by `self`
+        unsafe { RawAttachmentRef::new(self.ptr) }
     }
 
     /// Consumes the mutable reference and returns an immutable one with the
     /// same lifetime.
     #[inline]
     pub fn into_ref(self) -> RawAttachmentRef<'a> {
-        RawAttachmentRef {
-            // Safety???
-            ptr: self.ptr,
-            _marker: PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by `self`
+        unsafe { RawAttachmentRef::new(self.ptr) }
     }
 }
 
