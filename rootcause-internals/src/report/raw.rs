@@ -111,10 +111,9 @@ impl RawReport {
     /// Returns a reference to the [`ReportData`] instance.
     #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
-        RawReportRef {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        unsafe { RawReportRef::new(self.ptr) }
     }
 
     /// Returns a mutable reference to the [`ReportData`] instance.

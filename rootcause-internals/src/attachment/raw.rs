@@ -23,7 +23,7 @@
 //! attachments.
 
 use alloc::boxed::Box;
-use core::{any::TypeId, marker::PhantomData, ptr::NonNull};
+use core::{any::TypeId, ptr::NonNull};
 
 use crate::{
     attachment::data::AttachmentData,
@@ -82,7 +82,13 @@ impl RawAttachment {
             NonNull::new_unchecked(ptr)
         };
 
-        Self { ptr }
+        Self {
+            // SAFETY:
+            // 1. See above
+            // 2. N/A
+            // 3. N/A
+            ptr,
+        }
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
@@ -97,7 +103,9 @@ impl RawAttachment {
     /// Returns a mutable reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_mut(&mut self) -> RawAttachmentMut<'_> {
-        RawAttachmentMut::new(self.ptr)
+        // SAFETY:
+        // 1. Upheld by invariant on `self`
+        unsafe { RawAttachmentMut::new(self.ptr) }
     }
 }
 
