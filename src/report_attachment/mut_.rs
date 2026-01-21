@@ -195,7 +195,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// type `A`.
     ///
     /// To get back the report with a concrete `A` you can use the method
-    /// [`ReportMut::downcast_report`].
+    /// [`ReportAttachmentMut::downcast_attachment`].
     #[must_use]
     pub fn into_dynamic(self) -> ReportAttachmentMut<'a, Dynamic> {
         let raw = self.into_raw_mut();
@@ -451,7 +451,6 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// let typed_ref: Result<ReportAttachmentMut<i32>, _> = attachment_mut.downcast_attachment();
     /// assert!(typed_ref.is_ok());
     /// ```
-    #[must_use]
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachmentMut<'a, A>, Self>
     where
         A: Sized + 'static,

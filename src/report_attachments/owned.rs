@@ -378,6 +378,7 @@ impl<T> ReportAttachments<T> {
     /// }
     /// ```
     ///
+    /// [`ReportAttachmentMut`]: crate::report_attachment::ReportAttachmentMut
     /// [`into_iter()`]: Self::into_iter
     /// [`iter()`]: Self::iter
     pub fn iter_mut(&mut self) -> ReportAttachmentsIterMut<'_> {
