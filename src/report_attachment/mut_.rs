@@ -1,6 +1,6 @@
+use alloc::fmt;
 use core::any::TypeId;
 
-use alloc::fmt;
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
 use crate::{
@@ -19,7 +19,8 @@ mod limit_field_access {
 
     use crate::markers::Dynamic;
 
-    /// A mutable reference to a [`ReportAttachment`], enabling mutation of the underlying attachment.
+    /// A mutable reference to a [`ReportAttachment`], enabling mutation of the
+    /// underlying attachment.
     ///
     /// # Examples
     /// ```
@@ -43,7 +44,9 @@ mod limit_field_access {
         /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentMut`] must be of type `A`.
-        /// 3. This reference represents exclusive mutable access to the underlying [`AttachmentData`](rootcause_internals::attachment::data::AttachmentData).
+        /// 3. This reference represents exclusive mutable access to the
+        ///    underlying
+        ///    [`AttachmentData`](rootcause_internals::attachment::data::AttachmentData).
         raw: RawAttachmentMut<'a>,
         _attachment: PhantomData<&'a mut A>,
     }
@@ -76,7 +79,8 @@ mod limit_field_access {
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameter does not change.
             // 2. Upheld as the type parameter does not change.
-            // 3. Upheld since `self` is borrowed as shared and no mutable access can happen through the reference.
+            // 3. Upheld since `self` is borrowed as shared and no mutable access can happen
+            //    through the reference.
             let raw: &RawAttachmentMut<'_> = &self.raw;
 
             raw.as_ref()
@@ -95,7 +99,8 @@ mod limit_field_access {
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameter does not change.
             // 2. Upheld as the type parameter does not change.
-            // 3. Upheld since `self` is borrowed mutably transfers exclusive access by futher mutable borrow.
+            // 3. Upheld since `self` is borrowed mutably transfers exclusive access by
+            //    futher mutable borrow.
             let raw = &mut self.raw;
 
             raw.reborrow()
@@ -155,9 +160,9 @@ impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
     ///
     /// let mut attachment: ReportAttachment<i32> = ReportAttachment::new(40i32);
     /// {
-    ///   let attachment_mut: ReportAttachmentMut<'_, i32> = attachment.as_mut();
-    ///   let number: &mut i32 = attachment_mut.into_inner_mut();
-    ///   *number += 2;
+    ///     let attachment_mut: ReportAttachmentMut<'_, i32> = attachment.as_mut();
+    ///     let number: &mut i32 = attachment_mut.into_inner_mut();
+    ///     *number += 2;
     /// }
     ///
     /// assert_eq!(attachment.as_ref().inner(), &42i32);
@@ -175,17 +180,18 @@ impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
 }
 
 impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
-    /// Changes the attachment type of the [`ReportAttachmentMut`] to [`Dynamic`].
-    ///
-    /// Calling this method is equivalent to calling `attachment.into()`, however
-    /// this method has been restricted to only change the attachment to
+    /// Changes the attachment type of the [`ReportAttachmentMut`] to
     /// [`Dynamic`].
+    ///
+    /// Calling this method is equivalent to calling `attachment.into()`,
+    /// however this method has been restricted to only change the
+    /// attachment to [`Dynamic`].
     ///
     /// This method can be useful to help with type inference or to improve code
     /// readability, as it more clearly communicates intent.
     ///
-    /// This method does not actually modify the attachment in any way. It only has
-    /// the effect of "forgetting" that the context actually has the
+    /// This method does not actually modify the attachment in any way. It only
+    /// has the effect of "forgetting" that the context actually has the
     /// type `A`.
     ///
     /// To get back the report with a concrete `A` you can use the method
@@ -214,8 +220,8 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         unsafe { ReportAttachmentRef::<A>::from_raw(raw) }
     }
 
-    /// Consumes the [`ReportAttachmentMut`] and returns a [`ReportAttachmentRef`] with same
-    /// lifetime.
+    /// Consumes the [`ReportAttachmentMut`] and returns a
+    /// [`ReportAttachmentRef`] with same lifetime.
     #[must_use]
     pub fn into_ref(self) -> ReportAttachmentRef<'a, A> {
         let raw = self.into_raw_mut();
@@ -228,8 +234,8 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         unsafe { ReportAttachmentRef::<A>::from_raw(raw) }
     }
 
-    /// Reborrows the [`ReportAttachmentMut`] to return a new [`ReportAttachmentMut`] with a shorter
-    /// lifetime.
+    /// Reborrows the [`ReportAttachmentMut`] to return a new
+    /// [`ReportAttachmentMut`] with a shorter lifetime.
     #[must_use]
     pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
         let raw = self.as_raw_mut();
@@ -417,8 +423,8 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// Attempts to downcast the attachment reference to a different type `A`.
     ///
     /// This method performs a safe type cast, returning [`Ok`] if the
-    /// attachment actually contains data of type `A`, or [`Err`] with the original
-    /// reference if the types don't match.
+    /// attachment actually contains data of type `A`, or [`Err`] with the
+    /// original reference if the types don't match.
     ///
     /// This method is most useful when going from a [`Dynamic`] to a concrete
     /// `A`.
@@ -435,7 +441,8 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// let attachment_mut: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
     ///
     /// // Try to downcast to an incorrect type
-    /// let wrong_ref: Result<ReportAttachmentMut<'_, String>, _> = attachment_mut.downcast_attachment();
+    /// let wrong_ref: Result<ReportAttachmentMut<'_, String>, _> =
+    ///     attachment_mut.downcast_attachment();
     /// assert!(wrong_ref.is_err());
     ///
     /// let attachment_mut = wrong_ref.unwrap_err();
@@ -555,7 +562,8 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// #     report_attachment::{ReportAttachment, ReportAttachmentMut},
     /// # };
     ///
-    /// let mut attachment: ReportAttachment<Dynamic> = ReportAttachment::new_sendsync(42).into_dynamic();
+    /// let mut attachment: ReportAttachment<Dynamic> =
+    ///     ReportAttachment::new_sendsync(42).into_dynamic();
     /// let mut attachment_mut: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
     ///
     /// // Try to downcast to the correct type

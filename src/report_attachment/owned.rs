@@ -108,7 +108,8 @@ mod limit_field_access {
             raw.as_ref()
         }
 
-        /// Creates a lifetime-bound [`RawAttachmentMut`] from the inner [`RawAttachment`]
+        /// Creates a lifetime-bound [`RawAttachmentMut`] from the inner
+        /// [`RawAttachment`]
         #[must_use]
         pub(crate) fn as_raw_mut(&mut self) -> RawAttachmentMut<'_> {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -364,8 +365,8 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
 
     /// Creates a new attachment, with the inner attachment data preformatted.
     ///
-    /// This can be useful, as the preformatted attachment is a newly allocated object
-    /// and additionally is [`Send`]+[`Sync`].
+    /// This can be useful, as the preformatted attachment is a newly allocated
+    /// object and additionally is [`Send`]+[`Sync`].
     ///
     /// See [`PreformattedAttachment`] for more information.
     ///
@@ -373,7 +374,8 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     #[must_use]
     #[track_caller]
     pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
-        // For implementation reasons, the actual formatting works on ReportAttachmentRef
+        // For implementation reasons, the actual formatting works on
+        // ReportAttachmentRef
         self.as_ref().preformat()
     }
 }

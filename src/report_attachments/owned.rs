@@ -357,6 +357,7 @@ impl<T> ReportAttachments<T> {
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
         ReportAttachmentsIter::from_raw(self.as_raw().iter())
     }
+
     /// Returns an iterator over references to the attachments in the
     /// collection.
     ///
@@ -383,8 +384,9 @@ impl<T> ReportAttachments<T> {
         // SAFETY:
         //
         // 1. Mutation of the collection is not possible through the iterator.
-        // 2. Mutation of the individual attachments are only possible in a type-preserving manner,
-        //    meaning it is not possible to alter any of the attachments to be non-`Send + Sync`
+        // 2. Mutation of the individual attachments are only possible in a
+        //    type-preserving manner, meaning it is not possible to alter any of the
+        //    attachments to be non-`Send + Sync`
         let raw = unsafe {
             // @add-unsafe-context: ???
             self.as_raw_mut()

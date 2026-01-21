@@ -167,7 +167,6 @@ impl<'a> RawAttachmentRef<'a> {
     /// The caller must ensure:
     ///
     /// 1. That `ptr` has been created from a `Box<AttacnmentData<A>>`.
-    ///
     pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
         RawAttachmentRef {
             // SAFETY:
@@ -285,9 +284,10 @@ impl<'a> RawAttachmentRef<'a> {
     }
 }
 
-/// A mutable lifetime-bound pointer to an [`AttachmentData`] that is guaranteed to
-/// be the sole mutable(?) pointer to an initialized instance of an [`AttachmentData<A>`] for some
-/// specific `A`, though we do not know which actual `A` it is.
+/// A mutable lifetime-bound pointer to an [`AttachmentData`] that is guaranteed
+/// to be the sole mutable(?) pointer to an initialized instance of an
+/// [`AttachmentData<A>`] for some specific `A`, though we do not know which
+/// actual `A` it is.
 ///
 /// We cannot use a [`&'a mut AttachmentData<A>`] directly, because that would
 /// require us to know the actual type of the attachment, which we do not.
@@ -306,7 +306,8 @@ pub struct RawAttachmentMut<'a> {
     ///    for some `A` using `Box::into_raw`.
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
-    /// 3. This pointer represents exclusive mutable access to the `AttachmentData`.
+    /// 3. This pointer represents exclusive mutable access to the
+    ///    `AttachmentData`.
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -321,9 +322,10 @@ impl<'a> RawAttachmentMut<'a> {
     ///
     /// The caller must ensure:
     ///
-    /// 1. `ptr` must have been created from a `Box<AttachmentData<A>>`
-    ///    for some `A` using `Box::into_raw`.
-    /// 2. This pointer represents exclusive mutable access to the `AttachmentData`.
+    /// 1. `ptr` must have been created from a `Box<AttachmentData<A>>` for some
+    ///    `A` using `Box::into_raw`.
+    /// 2. This pointer represents exclusive mutable access to the
+    ///    `AttachmentData`.
     pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
         RawAttachmentMut {
             // SAFETY:
@@ -335,7 +337,8 @@ impl<'a> RawAttachmentMut<'a> {
         }
     }
 
-    /// Casts the [`RawAttachmentMut`] to an [`AttachmentData<A>`] mutable reference.
+    /// Casts the [`RawAttachmentMut`] to an [`AttachmentData<A>`] mutable
+    /// reference.
     ///
     /// # Safety
     ///
@@ -349,11 +352,13 @@ impl<'a> RawAttachmentMut<'a> {
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<A>());
 
         let mut this = self.ptr.cast::<AttachmentData<A>>();
-        // SAFETY: Converting the NonNull pointer to a mutable reference is sound because:
+        // SAFETY: Converting the NonNull pointer to a mutable reference is sound
+        // because:
         // - The pointer is non-null, properly aligned, and dereferenceable (guaranteed
         //   by RawAttachmentMut's type invariants)
         // - The pointee is properly initialized (RawAttachmentMut's doc comment
-        //   guarantees it is the exclusive pointer to an initialized AttachmentData<A> for some A)
+        //   guarantees it is the exclusive pointer to an initialized AttachmentData<A>
+        //   for some A)
         // - The type `A` matches the actual attachment type (guaranteed by caller)
         // - Shared access is NOT allowed
         // - The reference lifetime 'a is valid (tied to RawAttachmentMut<'a>'s

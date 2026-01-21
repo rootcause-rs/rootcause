@@ -197,8 +197,8 @@ impl<'a> RawReportRef<'a> {
     ///
     /// The caller must ensure:
     ///
-    /// 1. That `ptr` has been created from a `triomphe::Arc<ReportData<C>>`
-    ///    for some `C` using  `triomphe::Arc::into_raw`.
+    /// 1. That `ptr` has been created from a `triomphe::Arc<ReportData<C>>` for
+    ///    some `C` using  `triomphe::Arc::into_raw`.
     pub(super) unsafe fn new(ptr: NonNull<ReportData<Erased>>) -> Self {
         RawReportRef {
             ptr,
@@ -400,9 +400,8 @@ impl<'a> RawReportMut<'a> {
     ///
     /// The caller must ensure:
     ///
-    /// 1. That `ptr` was created from rom a
-    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
-    ///    `triomphe::Arc::into_raw`.
+    /// 1. That `ptr` was created from rom a `triomphe::Arc<ReportData<C>>` for
+    ///    some `C` using `triomphe::Arc::into_raw`.
     /// 2. That `ptr` is valid as a mutable reference.
     pub(super) unsafe fn new(ptr: NonNull<ReportData<Erased>>) -> Self {
         RawReportMut {
