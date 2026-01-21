@@ -362,10 +362,9 @@ impl<T> ReportAttachments<T> {
     ///
     /// The iterator yields [`ReportAttachmentMut`] items, which provide
     /// non-owning mutable access to the attachments. For owning iteration, use
-    /// [`into_iter()`] instead.
+    /// [`into_iter()`] instead. For pure reference iteration, see [`iter()`].
     ///
     /// # Examples
-    /// TODO
     /// ```
     /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
     ///
@@ -373,12 +372,13 @@ impl<T> ReportAttachments<T> {
     /// attachments.push(ReportAttachment::new("first").into_dynamic());
     /// attachments.push(ReportAttachment::new("second").into_dynamic());
     ///
-    /// for attachment in attachments.iter() {
+    /// for attachment in attachments.iter_mut() {
     ///     println!("Attachment type: {:?}", attachment.inner_type_id());
     /// }
     /// ```
     ///
     /// [`into_iter()`]: Self::into_iter
+    /// [`iter()`]: Self::iter
     pub fn iter_mut(&mut self) -> ReportAttachmentsIterMut<'_> {
         // SAFETY:
         //

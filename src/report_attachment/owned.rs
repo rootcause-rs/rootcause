@@ -367,11 +367,13 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// This can be useful, as the preformatted attachment is a newly allocated object
     /// and additionally is [`Send`]+[`Sync`].
     ///
-    /// # Examples
+    /// See [`PreformattedAttachment`] for more information.
     ///
-    /// TODO
+    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
     #[must_use]
+    #[track_caller]
     pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
+        // For implementation reasons, the actual formatting works on ReportAttachmentRef
         self.as_ref().preformat()
     }
 }

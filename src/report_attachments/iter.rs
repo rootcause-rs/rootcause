@@ -96,18 +96,21 @@ impl<'a> FusedIterator for ReportAttachmentsIter<'a> {}
 /// [`ReportAttachments::iter_mut`]: crate::report_attachments::ReportAttachments::iter_mut
 ///
 /// # Examples
-/// TODO
 /// ```
 /// use rootcause::{
 ///     report_attachment::ReportAttachment,
-///     report_attachments::{ReportAttachments, ReportAttachmentsIter},
+///     report_attachments::{ReportAttachments, ReportAttachmentsIterMut},
 /// };
 ///
 /// let mut attachments = ReportAttachments::new_sendsync();
-/// attachments.push(ReportAttachment::new("debug info").into_dynamic());
-/// attachments.push(ReportAttachment::new(42).into_dynamic());
+/// attachments.push(ReportAttachment::new(41i32).into_dynamic());
+/// attachments.push(ReportAttachment::new(41i32).into_dynamic());
 ///
-/// let iterator: ReportAttachmentsIter<'_> = attachments.iter();
+/// for mut attachment in attachments.iter_mut() {
+///     if let Some(num) = attachment.downcast_inner_mut::<i32>() {
+///         *num += 1;
+///     }
+/// }
 /// ```
 #[must_use]
 pub struct ReportAttachmentsIterMut<'a> {

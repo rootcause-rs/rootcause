@@ -332,6 +332,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     }
 
     /// See [`crate::report_attachment::owned::ReportAttachment::preformat`]
+    #[track_caller]
     #[must_use]
     pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
         ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
