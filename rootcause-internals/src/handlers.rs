@@ -443,9 +443,11 @@ pub trait AttachmentHandler<A>: 'static {
 pub struct ContextFormattingStyle {
     /// The preferred formatting function to use
     pub function: FormattingFunction,
-    /// Whether to follow the source chain when formatting
+    /// Whether to follow the [`core::error::Error`] source chain when
+    /// formatting
     pub follow_source: bool,
-    /// The maximum depth to follow the source chain when formatting
+    /// The maximum depth to follow the [`core::error::Error`] source chain when
+    /// formatting. Setting to `None` means unlimited depth.
     pub follow_source_depth: Option<usize>,
 }
 
