@@ -262,7 +262,7 @@ checksum = "7a2d987857b319362043e95f5353c0535c1f58eec5336fdfcf626430af7def58"
 
 [[package]]
 name = "rootcause"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -283,7 +283,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-backtrace"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "backtrace",
  "regex",
@@ -293,7 +293,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-internals"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "static_assertions",
  "triomphe",
@@ -301,7 +301,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-tracing"
-version = "0.11.1"
+version = "0.12.0"
 dependencies = [
  "rootcause",
  "thiserror",

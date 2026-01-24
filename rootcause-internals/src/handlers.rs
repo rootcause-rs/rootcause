@@ -224,6 +224,8 @@ pub trait ContextHandler<C>: 'static {
     ///         // Use the same formatting as the report
     ///         ContextFormattingStyle {
     ///             function: report_formatting_function,
+    ///             follow_source: false,
+    ///             follow_source_depth: None,
     ///         }
     ///     }
     /// }
@@ -433,12 +435,20 @@ pub trait AttachmentHandler<A>: 'static {
 /// // Explicitly request debug formatting
 /// let debug_style = ContextFormattingStyle {
 ///     function: FormattingFunction::Debug,
+///     follow_source: false,
+///     follow_source_depth: None,
 /// };
 /// ```
 #[derive(Copy, Clone, Debug, Default)]
 pub struct ContextFormattingStyle {
     /// The preferred formatting function to use
     pub function: FormattingFunction,
+    /// Whether to follow the [`core::error::Error`] source chain when
+    /// formatting
+    pub follow_source: bool,
+    /// The maximum depth to follow the [`core::error::Error`] source chain when
+    /// formatting. Setting to `None` means unlimited depth.
+    pub follow_source_depth: Option<usize>,
 }
 
 /// Formatting preferences for an attachment when displayed in a report.

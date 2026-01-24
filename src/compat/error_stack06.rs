@@ -199,6 +199,8 @@ where
     ) -> ContextFormattingStyle {
         ContextFormattingStyle {
             function: formatting_function,
+            follow_source: false,
+            follow_source_depth: None,
         }
     }
 }
