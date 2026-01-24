@@ -1,4 +1,5 @@
 #![deny(
+    elided_lifetimes_in_paths,
     missing_docs,
     unsafe_code,
     rustdoc::invalid_rust_codeblocks,

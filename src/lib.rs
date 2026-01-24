@@ -1,6 +1,7 @@
 #![cfg_attr(not(doc), no_std)]
 #![deny(
     missing_docs,
+    elided_lifetimes_in_paths,
     clippy::alloc_instead_of_core,
     clippy::std_instead_of_alloc,
     clippy::std_instead_of_core,
@@ -413,7 +414,7 @@ pub type Result<T, C = markers::Dynamic> = core::result::Result<T, Report<C>>;
 #[doc(hidden)]
 pub mod __private {
     // Used by the rootcause-backtrace
-    pub const ROOTCAUSE_LOCATION: &core::panic::Location = core::panic::Location::caller();
+    pub const ROOTCAUSE_LOCATION: &core::panic::Location<'_> = core::panic::Location::caller();
 
     use alloc::fmt;
     #[doc(hidden)]
