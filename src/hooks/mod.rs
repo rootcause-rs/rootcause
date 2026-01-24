@@ -6,7 +6,7 @@
 //!
 //! # Quick Start
 //!
-//! ```rust
+//! ```
 //! use rootcause::hooks::Hooks;
 //!
 //! // Automatically attach request IDs to all errors
@@ -112,7 +112,7 @@ use self::{
 /// # Examples
 ///
 /// Simple attachment collection:
-/// ```rust
+/// ```
 /// use rootcause::hooks::Hooks;
 ///
 /// // Automatically attach process ID to all errors
@@ -123,7 +123,7 @@ use self::{
 /// ```
 ///
 /// Combining multiple hooks:
-/// ```rust
+/// ```
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
@@ -206,6 +206,16 @@ pub(crate) struct HookData {
 ///
 /// Contains the hooks that were attempted to be installed, allowing you to
 /// recover them if needed.
+///
+/// # Examples
+///
+/// ```should_panic
+/// use rootcause::hooks::Hooks;
+///
+/// Hooks::new().install().unwrap();
+/// // Second install fails
+/// Hooks::new().install().unwrap();
+/// ```
 pub struct HooksAlreadyInstalledError(pub Hooks);
 
 impl core::fmt::Debug for HooksAlreadyInstalledError {
@@ -234,7 +244,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::Hooks;
     ///
     /// let hooks = Hooks::new().attachment_collector(|| std::process::id());
@@ -261,7 +271,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::Hooks;
     ///
     /// let hooks = Hooks::new_without_locations().attachment_collector(|| "custom data".to_string());
@@ -292,7 +302,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::{hooks::Hooks, prelude::*};
     ///
     /// let hooks = Hooks::new()
@@ -324,7 +334,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::{
     ///     ReportMut,
     ///     hooks::Hooks,
@@ -364,7 +374,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::{
     ///     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
     ///     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
@@ -408,7 +418,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use std::fmt;
     ///
     /// use rootcause::{
@@ -449,7 +459,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
     ///
     /// // Use ASCII-only formatting
@@ -482,7 +492,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::Hooks;
     ///
     /// let hooks = Hooks::new().attachment_collector(|| "custom data".to_string());
@@ -543,7 +553,7 @@ impl Hooks {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::Hooks;
     ///
     /// let hooks = Hooks::new().attachment_collector(|| "first".to_string());
@@ -552,7 +562,7 @@ impl Hooks {
     /// // Replace with different hooks
     /// let hooks2 = Hooks::new().attachment_collector(|| "second".to_string());
     /// let previous = hooks2.replace();
-    /// # unsafe { previous.unwrap().reclaim(); } // Clean up as miri does not like memory leaks
+    /// # unsafe { previous.unwrap().reclaim(); } // Clean up as Miri does not like memory leaks
     /// ```
     pub fn replace(self) -> Option<HooksHandle> {
         self.leak().replace()
@@ -594,7 +604,7 @@ impl Hooks {
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause::hooks::Hooks;
 ///
 /// // Install initial hooks
@@ -607,7 +617,7 @@ impl Hooks {
 /// let old_hooks = Hooks::new().attachment_collector(|| "v2").replace();
 ///
 /// // Option 1: Drop and leak (typical case)
-/// # // We don't want to leak in the doctest, as miri will complain about a memory leak
+/// # // We don't want to leak in the doctest, as Miri will complain about a memory leak
 /// # let saved_old_hooks = old_hooks;
 /// # let old_hooks = ();
 /// let _ = old_hooks;
@@ -652,6 +662,21 @@ impl HooksHandle {
     /// Replaces the currently installed hooks with `self`.
     ///
     /// Returns the previously installed hooks, if any.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::hooks::Hooks;
+    ///
+    /// // Install first set of hooks, get back None (nothing was installed before)
+    /// let old_hooks = Hooks::new().replace();
+    /// assert!(old_hooks.is_none());
+    ///
+    /// // Install second set, get back the first set we installed
+    /// let old_hooks = Hooks::new().replace();
+    /// assert!(old_hooks.is_some());
+    /// # unsafe { old_hooks.unwrap().reclaim(); }
+    /// ```
     pub fn replace(self) -> Option<HooksHandle> {
         let Self { hook_data } = self;
 

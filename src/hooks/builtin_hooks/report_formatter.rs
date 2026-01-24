@@ -18,7 +18,7 @@
 //! This formatter is the one used by default when no other formatter is
 //! installed. It is also possible to explicitly install it:
 //!
-//! ```rust
+//! ```
 //! use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 //!
 //! // Use the default Unicode configuration (no colors)
@@ -80,7 +80,7 @@ use crate::{
 /// # Examples
 ///
 /// Basic usage with default formatting:
-/// ```rust
+/// ```
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
@@ -91,7 +91,7 @@ use crate::{
 /// ```
 ///
 /// Using Unicode with ANSI colors for enhanced visuals:
-/// ```rust
+/// ```
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
@@ -102,7 +102,7 @@ use crate::{
 /// ```
 ///
 /// Using ASCII-only formatting for compatibility:
-/// ```rust
+/// ```
 /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
 ///
 /// Hooks::new()
@@ -272,6 +272,18 @@ impl DefaultReportFormatter {
     /// Unicode characters or ANSI color codes, such as basic terminals, log
     /// files, or text-only outputs. Uses simple ASCII box-drawing
     /// alternatives like `|-`, `o`, and `--`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter};
+    ///
+    /// // Use ASCII-only formatting
+    /// Hooks::new()
+    ///     .report_formatter(DefaultReportFormatter::ASCII)
+    ///     .install()
+    ///     .ok();
+    /// ```
     pub const ASCII: Self = Self {
         report_header: "\n",
         report_line_prefix_always: "",
@@ -613,7 +625,7 @@ impl Default for DefaultReportFormatter {
 /// # Examples
 ///
 /// Creating line formatting with tree characters:
-/// ```rust
+/// ```
 /// use rootcause::hooks::builtin_hooks::report_formatter::LineFormatting;
 ///
 /// let formatting = LineFormatting::new("├─ ", "\n");
@@ -621,7 +633,7 @@ impl Default for DefaultReportFormatter {
 /// ```
 ///
 /// Creating line formatting with ANSI colors:
-/// ```rust
+/// ```
 /// use rootcause::hooks::builtin_hooks::report_formatter::LineFormatting;
 ///
 /// let formatting = LineFormatting::new("\x1b[31m● ", "\x1b[0m\n");
@@ -646,7 +658,7 @@ impl LineFormatting {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::builtin_hooks::report_formatter::LineFormatting;
     ///
     /// let formatting = LineFormatting::new("→ ", "\n");
@@ -665,7 +677,7 @@ impl LineFormatting {
 /// # Examples
 ///
 /// Creating formatting for a tree structure:
-/// ```rust
+/// ```
 /// use rootcause::hooks::builtin_hooks::report_formatter::ItemFormatting;
 ///
 /// let formatting = ItemFormatting::new(
@@ -704,7 +716,7 @@ impl ItemFormatting {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::builtin_hooks::report_formatter::ItemFormatting;
     ///
     /// let formatting = ItemFormatting::new(
@@ -739,7 +751,7 @@ impl ItemFormatting {
 /// # Examples
 ///
 /// Creating a node configuration with tree-like formatting:
-/// ```rust
+/// ```
 /// use rootcause::hooks::builtin_hooks::report_formatter::{ItemFormatting, NodeConfig};
 ///
 /// let config = NodeConfig::new(
@@ -777,7 +789,7 @@ impl NodeConfig {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::hooks::builtin_hooks::report_formatter::NodeConfig;
     ///
     /// let config = NodeConfig::new(

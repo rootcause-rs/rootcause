@@ -79,7 +79,7 @@
 //!
 //! # Examples
 //!
-//! ```rust
+//! ```
 //! use std::io;
 //!
 //! use rootcause::prelude::*;
@@ -113,7 +113,7 @@ pub use rootcause_internals::handlers::{
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use std::io;
 ///
 /// use rootcause::prelude::*;
@@ -161,7 +161,7 @@ where
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause::prelude::*;
 ///
 /// // String types use the Display handler
@@ -246,7 +246,7 @@ where
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use rootcause::prelude::*;
 ///
 /// #[derive(Debug)]
@@ -325,7 +325,7 @@ where
 ///
 /// # Example
 ///
-/// ```rust
+/// ```
 /// use rootcause::{handlers, prelude::*};
 ///
 /// struct Opaque {

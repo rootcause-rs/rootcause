@@ -3,9 +3,10 @@ use core::any::TypeId;
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
-    Report, ReportIter, ReportRef,
-    markers::{Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
+    Report, ReportIter, ReportRef, handlers,
+    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
+    report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
     util::format_helper,
@@ -370,6 +371,57 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         self.as_mut().into_attachments_mut()
     }
 
+    /// Adds a new attachment.
+    ///
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`ReportMut`] and returns it.
+    ///
+    /// If you want more direct control over the attachments, you can use the
+    /// [`ReportMut::attachments_mut`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let mut report: Report = report!("error message");
+    /// let mut report_mut = report.as_mut();
+    /// report_mut = report_mut.attach("additional info");
+    /// ```
+    #[must_use]
+    pub fn attach<A>(mut self, attachment: A) -> Self
+    where
+        A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+    {
+        self.attachments_mut()
+            .push(ReportAttachment::new(attachment).into_dynamic());
+        self
+    }
+
+    /// Adds a new attachment.
+    ///
+    /// This is a convenience method used for chaining method calls; it consumes
+    /// the [`Report`] and returns it.
+    ///
+    /// If you want more direct control over the attachments, you can use the
+    /// [`Report::attachments_mut`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// let mut report: Report = report!("error message");
+    /// let mut report_mut = report.as_mut();
+    /// report_mut = report_mut.attach_custom::<handlers::Display, _>("info");
+    /// ```
+    #[must_use]
+    pub fn attach_custom<H, A>(mut self, attachment: A) -> Self
+    where
+        A: markers::ObjectMarkerFor<T>,
+        H: handlers::AttachmentHandler<A>,
+    {
+        self.attachments_mut()
+            .push(ReportAttachment::new_custom::<H>(attachment).into_dynamic());
+        self
+    }
+
     /// Consumes the [`ReportMut`] and returns a mutable reference to the
     /// attachments with the same lifetime.
     ///
@@ -690,6 +742,27 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
         self.as_raw_ref().context_type_id()
+    }
+
+    /// Returns the [`core::any::type_name`] of the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportMut, markers::Dynamic};
+    /// # use core::any::TypeId;
+    /// # struct MyError;
+    /// # let mut report = report!(MyError);
+    /// let report_mut: ReportMut<'_, MyError> = report.as_mut();
+    /// let type_name = report_mut.current_context_type_name();
+    /// assert_eq!(type_name, core::any::type_name::<MyError>());
+    ///
+    /// let report_mut: ReportMut<'_, Dynamic> = report_mut.into_dynamic();
+    /// let type_name = report_mut.current_context_type_name();
+    /// assert_eq!(type_name, core::any::type_name::<MyError>());
+    /// ```
+    #[must_use]
+    pub fn current_context_type_name(&self) -> &'static str {
+        self.as_raw_ref().context_type_name()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.

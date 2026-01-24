@@ -12,12 +12,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added support for formatting the error sources for a context [#94](https://github.com/rootcause-rs/rootcause/pull/94).
   - This adds new fields to the `ContextFormattingStyle` and the `DefaultReportFormatter`.
 
+## [0.11.1] - 2026-01-03
+
+### Added
+
+- Added a `OptionExt` trait [#92](https://github.com/rootcause-rs/rootcause/pull/92)
+- Added a `rootcause::Result` type alias [#91](https://github.com/rootcause-rs/rootcause/pull/91)
+- Added methods to get the type name of contexts and attachments [#100](https://github.com/rootcause-rs/rootcause/pull/100)
+- Implements `Clone` for `Backtrace` and `Display` for `Location` [#100](https://github.com/rootcause-rs/rootcause/pull/100)
+- Added `ReportMut::attach` and `ReportMut::attach_custom` [#101](https://github.com/rootcause-rs/rootcause/pull/101)
+- Added a `rootcause-tracing` crate [#102](https://github.com/rootcause-rs/rootcause/pull/102)
+
+### Fixed
+
+- Added `#[track_caller]` to two functions that were missing them [#89](https://github.com/rootcause-rs/rootcause/pull/89)
+
 ## [0.11.0] - 2025-12-12
 
 ### Added
 
-- Add a compatibility module for boxed errors [#70](https://github.com/rootcause-rs/rootcause/pull/70)
-- Add a compatibility module for error-stack v0.5 [#75](https://github.com/rootcause-rs/rootcause/pull/75)
+- Added a compatibility module for boxed errors [#70](https://github.com/rootcause-rs/rootcause/pull/70)
+- Added a compatibility module for error-stack v0.5 [#75](https://github.com/rootcause-rs/rootcause/pull/75)
 - Added a `ReportConversion` trait along with `context_to`, `context_transform` and `context_transform_nested` methods [#83](https://github.com/rootcause-rs/rootcause/pull/83)
 
 ### Changed
@@ -156,7 +171,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[0.12.0]: https://github.com/rootcause-rs/rootcause/compare/v0.11.0...HEAD
+[0.12.0]: https://github.com/rootcause-rs/rootcause/compare/v0.11.1...HEAD
+[0.11.1]: https://github.com/rootcause-rs/rootcause/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/rootcause-rs/rootcause/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/rootcause-rs/rootcause/compare/v0.9.1...v0.10.0
 [0.9.1]: https://github.com/rootcause-rs/rootcause/compare/v0.9.0...v0.9.1

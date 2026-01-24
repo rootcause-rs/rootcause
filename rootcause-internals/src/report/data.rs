@@ -305,7 +305,7 @@ mod tests {
         // Test that fields are accessible in the expected order for type-erased access
         use core::mem::{offset_of, size_of};
 
-        fn check<T>() {
+        fn check<T: 'static>() {
             // Verify field order: vtable, children, attachments, context
             assert_eq!(offset_of!(ReportData<T>, vtable), 0);
             assert_eq!(

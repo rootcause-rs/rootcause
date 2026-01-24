@@ -509,7 +509,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct LibError;
@@ -561,7 +561,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct LibError;
@@ -624,7 +624,7 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::{preformatted::PreformattedContext, prelude::*};
     /// # #[derive(Debug)]
     /// struct MyError {
@@ -845,7 +845,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::{ReportConversion, markers::Mutable, prelude::*};
     /// # #[derive(Debug)]
     /// enum AppError { Parse }
@@ -1277,6 +1277,27 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     #[must_use]
     pub fn current_context_type_id(&self) -> TypeId {
         self.as_uncloneable_ref().current_context_type_id()
+    }
+
+    /// Returns the [`core::any::type_name`] of the current context.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, markers::Dynamic};
+    /// # use core::any::TypeId;
+    /// # struct MyError;
+    /// # let report = report!(MyError).into_cloneable();
+    /// let report: Report<MyError> = report!(MyError);
+    /// let type_name = report.current_context_type_name();
+    /// assert_eq!(type_name, core::any::type_name::<MyError>());
+    ///
+    /// let report: Report<Dynamic> = report.into_dynamic();
+    /// let type_name = report.current_context_type_name();
+    /// assert_eq!(type_name, core::any::type_name::<MyError>());
+    /// ```
+    #[must_use]
+    pub fn current_context_type_name(&self) -> &'static str {
+        self.as_uncloneable_ref().current_context_type_name()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.

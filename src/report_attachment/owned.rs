@@ -247,6 +247,12 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         self.as_raw_ref().attachment_type_id()
     }
 
+    /// Returns the [`core::any::type_name`] of the inner attachment.
+    #[must_use]
+    pub fn inner_type_name(&self) -> &'static str {
+        self.as_raw_ref().attachment_type_name()
+    }
+
     /// Returns the [`TypeId`] of the handler used when creating this
     /// attachment.
     #[must_use]

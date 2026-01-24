@@ -1,6 +1,7 @@
 #![cfg_attr(not(doc), no_std)]
 #![deny(
     missing_docs,
+    elided_lifetimes_in_paths,
     clippy::alloc_instead_of_core,
     clippy::std_instead_of_alloc,
     clippy::std_instead_of_core,
@@ -38,7 +39,7 @@
 //!
 //! ## Quick Example
 //!
-//! ```rust
+//! ```
 //! use rootcause::prelude::{Report, ResultExt};
 //!
 //! fn read_config(path: &str) -> Result<String, Report> {
@@ -116,7 +117,7 @@
 //!
 //! **Most common usage:**
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! // Just use Report - works like anyhow::Error
 //! fn might_fail() -> Result<(), Report> {
@@ -126,7 +127,7 @@
 //!
 //! **For type safety:**
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! #[derive(Debug)]
 //! struct MyError;
@@ -174,7 +175,7 @@
 //!
 //! [`Dynamic`]: crate::markers::Dynamic
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! // Can return any error type
 //! fn might_fail() -> Result<(), Report> {
@@ -187,7 +188,7 @@
 //! The root error must be `YourErrorType`, but child errors can be anything.
 //! Callers can use `.current_context()` to pattern match on the typed error.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! #[derive(Debug)]
 //! struct ConfigError {/* ... */}
@@ -221,7 +222,7 @@
 //! `Arc`), but the top-level [`Report`] doesn't implement `Clone`. Start here,
 //! then convert to [`Cloneable`] if you need to clone the entire tree.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! let mut report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let report = report.attach("debug info"); // ✅ Can mutate root
@@ -233,7 +234,7 @@
 //! The [`Report`] can be cloned cheaply (via `Arc`), but can't be mutated. Use
 //! when you need to pass the same error to multiple places.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable> = report!("error".to_string());
 //! let cloneable = report.into_cloneable();
@@ -257,7 +258,7 @@
 //! The [`Report`] and all its contents are `Send + Sync`. Most types (String,
 //! Vec, primitives) are already `Send + Sync`, so this just works.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! let report: Report<String, markers::Mutable, markers::SendSync> = report!("error".to_string());
 //!
@@ -273,7 +274,7 @@
 //! Use when your error contains thread-local data like `Rc`, raw pointers, or
 //! other `!Send` types.
 //!
-//! ```rust
+//! ```
 //! # use rootcause::prelude::*;
 //! use std::rc::Rc;
 //!
@@ -353,6 +354,7 @@ pub mod markers;
 pub mod preformatted;
 
 pub mod compat;
+pub mod option_ext;
 pub mod prelude;
 mod report;
 pub mod report_attachment;
@@ -371,11 +373,48 @@ pub use self::{
     report_conversion::ReportConversion,
 };
 
+/// A [`Result`](core::result::Result) type alias where the error is [`Report`].
+///
+/// This is a convenient shorthand for functions that return errors as
+/// [`Report`]. The context type defaults to [`Dynamic`].
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::prelude::*;
+///
+/// fn might_fail() -> rootcause::Result<String> {
+///     Ok("success".to_string())
+/// }
+/// ```
+///
+/// With a typed error:
+///
+/// ```
+/// use rootcause::prelude::*;
+///
+/// #[derive(Debug)]
+/// struct MyError;
+/// # impl std::fmt::Display for MyError {
+/// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+/// #         write!(f, "MyError")
+/// #     }
+/// # }
+/// # impl std::error::Error for MyError {}
+///
+/// fn typed_error() -> rootcause::Result<String, MyError> {
+///     Err(report!(MyError))
+/// }
+/// ```
+///
+/// [`Dynamic`]: crate::markers::Dynamic
+pub type Result<T, C = markers::Dynamic> = core::result::Result<T, Report<C>>;
+
 // Not public API. Referenced by macro-generated code and rootcause-backtrace.
 #[doc(hidden)]
 pub mod __private {
     // Used by the rootcause-backtrace
-    pub const ROOTCAUSE_LOCATION: &core::panic::Location = core::panic::Location::caller();
+    pub const ROOTCAUSE_LOCATION: &core::panic::Location<'_> = core::panic::Location::caller();
 
     use alloc::fmt;
     #[doc(hidden)]

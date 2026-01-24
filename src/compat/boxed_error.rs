@@ -140,6 +140,16 @@ use crate::{
 ///   chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::{Report, compat::boxed_error::BoxedErrorHandler};
+///
+/// let boxed: Box<dyn std::error::Error + Send + Sync> =
+///     Box::new(std::io::Error::from(std::io::ErrorKind::NotFound));
+/// let report = Report::new_sendsync_custom::<BoxedErrorHandler>(boxed);
+/// ```
 #[derive(Copy, Clone, Debug)]
 pub struct BoxedErrorHandler;
 

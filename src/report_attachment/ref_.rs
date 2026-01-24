@@ -153,6 +153,31 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         self.as_raw_ref().attachment_type_id()
     }
 
+    /// Returns the [`TypeId`] of the inner attachment.
+    ///
+    /// # Examples
+    /// ```
+    /// use std::any::TypeId;
+    ///
+    /// use rootcause::{
+    ///     markers::Dynamic,
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
+    /// assert_eq!(
+    ///     attachment_ref.inner_type_name(),
+    ///     core::any::type_name::<&str>()
+    /// );
+    /// ```
+    #[must_use]
+    pub fn inner_type_name(self) -> &'static str {
+        self.as_raw_ref().attachment_type_name()
+    }
+
     /// Returns the [`TypeId`] of the handler used when creating this
     /// attachment.
     ///

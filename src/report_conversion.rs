@@ -22,7 +22,7 @@ use crate::{
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use rootcause::{ReportConversion, markers, prelude::*};
 /// # use std::io;
 ///

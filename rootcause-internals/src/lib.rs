@@ -1,6 +1,7 @@
 #![no_std]
 #![forbid(
     missing_docs,
+    elided_lifetimes_in_paths,
     clippy::alloc_instead_of_core,
     clippy::std_instead_of_alloc,
     clippy::std_instead_of_core,

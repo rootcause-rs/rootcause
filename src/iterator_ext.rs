@@ -21,7 +21,7 @@ use crate::{IntoReport, report_collection::ReportCollection};
 /// The standard library's [`Iterator::collect`] stops at the first error, while
 /// these methods continue processing and collect all errors:
 ///
-/// ```rust
+/// ```
 /// use rootcause::{prelude::*, report_collection::ReportCollection};
 ///
 /// let inputs = vec!["1", "2", "invalid", "4", "bad"];

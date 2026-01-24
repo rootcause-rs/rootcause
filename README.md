@@ -226,7 +226,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.11.0"
+rootcause = "0.11.1"
 ```
 
 Use `Report` as your error type:
@@ -250,6 +250,7 @@ That's it! The `?` operator automatically converts any error type to `Report`.
 rootcause is designed to be lightweight and extensible. The core library provides essential error handling functionality, while optional companion crates add specialized capabilities:
 
 - **[`rootcause-backtrace`](https://docs.rs/rootcause-backtrace)** - Automatic stack trace capture for debugging. Install hooks to attach backtraces to all errors, or use the extension trait to add them selectively.
+- **[`rootcause-tracing`](https://docs.rs/rootcause-tracing)** - Tracing span capture for error reports. Automatically capture and display the active tracing spans when errors occur, providing operation context especially useful in async code.
 
 ## Next Steps
 
@@ -293,17 +294,20 @@ Once you're comfortable with the basics, rootcause offers powerful features for 
 The rootcause ecosystem consists of multiple crates:
 
 **Core:**
+
 - **`rootcause`** - The main user-facing API with type-safe abstractions. Uses type markers to ensure the underlying data structures are used safely.
 - **`rootcause-internals`** - Low-level data structures and memory management. Handles the actual report storage, allocations, and pointer manipulation.
 
 **Extensions:**
+
 - **`rootcause-backtrace`** - Optional backtrace capture support. Provides hooks for automatic stack trace collection.
+- **`rootcause-tracing`** - Optional tracing span capture. Provides hooks to attach active tracing spans to error reports.
 
 The split between `rootcause` and `rootcause-internals` provides a clean API boundary: internals define how data is stored, while the main crate ensures that storage is accessed safely through Rust's type system. This makes it easy to understand the underlying representation while keeping the safe API ergonomic. Extensions integrate via the hook system without requiring changes to core.
 
 ## Stability and Roadmap
 
-**Current status:** Pre-1.0 (v0.11.0)
+**Current status:** Pre-1.0 (v0.11.1)
 
 rootcause follows semantic versioning. As a 0.x library, breaking changes may occur in minor version bumps (0.x → 0.x+1). We're actively refining the API based on real-world usage and focused on reaching 1.0.
 

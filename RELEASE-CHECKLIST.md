@@ -2,7 +2,9 @@
   - `Cargo.toml`
   - `rootcause-internals/Cargo.toml`
   - `rootcause-backtrace/Cargo.toml`
+  - `rootcause-tracing/Cargo.toml`
   - `README.md`
+  - `rootcause-tracing/README.md`
 - Grep for the old version number
 - Update CHANGELOG.md, including the links at the bottom
 - Run `cargo update`

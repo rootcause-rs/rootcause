@@ -20,7 +20,7 @@
 //!
 //! You can switch to other variants:
 //!
-//! ```rust
+//! ```
 //! use rootcause::{
 //!     hooks::{Hooks, builtin_hooks::report_formatter::DefaultReportFormatter},
 //!     prelude::*,
@@ -41,7 +41,7 @@
 //! You can also apply a formatter to a specific report without changing the
 //! global default using [`Report::format_with`]:
 //!
-//! ```rust
+//! ```
 //! use rootcause::{hooks::builtin_hooks::report_formatter::DefaultReportFormatter, prelude::*};
 //!
 //! let report = report!("parsing error");
@@ -92,7 +92,7 @@ use crate::{
 ///
 /// # Examples
 ///
-/// ```rust
+/// ```
 /// use std::fmt;
 ///
 /// use rootcause::{
@@ -149,6 +149,39 @@ pub trait ReportFormatter: 'static + Send + Sync + fmt::Debug {
     /// This is the primary method that controls how reports are displayed. This
     /// includes how multiple reports at the "same level" are presented
     /// together.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::fmt;
+    ///
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     handlers::FormattingFunction,
+    ///     hooks::report_formatter::ReportFormatter,
+    ///     markers::{Dynamic, Local, Uncloneable},
+    /// };
+    ///
+    /// #[derive(Debug)]
+    /// struct CompactFormatter;
+    /// impl ReportFormatter for CompactFormatter {
+    ///     fn format_reports(
+    ///         &self,
+    ///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
+    ///         f: &mut fmt::Formatter<'_>,
+    ///         _func: FormattingFunction,
+    ///     ) -> fmt::Result {
+    ///         // Format multiple reports on one line, separated by semicolons
+    ///         for (i, report) in reports.iter().enumerate() {
+    ///             if i > 0 {
+    ///                 write!(f, "; ")?;
+    ///             }
+    ///             write!(f, "{}", report.format_current_context_unhooked())?;
+    ///         }
+    ///         Ok(())
+    ///     }
+    /// }
+    /// ```
     fn format_reports(
         &self,
         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
@@ -163,6 +196,49 @@ pub trait ReportFormatter: 'static + Send + Sync + fmt::Debug {
     /// single-element slice. You typically don't need to implement this
     /// unless you want different behavior for single reports vs. report
     /// collections.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use std::fmt;
+    ///
+    /// use rootcause::{
+    ///     ReportRef,
+    ///     handlers::FormattingFunction,
+    ///     hooks::report_formatter::ReportFormatter,
+    ///     markers::{Dynamic, Local, Uncloneable},
+    /// };
+    ///
+    /// #[derive(Debug)]
+    /// struct SingleLineFormatter;
+    /// impl ReportFormatter for SingleLineFormatter {
+    ///     fn format_reports(
+    ///         &self,
+    ///         reports: &[ReportRef<'_, Dynamic, Uncloneable, Local>],
+    ///         f: &mut fmt::Formatter<'_>,
+    ///         _func: FormattingFunction,
+    ///     ) -> fmt::Result {
+    ///         // Format multiple reports with numbered list
+    ///         for (i, report) in reports.iter().enumerate() {
+    ///             write!(f, "{}. {}", i + 1, report.format_current_context_unhooked())?;
+    ///             if i < reports.len() - 1 {
+    ///                 writeln!(f)?;
+    ///             }
+    ///         }
+    ///         Ok(())
+    ///     }
+    ///
+    ///     fn format_report(
+    ///         &self,
+    ///         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+    ///         f: &mut fmt::Formatter<'_>,
+    ///         _func: FormattingFunction,
+    ///     ) -> fmt::Result {
+    ///         // Single reports get special prefix
+    ///         write!(f, "ERROR: {}", report.format_current_context_unhooked())
+    ///     }
+    /// }
+    /// ```
     fn format_report(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
