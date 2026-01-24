@@ -507,6 +507,8 @@ pub trait ContextFormatterHook<C>: 'static + Send + Sync {
     ///     ) -> ContextFormattingStyle {
     ///         ContextFormattingStyle {
     ///             function: FormattingFunction::Display,
+    ///             follow_source: false,
+    ///             follow_source_depth: None,
     ///         }
     ///     }
     /// }
