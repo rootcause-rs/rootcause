@@ -241,7 +241,7 @@ pub struct PreformattedAttachment {
 }
 
 impl PreformattedAttachment {
-    pub(crate) fn new_from_attachment<A>(attachment: ReportAttachmentRef<A>) -> Self
+    pub(crate) fn new_from_attachment<A>(attachment: ReportAttachmentRef<'_, A>) -> Self
     where
         A: ?Sized,
     {

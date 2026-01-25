@@ -41,7 +41,7 @@ mod limit_field_access {
     ///
     /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
     #[repr(transparent)]
-    pub struct ReportAttachmentRef<'a, A: ?Sized + 'static = Dynamic> {
+    pub struct ReportAttachmentRef<'a, Attachment: ?Sized + 'static = Dynamic> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
@@ -51,7 +51,7 @@ mod limit_field_access {
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentRef`] must be of type `A`.
         raw: RawAttachmentRef<'a>,
-        _attachment: PhantomData<A>,
+        _attachment: PhantomData<Attachment>,
     }
 
     impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
