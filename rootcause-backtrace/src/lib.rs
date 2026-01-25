@@ -363,7 +363,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                 AttachmentFormattingPlacement::Hidden
             } else {
                 AttachmentFormattingPlacement::InlineWithHeader {
-                    header: "Backtrace",
+                    header: "Backtrace".into(),
                 }
             },
             priority: 10,
