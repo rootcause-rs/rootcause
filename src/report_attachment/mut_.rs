@@ -47,7 +47,7 @@ mod limit_field_access {
     }
 
     impl<'a, A: ?Sized + 'static> ReportAttachmentMut<'a, A> {
-        /// Creates a new AttachmentRef from a raw attachment reference
+        /// Creates a new [`ReportAttachmentMut`] from a raw attachment mutable reference.
         ///
         /// # Safety
         ///
@@ -67,9 +67,7 @@ mod limit_field_access {
             }
         }
 
-        // Creates a raw reference to the underlying report.
-        //
-        // This returns a raw reference to the underlying report.
+        // Creates a raw reference to the underlying attachment.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -80,7 +78,7 @@ mod limit_field_access {
             raw.as_ref()
         }
 
-        /// Returns the underlying raw attachment reference
+        /// Returns the underlying raw attachment reference.
         #[must_use]
         pub(crate) fn into_raw_mut(self) -> RawAttachmentMut<'a> {
             // We are destroying `self`, so we no longer
@@ -88,7 +86,7 @@ mod limit_field_access {
             self.raw
         }
 
-        /// Creates a raw reference to the underlying report.
+        /// Creates a raw reference to the underlying attachment.
         pub(crate) fn as_raw_mut<'b>(&'b mut self) -> RawAttachmentMut<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameter does not change.
@@ -118,7 +116,7 @@ impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
         self.as_ref().inner()
     }
 
-    /// Returns a reference to the attachment data.
+    /// Returns a mutable reference to the attachment data.
     ///
     /// # Examples
     /// ```

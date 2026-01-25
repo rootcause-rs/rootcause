@@ -118,7 +118,7 @@ pub struct ReportAttachmentsIterMut<'a> {
 }
 
 impl<'a> ReportAttachmentsIterMut<'a> {
-    /// Creates a new `AttachmentsIter` from an iterator of raw attachments
+    /// Creates a new `AttachmentsIterMut` from a mutable iterator of raw attachments
     pub(crate) fn from_raw(raw: core::slice::IterMut<'a, RawAttachment>) -> Self {
         Self { raw }
     }
@@ -146,12 +146,6 @@ impl<'a> Iterator for ReportAttachmentsIterMut<'a> {
     }
 }
 
-impl<'a> ExactSizeIterator for ReportAttachmentsIterMut<'a> {
-    fn len(&self) -> usize {
-        self.raw.len()
-    }
-}
-
 impl<'a> DoubleEndedIterator for ReportAttachmentsIterMut<'a> {
     fn next_back(&mut self) -> Option<Self::Item> {
         let raw = self.raw.next_back()?.as_mut();
@@ -167,6 +161,14 @@ impl<'a> DoubleEndedIterator for ReportAttachmentsIterMut<'a> {
         Some(attachment)
     }
 }
+
+impl<'a> ExactSizeIterator for ReportAttachmentsIterMut<'a> {
+    fn len(&self) -> usize {
+        self.raw.len()
+    }
+}
+
+impl<'a> FusedIterator for ReportAttachmentsIterMut<'a> {}
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.

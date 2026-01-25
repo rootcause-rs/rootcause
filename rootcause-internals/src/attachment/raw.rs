@@ -296,7 +296,7 @@ impl<'a> RawAttachmentRef<'a> {
 }
 
 /// A mutable lifetime-bound pointer to an [`AttachmentData`] that is guaranteed
-/// to be the sole mutable(?) pointer to an initialized instance of an
+/// to be the sole mutable pointer to an initialized instance of an
 /// [`AttachmentData<A>`] for some specific `A`, though we do not know which
 /// actual `A` it is.
 ///

@@ -387,7 +387,7 @@ pub struct RawReportMut<'a> {
     ///    `triomphe::Arc::into_raw`.
     /// 2. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
-    /// 3. This pointer is valid to for exclusive mutable access to the
+    /// 3. This pointer is valid for exclusive mutable access to the
     ///    `ReportData` with the same semantics as a `&'a mut ReportData<C>`.
     ptr: NonNull<ReportData<Erased>>,
 
@@ -403,9 +403,9 @@ impl<'a> RawReportMut<'a> {
     ///
     /// The caller must ensure:
     ///
-    /// 1. That `ptr` was created from rom a `triomphe::Arc<ReportData<C>>` for
+    /// 1. That `ptr` was created from a `triomphe::Arc<ReportData<C>>` for
     ///    some `C` using `triomphe::Arc::into_raw`.
-    /// 2. This pointer is valid to for exclusive mutable access to the
+    /// 2. This pointer is valid for exclusive mutable access to the
     ///    `ReportData` with the same semantics as a `&'a mut ReportData<C>`.
     pub(super) unsafe fn new(ptr: NonNull<ReportData<Erased>>) -> Self {
         RawReportMut {
