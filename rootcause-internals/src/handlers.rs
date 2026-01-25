@@ -303,7 +303,7 @@ pub trait ContextHandler<C>: 'static {
 ///             // Large data goes to appendix
 ///             AttachmentFormattingStyle {
 ///                 placement: AttachmentFormattingPlacement::Appendix {
-///                     appendix_name: "Large Data Records",
+///                     appendix_name: "Large Data Records".into(),
 ///                 },
 ///                 function: FormattingFunction::Display,
 ///                 priority: 0,
@@ -489,7 +489,7 @@ pub struct ContextFormattingStyle {
 /// // High-priority attachment in appendix
 /// let appendix_style = AttachmentFormattingStyle {
 ///     placement: AttachmentFormattingPlacement::Appendix {
-///         appendix_name: "Stack Trace",
+///         appendix_name: "Stack Trace".into(),
 ///     },
 ///     function: FormattingFunction::Debug,
 ///     priority: 10,
@@ -565,12 +565,12 @@ pub enum FormattingFunction {
 ///
 /// // Attachment with header
 /// let with_header = AttachmentFormattingPlacement::InlineWithHeader {
-///     header: "Request Details",
+///     header: "Request Details".into(),
 /// };
 ///
 /// // Large content in appendix
 /// let appendix = AttachmentFormattingPlacement::Appendix {
-///     appendix_name: "Full Stack Trace",
+///     appendix_name: "Full Stack Trace".into(),
 /// };
 ///
 /// // Sensitive data that should be hidden
