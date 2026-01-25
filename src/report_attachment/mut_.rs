@@ -251,20 +251,20 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// use rootcause::{
     ///     markers::Dynamic,
     ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    ///     report_attachment::{ReportAttachment, ReportAttachmentMut},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
-    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
-    /// assert_eq!(attachment_ref.inner_type_id(), TypeId::of::<&str>());
+    /// let mut attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_mut: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
+    /// assert_eq!(attachment_mut.inner_type_id(), TypeId::of::<&str>());
     /// ```
     #[must_use]
     pub fn inner_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
 
-    /// Returns the [`TypeId`] of the inner attachment.
+    /// Returns the [`core::any::type_name`] of the inner attachment.
     ///
     /// # Examples
     /// ```
@@ -273,14 +273,14 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// use rootcause::{
     ///     markers::Dynamic,
     ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    ///     report_attachment::{ReportAttachment, ReportAttachmentMut},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
-    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
+    /// let mut attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_mut: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
     /// assert_eq!(
-    ///     attachment_ref.inner_type_name(),
+    ///     attachment_mut.inner_type_name(),
     ///     core::any::type_name::<&str>()
     /// );
     /// ```

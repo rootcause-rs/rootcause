@@ -373,8 +373,17 @@ impl<T> ReportAttachments<T> {
     /// attachments.push(ReportAttachment::new("first").into_dynamic());
     /// attachments.push(ReportAttachment::new("second").into_dynamic());
     ///
-    /// for attachment in attachments.iter_mut() {
-    ///     println!("Attachment type: {:?}", attachment.inner_type_id());
+    /// // Mutate all string attachments in-place using `iter_mut()`.
+    /// for mut attachment in attachments.iter_mut() {
+    ///     if let Some(value) = attachment.downcast_inner_mut::<&str>() {
+    ///         *value = "updated";
+    ///     }
+    /// }
+    ///
+    /// // Verify that the attachments were actually updated.
+    /// for attachment in attachments.iter() {
+    ///     let value = attachment.downcast_inner::<&str>().unwrap();
+    ///     assert_eq!(*value, "updated");
     /// }
     /// ```
     ///

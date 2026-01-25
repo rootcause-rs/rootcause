@@ -158,7 +158,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         self.as_raw_ref().attachment_type_id()
     }
 
-    /// Returns the [`TypeId`] of the inner attachment.
+    /// Returns the [`core::any::type_name`] of the inner attachment.
     ///
     /// # Examples
     /// ```

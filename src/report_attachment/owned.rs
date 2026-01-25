@@ -114,8 +114,8 @@ mod limit_field_access {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameters do not change.
             // 2. Upheld as the type parameters do not change.
-            // 3. Guaranteed by safety invariant #2 of [`RawAttachmentMut`]
-            // 4. Guaranteed by safety invariant #2 of [`RawAttachmentMut`]
+            // 3. Guaranteed by safety invariant #3 of [`RawAttachmentMut`]
+            // 4. Guaranteed by safety invariant #3 of [`RawAttachmentMut`]
             let raw = &mut self.raw;
 
             raw.as_mut()
