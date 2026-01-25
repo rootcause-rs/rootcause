@@ -392,7 +392,7 @@ pub trait AttachmentHandler<A>: 'static {
         value: &A,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        let _ = value;
+        let _ = (value,);
         AttachmentFormattingStyle {
             function: report_formatting_function,
             ..Default::default()
