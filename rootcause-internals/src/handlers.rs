@@ -189,8 +189,8 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Default Behavior
     ///
-    /// The default implementation uses the formatting of the report as a whole. This
-    /// is the behavior of all built-in handlers.
+    /// The default implementation uses the formatting of the report as a whole.
+    /// This is the behavior of all built-in handlers.
     ///
     /// # Examples
     ///
@@ -392,7 +392,7 @@ pub trait AttachmentHandler<A>: 'static {
         value: &A,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        let _ = (value,);
+        let _ = value;
         AttachmentFormattingStyle {
             function: report_formatting_function,
             ..Default::default()
