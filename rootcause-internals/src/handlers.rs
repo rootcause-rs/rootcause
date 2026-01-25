@@ -195,16 +195,16 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// Custom handler that mirrors the report's formatting:
+    /// Custom handler that flips the report's formatting:
     ///
     /// ```
     /// use rootcause_internals::handlers::{
     ///     ContextFormattingStyle, ContextHandler, FormattingFunction,
     /// };
     ///
-    /// struct MirrorHandler;
+    /// struct FlipHandler;
     ///
-    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for MirrorHandler {
+    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for FlipHandler {
     ///     fn source(_context: &C) -> Option<&(dyn std::error::Error + 'static)> {
     ///         None
     ///     }
