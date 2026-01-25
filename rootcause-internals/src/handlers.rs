@@ -189,9 +189,8 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Default Behavior
     ///
-    /// The default implementation ignores the report's formatting style and
-    /// always uses display formatting. This is the behavior of all built-in
-    /// handlers.
+    /// The default implementation uses the formatting of the report as a whole. This
+    /// is the behavior of all built-in handlers.
     ///
     /// # Examples
     ///
@@ -350,8 +349,8 @@ pub trait AttachmentHandler<A>: 'static {
     /// - **Priority**: The order in which attachments are displayed (higher =
     ///   earlier)
     ///
-    /// The default implementation returns inline display formatting with
-    /// priority 0.
+    /// The default implementation returns the same formatting as the report, in
+    /// inline formatting with priority 0.
     ///
     /// # Examples
     ///
