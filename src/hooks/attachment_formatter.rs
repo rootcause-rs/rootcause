@@ -64,7 +64,7 @@
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
 //!             placement: AttachmentFormattingPlacement::InlineWithHeader {
-//!                 header: "API Error Details",
+//!                 header: "API Error Details".into(),
 //!             },
 //!             function: FormattingFunction::Display,
 //!             priority: 100, // High priority for API errors
@@ -104,7 +104,7 @@
 //!         AttachmentFormattingStyle {
 //!             // Put logs in appendix to reduce noise in main error
 //!             placement: AttachmentFormattingPlacement::Appendix {
-//!                 appendix_name: "Log Entries",
+//!                 appendix_name: "Log Entries".into(),
 //!             },
 //!             function: FormattingFunction::Display,
 //!             priority: 10, // Lower priority than important data
@@ -606,7 +606,9 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     ///         _function: FormattingFunction,
     ///     ) -> AttachmentFormattingStyle {
     ///         AttachmentFormattingStyle {
-    ///             placement: AttachmentFormattingPlacement::InlineWithHeader { header: "Info" },
+    ///             placement: AttachmentFormattingPlacement::InlineWithHeader {
+    ///                 header: "Info".into(),
+    ///             },
     ///             function: FormattingFunction::Display,
     ///             priority: 100,
     ///         }
