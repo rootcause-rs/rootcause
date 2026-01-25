@@ -611,8 +611,7 @@ impl<C> ContextHandler<C> for Any {
 /// human-readable date), or some kind of internal identifier that is
 /// meaningless for humans to inspect.
 ///
-/// It is not useful as a context handler, and thus does not implement its use
-/// as one.
+/// Contexts do not support hiding, so this is not a context handler.
 ///
 /// # Formatting Behavior
 ///
@@ -633,9 +632,9 @@ impl<C> ContextHandler<C> for Any {
 /// assert!(!output.contains("Internal data"));
 /// ```
 #[derive(Copy, Clone)]
-pub struct Invisible;
+pub struct Hidden;
 
-impl<T: 'static> AttachmentHandler<T> for Invisible {
+impl<T: 'static> AttachmentHandler<T> for Hidden {
     fn display(_value: &T, _formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         Ok(())
     }

@@ -431,15 +431,11 @@ pub trait AttachmentHandler<A>: 'static {
 ///     function: FormattingFunction::Debug,
 /// };
 /// ```
-#[derive(Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct ContextFormattingStyle {
     /// The preferred formatting function to use
     pub function: FormattingFunction,
 }
-
-#[derive(Clone, Debug, Default)]
-#[doc(hidden)]
-struct Unclonable;
 
 /// Formatting preferences for an attachment when displayed in a report.
 ///
@@ -482,7 +478,7 @@ struct Unclonable;
 ///     priority: 10,
 /// };
 /// ```
-#[derive(Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug, Default)]
 pub struct AttachmentFormattingStyle {
     /// The preferred attachment placement
     pub placement: AttachmentFormattingPlacement,
@@ -563,7 +559,7 @@ pub enum FormattingFunction {
 /// // Sensitive data that should be hidden
 /// let hidden = AttachmentFormattingPlacement::Hidden;
 /// ```
-#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum AttachmentFormattingPlacement {
     /// Display the attachment inline with the error message.
     ///
@@ -578,7 +574,7 @@ pub enum AttachmentFormattingPlacement {
     /// such as configuration snippets or multi-field data structures.
     InlineWithHeader {
         /// The header text to display above the attachment
-        header: Cow<'static, str>,
+        header: &'static str,
     },
 
     /// Display the attachment in a separate appendix section.
@@ -588,7 +584,7 @@ pub enum AttachmentFormattingPlacement {
     /// or detailed diagnostic information.
     Appendix {
         /// The name of the appendix section for this attachment
-        appendix_name: Cow<'static, str>,
+        appendix_name: &'static str,
     },
 
     /// Don't display the attachment, but count it in a summary.
