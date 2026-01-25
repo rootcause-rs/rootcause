@@ -52,6 +52,7 @@
 //!   formatting options
 
 use alloc::{
+    borrow::Cow,
     string::{String, ToString},
     vec::Vec,
 };
@@ -814,7 +815,7 @@ impl NodeConfig {
     }
 }
 type Appendices<'a> = IndexMap<
-    &'static str,
+    Cow<'static, str>,
     Vec<(ReportAttachmentRef<'a, Dynamic>, FormattingFunction)>,
     rustc_hash::FxBuildHasher,
 >;
@@ -1031,14 +1032,14 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         );
         tmp_attachments_buffer
             .sort_by_key(|(style1, _attachment)| core::cmp::Reverse(style1.priority));
-        for (attachment_index, &(attachment_formatting_style, attachment)) in
+        for (attachment_index, (attachment_formatting_style, attachment)) in
             tmp_attachments_buffer.iter().enumerate()
         {
             let is_last_attachment = attachment_index + 1 == tmp_attachments_buffer.len();
             self.format_attachment(
                 tmp_value_buffer,
-                attachment_formatting_style,
-                attachment,
+                attachment_formatting_style.clone(),
+                *attachment,
                 is_last_attachment && !has_children,
             )?;
         }
