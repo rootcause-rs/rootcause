@@ -365,17 +365,9 @@ impl<'a> RawAttachmentMut<'a> {
         debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<A>());
 
         let mut this = self.ptr.cast::<AttachmentData<A>>();
-        // SAFETY: Converting the NonNull pointer to a mutable reference is sound
-        // because:
-        // - The pointer is non-null, properly aligned, and dereferenceable (guaranteed
-        //   by RawAttachmentMut's type invariants)
-        // - The pointee is properly initialized (RawAttachmentMut's doc comment
-        //   guarantees it is the exclusive pointer to an initialized AttachmentData<A>
-        //   for some A)
-        // - The type `A` matches the actual attachment type (guaranteed by caller)
-        // - Shared access is NOT allowed
-        // - The reference lifetime 'a is valid (tied to RawAttachmentMut<'a>'s
-        //   lifetime)
+        // SAFETY:
+        // 1. The pointer is non-null, properly aligned, and dereferenceable as guaranteed
+        //    by invariants of RawAttachmentMut and caller.
         unsafe { this.as_mut() }
     }
 
