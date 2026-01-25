@@ -469,7 +469,7 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// use rootcause::{
     ///     markers::Dynamic,
     ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    ///     report_attachment::{ReportAttachment, ReportAttachmentMut},
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");

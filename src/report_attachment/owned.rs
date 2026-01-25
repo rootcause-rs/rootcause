@@ -555,6 +555,15 @@ where
     }
 }
 
+impl<A: Sized, T> From<A> for ReportAttachment<Dynamic, T>
+where
+    A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+{
+    fn from(attachment: A) -> Self {
+        ReportAttachment::new_custom::<handlers::Display>(attachment).into_dynamic()
+    }
+}
+
 // SAFETY: The `SendSync` marker indicates that the inner attachment
 // is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
@@ -564,18 +573,6 @@ unsafe impl<A: ?Sized> Send for ReportAttachment<A, SendSync> {}
 // is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
 unsafe impl<A: ?Sized> Sync for ReportAttachment<A, SendSync> {}
-
-impl<'a, A: ?Sized> core::fmt::Display for ReportAttachment<A> {
-    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.as_ref(), formatter)
-    }
-}
-
-impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachment<A> {
-    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.as_ref(), formatter)
-    }
-}
 
 impl<A: ?Sized, T> Unpin for ReportAttachment<A, T> {}
 
