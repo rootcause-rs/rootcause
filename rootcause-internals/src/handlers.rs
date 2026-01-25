@@ -210,23 +210,11 @@ pub trait ContextHandler<C>: 'static {
     ///     }
     ///
     ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         std::fmt::Display::fmt(context, f)
-    ///     }
-    ///
-    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     ///         std::fmt::Debug::fmt(context, f)
     ///     }
     ///
-    ///     fn preferred_formatting_style(
-    ///         _value: &C,
-    ///         report_formatting_function: FormattingFunction,
-    ///     ) -> ContextFormattingStyle {
-    ///         // Use the same formatting as the report
-    ///         ContextFormattingStyle {
-    ///             function: report_formatting_function,
-    ///             follow_source: false,
-    ///             follow_source_depth: None,
-    ///         }
+    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Display::fmt(context, f)
     ///     }
     /// }
     /// ```
