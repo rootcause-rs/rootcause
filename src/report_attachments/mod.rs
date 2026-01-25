@@ -40,6 +40,6 @@ mod iter;
 mod owned;
 
 pub use self::{
-    iter::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
+    iter::{ReportAttachmentsIntoIter, ReportAttachmentsIter, ReportAttachmentsIterMut},
     owned::ReportAttachments,
 };

@@ -3,7 +3,9 @@ use alloc::vec::Vec;
 use crate::{
     markers::{Dynamic, Local, SendSync},
     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    report_attachments::{ReportAttachmentsIntoIter, ReportAttachmentsIter},
+    report_attachments::{
+        ReportAttachmentsIntoIter, ReportAttachmentsIter, ReportAttachmentsIterMut,
+    },
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -354,6 +356,56 @@ impl<T> ReportAttachments<T> {
     /// [`into_iter()`]: Self::into_iter
     pub fn iter(&self) -> ReportAttachmentsIter<'_> {
         ReportAttachmentsIter::from_raw(self.as_raw().iter())
+    }
+
+    /// Returns an iterator over mutable references to the attachments in the
+    /// collection.
+    ///
+    /// The iterator yields [`ReportAttachmentMut`] items, which provide
+    /// non-owning mutable access to the attachments. For owning iteration, use
+    /// [`into_iter()`] instead. For pure reference iteration, see [`iter()`].
+    ///
+    /// # Examples
+    /// ```
+    /// use rootcause::{report_attachment::ReportAttachment, report_attachments::ReportAttachments};
+    ///
+    /// let mut attachments = ReportAttachments::new_sendsync();
+    /// attachments.push(ReportAttachment::new("first").into_dynamic());
+    /// attachments.push(ReportAttachment::new("second").into_dynamic());
+    ///
+    /// // Mutate all string attachments in-place using `iter_mut()`.
+    /// for mut attachment in attachments.iter_mut() {
+    ///     if let Some(value) = attachment.downcast_inner_mut::<&str>() {
+    ///         *value = "updated";
+    ///     }
+    /// }
+    ///
+    /// // Verify that the attachments were actually updated.
+    /// for attachment in attachments.iter() {
+    ///     let value = attachment.downcast_inner::<&str>().unwrap();
+    ///     assert_eq!(*value, "updated");
+    /// }
+    /// ```
+    ///
+    /// [`ReportAttachmentMut`]: crate::report_attachment::ReportAttachmentMut
+    /// [`into_iter()`]: Self::into_iter
+    /// [`iter()`]: Self::iter
+    pub fn iter_mut(&mut self) -> ReportAttachmentsIterMut<'_> {
+        // SAFETY:
+        // 1. Mutation of the collection is not possible through the iterator, since we
+        //    are only providing mutable access to the individual attachments.
+        // 2. The iterator returns value of type `ReportAttachmentMut<'_, Dynamic>`, and
+        //    while mutation of the attachments is possible through this API, it is not
+        //    possible to change the type of the attachments and therefore its thread
+        //    safety marker.
+        let raw = unsafe {
+            // @add-unsafe-context: rootcause_internals::RawAttachmentMut
+            // @add-unsafe-context: rootcause_internals::RawAttachment
+            // @add-unsafe-context: ReportAttachment
+            // @add-unsafe-context: ReportAttachmentsIterMut
+            self.as_raw_mut()
+        };
+        ReportAttachmentsIterMut::from_raw(raw.iter_mut())
     }
 
     /// Converts this collection to use the [`Local`] thread safety marker.

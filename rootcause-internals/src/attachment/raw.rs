@@ -57,6 +57,7 @@ pub struct RawAttachment {
     ///    lifetime of this object.
     /// 3. The pointee is properly initialized for the entire lifetime of this
     ///    object, except during the execution of the `Drop` implementation.
+    /// 4. The pointer is the sole owner of the `AttachmentData` instance.
     ptr: NonNull<AttachmentData<Erased>>,
 }
 
@@ -82,16 +83,33 @@ impl RawAttachment {
             NonNull::new_unchecked(ptr)
         };
 
-        Self { ptr }
+        Self {
+            // SAFETY:
+            // 1. See above
+            // 2. N/A
+            // 3. N/A
+            // 4. The Box is consumed, so we are the sole owner
+            ptr,
+        }
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_ref(&self) -> RawAttachmentRef<'_> {
-        RawAttachmentRef {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        //
+        // 1. Upheld by invariant `self`
+        // 2. Upheld by shared borrow of `self`
+        unsafe { RawAttachmentRef::new(self.ptr) }
+    }
+
+    /// Returns a mutable reference to the [`AttachmentData`] instance.
+    #[inline]
+    pub fn as_mut(&mut self) -> RawAttachmentMut<'_> {
+        // SAFETY:
+        // 1. Upheld by invariant on `self`
+        // 2. Upheld by mutable borrow of `self`
+        unsafe { RawAttachmentMut::new(self.ptr) }
     }
 }
 
@@ -105,7 +123,7 @@ impl core::ops::Drop for RawAttachment {
         //    `RawAttachment::new`)
         // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
         //    data in the `AttachmentData`.
-        // 3. The pointer is initialized and has not been previously free as guaranteed
+        // 3. The pointer is initialized and has not been previously freed as guaranteed
         //    by the invariants on this type. We are correctly transferring ownership
         //    here and the pointer is not used afterwards, as we are in the drop
         //    function.
@@ -138,6 +156,9 @@ pub struct RawAttachmentRef<'a> {
     ///    for some `A` using `Box::into_raw`.
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
+    /// 3. This pointer represents read-only access to the `AttachmentData` for
+    ///    the lifetime `'a` with the same semantics as a `&'a
+    ///    AttachmentData<C>`.
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -146,6 +167,26 @@ pub struct RawAttachmentRef<'a> {
 }
 
 impl<'a> RawAttachmentRef<'a> {
+    /// Creates a new [`RawAttachmentRef`] from a pointer
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. That `ptr` has been created from a `Box<AttachmentData<A>>`.
+    /// 2. This pointer represents shared access to the `AttachmentData` for the
+    ///    lifetime `'a` with the same semantics as a `&'a AttachmentData<C>`.
+    pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
+        RawAttachmentRef {
+            // SAFETY:
+            // 1. Guaranteed by caller
+            // 2. N/A
+            // 3. Guaranteed by caller
+            ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
     /// Casts the [`RawAttachmentRef`] to an [`AttachmentData<A>`] reference.
     ///
     /// # Safety
@@ -190,7 +231,7 @@ impl<'a> RawAttachmentRef<'a> {
         self.vtable().type_name()
     }
 
-    /// Returns the [`TypeId`] of the attachment.
+    /// Returns the [`TypeId`] of the attachment handler.
     #[inline]
     pub fn attachment_handler_type_id(self) -> TypeId {
         self.vtable().handler_type_id()
@@ -251,6 +292,121 @@ impl<'a> RawAttachmentRef<'a> {
             // @add-unsafe-context: AttachmentData
             vtable.preferred_formatting_style(self, report_formatting_function)
         }
+    }
+}
+
+/// A mutable lifetime-bound pointer to an [`AttachmentData`] that is guaranteed
+/// to be the sole mutable pointer to an initialized instance of an
+/// [`AttachmentData<A>`] for some specific `A`, though we do not know which
+/// actual `A` it is.
+///
+/// We cannot use a [`&'a mut AttachmentData<A>`] directly, because that would
+/// require us to know the actual type of the attachment, which we do not.
+///
+/// [`&'a mut AttachmentData<A>`]: AttachmentData
+#[repr(transparent)]
+pub struct RawAttachmentMut<'a> {
+    /// Pointer to the inner attachment data
+    ///
+    /// # Safety
+    ///
+    /// The following safety invariants are guaranteed to be upheld as long as
+    /// this struct exists:
+    ///
+    /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
+    ///    for some `A` using `Box::into_raw`.
+    /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
+    ///    lifetime of this object.
+    /// 3. This pointer represents exclusive mutable access to the
+    ///    `AttachmentData` for the lifetime `'a` with the same semantics as a
+    ///    `&'a mut AttachmentData<C>`.
+    ptr: NonNull<AttachmentData<Erased>>,
+
+    /// Marker to tell the compiler that we should
+    /// behave the same as a `&'a mut AttachmentData<Erased>`
+    _marker: core::marker::PhantomData<&'a mut AttachmentData<Erased>>,
+}
+
+impl<'a> RawAttachmentMut<'a> {
+    /// Create a new [`RawAttachmentMut`] directly from a pointer
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. `ptr` must have been created from a `Box<AttachmentData<A>>` for some
+    ///    `A` using `Box::into_raw`.
+    /// 2. This pointer represents exclusive mutable access to the
+    ///    `AttachmentData` for the lifetime `'a` with the same semantics as a
+    ///    `&'a mut AttachmentData<C>`.
+    pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
+        RawAttachmentMut {
+            // SAFETY:
+            // 1. Guaranteed by caller
+            // 2. The pointer is not modified at this point, so the invariant holds
+            // 3. Guaranteed by caller
+            ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
+    /// Casts the [`RawAttachmentMut`] to an [`AttachmentData<A>`] mutable
+    /// reference.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A` matches the actual attachment type stored in the
+    ///    [`AttachmentData`].
+    #[inline]
+    pub(super) unsafe fn cast_inner<A>(self) -> &'a mut AttachmentData<A> {
+        // Debug assertion to catch type mismatches in case of bugs
+        debug_assert_eq!(self.as_ref().vtable().type_id(), TypeId::of::<A>());
+
+        let mut this = self.ptr.cast::<AttachmentData<A>>();
+        // SAFETY: Converting the NonNull pointer to a mutable reference is sound
+        // because:
+        // - The pointer is non-null, properly aligned, and dereferenceable (guaranteed
+        //   by RawAttachmentMut's type invariants)
+        // - The pointee is properly initialized (RawAttachmentMut's doc comment
+        //   guarantees it is the exclusive pointer to an initialized AttachmentData<A>
+        //   for some A)
+        // - The type `A` matches the actual attachment type (guaranteed by caller)
+        // - Shared access is NOT allowed
+        // - The reference lifetime 'a is valid (tied to RawAttachmentMut<'a>'s
+        //   lifetime)
+        unsafe { this.as_mut() }
+    }
+
+    /// Reborrows the mutable reference to the [`AttachmentData`] with a shorter
+    /// lifetime.
+    #[inline]
+    pub fn reborrow<'b>(&'b mut self) -> RawAttachmentMut<'b> {
+        // SAFETY:
+        // 1. Guaranteed by `self`
+        // 2. Guaranteed by mutable borrow of `self`
+        unsafe { RawAttachmentMut::new(self.ptr) }
+    }
+
+    /// Returns a reference to the [`AttachmentData`] instance.
+    #[inline]
+    pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
+        // SAFETY:
+        // 1. Guaranteed by `self`
+        // 2. Upheld by shared borrow of `self` combined with the invariant that `self`
+        //    represents exclusive access to the data.
+        unsafe { RawAttachmentRef::new(self.ptr) }
+    }
+
+    /// Consumes the mutable reference and returns an immutable one with the
+    /// same lifetime.
+    #[inline]
+    pub fn into_ref(self) -> RawAttachmentRef<'a> {
+        // SAFETY:
+        // 1. Guaranteed by `self`
+        // 2. Upheld by the fact that `self` represents exclusive access to the data.
+        unsafe { RawAttachmentRef::new(self.ptr) }
     }
 }
 
@@ -324,6 +480,27 @@ mod tests {
         );
         assert_eq!(
             core::mem::size_of::<Option<Option<RawAttachmentRef<'_>>>>(),
+            core::mem::size_of::<Option<usize>>()
+        );
+
+        assert_eq!(
+            core::mem::size_of::<RawAttachmentMut<'_>>(),
+            core::mem::size_of::<usize>()
+        );
+        assert_eq!(
+            core::mem::size_of::<Option<RawAttachmentMut<'_>>>(),
+            core::mem::size_of::<usize>()
+        );
+        assert_eq!(
+            core::mem::size_of::<Result<(), RawAttachmentMut<'_>>>(),
+            core::mem::size_of::<usize>()
+        );
+        assert_eq!(
+            core::mem::size_of::<Result<String, RawAttachmentMut<'_>>>(),
+            core::mem::size_of::<String>()
+        );
+        assert_eq!(
+            core::mem::size_of::<Option<Option<RawAttachmentMut<'_>>>>(),
             core::mem::size_of::<Option<usize>>()
         );
     }
@@ -419,5 +596,6 @@ mod tests {
     fn test_send_sync() {
         static_assertions::assert_not_impl_any!(RawAttachment: Send, Sync);
         static_assertions::assert_not_impl_any!(RawAttachmentRef<'_>: Send, Sync);
+        static_assertions::assert_not_impl_any!(RawAttachmentMut<'_>: Send, Sync);
     }
 }

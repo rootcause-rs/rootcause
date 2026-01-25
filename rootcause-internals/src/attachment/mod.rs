@@ -20,4 +20,4 @@ pub(crate) mod data;
 pub(crate) mod raw;
 pub(crate) mod vtable;
 
-pub use self::raw::{RawAttachment, RawAttachmentRef};
+pub use self::raw::{RawAttachment, RawAttachmentMut, RawAttachmentRef};
