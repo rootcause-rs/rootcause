@@ -13,9 +13,9 @@
     clippy::ptr_as_ptr,
     rustdoc::invalid_rust_codeblocks,
     rustdoc::broken_intra_doc_links,
-    missing_copy_implementations,
     unused_doc_comments
 )]
+#![deny(missing_copy_implementations)]
 #![allow(rustdoc::private_intra_doc_links)]
 //! Internal implementation crate for [`rootcause`].
 //!
