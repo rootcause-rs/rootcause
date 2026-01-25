@@ -212,21 +212,11 @@ pub trait ContextHandler<C>: 'static {
     ///     }
     ///
     ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         std::fmt::Display::fmt(context, f)
-    ///     }
-    ///
-    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     ///         std::fmt::Debug::fmt(context, f)
     ///     }
     ///
-    ///     fn preferred_formatting_style(
-    ///         _value: &C,
-    ///         report_formatting_function: FormattingFunction,
-    ///     ) -> ContextFormattingStyle {
-    ///         // Use the same formatting as the report
-    ///         ContextFormattingStyle {
-    ///             function: report_formatting_function,
-    ///         }
+    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Display::fmt(context, f)
     ///     }
     /// }
     /// ```
@@ -304,13 +294,11 @@ pub trait ContextHandler<C>: 'static {
 ///             // Large data goes to appendix
 ///             AttachmentFormattingStyle {
 ///                 placement: AttachmentFormattingPlacement::Appendix {
-///                     appendix_name: "Large Data Records",
+///                     appendix_name: "Large Data Records".into(),
 ///                 },
-///                 function: FormattingFunction::Display,
-///                 priority: 0,
+///                 ..Default::default()
 ///             }
 ///         } else {
-///             // Small data shows inline
 ///             AttachmentFormattingStyle::default()
 ///         }
 ///     }
@@ -448,6 +436,10 @@ pub struct ContextFormattingStyle {
     /// The preferred formatting function to use
     pub function: FormattingFunction,
 }
+
+#[derive(Clone, Debug, Default)]
+#[doc(hidden)]
+struct Unclonable;
 
 /// Formatting preferences for an attachment when displayed in a report.
 ///

@@ -360,7 +360,7 @@ where
 ///
 /// When having reports with contexts or attachments where displaying them as
 /// debug in the report printout may lead to security issues, but where
-/// accessing the debug formatting is still useful programatically.
+/// accessing the debug formatting is still useful programmatically.
 ///
 /// # Formatting Behavior
 ///
@@ -596,13 +596,13 @@ impl<C> ContextHandler<C> for Any {
 }
 
 /// Attachment handler for attachments that are not human-facing and/or
-/// exclusively acessed programmatically.
+/// exclusively accessed programmatically.
 ///
-/// This is also a universally applicable handler, since it literally implements
-/// no functionality. It both displays and debugs as the empty string. However,
-/// in the preferred formatting options it specifies the attachment as
-/// [`Hidden`](AttachmentFormattingPlacement::Hidden) so as to never actually
-/// show up in a formatted report.
+/// This is a universally applicable handler similar to the [`Any`]. However
+/// it sets the preferred formatting placement to [`Hidden`](AttachmentFormattingPlacement::Hidden),
+/// meaning it is not formatted.
+///
+/// If manually formatted, outputs the empty string.
 ///
 /// # When to Use
 ///
@@ -652,67 +652,6 @@ impl<T: 'static> AttachmentHandler<T> for Invisible {
             placement: AttachmentFormattingPlacement::Hidden,
             function: report_formatting_function,
             priority: i32::MIN,
-        }
-    }
-}
-
-/// Attachment handler combinator for attachments that are intended to be hidden
-/// from view by default, but still inspectable in code.
-///
-/// The preferred formatting options of the wrapped handler are preserved,
-/// except the placement is changed to [`Hidden`]
-///
-/// # When to Use
-///
-/// Same usecases as [`Invisible`] but for when you want to inspect this attachment
-/// as normal though directly formatting it.
-///
-/// It is not useful as a context handler, and thus does not implement its use
-/// as one.
-///
-/// **Be aware:** if your find yourself chaining multiple attachment handler
-/// combinators, consider writing your own instead.
-///
-/// # Formatting Behavior
-///
-/// - **Display output:** delegates to the wrapped handler
-/// - **Debug output:** delegates to the wrapped handler
-/// - **Formatting placement:** delegates to wrapped handler but changes the
-///   `placement` to [`Hidden`](AttachmentFormattingPlacement::Hidden)
-///
-/// The default wrapped handler is [`Display`].
-///
-/// # Example
-/// ```
-/// use rootcause::{handlers, prelude::*};
-///
-/// let report: Report<&'static str, markers::Mutable, markers::SendSync> =
-///     Report::new_custom::<handlers::Display>("I am a normal error!")
-///         .attach_custom::<handlers::Hidden, _>(42069i32);
-///
-/// // Does not show
-/// let output = format!("{}", report);
-/// assert!(!output.contains("42069"));
-/// ```
-#[derive(Copy, Clone)]
-pub struct Hidden<H = Display>(PhantomData<H>);
-
-impl<T: 'static, H: AttachmentHandler<T>> AttachmentHandler<T> for Hidden<H> {
-    fn display(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        H::display(value, formatter)
-    }
-
-    fn debug(value: &T, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        H::debug(value, formatter)
-    }
-
-    fn preferred_formatting_style(
-        value: &T,
-        report_formatting_function: FormattingFunction,
-    ) -> AttachmentFormattingStyle {
-        AttachmentFormattingStyle {
-            placement: AttachmentFormattingPlacement::Hidden,
-            ..H::preferred_formatting_style(value, report_formatting_function)
         }
     }
 }
