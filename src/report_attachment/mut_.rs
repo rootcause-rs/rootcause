@@ -47,7 +47,8 @@ mod limit_field_access {
     }
 
     impl<'a, A: ?Sized + 'static> ReportAttachmentMut<'a, A> {
-        /// Creates a new [`ReportAttachmentMut`] from a raw attachment mutable reference.
+        /// Creates a new [`ReportAttachmentMut`] from a raw attachment mutable
+        /// reference.
         ///
         /// # Safety
         ///
@@ -67,7 +68,8 @@ mod limit_field_access {
             }
         }
 
-        /// Creates a raw reference to the underlying attachment, with a shorter lifetime.
+        /// Creates a raw reference to the underlying attachment, with a shorter
+        /// lifetime.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -181,10 +183,10 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// readability, as it more clearly communicates intent.
     ///
     /// This method does not actually modify the attachment in any way. It only
-    /// has the effect of "forgetting" that the context actually has the
+    /// has the effect of "forgetting" that the attachment actually has the
     /// type `A`.
     ///
-    /// To get back the report with a concrete `A` you can use the method
+    /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachmentMut::downcast_attachment`].
     #[must_use]
     pub fn into_dynamic(self) -> ReportAttachmentMut<'a, Dynamic> {
@@ -268,8 +270,6 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ///
     /// # Examples
     /// ```
-    /// use std::any::TypeId;
-    ///
     /// use rootcause::{
     ///     markers::Dynamic,
     ///     prelude::*,
@@ -386,7 +386,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
     #[must_use]
     pub fn preferred_formatting_style_unhooked(
-        self,
+        &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()

@@ -358,7 +358,7 @@ impl<T> ReportAttachments<T> {
         ReportAttachmentsIter::from_raw(self.as_raw().iter())
     }
 
-    /// Returns an iterator over references to the attachments in the
+    /// Returns an iterator over mutable references to the attachments in the
     /// collection.
     ///
     /// The iterator yields [`ReportAttachmentMut`] items, which provide
@@ -392,12 +392,12 @@ impl<T> ReportAttachments<T> {
     /// [`iter()`]: Self::iter
     pub fn iter_mut(&mut self) -> ReportAttachmentsIterMut<'_> {
         // SAFETY:
-        // 1. Mutation of the collection is not possible through the iterator, since
-        //    we are only providing mutable access to the individual attachments.
-        // 2. The iterator returns value of type `ReportAttachmentMut<'_, Dynamic>`,
-        //    and while mutation of the attachments is possible through this API, it is
-        //    not possible to change the type of the attachments and therefore the
-        //    its thread safety marker.
+        // 1. Mutation of the collection is not possible through the iterator, since we
+        //    are only providing mutable access to the individual attachments.
+        // 2. The iterator returns value of type `ReportAttachmentMut<'_, Dynamic>`, and
+        //    while mutation of the attachments is possible through this API, it is not
+        //    possible to change the type of the attachments and therefore its thread
+        //    safety marker.
         let raw = unsafe {
             // @add-unsafe-context: rootcause_internals::RawAttachmentMut
             // @add-unsafe-context: rootcause_internals::RawAttachment

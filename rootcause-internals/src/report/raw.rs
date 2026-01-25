@@ -403,8 +403,8 @@ impl<'a> RawReportMut<'a> {
     ///
     /// The caller must ensure:
     ///
-    /// 1. That `ptr` was created from a `triomphe::Arc<ReportData<C>>` for
-    ///    some `C` using `triomphe::Arc::into_raw`.
+    /// 1. That `ptr` was created from a `triomphe::Arc<ReportData<C>>` for some
+    ///    `C` using `triomphe::Arc::into_raw`.
     /// 2. This pointer is valid for exclusive mutable access to the
     ///    `ReportData` with the same semantics as a `&'a mut ReportData<C>`.
     pub(super) unsafe fn new(ptr: NonNull<ReportData<Erased>>) -> Self {

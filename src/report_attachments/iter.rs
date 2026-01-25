@@ -35,7 +35,8 @@ pub struct ReportAttachmentsIter<'a> {
 }
 
 impl<'a> ReportAttachmentsIter<'a> {
-    /// Creates a new [`ReportAttachmentsIter`] from an iterator of raw attachments
+    /// Creates a new [`ReportAttachmentsIter`] from an iterator of raw
+    /// attachments
     pub(crate) fn from_raw(raw: core::slice::Iter<'a, RawAttachment>) -> Self {
         Self { raw }
     }
@@ -87,7 +88,7 @@ impl<'a> ExactSizeIterator for ReportAttachmentsIter<'a> {
 
 impl<'a> FusedIterator for ReportAttachmentsIter<'a> {}
 
-/// An iterator over references to report attachments.
+/// An iterator over mutable references to report attachments.
 ///
 /// This iterator yields [`ReportAttachmentMut`] items and is created by calling
 /// [`ReportAttachments::iter_mut`].
@@ -118,7 +119,8 @@ pub struct ReportAttachmentsIterMut<'a> {
 }
 
 impl<'a> ReportAttachmentsIterMut<'a> {
-    /// Creates a new [`ReportAttachmentsIterMut`] from a mutable iterator of raw attachments
+    /// Creates a new [`ReportAttachmentsIterMut`] from a mutable iterator of
+    /// raw attachments
     pub(crate) fn from_raw(raw: core::slice::IterMut<'a, RawAttachment>) -> Self {
         Self { raw }
     }
