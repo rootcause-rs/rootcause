@@ -57,6 +57,7 @@ pub struct RawAttachment {
     ///    lifetime of this object.
     /// 3. The pointee is properly initialized for the entire lifetime of this
     ///    object, except during the execution of the `Drop` implementation.
+    /// 4. The pointer is the sole owner of the `AttachmentData` instance.
     ptr: NonNull<AttachmentData<Erased>>,
 }
 
@@ -87,6 +88,7 @@ impl RawAttachment {
             // 1. See above
             // 2. N/A
             // 3. N/A
+            // 4. The Box is consumed, so we are the sole owner
             ptr,
         }
     }
@@ -97,6 +99,7 @@ impl RawAttachment {
         // SAFETY:
         //
         // 1. Upheld by invariant `self`
+        // 2. Upheld by shared borrow of `self`
         unsafe { RawAttachmentRef::new(self.ptr) }
     }
 
@@ -120,7 +123,7 @@ impl core::ops::Drop for RawAttachment {
         //    `RawAttachment::new`)
         // 2. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
         //    data in the `AttachmentData`.
-        // 3. The pointer is initialized and has not been previously free as guaranteed
+        // 3. The pointer is initialized and has not been previously freed as guaranteed
         //    by the invariants on this type. We are correctly transferring ownership
         //    here and the pointer is not used afterwards, as we are in the drop
         //    function.
@@ -153,6 +156,9 @@ pub struct RawAttachmentRef<'a> {
     ///    for some `A` using `Box::into_raw`.
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
+    /// 3. This pointer represents read-only access to the `AttachmentData` for
+    ///    the lifetime `'a` with the same semantics as a `&'a
+    ///    AttachmentData<C>`.
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -167,11 +173,15 @@ impl<'a> RawAttachmentRef<'a> {
     ///
     /// The caller must ensure:
     ///
-    /// 1. That `ptr` has been created from a `Box<AttacnmentData<A>>`.
+    /// 1. That `ptr` has been created from a `Box<AttachmentData<A>>`.
+    /// 2. This pointer represents shared access to the `AttachmentData` for the
+    ///    lifetime `'a` with the same semantics as a `&'a AttachmentData<C>`.
     pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
         RawAttachmentRef {
             // SAFETY:
             // 1. Guaranteed by caller
+            // 2. N/A
+            // 3. Guaranteed by caller
             ptr,
             _marker: core::marker::PhantomData,
         }
@@ -384,6 +394,8 @@ impl<'a> RawAttachmentMut<'a> {
     pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
         // SAFETY:
         // 1. Guaranteed by `self`
+        // 2. Upheld by shared borrow of `self` combined with the invariant that `self`
+        //    represents exclusive access to the data.
         unsafe { RawAttachmentRef::new(self.ptr) }
     }
 
@@ -393,6 +405,7 @@ impl<'a> RawAttachmentMut<'a> {
     pub fn into_ref(self) -> RawAttachmentRef<'a> {
         // SAFETY:
         // 1. Guaranteed by `self`
+        // 2. Upheld by the fact that `self` represents exclusive access to the data.
         unsafe { RawAttachmentRef::new(self.ptr) }
     }
 }

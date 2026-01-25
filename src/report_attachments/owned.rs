@@ -389,7 +389,10 @@ impl<T> ReportAttachments<T> {
         //    type-preserving manner, meaning it is not possible to alter any of the
         //    attachments to be non-`Send + Sync`
         let raw = unsafe {
-            // @add-unsafe-context: ???
+            // @add-unsafe-context: rootcause_internals::RawAttachmentMut
+            // @add-unsafe-context: rootcause_internals::RawAttachment
+            // @add-unsafe-context: ReportAttachment
+            // @add-unsafe-context: ReportAttachmentsIterMut
             self.as_raw_mut()
         };
         ReportAttachmentsIterMut::from_raw(raw.iter_mut())

@@ -68,6 +68,8 @@ mod limit_field_access {
         }
 
         // Creates a raw reference to the underlying report.
+        //
+        // This returns a raw reference to the underlying report.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -207,7 +209,10 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         // SAFETY:
         // 1. Guaranteed by invariants of this type.
         // 2. Guaranteed by invariants of this type.
-        unsafe { ReportAttachmentRef::<A>::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: RawAttachmentRef
+            ReportAttachmentRef::<A>::from_raw(raw)
+        }
     }
 
     /// Consumes the [`ReportAttachmentMut`] and returns a
@@ -233,7 +238,10 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         // SAFETY:
         // 1. Guaranteed by invariants of this type.
         // 2. Guaranteed by invariants of this type.
-        unsafe { ReportAttachmentMut::from_raw(raw) }
+        unsafe {
+            // @add-unsafe-context: RawAttachmentMut
+            ReportAttachmentMut::from_raw(raw)
+        }
     }
 
     /// Returns the [`TypeId`] of the inner attachment.
@@ -424,7 +432,7 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// let attachment_mut = wrong_ref.unwrap_err();
     ///
     /// // Try to downcast to the correct type
-    /// let typed_ref: Result<ReportAttachmentMut<i32>, _> = attachment_mut.downcast_attachment();
+    /// let typed_ref: Result<ReportAttachmentMut<'_, i32>, _> = attachment_mut.downcast_attachment();
     /// assert!(typed_ref.is_ok());
     /// ```
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachmentMut<'a, A>, Self>
@@ -465,12 +473,12 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
-    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
-    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
+    /// let mut attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_mut: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
     ///
     /// // SAFETY: We know the attachment contains &str data
-    /// let typed_ref: ReportAttachmentRef<'_, &str> =
-    ///     unsafe { attachment_ref.downcast_attachment_unchecked() };
+    /// let typed_mut: ReportAttachmentMut<'_, &str> =
+    ///     unsafe { attachment_mut.downcast_attachment_unchecked() };
     /// ```
     #[must_use]
     pub unsafe fn downcast_attachment_unchecked<A>(self) -> ReportAttachmentMut<'a, A>
@@ -589,7 +597,7 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     /// let mut attachment: ReportAttachment<Dynamic> = ReportAttachment::new(41i32).into_dynamic();
     /// let mut attachment_mut: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
     ///
-    /// // SAFETY: We know the attachment contains &str data
+    /// // SAFETY: We know the attachment contains i32 data
     /// let data: &mut i32 = unsafe { attachment_mut.downcast_inner_mut_unchecked() };
     /// *data += 1;
     /// assert_eq!(*data, 42);

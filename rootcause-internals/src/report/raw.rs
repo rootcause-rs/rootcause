@@ -129,7 +129,8 @@ impl RawReport {
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
         // SAFETY:
         // 1. Guaranteed by invariant on `self`
-        // 2. Upheld by mutable borrow on `self`
+        // 2. Upheld by mutable borrow on `self`, combined with the fact that the caller
+        //    guarantees that the strong count is 1.
         unsafe { RawReportMut::new(self.ptr) }
     }
 }
@@ -449,7 +450,7 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawReportMut<'b> {
         // SAFETY:
-        // 1. Guarateed by invariant on `self`
+        // 1. Guaranteed by invariant on `self`
         // 2. Upheld by mutable borrow of `self`
         unsafe { RawReportMut::new(self.ptr) }
     }
@@ -458,7 +459,7 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
         // SAFETY:
-        // 1. Guarateed by invariant on `self`
+        // 1. Guaranteed by invariant on `self`
         unsafe { RawReportRef::new(self.ptr) }
     }
 
@@ -467,7 +468,7 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub fn into_ref(self) -> RawReportRef<'a> {
         // SAFETY:
-        // 1. Guarateed by invariant on `self`
+        // 1. Guaranteed by invariant on `self`
         unsafe { RawReportRef::new(self.ptr) }
     }
 
