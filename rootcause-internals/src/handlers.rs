@@ -232,8 +232,11 @@ pub trait ContextHandler<C>: 'static {
         value: &C,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let _ = (value, report_formatting_function);
-        ContextFormattingStyle::default()
+        let _ = value;
+        ContextFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 
@@ -400,8 +403,11 @@ pub trait AttachmentHandler<A>: 'static {
         value: &A,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        let _ = (value, report_formatting_function);
-        AttachmentFormattingStyle::default()
+        let _ = (value,);
+        AttachmentFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 
