@@ -10,7 +10,6 @@ use crate::{
     markers::{self, Dynamic, Local, SendSync},
     preformatted::PreformattedAttachment,
     report_attachment::{ReportAttachmentMut, ReportAttachmentRef},
-    util::format_helper,
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -278,26 +277,13 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// Formats the attachment with hook processing.
     #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
-        format_helper(
-            attachment,
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
-            },
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
-            },
-        )
+        self.as_ref().format_inner()
     }
 
     /// Formats the attachment without hook processing.
     #[must_use]
     pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |attachment, formatter| attachment.attachment_display(formatter),
-            |attachment, formatter| attachment.attachment_debug(formatter),
-        )
+        self.as_ref().format_inner_unhooked()
     }
 
     /// Gets the preferred formatting style for the attachment with hook
@@ -316,10 +302,8 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::attachment_formatter::get_preferred_formatting_style(
-            self.as_ref().into_dynamic(),
-            report_formatting_function,
-        )
+        self.as_ref()
+            .preferred_formatting_style(report_formatting_function)
     }
 
     /// Gets the preferred formatting style for the attachment without hook
@@ -571,15 +555,6 @@ where
     }
 }
 
-impl<A: Sized, T> From<A> for ReportAttachment<Dynamic, T>
-where
-    A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
-{
-    fn from(attachment: A) -> Self {
-        ReportAttachment::new_custom::<handlers::Display>(attachment).into_dynamic()
-    }
-}
-
 // SAFETY: The `SendSync` marker indicates that the inner attachment
 // is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
@@ -589,6 +564,18 @@ unsafe impl<A: ?Sized> Send for ReportAttachment<A, SendSync> {}
 // is `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the
 // attachment itself.
 unsafe impl<A: ?Sized> Sync for ReportAttachment<A, SendSync> {}
+
+impl<'a, A: ?Sized> core::fmt::Display for ReportAttachment<A> {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.as_ref(), formatter)
+    }
+}
+
+impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachment<A> {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(&self.as_ref(), formatter)
+    }
+}
 
 impl<A: ?Sized, T> Unpin for ReportAttachment<A, T> {}
 

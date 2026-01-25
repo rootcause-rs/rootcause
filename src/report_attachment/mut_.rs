@@ -1,4 +1,3 @@
-use alloc::fmt;
 use core::any::TypeId;
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
@@ -7,7 +6,6 @@ use crate::{
     markers::{Dynamic, SendSync},
     preformatted::PreformattedAttachment,
     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    util::format_helper,
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -35,7 +33,7 @@ mod limit_field_access {
     ///
     /// [`ReportAttachment`]: crate::report_attachment::ReportAttachment
     #[repr(transparent)]
-    pub struct ReportAttachmentMut<'a, A: ?Sized + 'static = Dynamic> {
+    pub struct ReportAttachmentMut<'a, Attachment: ?Sized + 'static = Dynamic> {
         /// # Safety
         ///
         /// The following safety invariants are guaranteed to be upheld as long
@@ -44,11 +42,8 @@ mod limit_field_access {
         /// 1. `A` must either be a type bounded by `Sized`, or `Dynamic`.
         /// 2. If `A` is a `Sized` type: The attachment embedded in the
         ///    [`RawAttachmentMut`] must be of type `A`.
-        /// 3. This reference represents exclusive mutable access to the
-        ///    underlying
-        ///    [`AttachmentData`](rootcause_internals::attachment::data::AttachmentData).
         raw: RawAttachmentMut<'a>,
-        _attachment: PhantomData<&'a mut A>,
+        _attachment: PhantomData<Attachment>,
     }
 
     impl<'a, A: ?Sized + 'static> ReportAttachmentMut<'a, A> {
@@ -66,7 +61,6 @@ mod limit_field_access {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Guaranteed by the caller
             // 2. Guaranteed by the caller
-            // 3. Guaranteed by safety invariant #3 of [`RawAttachmentMut`]
             ReportAttachmentMut {
                 raw,
                 _attachment: PhantomData,
@@ -79,8 +73,6 @@ mod limit_field_access {
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameter does not change.
             // 2. Upheld as the type parameter does not change.
-            // 3. Upheld since `self` is borrowed as shared and no mutable access can happen
-            //    through the reference.
             let raw: &RawAttachmentMut<'_> = &self.raw;
 
             raw.as_ref()
@@ -99,8 +91,6 @@ mod limit_field_access {
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameter does not change.
             // 2. Upheld as the type parameter does not change.
-            // 3. Upheld since `self` is borrowed mutably transfers exclusive access by
-            //    futher mutable borrow.
             let raw = &mut self.raw;
 
             raw.reborrow()
@@ -308,29 +298,6 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
-    /// Formats the inner attachment data without applying any formatting hooks.
-    ///
-    /// This method provides direct access to the attachment's formatting
-    /// capabilities as defined by its handler, bypassing any global
-    /// formatting hooks that might modify the output. The returned object
-    /// implements both [`Display`] and [`Debug`] traits for flexible
-    /// formatting options.
-    ///
-    /// For formatted output that includes formatting hooks, use
-    /// [`format_inner`] instead.
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
-    /// [`format_inner`]: Self::format_inner
-    #[must_use]
-    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |attachment, formatter| attachment.attachment_display(formatter),
-            |attachment, formatter| attachment.attachment_debug(formatter),
-        )
-    }
-
     /// Formats the inner attachment data with formatting hooks applied.
     ///
     /// This method formats the attachment using both its handler and any global
@@ -347,15 +314,26 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
     #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_ref().into_dynamic(),
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
-            },
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
-            },
-        )
+        self.as_ref().format_inner()
+    }
+
+    /// Formats the inner attachment data without applying any formatting hooks.
+    ///
+    /// This method provides direct access to the attachment's formatting
+    /// capabilities as defined by its handler, bypassing any global
+    /// formatting hooks that might modify the output. The returned object
+    /// implements both [`Display`] and [`Debug`] traits for flexible
+    /// formatting options.
+    ///
+    /// For formatted output that includes formatting hooks, use
+    /// [`format_inner`] instead.
+    ///
+    /// [`Display`]: core::fmt::Display
+    /// [`Debug`]: core::fmt::Debug
+    /// [`format_inner`]: Self::format_inner
+    #[must_use]
+    pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
+        self.as_ref().format_inner_unhooked()
     }
 
     /// Returns the preferred formatting style for this attachment with
@@ -379,10 +357,8 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::attachment_formatter::get_preferred_formatting_style(
-            self.as_ref().into_dynamic(),
-            report_formatting_function,
-        )
+        self.as_ref()
+            .preferred_formatting_style(report_formatting_function)
     }
 
     /// Returns the preferred formatting style for this attachment without
@@ -632,16 +608,14 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
 }
 
 impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentMut<'a, A> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let report: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
-        crate::hooks::attachment_formatter::display_attachment(report, None, formatter)
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.as_ref(), formatter)
     }
 }
 
 impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentMut<'a, A> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let report: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
-        crate::hooks::attachment_formatter::debug_attachment(report, None, formatter)
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Debug::fmt(&self.as_ref(), formatter)
     }
 }
 

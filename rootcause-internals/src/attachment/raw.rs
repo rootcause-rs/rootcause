@@ -105,6 +105,7 @@ impl RawAttachment {
     pub fn as_mut(&mut self) -> RawAttachmentMut<'_> {
         // SAFETY:
         // 1. Upheld by invariant on `self`
+        // 2. Upheld by mutable borrow of `self`
         unsafe { RawAttachmentMut::new(self.ptr) }
     }
 }
@@ -307,7 +308,8 @@ pub struct RawAttachmentMut<'a> {
     /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
     ///    lifetime of this object.
     /// 3. This pointer represents exclusive mutable access to the
-    ///    `AttachmentData`.
+    ///    `AttachmentData` for the lifetime `'a` with the same semantics as a
+    ///    `&'a mut AttachmentData<C>`.
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -325,12 +327,13 @@ impl<'a> RawAttachmentMut<'a> {
     /// 1. `ptr` must have been created from a `Box<AttachmentData<A>>` for some
     ///    `A` using `Box::into_raw`.
     /// 2. This pointer represents exclusive mutable access to the
-    ///    `AttachmentData`.
+    ///    `AttachmentData` for the lifetime `'a` with the same semantics as a
+    ///    `&'a mut AttachmentData<C>`.
     pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
         RawAttachmentMut {
             // SAFETY:
             // 1. Guaranteed by caller
-            // 2. N/A
+            // 2. The pointer is not modified at this point, so the invariant holds
             // 3. Guaranteed by caller
             ptr,
             _marker: core::marker::PhantomData,
