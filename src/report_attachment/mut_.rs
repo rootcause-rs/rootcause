@@ -67,7 +67,7 @@ mod limit_field_access {
             }
         }
 
-        // Creates a raw reference to the underlying attachment.
+        /// Creates a raw reference to the underlying attachment, with a shorter lifetime.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
