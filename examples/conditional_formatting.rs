@@ -118,7 +118,7 @@ impl AttachmentFormatterHook<DebugSnapshot> for DebugSnapshotFormatter {
             // Show in appendix when runtime condition is false
             AttachmentFormattingStyle {
                 placement: AttachmentFormattingPlacement::Appendix {
-                    appendix_name: "Debug Info",
+                    appendix_name: "Debug Info".into(),
                 },
                 function: FormattingFunction::Display,
                 priority: 0,

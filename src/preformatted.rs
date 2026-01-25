@@ -327,10 +327,10 @@ impl ContextHandler<PreformattedContext> for PreformattedHandler {
     ) -> ContextFormattingStyle {
         match report_formatting_function {
             rootcause_internals::handlers::FormattingFunction::Display => {
-                value.display_preferred_formatting_style
+                value.display_preferred_formatting_style.clone()
             }
             rootcause_internals::handlers::FormattingFunction::Debug => {
-                value.debug_preferred_formatting_style
+                value.debug_preferred_formatting_style.clone()
             }
         }
     }
@@ -357,10 +357,10 @@ impl AttachmentHandler<PreformattedAttachment> for PreformattedHandler {
     ) -> AttachmentFormattingStyle {
         match report_formatting_function {
             rootcause_internals::handlers::FormattingFunction::Display => {
-                value.display_preferred_formatting_style
+                value.display_preferred_formatting_style.clone()
             }
             rootcause_internals::handlers::FormattingFunction::Debug => {
-                value.debug_preferred_formatting_style
+                value.debug_preferred_formatting_style.clone()
             }
         }
     }

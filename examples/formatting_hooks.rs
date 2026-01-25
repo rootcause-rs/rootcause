@@ -59,7 +59,7 @@ impl AttachmentFormatterHook<DatabaseQuery> for DatabaseQueryFormatter {
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
             placement: AttachmentFormattingPlacement::Appendix {
-                appendix_name: "Database Query",
+                appendix_name: "Database Query".into(),
             },
             function: FormattingFunction::Display,
             priority: 0,

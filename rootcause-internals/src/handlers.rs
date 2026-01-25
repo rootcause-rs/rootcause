@@ -5,6 +5,8 @@
 //! handlers that control how context objects and attachments are formatted and
 //! displayed in error reports.
 
+use alloc::borrow::Cow;
+
 /// Trait for implementing custom formatting and error-chaining behavior for
 /// report contexts.
 ///
@@ -301,7 +303,7 @@ pub trait ContextHandler<C>: 'static {
 ///             // Large data goes to appendix
 ///             AttachmentFormattingStyle {
 ///                 placement: AttachmentFormattingPlacement::Appendix {
-///                     appendix_name: "Large Data Records",
+///                     appendix_name: "Large Data Records".into(),
 ///                 },
 ///                 function: FormattingFunction::Display,
 ///                 priority: 0,
@@ -439,7 +441,8 @@ pub trait AttachmentHandler<A>: 'static {
 ///     follow_source_depth: None,
 /// };
 /// ```
-#[derive(Copy, Clone, Debug, Default)]
+#[allow(missing_copy_implementations)]
+#[derive(Clone, Debug, Default)]
 pub struct ContextFormattingStyle {
     /// The preferred formatting function to use
     pub function: FormattingFunction,
@@ -486,13 +489,13 @@ pub struct ContextFormattingStyle {
 /// // High-priority attachment in appendix
 /// let appendix_style = AttachmentFormattingStyle {
 ///     placement: AttachmentFormattingPlacement::Appendix {
-///         appendix_name: "Stack Trace",
+///         appendix_name: "Stack Trace".into(),
 ///     },
 ///     function: FormattingFunction::Debug,
 ///     priority: 10,
 /// };
 /// ```
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Clone, Debug, Default)]
 pub struct AttachmentFormattingStyle {
     /// The preferred attachment placement
     pub placement: AttachmentFormattingPlacement,
@@ -562,18 +565,18 @@ pub enum FormattingFunction {
 ///
 /// // Attachment with header
 /// let with_header = AttachmentFormattingPlacement::InlineWithHeader {
-///     header: "Request Details",
+///     header: "Request Details".into(),
 /// };
 ///
 /// // Large content in appendix
 /// let appendix = AttachmentFormattingPlacement::Appendix {
-///     appendix_name: "Full Stack Trace",
+///     appendix_name: "Full Stack Trace".into(),
 /// };
 ///
 /// // Sensitive data that should be hidden
 /// let hidden = AttachmentFormattingPlacement::Hidden;
 /// ```
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
+#[derive(Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum AttachmentFormattingPlacement {
     /// Display the attachment inline with the error message.
     ///
@@ -588,7 +591,7 @@ pub enum AttachmentFormattingPlacement {
     /// such as configuration snippets or multi-field data structures.
     InlineWithHeader {
         /// The header text to display above the attachment
-        header: &'static str,
+        header: Cow<'static, str>,
     },
 
     /// Display the attachment in a separate appendix section.
@@ -598,7 +601,7 @@ pub enum AttachmentFormattingPlacement {
     /// or detailed diagnostic information.
     Appendix {
         /// The name of the appendix section for this attachment
-        appendix_name: &'static str,
+        appendix_name: Cow<'static, str>,
     },
 
     /// Don't display the attachment, but count it in a summary.
