@@ -131,7 +131,7 @@
 
 use core::marker::PhantomData;
 
-use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
+use rootcause_internals::handlers::ContextHandler;
 
 use crate::{
     Report,

@@ -138,7 +138,7 @@
 use core::marker::PhantomData;
 
 use error_stack05 as error_stack;
-use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
+use rootcause_internals::handlers::ContextHandler;
 
 use crate::{
     Report,
