@@ -241,8 +241,7 @@ where
 /// - **`display` method**: Shows "Context of type `TypeName`"
 /// - **`debug` method**: Uses the type's `Debug` implementation
 /// - **`source` method**: Always returns `None`
-/// - **Preferred formatting**: Uses `Display` by default, so contexts show the
-///   generic type name message even when the report is formatted with `{:?}`
+/// - **Preferred formatting**: Same as requested formatting of the report.
 ///
 /// # Example
 ///
