@@ -1151,7 +1151,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 )?;
             }
             AttachmentFormattingPlacement::Appendix { appendix_name } => {
-                let appendices = self.appendices.entry(appendix_name).or_default();
+                let appendices = self.appendices.entry(appendix_name.clone()).or_default();
                 appendices.push((attachment, attachment_formatting_style.function));
                 let formatting = if is_last {
                     &self.config.notice_see_also_last_formatting

@@ -132,7 +132,7 @@ impl AttachmentHandler<Span> for SpanHandler {
                 AttachmentFormattingPlacement::Hidden
             } else {
                 AttachmentFormattingPlacement::InlineWithHeader {
-                    header: "Tracing spans:",
+                    header: "Tracing spans:".into(),
                 }
             },
             priority: 9, // Slightly lower priority than backtraces (10)
