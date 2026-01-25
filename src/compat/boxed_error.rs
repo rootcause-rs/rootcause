@@ -178,6 +178,8 @@ impl ContextHandler<Box<dyn Error + Send + Sync>> for BoxedErrorHandler {
     ) -> ContextFormattingStyle {
         ContextFormattingStyle {
             function: formatting_function,
+            follow_source: false,
+            follow_source_depth: None,
         }
     }
 }
@@ -207,6 +209,8 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
     ) -> ContextFormattingStyle {
         ContextFormattingStyle {
             function: formatting_function,
+            follow_source: false,
+            follow_source_depth: None,
         }
     }
 }
