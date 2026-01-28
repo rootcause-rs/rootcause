@@ -630,7 +630,10 @@ const fn get_rootcause_backtrace_matcher(
     if std::path::MAIN_SEPARATOR == '/' {
         assert!(suffix.eq_ignore_ascii_case("/src/lib.rs"));
     } else {
-        assert!(suffix.eq_ignore_ascii_case(r#"/src\lib.rs"#));
+        assert!(
+            suffix.eq_ignore_ascii_case(r#"\src\lib.rs"#)
+                || suffix.eq_ignore_ascii_case(r#"/src\lib.rs"#)
+        );
     }
 
     let (matcher_prefix, _) = file.split_at(prefix_len + 4);
