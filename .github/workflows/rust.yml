@@ -54,7 +54,11 @@ jobs:
           rust-version: ${{ matrix.rust }}
 
   miri:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v6
