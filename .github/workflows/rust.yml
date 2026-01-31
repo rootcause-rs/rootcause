@@ -79,6 +79,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Run tests with miri
+        shell: bash
         run: |
           export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
 
