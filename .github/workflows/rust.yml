@@ -67,7 +67,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-latest]
+        # The windows miri support doesn't seem to be working well currently
+        os: [ubuntu-latest, macos-latest]
 
     runs-on: ${{ matrix.os }}
 
@@ -81,19 +82,20 @@ jobs:
       - uses: Swatinem/rust-cache@v2
 
       - name: Run tests with miri
-        shell: bash
         run: |
-          MIRIFLAGS="-Zmiri-strict-provenance" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-targets
-          MIRIFLAGS="-Zmiri-strict-provenance" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-features --all-targets
+          export MIRIFLAGS="-Zmiri-strict-provenance"
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-targets
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-features --all-targets
 
-          MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc
-          MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc --all-features
+          export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc
+          cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc --all-features
 
           # Only run rootcause-backtrace tests on scheduled runs or manual dispatch (slow)
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "Running rootcause-backtrace miri tests (scheduled/manual run)"
-            MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn" cargo miri test -p rootcause-backtrace --all-targets
-            MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn" cargo miri test -p rootcause-backtrace --doc
+            cargo miri test -p rootcause-backtrace --all-targets
+            cargo miri test -p rootcause-backtrace --doc
           else
             echo "Skipping rootcause-backtrace miri tests (too slow for push/PR events)"
           fi
