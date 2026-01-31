@@ -15,8 +15,9 @@ on:
 jobs:
   test:
     strategy:
+      fail-fast: false
       matrix:
-        os: [ubuntu-latest]
+        os: [ubuntu-latest, windows-latest, macos-latest]
         rust: ["1.89", stable, beta]
 
     runs-on: ${{ matrix.os }}
@@ -48,13 +49,28 @@ jobs:
       - name: Run docs
         run: cargo doc --no-deps -p rootcause -p rootcause-internals -p rootcause-backtrace -p rootcause-tracing --all-features
 
+  cargo-deny:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+      - uses: Swatinem/rust-cache@v2
+
       - name: Run cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
-        with:
-          rust-version: ${{ matrix.rust }}
 
   miri:
-    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        # The windows miri support doesn't seem to be working well currently
+        os: [ubuntu-latest, macos-latest]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@v6
@@ -67,11 +83,11 @@ jobs:
 
       - name: Run tests with miri
         run: |
-          export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
-
+          export MIRIFLAGS="-Zmiri-strict-provenance"
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-targets
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-features --all-targets
 
+          export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc --all-features
 
