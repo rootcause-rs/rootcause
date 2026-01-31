@@ -189,44 +189,31 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Default Behavior
     ///
-    /// The default implementation ignores the report's formatting style and
-    /// always uses display formatting. This is the behavior of all built-in
-    /// handlers.
+    /// The default implementation uses the formatting of the report as a whole.
+    /// This is the behavior of all built-in handlers.
     ///
     /// # Examples
     ///
-    /// Custom handler that mirrors the report's formatting:
+    /// Custom handler that flips the report's formatting:
     ///
     /// ```
     /// use rootcause_internals::handlers::{
     ///     ContextFormattingStyle, ContextHandler, FormattingFunction,
     /// };
     ///
-    /// struct MirrorHandler;
+    /// struct FlipHandler;
     ///
-    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for MirrorHandler {
+    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for FlipHandler {
     ///     fn source(_context: &C) -> Option<&(dyn std::error::Error + 'static)> {
     ///         None
     ///     }
     ///
     ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         std::fmt::Display::fmt(context, f)
-    ///     }
-    ///
-    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     ///         std::fmt::Debug::fmt(context, f)
     ///     }
     ///
-    ///     fn preferred_formatting_style(
-    ///         _value: &C,
-    ///         report_formatting_function: FormattingFunction,
-    ///     ) -> ContextFormattingStyle {
-    ///         // Use the same formatting as the report
-    ///         ContextFormattingStyle {
-    ///             function: report_formatting_function,
-    ///             follow_source: false,
-    ///             follow_source_depth: None,
-    ///         }
+    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Display::fmt(context, f)
     ///     }
     /// }
     /// ```
@@ -234,8 +221,11 @@ pub trait ContextHandler<C>: 'static {
         value: &C,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let _ = (value, report_formatting_function);
-        ContextFormattingStyle::default()
+        let _ = value;
+        ContextFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 
@@ -359,8 +349,8 @@ pub trait AttachmentHandler<A>: 'static {
     /// - **Priority**: The order in which attachments are displayed (higher =
     ///   earlier)
     ///
-    /// The default implementation returns inline display formatting with
-    /// priority 0.
+    /// The default implementation returns the same formatting as the report, in
+    /// inline formatting with priority 0.
     ///
     /// # Examples
     ///
@@ -402,8 +392,11 @@ pub trait AttachmentHandler<A>: 'static {
         value: &A,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        let _ = (value, report_formatting_function);
-        AttachmentFormattingStyle::default()
+        let _ = value;
+        AttachmentFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 

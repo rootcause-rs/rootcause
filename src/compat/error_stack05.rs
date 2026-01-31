@@ -138,7 +138,7 @@
 use core::marker::PhantomData;
 
 use error_stack05 as error_stack;
-use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
+use rootcause_internals::handlers::ContextHandler;
 
 use crate::{
     Report,
@@ -199,17 +199,6 @@ where
         formatter: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         core::fmt::Debug::fmt(value, formatter)
-    }
-
-    fn preferred_formatting_style(
-        _value: &error_stack::Report<C>,
-        formatting_function: FormattingFunction,
-    ) -> ContextFormattingStyle {
-        ContextFormattingStyle {
-            function: formatting_function,
-            follow_source: false,
-            follow_source_depth: None,
-        }
     }
 }
 
