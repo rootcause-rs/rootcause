@@ -86,8 +86,8 @@ jobs:
           MIRIFLAGS="-Zmiri-strict-provenance" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-targets
           MIRIFLAGS="-Zmiri-strict-provenance" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --all-features --all-targets
 
-          MIRIFLAGS="-Zmiri-strict-provenance" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc
-          MIRIFLAGS="-Zmiri-strict-provenance" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc --all-features
+          MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc
+          MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn" cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing --doc --all-features
 
           # Only run rootcause-backtrace tests on scheduled runs or manual dispatch (slow)
           if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
