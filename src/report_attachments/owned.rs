@@ -404,6 +404,7 @@ impl<T> ReportAttachments<T> {
             // @add-unsafe-context: rootcause_internals::RawAttachment
             // @add-unsafe-context: ReportAttachment
             // @add-unsafe-context: ReportAttachmentsIterMut
+            // @add-unsafe-context: crate::report_attachment::ReportAttachmentMut
             self.as_raw_mut()
         };
         ReportAttachmentsIterMut::from_raw(raw.iter_mut())
