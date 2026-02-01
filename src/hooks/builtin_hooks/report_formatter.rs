@@ -814,11 +814,9 @@ impl NodeConfig {
         }
     }
 }
-type Appendices<'a> = IndexMap<
-    Cow<'static, str>,
-    Vec<(ReportAttachmentRef<'a, Dynamic>, FormattingFunction)>,
-    rustc_hash::FxBuildHasher,
->;
+
+type AppendixValues<'a> = Vec<(ReportAttachmentRef<'a, Dynamic>, FormattingFunction)>;
+type Appendices<'a> = IndexMap<Cow<'static, str>, AppendixValues<'a>, rustc_hash::FxBuildHasher>;
 
 struct DefaultFormatterState<'a, 'b> {
     config: &'a DefaultReportFormatter,
@@ -843,6 +841,19 @@ impl ReportFormatter for DefaultReportFormatter {
 
 type TmpValueBuffer = String;
 type TmpAttachmentsBuffer<'a> = Vec<(AttachmentFormattingStyle, ReportAttachmentRef<'a, Dynamic>)>;
+
+fn format_line(
+    formatter: &mut Formatter<'_>,
+    line_prefix: &str,
+    line_info: &LineFormatting,
+    line: impl core::fmt::Display,
+) -> fmt::Result {
+    formatter.write_str(&line_prefix)?;
+    formatter.write_str(line_info.prefix)?;
+    line.fmt(formatter)?;
+    formatter.write_str(line_info.suffix)?;
+    Ok(())
+}
 
 impl<'a, 'b> DefaultFormatterState<'a, 'b> {
     fn new(
@@ -905,21 +916,14 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 (false, false) => &formatting.middle_line,
                 (false, true) => &formatting.last_line,
             };
-            self.format_line(line_formatting, value_line)?;
+            format_line(
+                &mut self.formatter,
+                &self.line_prefix,
+                line_formatting,
+                value_line,
+            )?;
             is_first = false;
         }
-        Ok(())
-    }
-
-    fn format_line(
-        &mut self,
-        line_info: &LineFormatting,
-        line: impl core::fmt::Display,
-    ) -> fmt::Result {
-        self.formatter.write_str(&self.line_prefix)?;
-        self.formatter.write_str(line_info.prefix)?;
-        line.fmt(self.formatter)?;
-        self.formatter.write_str(line_info.suffix)?;
         Ok(())
     }
 
@@ -1030,16 +1034,17 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     },
                 ),
         );
+        let len = tmp_attachments_buffer.len();
         tmp_attachments_buffer
             .sort_by_key(|(style1, _attachment)| core::cmp::Reverse(style1.priority));
         for (attachment_index, (attachment_formatting_style, attachment)) in
-            tmp_attachments_buffer.iter().enumerate()
+            tmp_attachments_buffer.drain(..).enumerate()
         {
-            let is_last_attachment = attachment_index + 1 == tmp_attachments_buffer.len();
+            let is_last_attachment = attachment_index + 1 == len;
             self.format_attachment(
                 tmp_value_buffer,
-                attachment_formatting_style.clone(),
-                *attachment,
+                attachment_formatting_style,
+                attachment,
                 is_last_attachment && !has_children,
             )?;
         }
@@ -1050,7 +1055,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             } else {
                 &self.config.notice_opaque_last_formatting
             };
-            self.format_line(
+            format_line(
+                &mut self.formatter,
+                &self.line_prefix,
                 item_info,
                 format_args!(
                     "{opaque_attachment_count} additional opaque {word}",
@@ -1151,15 +1158,22 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 )?;
             }
             AttachmentFormattingPlacement::Appendix { appendix_name } => {
-                let appendices = self.appendices.entry(appendix_name.clone()).or_default();
-                appendices.push((attachment, attachment_formatting_style.function));
+                let mut appendices = match self.appendices.entry(appendix_name) {
+                    indexmap::map::Entry::Occupied(occupied_entry) => occupied_entry,
+                    indexmap::map::Entry::Vacant(vacant_entry) => {
+                        vacant_entry.insert_entry(Vec::new())
+                    }
+                };
+                appendices
+                    .get_mut()
+                    .push((attachment, attachment_formatting_style.function));
                 let formatting = if is_last {
                     &self.config.notice_see_also_last_formatting
                 } else {
                     &self.config.notice_see_also_middle_formatting
                 };
-                let line = format_args!("{appendix_name} #{}", appendices.len());
-                self.format_line(formatting, line)?;
+                let line = format_args!("{} #{}", appendices.key(), appendices.get().len());
+                format_line(&mut self.formatter, &self.line_prefix, formatting, line)?;
             }
             AttachmentFormattingPlacement::Opaque | AttachmentFormattingPlacement::Hidden => {}
         }
@@ -1239,7 +1253,9 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
 
                     // The omitted notice is always the last item in the source chain subtree,
                     // so we use a modified version with ╰ instead of ├
-                    this.format_line(
+                    format_line(
+                        &mut this.formatter,
+                        &this.line_prefix,
                         &this
                             .config
                             .source_chain_item_last_formatting
@@ -1282,7 +1298,12 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 }
 
                 let line = format_args!("{appendix_name} #{}", appendix_index + 1);
-                self.format_line(&self.config.appendix_header, line)?;
+                format_line(
+                    &mut self.formatter,
+                    &self.line_prefix,
+                    &self.config.appendix_header,
+                    line,
+                )?;
                 self.format_item(
                     tmp_value_buffer,
                     &self.config.appendix_body,
