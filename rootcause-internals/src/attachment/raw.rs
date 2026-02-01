@@ -384,8 +384,11 @@ impl<'a> RawAttachmentMut<'a> {
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawAttachmentMut<'b> {
         // SAFETY:
-        // 1. Guaranteed by `self`
-        // 2. Guaranteed by mutable borrow of `self`
+        // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
+        // 2. Exclusive mutable access for lifetime `'b` is guaranteed because:
+        //    - The returned `RawAttachmentMut<'b>` contains `PhantomData<&'b mut ...>`
+        //    - This causes the borrow checker to treat the return value as borrowing `self` for `'b`
+        //    - Therefore `self` cannot be used while the returned value exists
         unsafe { RawAttachmentMut::new(self.ptr) }
     }
 

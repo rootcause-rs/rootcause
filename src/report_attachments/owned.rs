@@ -392,12 +392,13 @@ impl<T> ReportAttachments<T> {
     /// [`iter()`]: Self::iter
     pub fn iter_mut(&mut self) -> ReportAttachmentsIterMut<'_> {
         // SAFETY:
-        // 1. Mutation of the collection is not possible through the iterator, since we
-        //    are only providing mutable access to the individual attachments.
-        // 2. The iterator returns value of type `ReportAttachmentMut<'_, Dynamic>`, and
-        //    while mutation of the attachments is possible through this API, it is not
-        //    possible to change the type of the attachments and therefore its thread
-        //    safety marker.
+        // 1. The iterator does not allow structural mutation of the collection (adding/removing
+        //    elements). `Vec::iter_mut()` only provides mutable access to existing elements,
+        //    not the ability to change the vector's length.
+        // 2. The iterator yields `ReportAttachmentMut<'_, Dynamic>` which only allows in-place
+        //    mutation of attachment data through methods like `inner_mut()`. It does not expose
+        //    any way to replace an entire attachment with a different type, so the `Send + Sync`
+        //    invariant (when `T = SendSync`) is preserved.
         let raw = unsafe {
             // @add-unsafe-context: rootcause_internals::RawAttachmentMut
             // @add-unsafe-context: rootcause_internals::RawAttachment

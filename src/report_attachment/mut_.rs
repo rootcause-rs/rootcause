@@ -70,6 +70,9 @@ mod limit_field_access {
 
         /// Creates a raw reference to the underlying attachment, with a shorter
         /// lifetime.
+        ///
+        /// This returns a raw, read-only reference to the same attachment, but with a
+        /// lifetime tied to the lifetime of `self`.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -207,8 +210,10 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         let raw = self.as_raw_ref();
 
         // SAFETY:
-        // 1. Guaranteed by invariants of this type.
-        // 2. Guaranteed by invariants of this type.
+        // 1. Guaranteed by invariants of this type combined with the fact that
+        //    `as_raw_ref` returns a reference to the same attachment.
+        // 2. Guaranteed by invariants of this type combined with the fact that
+        //    `as_raw_ref` returns a reference to the same attachment.
         unsafe {
             // @add-unsafe-context: RawAttachmentRef
             ReportAttachmentRef::<A>::from_raw(raw)

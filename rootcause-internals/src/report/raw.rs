@@ -128,9 +128,9 @@ impl RawReport {
     #[inline]
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
         // SAFETY:
-        // 1. Guaranteed by invariant on `self`
-        // 2. Upheld by mutable borrow on `self`, combined with the fact that the caller
-        //    guarantees that the strong count is 1.
+        // 1. The pointer comes from `Arc::into_raw` (guaranteed by `RawReport`'s invariant)
+        // 2. Exclusive mutable access is guaranteed by the caller's obligation that no other
+        //    references to the inner `ReportData` exist
         unsafe { RawReportMut::new(self.ptr) }
     }
 }
