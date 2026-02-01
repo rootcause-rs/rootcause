@@ -14,9 +14,7 @@
 
 use rootcause::{
     ReportRef,
-    handlers::{
-        AttachmentFormattingPlacement, AttachmentFormattingStyle, Debug, FormattingFunction,
-    },
+    handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
     hooks::{
         Hooks, attachment_formatter::AttachmentFormatterHook,
         context_formatter::ContextFormatterHook,
@@ -36,7 +34,7 @@ struct DatabaseQuery {
 }
 
 impl core::fmt::Display for DatabaseQuery {
-    fn fmt(&self, f: &mut &mut std::fmt::Formatter<'_>Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> core::fmt::Result {
         writeln!(f, "SQL: {}", self.sql)?;
         writeln!(f, "Parameters: [{}]", self.params.join(", "))?;
         writeln!(f, "\nExecution Plan:")?;
