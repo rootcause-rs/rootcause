@@ -387,8 +387,8 @@ impl<'a> RawAttachmentMut<'a> {
             // SAFETY:
             // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
             // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
-            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime
-            //    `'b`, which is valid because we are consuming `self` and turning it into a shared reference
+            // 3. The returned `RawAttachmentRef<'a>` represents shared access for lifetime
+            //    `'a`, which is valid because we are consuming `self` and turning it into a shared reference
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
