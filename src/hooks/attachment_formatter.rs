@@ -584,8 +584,8 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// Determines the preferred formatting style for this attachment.
     ///
     /// This method allows the formatter to specify how the attachment should be
-    /// presented in the overall report structure (inline, with header, in
-    /// appendix, etc.). The default implementation delegates to the
+    /// presented in the overall report structure (inline, in
+    /// appendix, not at all, etc.) The default implementation delegates to the
     /// attachment's unhooked preference.
     ///
     /// # Arguments
