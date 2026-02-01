@@ -398,7 +398,14 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
             .preferred_formatting_style(report_formatting_function)
     }
 
-    /// See [`crate::report_attachment::owned::ReportAttachment::preformat`]
+    /// Creates a new attachment, with the inner attachment data preformatted.
+    ///
+    /// This can be useful, as the preformatted attachment is a newly allocated
+    /// object and additionally is [`Send`]+[`Sync`].
+    ///
+    /// See [`PreformattedAttachment`] for more information.
+    ///
+    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
     #[track_caller]
     #[must_use]
     pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
