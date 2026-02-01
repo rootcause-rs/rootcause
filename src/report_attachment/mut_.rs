@@ -127,8 +127,12 @@ impl<'a, A: Sized> ReportAttachmentMut<'a, A> {
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::*};
     /// let mut attachment = ReportAttachment::new_sendsync(41i32);
-    /// let mut attachment_mut = attachment.as_mut();
-    /// let data = attachment_mut.inner_mut();
+    /// {
+    ///     let mut attachment_mut = attachment.as_mut();
+    ///     let data = attachment_mut.inner_mut();
+    ///     *data += 1;
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
     /// ```
     #[must_use]
     pub fn inner_mut(&mut self) -> &mut A {
@@ -503,7 +507,7 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
         unsafe { ReportAttachmentMut::from_raw(raw) }
     }
 
-    /// Attempts to downcast the inner attachment data to a reference of type
+    /// Attempts to downcast the inner attachment data to an immutable reference of type
     /// `A`.
     ///
     /// See [`ReportAttachmentRef::downcast_inner`] for more info.
