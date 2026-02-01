@@ -148,7 +148,7 @@
 //!                 AttachmentFormattingPlacement::Opaque,
 //!             } else {
 //!                 AttachmentFormattingPlacement::Inline
-//!             }
+//!             },
 //!             function: report_formatting_function,
 //!             priority: 0,
 //!         }
