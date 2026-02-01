@@ -118,9 +118,9 @@
 //!     .expect("failed to install hooks");
 //! ```
 //!
-//! ## Hiding Attachments
+//! ## Suppressing display of Attachments
 //!
-//! Hide noisy or unnecessary information by setting placement to `Hidden`:
+//! Omit noisy or unnecessary information by setting placement to `Opaque`:
 //!
 //! ```
 //! use rootcause::{
@@ -132,17 +132,19 @@
 //!
 //! struct DebugInfo(String);
 //!
-//! struct HideDebugInfo;
+//! struct OmitDebugInfo;
 //!
-//! impl AttachmentFormatterHook<DebugInfo> for HideDebugInfo {
+//! impl AttachmentFormatterHook<DebugInfo> for OmitDebugInfo {
 //!     fn preferred_formatting_style(
 //!         &self,
 //!         _attachment: ReportAttachmentRef<'_, Dynamic>,
-//!         _report_formatting_function: FormattingFunction,
+//!         report_formatting_function: FormattingFunction,
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
-//!             placement: AttachmentFormattingPlacement::Hidden,
-//!             function: FormattingFunction::Display,
+//!             // This will still show up as a count of omitted attachments,
+//!             // can be set it as Hidden instead to make it completely invisible.
+//!             placement: AttachmentFormattingPlacement::Opaque,
+//!             function: report_formatting_function,
 //!             priority: 0,
 //!         }
 //!     }
@@ -150,7 +152,7 @@
 //!
 //! // Install hook to suppress debug info in production reports
 //! Hooks::new()
-//!     .attachment_formatter::<DebugInfo, _>(HideDebugInfo)
+//!     .attachment_formatter::<DebugInfo, _>(OmitDebugInfo)
 //!     .install()
 //!     .expect("failed to install hooks");
 //! ```
@@ -603,11 +605,11 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     ///     fn preferred_formatting_style(
     ///         &self,
     ///         _attachment: ReportAttachmentRef<'_, Dynamic>,
-    ///         _function: FormattingFunction,
+    ///         formatting_function: FormattingFunction,
     ///     ) -> AttachmentFormattingStyle {
     ///         AttachmentFormattingStyle {
     ///             placement: AttachmentFormattingPlacement::InlineWithHeader { header: "Info" },
-    ///             function: FormattingFunction::Display,
+    ///             function: formatting_function,
     ///             priority: 100,
     ///         }
     ///     }

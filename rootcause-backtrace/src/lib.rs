@@ -357,7 +357,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
 
     fn preferred_formatting_style(
         backtrace: &Backtrace,
-        report_formatting_function: FormattingFunction,
+        _report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
             placement: if backtrace.entries.is_empty() {
@@ -367,7 +367,9 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                     header: "Backtrace",
                 }
             },
-            function: report_formatting_function,
+            // No reason to every print the Backtrace in the report
+            // as anything other than display.
+            function: FormattingFunction::Display,
             priority: 10,
         }
     }

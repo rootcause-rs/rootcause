@@ -14,7 +14,9 @@
 
 use rootcause::{
     ReportRef,
-    handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
+    handlers::{
+        AttachmentFormattingPlacement, AttachmentFormattingStyle, Debug, FormattingFunction,
+    },
     hooks::{
         Hooks, attachment_formatter::AttachmentFormatterHook,
         context_formatter::ContextFormatterHook,
@@ -34,7 +36,7 @@ struct DatabaseQuery {
 }
 
 impl core::fmt::Display for DatabaseQuery {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+    fn fmt(&self, f: &mut &mut std::fmt::Formatter<'_>Formatter<'_>) -> core::fmt::Result {
         writeln!(f, "SQL: {}", self.sql)?;
         writeln!(f, "Parameters: [{}]", self.params.join(", "))?;
         writeln!(f, "\nExecution Plan:")?;
@@ -55,14 +57,25 @@ impl AttachmentFormatterHook<DatabaseQuery> for DatabaseQueryFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
-        _report_formatting_function: FormattingFunction,
+        formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        AttachmentFormattingStyle {
-            placement: AttachmentFormattingPlacement::Appendix {
-                appendix_name: "Database Query",
+        match formatting_function {
+            // for display printing we want the full verbosity level and
+            // put it in an appendix
+            FormattingFunction::Display => AttachmentFormattingStyle {
+                placement: AttachmentFormattingPlacement::Appendix {
+                    appendix_name: "Database Query",
+                },
+                function: FormattingFunction::Display,
+                priority: 0,
             },
-            function: FormattingFunction::Display,
-            priority: 0,
+            // debug printing of the attachment is more compact so
+            // we put it inline but at the end
+            FormattingFunction::Debug => AttachmentFormattingStyle {
+                placement: AttachmentFormattingPlacement::Inline,
+                function: FormattingFunction::Debug,
+                priority: -10,
+            },
         }
     }
 }

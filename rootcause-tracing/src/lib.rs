@@ -135,8 +135,8 @@ impl AttachmentHandler<Span> for SpanHandler {
                     header: "Tracing spans:",
                 }
             },
+            function: FormattingFunction::Display,
             priority: 9, // Slightly lower priority than backtraces (10)
-            ..Default::default()
         }
     }
 }
