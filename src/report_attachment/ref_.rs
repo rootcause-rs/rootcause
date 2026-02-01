@@ -1,9 +1,13 @@
-use alloc::fmt;
 use core::any::TypeId;
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::{markers::Dynamic, util::format_helper};
+use crate::{
+    markers::{Dynamic, SendSync},
+    preformatted::{self, PreformattedAttachment},
+    report_attachment::ReportAttachment,
+    util::format_helper,
+};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -85,6 +89,7 @@ mod limit_field_access {
     // 2. This remains true for both the original and the copy
     impl<'a, A: ?Sized> Copy for ReportAttachmentRef<'a, A> {}
 }
+
 pub use limit_field_access::ReportAttachmentRef;
 
 impl<'a, A: ?Sized> Clone for ReportAttachmentRef<'a, A> {
@@ -153,7 +158,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         self.as_raw_ref().attachment_type_id()
     }
 
-    /// Returns the [`TypeId`] of the inner attachment.
+    /// Returns the [`core::any::type_name`] of the inner attachment.
     ///
     /// # Examples
     /// ```
@@ -189,8 +194,35 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
     #[must_use]
-    pub fn inner_handler_type_id(&self) -> TypeId {
+    pub fn inner_handler_type_id(self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
+    }
+
+    /// Formats the inner attachment data with formatting hooks applied.
+    ///
+    /// This method formats the attachment using both its handler and any global
+    /// formatting hooks that have been registered. The hooks allow for
+    /// custom formatting behaviors such as filtering, transforming, or
+    /// decorating the output. The returned object implements both
+    /// [`Display`] and [`Debug`] traits.
+    ///
+    /// For direct formatting without hooks, use [`format_inner_unhooked`]
+    /// instead.
+    ///
+    /// [`Display`]: core::fmt::Display
+    /// [`Debug`]: core::fmt::Debug
+    /// [`format_inner_unhooked`]: Self::format_inner_unhooked
+    #[must_use]
+    pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
+        format_helper(
+            self.into_dynamic(),
+            |attachment, formatter| {
+                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
+            },
+            |attachment, formatter| {
+                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
+            },
+        )
     }
 
     /// Formats the inner attachment data without applying any formatting hooks.
@@ -213,34 +245,6 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
             self.as_raw_ref(),
             |attachment, formatter| attachment.attachment_display(formatter),
             |attachment, formatter| attachment.attachment_debug(formatter),
-        )
-    }
-
-    /// Formats the inner attachment data with formatting hooks applied.
-    ///
-    /// This method formats the attachment using both its handler and any global
-    /// formatting hooks that have been registered. The hooks allow for
-    /// custom formatting behaviors such as filtering, transforming, or
-    /// decorating the output. The returned object implements both
-    /// [`Display`] and [`Debug`] traits.
-    ///
-    /// For direct formatting without hooks, use [`format_inner_unhooked`]
-    /// instead.
-    ///
-    /// [`Display`]: core::fmt::Display
-    /// [`Debug`]: core::fmt::Debug
-    /// [`format_inner_unhooked`]: Self::format_inner_unhooked
-    #[must_use]
-    pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'a, Dynamic> = self.into_dynamic();
-        format_helper(
-            attachment,
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
-            },
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
-            },
         )
     }
 
@@ -291,7 +295,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Debug`]: core::fmt::Debug
     #[must_use]
     pub fn preferred_formatting_style(
-        &self,
+        self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         crate::hooks::attachment_formatter::get_preferred_formatting_style(
@@ -319,11 +323,27 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
     #[must_use]
     pub fn preferred_formatting_style_unhooked(
-        &self,
+        self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
             .preferred_formatting_style(report_formatting_function)
+    }
+
+    /// Creates a new attachment, with the inner attachment data preformatted.
+    ///
+    /// This can be useful, as the preformatted attachment is a newly allocated
+    /// object and additionally is [`Send`]+[`Sync`].
+    ///
+    /// See [`PreformattedAttachment`] for more information.
+    ///
+    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
+    #[track_caller]
+    #[must_use]
+    pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
+        ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
+            PreformattedAttachment::new_from_attachment(self),
+        )
     }
 }
 
@@ -498,14 +518,14 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
 }
 
 impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentRef<'a, A> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
         crate::hooks::attachment_formatter::display_attachment(report, None, formatter)
     }
 }
 
 impl<'a, A: ?Sized> core::fmt::Debug for ReportAttachmentRef<'a, A> {
-    fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+    fn fmt(&self, formatter: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report: ReportAttachmentRef<'_, Dynamic> = self.into_dynamic();
         crate::hooks::attachment_formatter::debug_attachment(report, None, formatter)
     }

@@ -6,8 +6,7 @@ use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 use crate::{
     Report, ReportIter,
     markers::{Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::{self, PreformattedAttachment, PreformattedContext},
-    report_attachment::ReportAttachment,
+    preformatted::{self, PreformattedContext},
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
     util::format_helper,
@@ -588,12 +587,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
                 .collect(),
             self.attachments()
                 .iter()
-                .map(|attachment| {
-                    ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
-                        PreformattedAttachment::new_from_attachment(attachment),
-                    )
-                    .into_dynamic()
-                })
+                .map(|attachment| attachment.preformat().into_dynamic())
                 .collect(),
         )
     }

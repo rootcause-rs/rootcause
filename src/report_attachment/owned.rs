@@ -8,8 +8,8 @@ use rootcause_internals::{
 use crate::{
     handlers::{self, AttachmentHandler},
     markers::{self, Dynamic, Local, SendSync},
-    report_attachment::ReportAttachmentRef,
-    util::format_helper,
+    preformatted::PreformattedAttachment,
+    report_attachment::{ReportAttachmentMut, ReportAttachmentRef},
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -17,7 +17,7 @@ use crate::{
 mod limit_field_access {
     use core::marker::PhantomData;
 
-    use rootcause_internals::{RawAttachment, RawAttachmentRef};
+    use rootcause_internals::{RawAttachment, RawAttachmentMut, RawAttachmentRef};
 
     use crate::markers::{Dynamic, SendSync};
 
@@ -95,6 +95,14 @@ mod limit_field_access {
 
         /// Creates a lifetime-bound [`RawAttachmentRef`] from the inner
         /// [`RawAttachment`].
+        ///
+        /// This returns a raw, read-only reference to the same attachment, but with a
+        /// lifetime tied to the lifetime of `self`.
+        ///
+        /// # Guarantees
+        ///
+        /// The returned `RawAttachmentRef` refers to the same attachment data as
+        /// this `ReportAttachment`, preserving the attachment's type.
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -105,6 +113,30 @@ mod limit_field_access {
             let raw = &self.raw;
 
             raw.as_ref()
+        }
+
+        /// Creates a lifetime-bound [`RawAttachmentMut`] from the inner
+        /// [`RawAttachment`]
+        ///
+        /// This returns a raw, mutable reference to the same attachment, but with a
+        /// lifetime tied to the lifetime of `self`.
+        ///
+        /// # Guarantees
+        ///
+        /// The returned `RawAttachmentMut` refers to the same attachment data as
+        /// this `ReportAttachment`, preserving the attachment's type.
+        #[must_use]
+        pub(crate) fn as_raw_mut(&mut self) -> RawAttachmentMut<'_> {
+            // SAFETY: We must uphold the safety invariants of the raw field:
+            // 1. Upheld as the type parameters do not change.
+            // 2. Upheld as the type parameters do not change.
+            // 3. While mutation is possible through the `RawAttachmentMut`, it's
+            //    not possible to change the type of the attachment.
+            // 4. While mutation is possible through the `RawAttachmentMut`, it's
+            //    not possible to change the type of the attachment.
+            let raw = &mut self.raw;
+
+            raw.as_mut()
         }
     }
 }
@@ -263,26 +295,13 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// Formats the attachment with hook processing.
     #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        let attachment: ReportAttachmentRef<'_, Dynamic> = self.as_ref().into_dynamic();
-        format_helper(
-            attachment,
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
-            },
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
-            },
-        )
+        self.as_ref().format_inner()
     }
 
     /// Formats the attachment without hook processing.
     #[must_use]
     pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |attachment, formatter| attachment.attachment_display(formatter),
-            |attachment, formatter| attachment.attachment_debug(formatter),
-        )
+        self.as_ref().format_inner_unhooked()
     }
 
     /// Gets the preferred formatting style for the attachment with hook
@@ -301,10 +320,8 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         &self,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        crate::hooks::attachment_formatter::get_preferred_formatting_style(
-            self.as_ref().into_dynamic(),
-            report_formatting_function,
-        )
+        self.as_ref()
+            .preferred_formatting_style(report_formatting_function)
     }
 
     /// Gets the preferred formatting style for the attachment without hook
@@ -332,10 +349,43 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         let raw = self.as_raw_ref();
 
-        // SAFETY:
-        // 1. Guaranteed by the invariants of this type.
-        // 2. Guaranteed by the invariants of this type.
+        // SAFETY: The safety requirements for `ReportAttachmentRef::from_raw` are upheld:
+        // 1. The type parameter `A` is either `Sized` or `Dynamic` (enforced by this type's
+        //    documented invariants)
+        // 2. If `A` is `Sized`, the attachment in `raw` is of type `A` because `as_raw_ref()`
+        //    returns a reference to the same underlying attachment data that this
+        //    `ReportAttachment<A>` wraps, which satisfies this type's invariant
         unsafe { ReportAttachmentRef::from_raw(raw) }
+    }
+
+    /// Returns a mutable reference to the attachment.
+    #[must_use]
+    pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
+        let raw = self.as_raw_mut();
+
+        // SAFETY: The safety requirements for `ReportAttachmentMut::from_raw` are upheld:
+        // 1. The type parameter `A` is either `Sized` or `Dynamic` (enforced by this type's
+        //    documented invariants)
+        // 2. If `A` is `Sized`, the attachment in `raw` is of type `A` because `as_raw_mut()`
+        //    returns a mutable reference to the same underlying attachment data that this
+        //    `ReportAttachment<A>` wraps, which satisfies this type's invariant
+        unsafe { ReportAttachmentMut::from_raw(raw) }
+    }
+
+    /// Creates a new attachment, with the inner attachment data preformatted.
+    ///
+    /// This can be useful, as the preformatted attachment is a newly allocated
+    /// object and additionally is [`Send`]+[`Sync`].
+    ///
+    /// See [`PreformattedAttachment`] for more information.
+    ///
+    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
+    #[must_use]
+    #[track_caller]
+    pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
+        // For implementation reasons, the actual formatting works on
+        // ReportAttachmentRef
+        self.as_ref().preformat()
     }
 }
 
@@ -437,6 +487,41 @@ impl<T> ReportAttachment<Dynamic, T> {
         // SAFETY:
         // 1. Guaranteed by the caller
         unsafe { raw.attachment_downcast_unchecked() }
+    }
+
+    /// Attempts to downcast the inner attachment to a specific type.
+    ///
+    /// Returns `Some(&mut A)` if the inner attachment is of type `A`, otherwise
+    /// returns `None`.
+    #[must_use]
+    pub fn downcast_inner_mut<A>(&mut self) -> Option<&mut A>
+    where
+        A: Sized + 'static,
+    {
+        let mut_ = self.as_mut().downcast_attachment().ok()?;
+        Some(mut_.into_inner_mut())
+    }
+
+    /// Downcasts the inner attachment to a specific type without checking.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The inner attachment is actually of type `A` (can be verified by
+    ///    calling [`inner_type_id()`] first)
+    ///
+    /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    #[must_use]
+    pub unsafe fn downcast_inner_mut_unchecked<A>(&mut self) -> &mut A
+    where
+        A: Sized + 'static,
+    {
+        let raw = self.as_raw_mut();
+
+        // SAFETY:
+        // 1. Guaranteed by the caller
+        unsafe { raw.into_attachment_downcast_unchecked() }
     }
 
     /// Attempts to downcast the [`ReportAttachment`] to a specific attachment
