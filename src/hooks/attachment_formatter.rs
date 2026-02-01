@@ -145,7 +145,7 @@
 //!             placement: if report_formatting_function == FormattingFunction::Display {
 //!                 // This will still show up as a count of omitted attachments,
 //!                 // can be set it as Hidden instead to make it completely invisible.
-//!                 AttachmentFormattingPlacement::Opaque,
+//!                 AttachmentFormattingPlacement::Opaque
 //!             } else {
 //!                 AttachmentFormattingPlacement::Inline
 //!             },
