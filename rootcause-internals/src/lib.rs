@@ -36,7 +36,8 @@
 //!
 //! - **[`attachment`]**: Type-erased attachment storage
 //!   - [`RawAttachment`]: Owned attachment with [`Box`]-based allocation
-//!   - [`RawAttachmentRef`]: Borrowed reference to an attachment
+//!   - [`RawAttachmentRef`]/[`RawAttachmentMut`]: Borrowed reference to an
+//!     attachment (shared/mutable)
 //!   - [`AttachmentData`]: `#[repr(C)]` wrapper enabling field access on erased
 //!     types
 //!   - [`AttachmentVtable`]: Function pointers for type-erased dispatch
@@ -87,5 +88,5 @@ pub mod handlers;
 mod report;
 mod util;
 
-pub use attachment::{RawAttachment, RawAttachmentRef};
+pub use attachment::{RawAttachment, RawAttachmentMut, RawAttachmentRef};
 pub use report::{RawReport, RawReportMut, RawReportRef};

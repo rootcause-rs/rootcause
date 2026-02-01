@@ -111,10 +111,9 @@ impl RawReport {
     /// Returns a reference to the [`ReportData`] instance.
     #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
-        RawReportRef {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        unsafe { RawReportRef::new(self.ptr) }
     }
 
     /// Returns a mutable reference to the [`ReportData`] instance.
@@ -128,10 +127,11 @@ impl RawReport {
     ///    [`triomphe::Arc`] must be `1`.
     #[inline]
     pub unsafe fn as_mut(&mut self) -> RawReportMut<'_> {
-        RawReportMut {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        // 2. Upheld by mutable borrow on `self`, combined with the fact that the caller
+        //    guarantees that the strong count is 1.
+        unsafe { RawReportMut::new(self.ptr) }
     }
 }
 
@@ -192,6 +192,21 @@ pub struct RawReportRef<'a> {
 }
 
 impl<'a> RawReportRef<'a> {
+    /// Creates a new [`RawReportRef`] from a pointer to a report
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. That `ptr` has been created from a `triomphe::Arc<ReportData<C>>` for
+    ///    some `C` using  `triomphe::Arc::into_raw`.
+    pub(super) unsafe fn new(ptr: NonNull<ReportData<Erased>>) -> Self {
+        RawReportRef {
+            ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
     /// Casts the [`RawReportRef`] to a [`ReportData<C>`] reference.
     ///
     /// # Safety
@@ -372,6 +387,8 @@ pub struct RawReportMut<'a> {
     ///    `triomphe::Arc::into_raw`.
     /// 2. The pointer will point to the same `ReportData<C>` for the entire
     ///    lifetime of this object.
+    /// 3. This pointer is valid for exclusive mutable access to the
+    ///    `ReportData` with the same semantics as a `&'a mut ReportData<C>`.
     ptr: NonNull<ReportData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -380,6 +397,27 @@ pub struct RawReportMut<'a> {
 }
 
 impl<'a> RawReportMut<'a> {
+    /// Creates a [`RawReportMut`] from a pointer directly.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. That `ptr` was created from a `triomphe::Arc<ReportData<C>>` for some
+    ///    `C` using `triomphe::Arc::into_raw`.
+    /// 2. This pointer is valid for exclusive mutable access to the
+    ///    `ReportData` with the same semantics as a `&'a mut ReportData<C>`.
+    pub(super) unsafe fn new(ptr: NonNull<ReportData<Erased>>) -> Self {
+        RawReportMut {
+            // SAFETY:
+            // 1. Guaranteed by caller
+            // 2. N/A
+            // 3. Guaranteed by caller
+            ptr,
+            _marker: core::marker::PhantomData,
+        }
+    }
+
     /// Casts the [`RawReportMut`] to a mutable [`ReportData<C>`] reference.
     ///
     /// # Safety
@@ -411,29 +449,27 @@ impl<'a> RawReportMut<'a> {
     /// lifetime.
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawReportMut<'b> {
-        RawReportMut {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        // 2. Upheld by mutable borrow of `self`
+        unsafe { RawReportMut::new(self.ptr) }
     }
 
     /// Returns a reference to the [`ReportData`] instance.
     #[inline]
     pub fn as_ref(&self) -> RawReportRef<'_> {
-        RawReportRef {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        unsafe { RawReportRef::new(self.ptr) }
     }
 
     /// Consumes the mutable reference and returns an immutable one with the
     /// same lifetime.
     #[inline]
     pub fn into_ref(self) -> RawReportRef<'a> {
-        RawReportRef {
-            ptr: self.ptr,
-            _marker: core::marker::PhantomData,
-        }
+        // SAFETY:
+        // 1. Guaranteed by invariant on `self`
+        unsafe { RawReportRef::new(self.ptr) }
     }
 
     /// Consumes this [`RawReportMut`] and returns a raw mutable pointer to the

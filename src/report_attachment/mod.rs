@@ -153,7 +153,8 @@
 //! [`Display`]: crate::handlers::Display
 //! [`Debug`]: crate::handlers::Debug
 
+mod mut_;
 mod owned;
 mod ref_;
 
-pub use self::{owned::ReportAttachment, ref_::ReportAttachmentRef};
+pub use self::{mut_::ReportAttachmentMut, owned::ReportAttachment, ref_::ReportAttachmentRef};
