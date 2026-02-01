@@ -120,7 +120,8 @@
 //!
 //! ## Suppressing display of Attachments
 //!
-//! Omit noisy or unnecessary information by setting placement to `Opaque`:
+//! Omit noisy or unnecessary information by setting placement to `Opaque`
+//! when formatting as display:
 //!
 //! ```
 //! use rootcause::{
@@ -141,9 +142,13 @@
 //!         report_formatting_function: FormattingFunction,
 //!     ) -> AttachmentFormattingStyle {
 //!         AttachmentFormattingStyle {
-//!             // This will still show up as a count of omitted attachments,
-//!             // can be set it as Hidden instead to make it completely invisible.
-//!             placement: AttachmentFormattingPlacement::Opaque,
+//!             placement: if report_formatting_function == FormattingFunction::Display {
+//!                 // This will still show up as a count of omitted attachments,
+//!                 // can be set it as Hidden instead to make it completely invisible.
+//!                 AttachmentFormattingPlacement::Opaque,
+//!             } else {
+//!                 AttachmentFormattingPlacement::Inline
+//!             }
 //!             function: report_formatting_function,
 //!             priority: 0,
 //!         }
