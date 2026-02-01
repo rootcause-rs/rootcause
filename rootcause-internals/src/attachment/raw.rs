@@ -96,20 +96,30 @@ impl RawAttachment {
     /// Returns a reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_ref(&self) -> RawAttachmentRef<'_> {
-        // SAFETY:
-        //
-        // 1. Upheld by invariant `self`
-        // 2. Upheld by shared borrow of `self`
-        unsafe { RawAttachmentRef::new(self.ptr) }
+        RawAttachmentRef {
+            // SAFETY:
+            // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
+            // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
+            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime
+            //    `'b`, which is valid because we borrow `self` for `'b`, preventing any
+            //    mutation through `self` while the returned reference exists
+            ptr: self.ptr,
+            _marker: core::marker::PhantomData,
+        }
     }
 
     /// Returns a mutable reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_mut(&mut self) -> RawAttachmentMut<'_> {
-        // SAFETY:
-        // 1. Upheld by invariant on `self`
-        // 2. Upheld by mutable borrow of `self`
-        unsafe { RawAttachmentMut::new(self.ptr) }
+        RawAttachmentMut {
+            // SAFETY:
+            // 1. Upheld by invariant on `self`
+            // 2. We are creating the `RawAttachmentMut` here, and we are
+            //    not changing the pointer
+            // 3. Upheld by mutable borrow of `self`
+            ptr: self.ptr,
+            _marker: core::marker::PhantomData,
+        }
     }
 }
 
@@ -167,26 +177,6 @@ pub struct RawAttachmentRef<'a> {
 }
 
 impl<'a> RawAttachmentRef<'a> {
-    /// Creates a new [`RawAttachmentRef`] from a pointer
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure:
-    ///
-    /// 1. That `ptr` has been created from a `Box<AttachmentData<A>>`.
-    /// 2. This pointer represents shared access to the `AttachmentData` for the
-    ///    lifetime `'a` with the same semantics as a `&'a AttachmentData<C>`.
-    pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
-        RawAttachmentRef {
-            // SAFETY:
-            // 1. Guaranteed by caller
-            // 2. N/A
-            // 3. Guaranteed by caller
-            ptr,
-            _marker: core::marker::PhantomData,
-        }
-    }
-
     /// Casts the [`RawAttachmentRef`] to an [`AttachmentData<A>`] reference.
     ///
     /// # Safety
@@ -328,28 +318,6 @@ pub struct RawAttachmentMut<'a> {
 }
 
 impl<'a> RawAttachmentMut<'a> {
-    /// Create a new [`RawAttachmentMut`] directly from a pointer
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure:
-    ///
-    /// 1. `ptr` must have been created from a `Box<AttachmentData<A>>` for some
-    ///    `A` using `Box::into_raw`.
-    /// 2. This pointer represents exclusive mutable access to the
-    ///    `AttachmentData` for the lifetime `'a` with the same semantics as a
-    ///    `&'a mut AttachmentData<C>`.
-    pub(super) unsafe fn new(ptr: NonNull<AttachmentData<Erased>>) -> Self {
-        RawAttachmentMut {
-            // SAFETY:
-            // 1. Guaranteed by caller
-            // 2. The pointer is not modified at this point, so the invariant holds
-            // 3. Guaranteed by caller
-            ptr,
-            _marker: core::marker::PhantomData,
-        }
-    }
-
     /// Casts the [`RawAttachmentMut`] to an [`AttachmentData<A>`] mutable
     /// reference.
     ///
@@ -383,33 +351,47 @@ impl<'a> RawAttachmentMut<'a> {
     /// lifetime.
     #[inline]
     pub fn reborrow<'b>(&'b mut self) -> RawAttachmentMut<'b> {
-        // SAFETY:
-        // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
-        // 2. Exclusive mutable access for lifetime `'b` is guaranteed because:
-        //    - The returned `RawAttachmentMut<'b>` contains `PhantomData<&'b mut ...>`
-        //    - This causes the borrow checker to treat the return value as borrowing `self` for `'b`
-        //    - Therefore `self` cannot be used while the returned value exists
-        unsafe { RawAttachmentMut::new(self.ptr) }
+        RawAttachmentMut {
+            // SAFETY:
+            // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
+            // 2. We are creating the `RawAttachmentMut` here, and we are not changing the pointer
+            // 3. Exclusive mutable access for lifetime `'b` is guaranteed because:
+            //    - The returned `RawAttachmentMut<'b>` contains `PhantomData<&'b mut ...>`
+            //    - This causes the borrow checker to treat the return value as borrowing `self` for `'b`
+            //    - Therefore `self` cannot be used while the returned value exists
+            ptr: self.ptr,
+            _marker: core::marker::PhantomData,
+        }
     }
 
     /// Returns a reference to the [`AttachmentData`] instance.
     #[inline]
     pub fn as_ref<'b: 'a>(&'b self) -> RawAttachmentRef<'b> {
-        // SAFETY:
-        // 1. Guaranteed by `self`
-        // 2. Upheld by shared borrow of `self` combined with the invariant that `self`
-        //    represents exclusive access to the data.
-        unsafe { RawAttachmentRef::new(self.ptr) }
+        RawAttachmentRef {
+            // SAFETY:
+            // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
+            // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
+            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime
+            //    `'b`, which is valid because we borrow `self` for `'b`, preventing any
+            //    mutation through `self` while the returned reference exists
+            ptr: self.ptr,
+            _marker: core::marker::PhantomData,
+        }
     }
 
     /// Consumes the mutable reference and returns an immutable one with the
     /// same lifetime.
     #[inline]
     pub fn into_ref(self) -> RawAttachmentRef<'a> {
-        // SAFETY:
-        // 1. Guaranteed by `self`
-        // 2. Upheld by the fact that `self` represents exclusive access to the data.
-        unsafe { RawAttachmentRef::new(self.ptr) }
+        RawAttachmentRef {
+            // SAFETY:
+            // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
+            // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
+            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime
+            //    `'b`, which is valid because we are consuming `self` and turning it into a shared reference
+            ptr: self.ptr,
+            _marker: core::marker::PhantomData,
+        }
     }
 }
 
