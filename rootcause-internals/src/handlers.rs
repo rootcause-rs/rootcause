@@ -174,12 +174,13 @@ pub trait ContextHandler<C>: 'static {
     /// Specifies the preferred formatting style when this context is embedded
     /// in a report.
     ///
-    /// This method allows the handler to choose between display and debug
-    /// formatting based on how the report itself is being formatted. The
-    /// default implementation always returns
-    /// [`FormattingFunction::Display`], meaning the context will use
-    /// its [`display`](ContextHandler::display) method even when the report is
-    /// being debug-formatted.
+    /// This method allows the handler to control:
+    /// - **Formatting**: Whether to use display or debug formatting
+    /// - **Source-chasing**: Whether to follow the chain of of [`Error::source()`](core::error::Error::source) if [`ContextHandler::source`] returns `Some`, and
+    ///   also how deep to chase.
+    ///
+    /// The default implementation returns the same formatting as the report, with
+    /// no source chasing.
     ///
     /// # Arguments
     ///
@@ -194,7 +195,7 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// Custom handler that flips the report's formatting:
+    /// Custom handler that flips the report's formatting (not actually intended to be useful):
     ///
     /// ```
     /// use rootcause_internals::handlers::{
@@ -411,10 +412,13 @@ pub trait AttachmentHandler<A>: 'static {
 ///
 /// - `function`: Whether to use [`Display`](core::fmt::Display) or
 ///   [`Debug`](core::fmt::Debug) formatting
+/// - `follow_source`: Whether to follow the [`Error::source`](core::error::Error::source)-chain
+///   when [`ContextHandler::source`] returns `Some`.
+/// - `follow_source_depth`: How deep to follow the chain, `None` means no limit.
 ///
 /// # Default
 ///
-/// The default is to use [`FormattingFunction::Display`].
+/// The default is to use [`FormattingFunction::Display`] and not to chase sources at all.
 ///
 /// # Examples
 ///
