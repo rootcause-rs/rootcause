@@ -848,7 +848,7 @@ fn format_line(
     line_info: &LineFormatting,
     line: impl core::fmt::Display,
 ) -> fmt::Result {
-    formatter.write_str(&line_prefix)?;
+    formatter.write_str(line_prefix)?;
     formatter.write_str(line_info.prefix)?;
     line.fmt(formatter)?;
     formatter.write_str(line_info.suffix)?;
@@ -917,7 +917,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 (false, true) => &formatting.last_line,
             };
             format_line(
-                &mut self.formatter,
+                self.formatter,
                 &self.line_prefix,
                 line_formatting,
                 value_line,
@@ -1056,7 +1056,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 &self.config.notice_opaque_last_formatting
             };
             format_line(
-                &mut self.formatter,
+                self.formatter,
                 &self.line_prefix,
                 item_info,
                 format_args!(
@@ -1173,7 +1173,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     &self.config.notice_see_also_middle_formatting
                 };
                 let line = format_args!("{} #{}", appendices.key(), appendices.get().len());
-                format_line(&mut self.formatter, &self.line_prefix, formatting, line)?;
+                format_line(self.formatter, &self.line_prefix, formatting, line)?;
             }
             AttachmentFormattingPlacement::Opaque | AttachmentFormattingPlacement::Hidden => {}
         }
@@ -1254,7 +1254,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                     // The omitted notice is always the last item in the source chain subtree,
                     // so we use a modified version with ╰ instead of ├
                     format_line(
-                        &mut this.formatter,
+                        this.formatter,
                         &this.line_prefix,
                         &this
                             .config
@@ -1299,7 +1299,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
 
                 let line = format_args!("{appendix_name} #{}", appendix_index + 1);
                 format_line(
-                    &mut self.formatter,
+                    self.formatter,
                     &self.line_prefix,
                     &self.config.appendix_header,
                     line,
