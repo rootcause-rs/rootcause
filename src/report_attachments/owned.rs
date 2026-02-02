@@ -309,7 +309,10 @@ impl<T> ReportAttachments<T> {
         // SAFETY:
         // 1. `A=Dynamic`, so this is trivially true.
         // 2. `A=Dynamic`, so this is trivially true.
-        let attachment = unsafe { ReportAttachmentRef::<Dynamic>::from_raw(raw) };
+        let attachment = unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportAttachmentRef::<Dynamic>::from_raw(raw)
+        };
 
         Some(attachment)
     }

@@ -141,6 +141,8 @@ impl ReportVtable {
         // 3. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: drop
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
             (self.drop)(ptr);
         }
     }
@@ -170,6 +172,8 @@ impl ReportVtable {
         // 4. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: clone_arc
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
             (self.clone_arc)(ptr)
         }
     }
@@ -191,6 +195,8 @@ impl ReportVtable {
         // 1. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: strong_count
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
             (self.strong_count)(ptr)
         }
     }
@@ -216,6 +222,8 @@ impl ReportVtable {
         // 1. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: source
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
             (self.source)(ptr)
         }
     }
@@ -242,6 +250,8 @@ impl ReportVtable {
         // 1. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: display
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
             (self.display)(ptr, formatter)
         }
     }
@@ -268,6 +278,8 @@ impl ReportVtable {
         // 1. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: debug
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
             (self.debug)(ptr, formatter)
         }
     }

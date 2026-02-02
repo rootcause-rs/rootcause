@@ -96,7 +96,7 @@ mod limit_field_access {
             }
         }
 
-        /// Creates a reference to [`ReportCollection`] from reference to a
+        /// Creates a reference to a [`ReportCollection`] from reference to a
         /// vector of raw reports
         ///
         /// # Safety
@@ -134,7 +134,7 @@ mod limit_field_access {
             unsafe { &*raw_ptr }
         }
 
-        /// Creates a mutable reference to [`ReportCollection`] from mutable
+        /// Creates a mutable reference to a [`ReportCollection`] from mutable
         /// reference
         ///
         /// # Safety
@@ -177,7 +177,7 @@ mod limit_field_access {
         #[must_use]
         pub(crate) fn into_raw(self) -> Vec<RawReport> {
             // SAFETY: We are destroying `self`, so we no longer
-            // need to uphold invariants 1-5. Invariant 6 is not relevent as
+            // need to uphold invariants 1-5. Invariant 6 is not relevant as
             // we are consuming self and thus could not have been created through
             // `from_raw_mut`.
             self.raw
@@ -202,10 +202,10 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. If the collection is mutated so that is becomes non-empty, then
+        /// 1. If the collection is mutated so that it becomes non-empty, then
         ///    `C` must either be a type bounded by `Sized`, or be `Dynamic`.
-        /// 2. If the collection is mutated so that is becomes non-empty, then
-        ///    `T` must be either be `SendSync` or `Local`.
+        /// 2. If the collection is mutated so that it becomes non-empty, then
+        ///    `T` must either be `SendSync` or `Local`.
         /// 3. If `C` is a `Sized` type: No mutation is performed that would
         ///    invalidate the invariant that all contexts are of type `C`.
         /// 4. No mutation is performed that would invalidate the shared
@@ -349,9 +349,12 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         //    this will not modify it to become non-empty.
         // 2. If the collection is already non-empty, `T` is already valid. Otherwise
         //    this will not modify it to become non-empty.
-        // 3. We only remove reports, so the invariants of the collection remain upheld.
-        // 4. We only remove reports, so the invariants of the collection remain upheld.
-        // 5. We only remove reports, so the invariants of the collection remain upheld.
+        // 3. Removing an element does not change the types of contexts in the remaining
+        //    elements.
+        // 4. Removing an element does not invalidate the shared ownership properties of
+        //    the remaining elements.
+        // 5. Removing an element does not cause the remaining elements to stop being
+        //    `Send + Sync`.
         let raw = unsafe { self.as_raw_mut() };
 
         let report = raw.pop()?;
@@ -917,6 +920,7 @@ impl<C: ?Sized, T> core::fmt::Display for ReportCollection<C, T> {
         let slice = unsafe {
             // @add-unsafe-context: rootcause_internals::RawReport
             // @add-unsafe-context: rootcause_internals::RawReportRef
+            // @add-unsafe-context: Dynamic
             ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
