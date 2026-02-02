@@ -99,8 +99,9 @@ impl AttachmentHandler<Location> for LocationHandler {
         _report_formatting_function: rootcause_internals::handlers::FormattingFunction,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {
+            placement: rootcause_internals::handlers::AttachmentFormattingPlacement::Inline,
             priority: 20,
-            ..Default::default()
+            function: rootcause_internals::handlers::FormattingFunction::Display,
         }
     }
 }

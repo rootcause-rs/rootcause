@@ -55,14 +55,25 @@ impl AttachmentFormatterHook<DatabaseQuery> for DatabaseQueryFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
-        _report_formatting_function: FormattingFunction,
+        formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        AttachmentFormattingStyle {
-            placement: AttachmentFormattingPlacement::Appendix {
-                appendix_name: "Database Query",
+        match formatting_function {
+            // for display printing we want the full verbosity level and
+            // put it in an appendix
+            FormattingFunction::Display => AttachmentFormattingStyle {
+                placement: AttachmentFormattingPlacement::Appendix {
+                    appendix_name: "Database Query",
+                },
+                function: FormattingFunction::Display,
+                priority: 0,
             },
-            function: FormattingFunction::Display,
-            priority: 0,
+            // debug printing of the attachment is more compact so
+            // we put it inline but at the end
+            FormattingFunction::Debug => AttachmentFormattingStyle {
+                placement: AttachmentFormattingPlacement::Inline,
+                function: FormattingFunction::Debug,
+                priority: -10,
+            },
         }
     }
 }

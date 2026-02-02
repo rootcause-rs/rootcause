@@ -47,7 +47,7 @@ impl AttachmentFormatterHook<ApiCredentials> for CredentialsFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
-        _report_formatting_function: rootcause::handlers::FormattingFunction,
+        report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> rootcause::handlers::AttachmentFormattingStyle {
         use rootcause::handlers::{
             AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
@@ -58,6 +58,7 @@ impl AttachmentFormatterHook<ApiCredentials> for CredentialsFormatter {
             // permissions, etc.)
             AttachmentFormattingStyle {
                 placement: AttachmentFormattingPlacement::Hidden,
+                // force Display formatting, just in case something slips thorugh
                 function: FormattingFunction::Display,
                 priority: 0,
             }
@@ -65,7 +66,7 @@ impl AttachmentFormatterHook<ApiCredentials> for CredentialsFormatter {
             // Show when condition is false
             AttachmentFormattingStyle {
                 placement: AttachmentFormattingPlacement::Inline,
-                function: FormattingFunction::Display,
+                function: report_formatting_function,
                 priority: 0,
             }
         }
@@ -101,7 +102,7 @@ impl AttachmentFormatterHook<DebugSnapshot> for DebugSnapshotFormatter {
     fn preferred_formatting_style(
         &self,
         _attachment: ReportAttachmentRef<'_, Dynamic>,
-        _report_formatting_function: rootcause::handlers::FormattingFunction,
+        report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> rootcause::handlers::AttachmentFormattingStyle {
         use rootcause::handlers::{
             AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction,
@@ -120,7 +121,7 @@ impl AttachmentFormatterHook<DebugSnapshot> for DebugSnapshotFormatter {
                 placement: AttachmentFormattingPlacement::Appendix {
                     appendix_name: "Debug Info",
                 },
-                function: FormattingFunction::Display,
+                function: report_formatting_function,
                 priority: 0,
             }
         }

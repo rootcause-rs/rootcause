@@ -367,8 +367,10 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
                     header: "Backtrace",
                 }
             },
+            // No reason to every print the Backtrace in the report
+            // as anything other than display.
+            function: FormattingFunction::Display,
             priority: 10,
-            ..Default::default()
         }
     }
 }

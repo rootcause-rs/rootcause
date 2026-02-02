@@ -174,12 +174,13 @@ pub trait ContextHandler<C>: 'static {
     /// Specifies the preferred formatting style when this context is embedded
     /// in a report.
     ///
-    /// This method allows the handler to choose between display and debug
-    /// formatting based on how the report itself is being formatted. The
-    /// default implementation always returns
-    /// [`FormattingFunction::Display`], meaning the context will use
-    /// its [`display`](ContextHandler::display) method even when the report is
-    /// being debug-formatted.
+    /// This method allows the handler to control:
+    /// - **Formatting**: Whether to use display or debug formatting
+    /// - **Source-chasing**: Whether to follow the chain of of [`Error::source()`](core::error::Error::source) if [`ContextHandler::source`] returns `Some`, and
+    ///   also how deep to chase.
+    ///
+    /// The default implementation returns the same formatting as the report, with
+    /// no source chasing.
     ///
     /// # Arguments
     ///
@@ -189,44 +190,31 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Default Behavior
     ///
-    /// The default implementation ignores the report's formatting style and
-    /// always uses display formatting. This is the behavior of all built-in
-    /// handlers.
+    /// The default implementation uses the formatting of the report as a whole.
+    /// This is the behavior of all built-in handlers.
     ///
     /// # Examples
     ///
-    /// Custom handler that mirrors the report's formatting:
+    /// Custom handler that flips the report's formatting (not actually intended to be useful):
     ///
     /// ```
     /// use rootcause_internals::handlers::{
     ///     ContextFormattingStyle, ContextHandler, FormattingFunction,
     /// };
     ///
-    /// struct MirrorHandler;
+    /// struct FlipHandler;
     ///
-    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for MirrorHandler {
+    /// impl<C: std::fmt::Display + std::fmt::Debug> ContextHandler<C> for FlipHandler {
     ///     fn source(_context: &C) -> Option<&(dyn std::error::Error + 'static)> {
     ///         None
     ///     }
     ///
     ///     fn display(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-    ///         std::fmt::Display::fmt(context, f)
-    ///     }
-    ///
-    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     ///         std::fmt::Debug::fmt(context, f)
     ///     }
     ///
-    ///     fn preferred_formatting_style(
-    ///         _value: &C,
-    ///         report_formatting_function: FormattingFunction,
-    ///     ) -> ContextFormattingStyle {
-    ///         // Use the same formatting as the report
-    ///         ContextFormattingStyle {
-    ///             function: report_formatting_function,
-    ///             follow_source: false,
-    ///             follow_source_depth: None,
-    ///         }
+    ///     fn debug(context: &C, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    ///         std::fmt::Display::fmt(context, f)
     ///     }
     /// }
     /// ```
@@ -234,8 +222,11 @@ pub trait ContextHandler<C>: 'static {
         value: &C,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        let _ = (value, report_formatting_function);
-        ContextFormattingStyle::default()
+        let _ = value;
+        ContextFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 
@@ -359,8 +350,8 @@ pub trait AttachmentHandler<A>: 'static {
     /// - **Priority**: The order in which attachments are displayed (higher =
     ///   earlier)
     ///
-    /// The default implementation returns inline display formatting with
-    /// priority 0.
+    /// The default implementation returns the same formatting as the report, in
+    /// inline formatting with priority 0.
     ///
     /// # Examples
     ///
@@ -402,8 +393,11 @@ pub trait AttachmentHandler<A>: 'static {
         value: &A,
         report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
-        let _ = (value, report_formatting_function);
-        AttachmentFormattingStyle::default()
+        let _ = value;
+        AttachmentFormattingStyle {
+            function: report_formatting_function,
+            ..Default::default()
+        }
     }
 }
 
@@ -418,10 +412,13 @@ pub trait AttachmentHandler<A>: 'static {
 ///
 /// - `function`: Whether to use [`Display`](core::fmt::Display) or
 ///   [`Debug`](core::fmt::Debug) formatting
+/// - `follow_source`: Whether to follow the [`Error::source`](core::error::Error::source)-chain
+///   when [`ContextHandler::source`] returns `Some`.
+/// - `follow_source_depth`: How deep to follow the chain, `None` means no limit.
 ///
 /// # Default
 ///
-/// The default is to use [`FormattingFunction::Display`].
+/// The default is to use [`FormattingFunction::Display`] and not to chase sources at all.
 ///
 /// # Examples
 ///
