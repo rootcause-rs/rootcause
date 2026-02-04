@@ -629,7 +629,7 @@ const fn get_rootcause_backtrace_matcher(
     let (prefix, suffix) = file.split_at(prefix_len);
     // Assert the suffix is /src/lib.rs (or \src\lib.rs on Windows)
     // This is a compile-time check that the caller location is valid
-    if std::path::MAIN_SEPARATOR == '/' {
+    if HOST_PATH_SEPARATOR == '/' {
         assert!(suffix.eq_ignore_ascii_case("/src/lib.rs"));
     } else {
         assert!(suffix.eq_ignore_ascii_case(r#"\src\lib.rs"#));
@@ -641,7 +641,7 @@ const fn get_rootcause_backtrace_matcher(
     while !splitter_prefix.is_empty() {
         let (new_prefix, last_char) = splitter_prefix.split_at(splitter_prefix.len() - 1);
         splitter_prefix = new_prefix;
-        if last_char.eq_ignore_ascii_case(std::path::MAIN_SEPARATOR_STR) {
+        if last_char.eq_ignore_ascii_case(HOST_PATH_SEPARATOR.encode_utf8(&mut [0])) {
             break;
         }
     }
@@ -649,6 +649,7 @@ const fn get_rootcause_backtrace_matcher(
     Some((matcher_prefix, splitter_prefix.len()))
 }
 
+const HOST_PATH_SEPARATOR: char = include!(concat!(env!("OUT_DIR"), "/host_path_separator"));
 const ROOTCAUSE_BACKTRACE_MATCHER: Option<(&str, usize)> =
     get_rootcause_backtrace_matcher(Location::caller());
 const ROOTCAUSE_MATCHER: Option<(&str, usize)> =
