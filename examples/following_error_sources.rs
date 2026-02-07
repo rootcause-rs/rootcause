@@ -1,8 +1,17 @@
-//! Demonstrates how to display error source chains in reports.
+//! Demonstrates how following error sources reveals valuable diagnostic
+//! information hidden in error chains.
 //!
-//! By default, rootcause only displays the immediate error context. This
-//! example shows how to enable source chain traversal to display the full error
-//! chain, providing better diagnostic information.
+//! Many error types (like `reqwest::Error`) wrap underlying causes but only
+//! display a generic message at the top level. This example shows how enabling
+//! source chain traversal dramatically improves error clarity.
+//!
+//! ## What are error sources?
+//!
+//! In Rust's error system, errors can implement `Error::source()` to point to
+//! their underlying cause, creating a chain. For example, a network error might
+//! have an IO error as its source, which has an OS error as its source. By
+//! default, rootcause only displays the top-level error. Enabling source
+//! following traverses this chain to show the complete diagnostic picture.
 
 use rootcause::{
     ReportRef,
@@ -10,139 +19,69 @@ use rootcause::{
     markers::{Dynamic, Local, Uncloneable},
     prelude::*,
 };
-use rootcause_internals::handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction};
+use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
-// A simple error type that can chain to other errors
-#[derive(Debug)]
-struct ChainedError {
-    message: String,
-    source: Option<Box<dyn std::error::Error + Send + Sync>>,
+/// Simulates making an HTTP request that fails
+async fn make_request(url: &str) -> Result<String, Report> {
+    // This will fail with a DNS resolution error
+    let response = reqwest::get(url).await?;
+    let body = response.text().await?;
+    Ok(body)
 }
 
-impl ChainedError {
-    fn new(message: impl Into<String>) -> Self {
-        Self {
-            message: message.into(),
-            source: None,
-        }
-    }
+/// Context formatter that enables source chain following for reqwest::Error
+struct ReqwestErrorFormatter;
 
-    fn with_source(mut self, source: impl std::error::Error + Send + Sync + 'static) -> Self {
-        self.source = Some(Box::new(source));
-        self
-    }
-}
-
-impl std::fmt::Display for ChainedError {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for ChainedError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        if let Some(source) = &self.source {
-            Some(&**source)
-        } else {
-            None
+impl ContextFormatterHook<reqwest::Error> for ReqwestErrorFormatter {
+    fn preferred_context_formatting_style(
+        &self,
+        _report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+        report_formatting_function: FormattingFunction,
+    ) -> ContextFormattingStyle {
+        ContextFormattingStyle {
+            function: report_formatting_function,
+            // Enable following the error source chain
+            follow_source: true,
+            // Follow the full chain (no depth limit)
+            follow_source_depth: None,
         }
     }
 }
 
-fn main() {
-    // Create an error with a source chain
-    let error = ChainedError::new("request failed").with_source(
-        ChainedError::new("connection error")
-            .with_source(ChainedError::new("TLS handshake failed")),
-    );
+#[tokio::main]
+async fn main() {
+    // Many error types (reqwest, hyper, tokio) have rich source chains but only
+    // show generic top-level messages. Enable source following to see the full
+    // diagnostic chain.
 
-    println!("=== Method 1: Using a ContextHandler ===\n");
-    println!("Use this approach when the error type itself should control formatting.");
-    println!("Best for:");
-    println!("  • Library authors defining how their error types are displayed");
-    println!("  • Different behavior for different error types");
-    println!("  • When the decision is inherent to what the error represents\n");
+    println!("Without source following:\n");
 
-    // Define a custom handler that enables source chain following.
-    // This associates the behavior directly with the ChainedError type.
-    struct ErrorWithSourcesHandler;
-    impl ContextHandler<ChainedError> for ErrorWithSourcesHandler {
-        fn source(value: &ChainedError) -> Option<&(dyn std::error::Error + 'static)> {
-            std::error::Error::source(value)
-        }
+    let result1 = make_request("https://this-domain-definitely-does-not-exist-12345.com")
+        .await
+        .context("Failed to fetch user data");
 
-        fn display(
-            value: &ChainedError,
-            formatter: &mut std::fmt::Formatter<'_>,
-        ) -> std::fmt::Result {
-            std::fmt::Display::fmt(value, formatter)
-        }
-
-        fn debug(
-            value: &ChainedError,
-            formatter: &mut std::fmt::Formatter<'_>,
-        ) -> std::fmt::Result {
-            std::fmt::Debug::fmt(value, formatter)
-        }
-
-        fn preferred_formatting_style(
-            _value: &ChainedError,
-            formatting_function: FormattingFunction,
-        ) -> ContextFormattingStyle {
-            ContextFormattingStyle {
-                function: formatting_function,
-                // Enable source chain traversal
-                follow_source: true,
-                // Note: Set follow_source_depth to Some(n) to limit chain depth
-                // No depth limit (show all)
-                follow_source_depth: None,
-            }
-        }
+    if let Err(err) = result1 {
+        println!("{err}\n");
     }
 
-    let report = Report::new_sendsync_custom::<ErrorWithSourcesHandler>(error)
-        .context("Failed to fetch data");
-    println!("{report}");
+    println!("With source following:\n");
 
-    println!("\n=== Method 2: Using a ContextFormatterHook ===\n");
-    println!("Use this approach for application-wide configuration of a specific type.");
-    println!("Best for:");
-    println!("  • Configuring third-party error types you don't control");
-    println!("  • Environment-based behavior (dev vs production)");
-    println!("  • Changing formatting without modifying where errors are created");
-    println!("  • Centralizing configuration instead of specifying at each creation site\n");
-
-    // Install a global hook that enables source chain following for ChainedError.
-    // Unlike the handler approach, this applies to ALL ChainedError instances
-    // in your application, even when created with Report::new() instead of
-    // Report::new_sendsync_custom().
-    struct ChainedErrorFormatter;
-    impl ContextFormatterHook<ChainedError> for ChainedErrorFormatter {
-        fn preferred_context_formatting_style(
-            &self,
-            _report: ReportRef<'_, Dynamic, Uncloneable, Local>,
-            _report_formatting_function: FormattingFunction,
-        ) -> ContextFormattingStyle {
-            ContextFormattingStyle {
-                function: FormattingFunction::Display,
-                follow_source: true,
-                follow_source_depth: None,
-            }
-        }
-    }
-
+    // Install a hook to follow the source chain for all reqwest::Error instances
     Hooks::new()
-        .context_formatter::<ChainedError, _>(ChainedErrorFormatter)
+        .context_formatter::<reqwest::Error, _>(ReqwestErrorFormatter)
         .install()
-        .ok();
+        .expect("Failed to install hooks");
 
-    // Create a new error (same structure as before)
-    let error2 = ChainedError::new("request failed").with_source(
-        ChainedError::new("connection error")
-            .with_source(ChainedError::new("TLS handshake failed")),
-    );
+    let result2 = make_request("https://this-domain-definitely-does-not-exist-12345.com")
+        .await
+        .context("Failed to fetch user data");
 
-    // No custom handler needed - the hook applies globally
-    let report2 = report!(error2).context("Failed to fetch data");
-    println!("{report2}");
+    if let Err(err) = result2 {
+        println!("{err}\n");
+    }
+
+    // Note: For your own error types, you can also enable source following
+    // per-instance using ContextHandler. See custom_handler.rs for the handler
+    // pattern, then implement preferred_formatting_style() to return
+    // ContextFormattingStyle with follow_source: true.
 }
