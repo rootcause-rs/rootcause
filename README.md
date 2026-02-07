@@ -322,7 +322,7 @@ We're committed to reaching 1.0, but we want to get the API right first.
 
 Our current Minimum Supported Rust Version is 1.89.0. When adding features, we will follow these guidelines:
 
-- Our goal is to support at least five minor Rust versions. This gives you a 6 month window to upgrade your compiler.
+- We will always support the latest five minor Rust versions (or more). This gives you a 6 month window to upgrade your compiler.
 - Any change to the MSRV will be accompanied with a minor version bump.
 
 ## Acknowledgements

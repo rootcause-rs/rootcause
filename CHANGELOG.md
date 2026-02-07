@@ -13,7 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added support for formatting the error sources for a context [#94](https://github.com/rootcause-rs/rootcause/pull/94).
   - This adds new fields to the `ContextFormattingStyle` and the `DefaultReportFormatter`.
-- Added support for mutating attachments [#116](https://github.com/rootcause-rs/rootcause/pull/116).
+- Added support for mutating attachments [#113](https://github.com/rootcause-rs/rootcause/pull/113).
+
+### Changed
+
+- The contexts and attachments will by default use the same formatter (`Display`/`Debug`) as the one used to format the report. [#116](https://github.com/rootcause-rs/rootcause/pull/116)
 
 ### Fixed
 
