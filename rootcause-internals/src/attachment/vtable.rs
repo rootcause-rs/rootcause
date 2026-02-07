@@ -175,6 +175,8 @@ impl AttachmentVtable {
         // 1. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: debug
+            // @add-unsafe-context: RawAttachmentRef
+            // @add-unsafe-context: AttachmentData
             (self.debug)(ptr, formatter)
         }
     }
@@ -203,6 +205,8 @@ impl AttachmentVtable {
         // 1. Guaranteed by the caller
         unsafe {
             // @add-unsafe-context: preferred_formatting_style
+            // @add-unsafe-context: RawAttachmentRef
+            // @add-unsafe-context: AttachmentData
             (self.preferred_formatting_style)(ptr, report_formatting_function)
         }
     }
