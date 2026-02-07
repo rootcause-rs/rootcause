@@ -5,12 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.12.0] - Unreleased
+## [Unreleased]
+
+## [0.12.0] - 2026-02-07
 
 ### Added
 
 - Added support for formatting the error sources for a context [#94](https://github.com/rootcause-rs/rootcause/pull/94).
   - This adds new fields to the `ContextFormattingStyle` and the `DefaultReportFormatter`.
+- Added support for mutating attachments [#116](https://github.com/rootcause-rs/rootcause/pull/116).
+
+### Fixed
+
+- Fixed some issues with using rootcause-backtrace on windows [#118](https://github.com/rootcause-rs/rootcause/pull/94), [#120](https://github.com/rootcause-rs/rootcause/pull/120), [#121](https://github.com/rootcause-rs/rootcause/pull/121).
 
 ## [0.11.1] - 2026-01-03
 
@@ -171,7 +178,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[0.12.0]: https://github.com/rootcause-rs/rootcause/compare/v0.11.1...HEAD
+[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/rootcause-rs/rootcause/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/rootcause-rs/rootcause/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/rootcause-rs/rootcause/compare/v0.10.0...v0.11.0
 [0.10.0]: https://github.com/rootcause-rs/rootcause/compare/v0.9.1...v0.10.0
