@@ -215,6 +215,15 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     pub fn inner(&self) -> &A {
         self.as_ref().inner()
     }
+
+    /// Returns a mutable reference to the inner attachment.
+    ///
+    /// This method is only available when the attachment type is a specific
+    /// type, and not [`Dynamic`].
+    #[must_use]
+    pub fn inner_mut(&mut self) -> &mut A {
+        self.as_mut().into_inner_mut()
+    }
 }
 
 impl<A: ?Sized, T> ReportAttachment<A, T> {
