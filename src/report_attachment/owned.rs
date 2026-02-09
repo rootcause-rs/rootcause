@@ -222,11 +222,7 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     /// type, and not [`Dynamic`].
     #[must_use]
     pub fn inner_mut(&mut self) -> &mut A {
-        let raw = self.as_raw_mut();
-
-        // SAFETY:
-        // 1. Ensured by safety guarantees of as_raw_mut.
-        unsafe { raw.into_attachment_downcast_unchecked() }
+        self.as_mut().into_inner_mut()
     }
 }
 
