@@ -22,8 +22,8 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.12.0"
-rootcause-tracing = "0.12.0"
+rootcause = "0.12.1"
+rootcause-tracing = "0.12.1"
 tracing = "0.1.44"
 tracing-subscriber = "0.3.22"
 ```

@@ -226,7 +226,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.12.0"
+rootcause = "0.12.1"
 ```
 
 Use `Report` as your error type:
@@ -307,7 +307,7 @@ The split between `rootcause` and `rootcause-internals` provides a clean API bou
 
 ## Stability and Roadmap
 
-**Current status:** Pre-1.0 (v0.12.0)
+**Current status:** Pre-1.0 (v0.12.1)
 
 rootcause follows semantic versioning. As a 0.x library, breaking changes may occur in minor version bumps (0.x → 0.x+1). We're actively refining the API based on real-world usage and focused on reaching 1.0.
 

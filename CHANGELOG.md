@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-02-19
+
+### Added
+
+- Implement `IntoIterator` for `&mut ReportAttachments` [#128](https://github.com/rootcause-rs/rootcause/pull/128).
+- Add a `ReportAttachment::inner_mut()` method [#128](https://github.com/rootcause-rs/rootcause/pull/128).
+
 ## [0.12.0] - 2026-02-07
 
 ### Added
@@ -182,7 +189,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.12.1...HEAD
+[0.12.1]: https://github.com/rootcause-rs/rootcause/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/rootcause-rs/rootcause/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/rootcause-rs/rootcause/compare/v0.11.0...v0.11.1
 [0.11.0]: https://github.com/rootcause-rs/rootcause/compare/v0.10.0...v0.11.0
