@@ -734,7 +734,24 @@ const ROOTCAUSE_MATCHER: Option<(&str, usize)> =
 
 impl Backtrace {
     /// Captures the current stack backtrace, applying optional filtering.
+    ///
+    /// When `RUST_BACKTRACE=full` is set, all filtering is bypassed regardless
+    /// of the provided filter configuration.
     pub fn capture(filter: &BacktraceFilter) -> Option<Self> {
+        let unfiltered;
+        let filter = if RootcauseEnvOptions::get().rust_backtrace_full {
+            unfiltered = BacktraceFilter {
+                skipped_initial_crates: &[],
+                skipped_middle_crates: &[],
+                skipped_final_crates: &[],
+                skipped_path_patterns: &[],
+                max_entry_count: usize::MAX,
+                show_full_path: filter.show_full_path,
+            };
+            &unfiltered
+        } else {
+            filter
+        };
         let mut initial_filtering = !filter.skipped_initial_crates.is_empty();
         let mut entries: Vec<BacktraceEntry> = Vec::new();
         let mut total_omitted_frames = 0;
