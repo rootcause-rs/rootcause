@@ -124,6 +124,7 @@
 //!         skipped_initial_crates: &["rootcause", "rootcause-backtrace"],  // Skip frames from rootcause at start
 //!         skipped_middle_crates: &["tokio"],     // Skip tokio frames in middle
 //!         skipped_final_crates: &["std"],        // Skip std frames at end
+//!         skipped_path_patterns: &[],            // Skip paths that contain this regex, useful for non rust code
 //!         max_entry_count: 15,                   // Limit to 15 frames
 //!         show_full_path: false,                 // Show shortened paths
 //!     },
@@ -131,7 +132,7 @@
 //! };
 //! ```
 
-use std::{borrow::Cow, fmt, panic::Location, sync::OnceLock};
+use std::{fmt, panic::Location, sync::OnceLock};
 
 use backtrace::BytesOrWideString;
 use rootcause::{
@@ -206,8 +207,6 @@ pub struct Frame {
 pub struct FramePath {
     /// The raw file path from the debug information.
     pub raw_path: String,
-    /// The crate name if detected from the path.
-    pub crate_name: Option<Cow<'static, str>>,
     /// Common path prefix information for shortening display.
     pub split_path: Option<FramePrefix>,
 }
@@ -220,8 +219,7 @@ pub struct FramePath {
 pub struct FramePrefix {
     /// The kind of prefix used to identify this prefix.
     ///
-    /// Examples: `"RUST_SRC"` for Rust standard library paths,
-    /// `"CARGO"` for Cargo registry crate paths,
+    /// Examples: `"CRATE"` for crate paths,
     /// `"ROOTCAUSE"` for rootcause library paths.
     pub prefix_kind: &'static str,
     /// The full prefix path that was removed from the original path.
@@ -286,6 +284,77 @@ fn get_function_name(s: &str) -> &str {
         // We started at word start but never found an end; return rest of string
         &s[word_start..]
     }
+}
+
+/// Extracts the crate name from a demangled symbol name.
+///
+/// For `<Type as Trait>::method`, extracts from the trait path.
+/// For `<Type>::method` or `crate::func`, extracts from the type/path.
+fn crate_name_from_symbol(sym: &str) -> Option<&str> {
+    if let Some(rest) = sym.strip_prefix('<') {
+        let mut depth = 1u32;
+        let mut prev_was_dash = false;
+        for (i, b) in rest.bytes().enumerate() {
+            let was_dash = prev_was_dash;
+            prev_was_dash = b == b'-';
+            match b {
+                b'<' => depth += 1,
+                b'>' if !was_dash => depth = depth.saturating_sub(1),
+                b' ' if depth == 1 && rest[i..].starts_with(" as ") => {
+                    let after_as = &rest[i + 4..]; // skip over ` as `
+                    let name = after_as.split("::").next()?;
+                    return if name.is_empty() { None } else { Some(name) };
+                }
+                _ => {}
+            }
+        }
+        let name = rest.split("::").next()?;
+        if name.is_empty() { None } else { Some(name) }
+    } else {
+        let name = sym.split("::").next()?;
+        if name.is_empty() { None } else { Some(name) }
+    }
+}
+
+/// Compares two crate names treating `-` and `_` as equivalent.
+fn crate_name_matches(a: &str, b: &str) -> bool {
+    a.len() == b.len() && starts_with_normalized(a, b)
+}
+
+fn starts_with_normalized(a: &str, b: &str) -> bool {
+    a.bytes().zip(b.bytes()).all(crate_byte_is_equal)
+}
+
+fn crate_byte_is_equal((x, y): (u8, u8)) -> bool {
+    x == y || (x == b'-' || x == b'_') && (y == b'-' || y == b'_')
+}
+
+/// Finds the split point in a path where a crate directory starts.
+///
+/// Searches backwards for a path component starting with `crate_name`
+/// (using dash/underscore normalization).
+fn find_crate_split(path: &str, crate_name: &str) -> Option<usize> {
+    let bytes = path.as_bytes();
+    let mut i = bytes.len();
+    while i > 0 {
+        i -= 1;
+        if (bytes[i] == b'/' || bytes[i] == b'\\') && is_crate_component(&path[i + 1..], crate_name)
+        {
+            return Some(i + 1);
+        }
+    }
+    if is_crate_component(path, crate_name) {
+        return Some(0);
+    }
+    None
+}
+
+fn is_crate_component(component: &str, crate_name: &str) -> bool {
+    if !starts_with_normalized(component, crate_name) {
+        return false;
+    }
+    let after = component.as_bytes().get(crate_name.len());
+    after.is_none() || matches!(after, Some(b'/' | b'\\' | b'-' | b'_' | b'.'))
 }
 
 impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandler<SHOW_FULL_PATH> {
@@ -406,6 +475,7 @@ impl<const SHOW_FULL_PATH: bool> AttachmentHandler<Backtrace> for BacktraceHandl
 ///         skipped_initial_crates: &[],
 ///         skipped_middle_crates: &[],
 ///         skipped_final_crates: &[],
+///         skipped_path_patterns: &[],
 ///         max_entry_count: 30,
 ///         show_full_path: true,
 ///     },
@@ -454,6 +524,8 @@ pub struct BacktraceCollector {
 ///     skipped_middle_crates: &["tokio", "hyper", "tower"],
 ///     // Hide runtime frames at the end
 ///     skipped_final_crates: &["std", "tokio"],
+///     // Hide frames whose file path matches any of these patterns
+///     skipped_path_patterns: &["rustc"],
 ///     // Show only the most relevant 10 frames
 ///     max_entry_count: 10,
 ///     // Show shortened paths
@@ -471,6 +543,9 @@ pub struct BacktraceFilter {
     /// Set of crate names whose frames should be hidden when they appear
     /// at the end of a backtrace.
     pub skipped_final_crates: &'static [&'static str],
+    /// Substring patterns matched against frame file paths. Frames whose
+    /// path contains any of these patterns are unconditionally omitted.
+    pub skipped_path_patterns: &'static [&'static str],
     /// Maximum number of entries to include in the backtrace.
     pub max_entry_count: usize,
     /// Whether to show full file paths in the backtrace frames.
@@ -490,6 +565,7 @@ impl BacktraceFilter {
         ],
         skipped_middle_crates: &["std", "core", "alloc", "tokio"],
         skipped_final_crates: &["std", "core", "alloc", "tokio"],
+        skipped_path_patterns: &["rustc"],
         max_entry_count: 20,
         show_full_path: false,
     };
@@ -575,6 +651,7 @@ impl BacktraceCollector {
                     skipped_initial_crates: &[],
                     skipped_middle_crates: &[],
                     skipped_final_crates: &[],
+                    skipped_path_patterns: &[],
                     max_entry_count: usize::MAX,
                     show_full_path: env_options.show_full_path,
                 }
@@ -678,11 +755,29 @@ impl Backtrace {
                     return;
                 }
 
-                let frame_path = FramePath::new(filename_raw);
+                // Check path patterns early to skip frames unconditionally
+                // before any symbol-based filtering.
+                if !filter.skipped_path_patterns.is_empty() {
+                    let path_str = filename_raw.to_string();
+                    if filter
+                        .skipped_path_patterns
+                        .iter()
+                        .any(|pattern| path_str.contains(pattern))
+                    {
+                        total_omitted_frames += 1;
+                        return;
+                    }
+                }
+
+                let sym_demangled = format!("{sym:#}");
+                let sym_crate = crate_name_from_symbol(&sym_demangled);
 
                 if initial_filtering {
-                    if let Some(cur_crate_name) = &frame_path.crate_name
-                        && filter.skipped_initial_crates.contains(&&**cur_crate_name)
+                    if let Some(cur_crate) = sym_crate
+                        && filter
+                            .skipped_initial_crates
+                            .iter()
+                            .any(|name| crate_name_matches(name, cur_crate))
                     {
                         total_omitted_frames += 1;
                         return;
@@ -691,9 +786,9 @@ impl Backtrace {
                     }
                 }
 
-                if let Some(cur_crate_name) = &frame_path.crate_name
+                if let Some(cur_crate) = sym_crate
                     && let Some(currently_omitted_crate_name) = &currently_omitted_crate_name
-                    && cur_crate_name == currently_omitted_crate_name
+                    && crate_name_matches(currently_omitted_crate_name, cur_crate)
                 {
                     delayed_omitted_frame = None;
                     currently_omitted_frames += 1;
@@ -713,17 +808,19 @@ impl Backtrace {
                     currently_omitted_frames = 0;
                 }
 
-                if let Some(cur_crate_name) = &frame_path.crate_name
+                let frame_path = FramePath::new(filename_raw, sym_crate);
+
+                if let Some(cur_crate) = sym_crate
                     && let Some(skipped_crate) = filter
                         .skipped_middle_crates
                         .iter()
-                        .find(|&crate_name| crate_name == cur_crate_name)
+                        .find(|&name| crate_name_matches(name, cur_crate))
                 {
                     currently_omitted_crate_name = Some(skipped_crate);
                     currently_omitted_frames = 1;
                     total_omitted_frames += 1;
                     delayed_omitted_frame = Some(Frame {
-                        sym_demangled: format!("{sym:#}"),
+                        sym_demangled,
                         frame_path: Some(frame_path),
                         lineno: symbol.lineno(),
                     });
@@ -731,7 +828,7 @@ impl Backtrace {
                 }
 
                 entries.push(BacktraceEntry::Frame(Frame {
-                    sym_demangled: format!("{sym:#}"),
+                    sym_demangled,
                     frame_path: Some(frame_path),
                     lineno: symbol.lineno(),
                 }));
@@ -755,18 +852,18 @@ impl Backtrace {
             match last {
                 BacktraceEntry::Frame(frame) => {
                     let mut skip = false;
-                    if let Some(frame_path) = &frame.frame_path
-                        && let Some(crate_name) = &frame_path.crate_name
-                        && filter.skipped_final_crates.contains(&&**crate_name)
-                    {
-                        skip = true;
-                    } else if frame.sym_demangled == "__libc_start_call_main"
-                        || frame.sym_demangled == "__libc_start_main_impl"
+                    if let Some(sym_crate) = crate_name_from_symbol(&frame.sym_demangled)
+                        && filter
+                            .skipped_final_crates
+                            .iter()
+                            .any(|name| crate_name_matches(name, sym_crate))
                     {
                         skip = true;
                     } else if let Some(frame_path) = &frame.frame_path
-                        && frame.sym_demangled == "_start"
-                        && frame_path.raw_path.contains("zig/libc/glibc")
+                        && filter
+                            .skipped_path_patterns
+                            .iter()
+                            .any(|pattern| frame_path.raw_path.contains(pattern))
                     {
                         skip = true;
                     }
@@ -804,105 +901,66 @@ impl Backtrace {
 }
 
 impl FramePath {
-    fn new(path: BytesOrWideString<'_>) -> Self {
-        static REGEXES: OnceLock<[regex::Regex; 2]> = OnceLock::new();
-        let [std_regex, registry_regex] = REGEXES.get_or_init(|| {
-            [
-                // Matches Rust standard library paths:
-                // - /lib/rustlib/src/rust/library/{std|core|alloc}/src/...
-                // - /rustc/{40-char-hash}/library/{std|core|alloc}/src/...
-                regex::Regex::new(
-                    r"(?:/lib/rustlib/src/rust|^/rustc/[0-9a-f]{40})/library/(std|core|alloc)/src/.*$",
-                )
-                .expect("built-in regex pattern for std library paths should be valid"),
-                // Matches Cargo registry paths:
-                // - /.cargo/registry/src/{index}-{16-char-hash}/{crate}-{version}/src/...
-                regex::Regex::new(
-                    r"/\.cargo/registry/src/[^/]+-[0-9a-f]{16}/([^./]+)-[0-9]+\.[^/]*/src/.*$",
-                )
-                .expect("built-in regex pattern for cargo registry paths should be valid"),
-            ]
-        });
-
+    fn new(path: BytesOrWideString<'_>, sym_crate: Option<&str>) -> Self {
         let path_str = path.to_string();
+        let raw_path = path.to_str_lossy().into_owned();
 
-        if let Some(captures) = std_regex.captures(&path_str) {
-            let raw_path = path.to_str_lossy().into_owned();
-            let crate_capture = captures
-                .get(1)
-                .expect("regex capture group 1 should exist for std library paths");
-            let split = crate_capture.start();
-            let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
-
-            Self {
-                raw_path,
-                split_path: Some(FramePrefix {
-                    prefix_kind: "RUST_SRC",
-                    prefix: prefix.to_string(),
-                    suffix: suffix.to_string(),
-                }),
-                crate_name: Some(crate_capture.as_str().to_string().into()),
-            }
-        } else if let Some(captures) = registry_regex.captures(&path_str) {
-            let raw_path = path.to_str_lossy().into_owned();
-            let crate_capture = captures
-                .get(1)
-                .expect("regex capture group 1 should exist for cargo registry paths");
-            let split = crate_capture.start();
-            let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
-
-            Self {
-                raw_path,
-                crate_name: Some(crate_capture.as_str().to_string().into()),
-                split_path: Some(FramePrefix {
-                    prefix_kind: "CARGO",
-                    prefix: prefix.to_string(),
-                    suffix: suffix.to_string(),
-                }),
-            }
-        } else if let Some((rootcause_matcher_prefix, rootcause_splitter_prefix_len)) =
-            ROOTCAUSE_MATCHER
+        if let Some((rootcause_matcher_prefix, rootcause_splitter_prefix_len)) = ROOTCAUSE_MATCHER
             && path_str.starts_with(rootcause_matcher_prefix)
         {
-            let raw_path = path.to_str_lossy().into_owned();
             let (prefix, suffix) = (
                 &path_str[..rootcause_splitter_prefix_len],
                 &path_str[rootcause_splitter_prefix_len + 1..],
             );
-            Self {
+            return Self {
                 raw_path,
                 split_path: Some(FramePrefix {
                     prefix_kind: "ROOTCAUSE",
                     prefix: prefix.to_string(),
                     suffix: suffix.to_string(),
                 }),
-                crate_name: Some(Cow::Borrowed("rootcause")),
-            }
-        } else if let Some((rootcause_matcher_prefix, rootcause_splitter_prefix_len)) =
+            };
+        }
+
+        if let Some((rootcause_matcher_prefix, rootcause_splitter_prefix_len)) =
             ROOTCAUSE_BACKTRACE_MATCHER
             && path_str.starts_with(rootcause_matcher_prefix)
         {
-            let raw_path = path.to_str_lossy().into_owned();
             let (prefix, suffix) = (
                 &path_str[..rootcause_splitter_prefix_len],
                 &path_str[rootcause_splitter_prefix_len + 1..],
             );
-            Self {
+            return Self {
                 raw_path,
                 split_path: Some(FramePrefix {
                     prefix_kind: "ROOTCAUSE",
                     prefix: prefix.to_string(),
                     suffix: suffix.to_string(),
                 }),
-                crate_name: Some(Cow::Borrowed("rootcause-backtrace")),
-            }
-        } else {
-            let raw_path = path.to_str_lossy().into_owned();
-            Self {
+            };
+        }
+
+        if let Some(crate_name) = sym_crate
+            && let Some(split) = find_crate_split(&path_str, crate_name)
+        {
+            let (prefix, suffix) = if split > 0 {
+                (&path_str[..split - 1], &path_str[split..])
+            } else {
+                ("", &path_str[..])
+            };
+            return Self {
                 raw_path,
-                crate_name: None,
-                split_path: None,
-            }
+                split_path: Some(FramePrefix {
+                    prefix_kind: "CRATE",
+                    prefix: prefix.to_string(),
+                    suffix: suffix.to_string(),
+                }),
+            };
+        }
+
+        Self {
+            raw_path,
+            split_path: None,
         }
     }
 }
@@ -952,6 +1010,7 @@ impl FramePath {
 ///     skipped_initial_crates: &[],
 ///     skipped_middle_crates: &[],
 ///     skipped_final_crates: &[],
+///     skipped_path_patterns: &[],
 ///     max_entry_count: 50,
 ///     show_full_path: true,
 /// };
