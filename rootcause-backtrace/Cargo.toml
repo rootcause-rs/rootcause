@@ -15,7 +15,6 @@ backtrace = { version = "0.3.76", default-features = false, features = [
   "std",
   "cpp_demangle",
 ] }
-regex = { version = "1.12.2", default-features = false }
 unicode-ident = "1.0.22"
 
 # Internal dependencies
