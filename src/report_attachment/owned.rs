@@ -470,6 +470,19 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     }
 
     /// Returns a mutable reference to the attachment.
+    /// 
+    /// # Example
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32);
+    /// let mut reference = attachment.as_mut();
+    /// 
+    /// *reference.inner_mut() += 1;
+    /// std::mem::drop(reference);
+    ///
+    /// assert_eq!(attachment.inner(), &42)
+    /// ```
     #[must_use]
     pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
         let raw = self.as_raw_mut();
