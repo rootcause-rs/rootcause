@@ -211,6 +211,15 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     ///
     /// This method is only available when the attachment type is a specific
     /// type, and not [`Dynamic`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(41i32);
+    /// let the_answer = attachment.inner();
+    /// assert_eq!(42, 1 + *the_answer)
+    /// ```
     #[must_use]
     pub fn inner(&self) -> &A {
         self.as_ref().inner()
@@ -234,6 +243,16 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     ///
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachment::downcast_attachment`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// let known_type = ReportAttachment::new_sendsync(42i32);
+    /// let the_answer = known_type.format_inner().to_string();
+    /// let unknown_type : ReportAttachment<Dynamic, _> = known_type.into_dynamic();
+    /// assert_eq!(unknown_type.format_inner().to_string(), the_answer);
+    /// ```
     #[must_use]
     pub fn into_dynamic(self) -> ReportAttachment<Dynamic, T> {
         let raw = self.into_raw();
@@ -261,6 +280,16 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// This method does not actually modify the attachment in any way. It only
     /// has the effect of "forgetting" that the object in the
     /// [`ReportAttachment`] might actually be [`Send`] and [`Sync`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// let sendsync = ReportAttachment::new_sendsync(42i32);
+    /// let the_answer = sendsync.format_inner().to_string();
+    /// let local : ReportAttachment<_, Local> = sendsync.into_local();
+    /// assert_eq!(local.format_inner().to_string(), the_answer);
+    /// ```
     #[must_use]
     pub fn into_local(self) -> ReportAttachment<A, Local> {
         let raw = self.into_raw();
@@ -274,12 +303,30 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     }
 
     /// Returns the [`TypeId`] of the inner attachment.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// assert_eq!(attachment.inner_type_id(), TypeId::of::<i32>());
+    /// ```
     #[must_use]
     pub fn inner_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_type_id()
     }
 
     /// Returns the [`core::any::type_name`] of the inner attachment.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// assert_eq!(attachment.inner_type_name(), type_name::<i32>());
+    /// ```
     #[must_use]
     pub fn inner_type_name(&self) -> &'static str {
         self.as_raw_ref().attachment_type_name()
@@ -287,18 +334,45 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
 
     /// Returns the [`TypeId`] of the handler used when creating this
     /// attachment.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// assert_eq!(attachment.inner_handler_type_id(), TypeId::of::<Display>());
+    /// ```
     #[must_use]
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
     /// Formats the attachment with hook processing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
         self.as_ref().format_inner()
     }
 
     /// Formats the attachment without hook processing.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// assert_eq!(attachment.format_inner_unhooked().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
         self.as_ref().format_inner_unhooked()
@@ -315,6 +389,19 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*,
+    /// # report_attachment::ReportAttachment,
+    /// # handlers::*, hooks::builtin_hooks::location::*};
+    ///
+    /// let location = Location { file: "the-answer.rs", line: 42 };
+    /// let attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
+    /// let formatting = attachment.preferred_formatting_style(FormattingFunction::Display);
+    /// assert_eq!(formatting.priority, 20);
+    /// ```
     #[must_use]
     pub fn preferred_formatting_style(
         &self,
@@ -335,6 +422,20 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    ///
+    ///     /// # Example
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*,
+    /// # report_attachment::ReportAttachment,
+    /// # handlers::*, hooks::builtin_hooks::location::*};
+    ///
+    /// let location = Location { file: "the-answer.rs", line: 42 };
+    /// let attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
+    /// let formatting = attachment
+    ///     .preferred_formatting_style_unhooked(FormattingFunction::Display);
+    /// assert_eq!(formatting.priority, 20);
+    /// ```
     #[must_use]
     pub fn preferred_formatting_style_unhooked(
         &self,
@@ -345,6 +446,16 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     }
 
     /// Returns a reference to the attachment.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42);
+    /// let reference = attachment.as_ref();
+    ///
+    /// assert_eq!(reference.inner(), &42)
+    /// ```
     #[must_use]
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         let raw = self.as_raw_ref();
@@ -380,6 +491,15 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// See [`PreformattedAttachment`] for more information.
     ///
     /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// let preformat = attachment.preformat();
+    /// assert_eq!(attachment.format_inner().to_string(), preformat.format_inner().to_string());
+    /// ```
     #[must_use]
     #[track_caller]
     pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
@@ -398,6 +518,18 @@ impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     ///
     /// The attachment will use the [`handlers::Display`] handler to format the
     /// attachment.
+    ///
+    /// # Example
+    ///
+    /// ```rust.compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// ```
     #[must_use]
     pub fn new_sendsync(attachment: A) -> Self
     where
@@ -413,6 +545,18 @@ impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     /// with explicit [`SendSync`] thread safety. Use this method when
     /// you're having trouble with type inference for the thread safety
     /// parameter.
+    ///
+    /// # Example
+    ///
+    /// ```rust.compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// let attachment = ReportAttachment::new_custom::<Debug>(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// let attachment = ReportAttachment::new_sendsync_custom::<Debug>(42i32);
+    /// ```
     #[must_use]
     pub fn new_sendsync_custom<H>(attachment: A) -> Self
     where
@@ -431,6 +575,18 @@ impl<A: Sized> ReportAttachment<A, Local> {
     ///
     /// The attachment will use the [`handlers::Display`] handler to format the
     /// attachment.
+    ///
+    /// # Example
+    ///
+    /// ```rust.compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_local(42i32);
+    /// ```
     #[must_use]
     pub fn new_local(attachment: A) -> Self
     where
@@ -445,6 +601,18 @@ impl<A: Sized> ReportAttachment<A, Local> {
     /// This is a convenience method that calls [`ReportAttachment::new_custom`]
     /// with explicit [`Local`] thread safety. Use this method when you're
     /// having trouble with type inference for the thread safety parameter.
+    ///
+    /// # Example
+    ///
+    /// ```rust.compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// let attachment = ReportAttachment::new_custom::<Debug>(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// let attachment = ReportAttachment::new_local_custom::<Debug>(42i32);
+    /// ```
     #[must_use]
     pub fn new_local_custom<H>(attachment: A) -> Self
     where
@@ -459,6 +627,15 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///
     /// Returns `Some(&A)` if the inner attachment is of type `A`, otherwise
     /// returns `None`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32).into_dynamic();
+    /// assert_eq!(None, attachment.downcast_inner::<i64>());
+    /// assert_eq!(Some(&42), attachment.downcast_inner::<i32>());
+    /// ```
     #[must_use]
     pub fn downcast_inner<A>(&self) -> Option<&A>
     where
@@ -477,6 +654,19 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32).into_dynamic();
+    /// let inner = unsafe {
+    ///     // SAFETY:
+    ///     // 1. We just upcast to Dynamic from i32 above.
+    ///     attachment.downcast_inner_unchecked::<i32>()
+    /// };
+    /// assert_eq!(42, *inner);
+    /// ```
     #[must_use]
     pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
     where
@@ -493,6 +683,18 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///
     /// Returns `Some(&mut A)` if the inner attachment is of type `A`, otherwise
     /// returns `None`.
+    ///
+    /// # Example
+    /// 
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32).into_dynamic();
+    /// assert_eq!(None, attachment.downcast_inner_mut::<i64>());
+    /// if let Some(n) = attachment.downcast_inner_mut::<i32>() {
+    ///     *n += 1;
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn downcast_inner_mut<A>(&mut self) -> Option<&mut A>
     where
@@ -512,6 +714,22 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32).into_dynamic();
+    /// {
+    ///     let inner = unsafe {
+    ///         // SAFETY:
+    ///         // 1. We just upcasted from i32 above
+    ///         attachment.downcast_inner_mut_unchecked::<i32>()
+    ///     };
+    ///     *inner += 1;
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
     #[must_use]
     pub unsafe fn downcast_inner_mut_unchecked<A>(&mut self) -> &mut A
     where
@@ -529,6 +747,16 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///
     /// Returns `Ok(attachment)` if the inner attachment is of type `A`,
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32).into_dynamic();
+    /// let Err(attachment) = attachment.downcast_attachment::<i64>() else { panic!(); };
+    /// let Ok(attachment) = attachment.downcast_attachment::<i32>() else { panic!(); };
+    /// assert_eq!(attachment.inner(), &42);
+    /// ```
     pub fn downcast_attachment<A>(self) -> Result<ReportAttachment<A, T>, Self>
     where
         A: Sized + 'static,
@@ -555,6 +783,19 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
+    /// 
+    /// # Example
+    /// 
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32).into_dynamic();
+    /// let attachment = unsafe {
+    ///     // SAFETY:
+    ///     // 1. We just upcast from i32 above
+    ///     attachment.downcast_unchecked::<i32>()
+    /// };
+    /// assert_eq!(attachment.inner(), &42);
+    /// ```
     #[must_use]
     pub unsafe fn downcast_unchecked<A>(self) -> ReportAttachment<A, T>
     where
