@@ -2,7 +2,7 @@ use alloc::vec::Vec;
 
 use crate::{
     markers::{Dynamic, Local, SendSync},
-    report_attachment::{ReportAttachment, ReportAttachmentRef},
+    report_attachment::{ReportAttachment, ReportAttachmentMut, ReportAttachmentRef},
     report_attachments::{
         ReportAttachmentsIntoIter, ReportAttachmentsIter, ReportAttachmentsIterMut,
     },
@@ -600,6 +600,15 @@ impl<'a, T> IntoIterator for &'a ReportAttachments<T> {
 
     fn into_iter(self) -> ReportAttachmentsIter<'a> {
         self.iter()
+    }
+}
+
+impl<'a, T> IntoIterator for &'a mut ReportAttachments<T> {
+    type IntoIter = ReportAttachmentsIterMut<'a>;
+    type Item = ReportAttachmentMut<'a, Dynamic>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter_mut()
     }
 }
 
