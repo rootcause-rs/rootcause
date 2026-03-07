@@ -630,6 +630,12 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
 
     /// Returns a reference to the collection with type-erased contexts via
     /// [`Dynamic`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    ///
+    /// ```
     #[must_use]
     pub fn as_dynamic(&self) -> &ReportCollection<Dynamic, T> {
         let raw = self.as_raw();
