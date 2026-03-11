@@ -229,6 +229,15 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     ///
     /// This method is only available when the attachment type is a specific
     /// type, and not [`Dynamic`].
+    ///
+    /// ```rust
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32);
+    /// {
+    ///     let the_answer = attachment.inner_mut();
+    ///     *the_answer += 1;
+    /// }
+    /// assert_eq!("42", attachment.format_inner().to_string());
     #[must_use]
     pub fn inner_mut(&mut self) -> &mut A {
         self.as_mut().into_inner_mut()
@@ -479,14 +488,14 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     }
 
     /// Returns a mutable reference to the attachment.
-    /// 
+    ///
     /// # Example
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
     /// let mut attachment = ReportAttachment::new_sendsync(41i32);
     /// let mut reference = attachment.as_mut();
-    /// 
+    ///
     /// *reference.inner_mut() += 1;
     /// std::mem::drop(reference);
     ///
@@ -707,7 +716,7 @@ impl<T> ReportAttachment<Dynamic, T> {
     /// returns `None`.
     ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
     /// let mut attachment = ReportAttachment::new_sendsync(41i32).into_dynamic();
@@ -736,9 +745,9 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
     /// let mut attachment = ReportAttachment::new_sendsync(41i32).into_dynamic();
@@ -769,9 +778,9 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///
     /// Returns `Ok(attachment)` if the inner attachment is of type `A`,
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
     /// let attachment = ReportAttachment::new_sendsync(42i32).into_dynamic();
@@ -805,9 +814,9 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///    calling [`inner_type_id()`] first)
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
-    /// 
+    ///
     /// # Example
-    /// 
+    ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
     /// let attachment = ReportAttachment::new_sendsync(42i32).into_dynamic();
