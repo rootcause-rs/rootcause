@@ -421,11 +421,11 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// # Examples
     ///
     /// ```
-    /// use rootcause::{
-    ///     markers::{Dynamic, SendSync},
-    ///     report,
-    ///     report_collection::ReportCollection,
-    /// };
+    /// # use rootcause::{
+    /// #     markers::{Dynamic, SendSync},
+    /// #     report,
+    /// #     report_collection::ReportCollection,
+    /// # };
     ///
     /// let mut collection = ReportCollection::<Dynamic, SendSync>::new();
     /// collection.reserve(10);
@@ -449,7 +449,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     ///
     /// # Examples
     ///
-    /// ```
+    /// ```rust
     /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
@@ -633,8 +633,20 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     ///
     /// # Examples
     ///
-    /// ```
-    ///
+    /// ```rust
+    /// # use rootcause::{
+    /// #     markers::{Dynamic, SendSync},
+    /// #     Report,
+    /// #     handlers::Display,
+    /// #     report_collection::ReportCollection,
+    /// # };
+    /// #
+    /// let mut collection = ReportCollection::<i32, SendSync>::new();
+    /// let report = Report::new_custom::<Display>(42i32).into_cloneable();
+    /// collection.push(report);
+    /// let dynamic = collection.as_dynamic();
+    /// let first = dynamic.iter().next().unwrap();
+    /// assert_eq!(first.downcast_current_context::<i32>(), Some(&42i32));
     /// ```
     #[must_use]
     pub fn as_dynamic(&self) -> &ReportCollection<Dynamic, T> {
@@ -695,6 +707,24 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
 
     /// Returns a reference to the collection with [`Local`] thread safety
     /// semantics.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::{
+    /// #     markers::{Dynamic, SendSync},
+    /// #     Report,
+    /// #     handlers::Display,
+    /// #     report_collection::ReportCollection,
+    /// # };
+    /// #
+    /// let mut collection = ReportCollection::<i32, SendSync>::new();
+    /// let report = Report::new_custom::<Display>(42i32).into_cloneable();
+    /// collection.push(report);
+    /// let local = collection.as_local();
+    /// let first = local.iter().next().unwrap();
+    /// assert_eq!(first.current_context(), &42i32);
+    /// ```
     #[must_use]
     pub fn as_local(&self) -> &ReportCollection<C, Local> {
         let raw = self.as_raw();
