@@ -1,0 +1,8 @@
+[package]
+name = "rootcause-opentelemetry"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+opentelemetry = "0.31"
+rootcause = { path='../', version =  }
