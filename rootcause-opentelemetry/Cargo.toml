@@ -5,4 +5,4 @@ edition = "2024"
 
 [dependencies]
 opentelemetry = "0.31"
-rootcause = { path='../', version =  }
+rootcause = { path = "../", version = "=0.12.1" }
