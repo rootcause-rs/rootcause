@@ -1,15 +1,17 @@
-use core::any::TypeId;
+use core::{any::TypeId, fmt};
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
-    Report, ReportIter, ReportRef, handlers,
+    Report, ReportIter, ReportRef,
+    format_helpers::FormatWithFunctions,
+    handlers,
+    hooks::context_formatter,
     markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     preformatted::PreformattedContext,
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
-    util::format_helper,
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -389,7 +391,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     #[must_use]
     pub fn attach<A>(mut self, attachment: A) -> Self
     where
-        A: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
+        A: markers::ObjectMarkerFor<T> + fmt::Display + fmt::Debug,
     {
         self.attachments_mut()
             .push(ReportAttachment::new(attachment).into_dynamic());
@@ -812,13 +814,12 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// println!("{formatted}");
     /// ```
     #[must_use]
-    pub fn format_current_context(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        let report = self.as_ref().into_dynamic().into_uncloneable().into_local();
-        format_helper(
-            report,
-            |report, formatter| crate::hooks::context_formatter::display_context(report, formatter),
-            |report, formatter| crate::hooks::context_formatter::debug_context(report, formatter),
-        )
+    pub fn format_current_context(&self) -> impl fmt::Display + fmt::Debug {
+        FormatWithFunctions {
+            state: self.as_ref().into_dynamic().into_uncloneable().into_local(),
+            display: context_formatter::display_context,
+            debug: context_formatter::debug_context,
+        }
     }
 
     /// Formats the current context without hook processing.
@@ -832,12 +833,12 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// println!("{formatted}");
     /// ```
     #[must_use]
-    pub fn format_current_context_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |report, formatter| report.context_display(formatter),
-            |report, formatter| report.context_debug(formatter),
-        )
+    pub fn format_current_context_unhooked(&self) -> impl fmt::Display + fmt::Debug {
+        FormatWithFunctions {
+            state: self.as_raw_ref(),
+            display: rootcause_internals::RawReportRef::context_display,
+            debug: rootcause_internals::RawReportRef::context_debug,
+        }
     }
 
     /// Formats the entire report using a specific report formatting hook.
@@ -865,7 +866,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with<H>(&self, hook: &H) -> impl core::fmt::Display + core::fmt::Debug
+    pub fn format_with<H>(&self, hook: &H) -> impl fmt::Display + fmt::Debug
     where
         H: crate::hooks::report_formatter::ReportFormatter,
     {
@@ -898,7 +899,7 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         let report = self.as_ref().into_dynamic().into_uncloneable().into_local();
-        crate::hooks::context_formatter::get_preferred_context_formatting_style(
+        context_formatter::get_preferred_context_formatting_style(
             report,
             report_formatting_function,
         )
@@ -1155,15 +1156,15 @@ impl<'a, T> ReportMut<'a, Dynamic, T> {
     }
 }
 
-impl<'a, C: ?Sized, T> core::fmt::Display for ReportMut<'a, C, T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Display::fmt(&self.as_ref(), f)
+impl<'a, C: ?Sized, T> fmt::Display for ReportMut<'a, C, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(&self.as_ref(), f)
     }
 }
 
-impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        core::fmt::Debug::fmt(&self.as_ref(), f)
+impl<'a, C: ?Sized, T> fmt::Debug for ReportMut<'a, C, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(&self.as_ref(), f)
     }
 }
 

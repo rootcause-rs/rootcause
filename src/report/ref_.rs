@@ -1,15 +1,19 @@
 use alloc::vec;
-use core::any::TypeId;
+use core::{any::TypeId, fmt};
 
-use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
+use rootcause_internals::{
+    RawReportRef,
+    handlers::{ContextFormattingStyle, FormattingFunction},
+};
 
 use crate::{
     Report, ReportIter,
+    format_helpers::{Format2WithFunction, FormatWithFunctions},
+    hooks::{context_formatter, report_formatter},
     markers::{Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     preformatted::{self, PreformattedContext},
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
-    util::format_helper,
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -680,12 +684,12 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// println!("{formatted}");
     /// ```
     #[must_use]
-    pub fn format_current_context(self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.into_dynamic().into_uncloneable().into_local(),
-            |report, formatter| crate::hooks::context_formatter::display_context(report, formatter),
-            |report, formatter| crate::hooks::context_formatter::debug_context(report, formatter),
-        )
+    pub fn format_current_context(self) -> impl fmt::Display + fmt::Debug {
+        FormatWithFunctions {
+            state: self.into_dynamic().into_uncloneable().into_local(),
+            display: context_formatter::display_context,
+            debug: context_formatter::debug_context,
+        }
     }
 
     /// Formats the current context without hook processing.
@@ -699,12 +703,12 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// println!("{formatted}");
     /// ```
     #[must_use]
-    pub fn format_current_context_unhooked(self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |report, formatter| report.context_display(formatter),
-            |report, formatter| report.context_debug(formatter),
-        )
+    pub fn format_current_context_unhooked(self) -> impl fmt::Display + fmt::Debug {
+        FormatWithFunctions {
+            state: self.as_raw_ref(),
+            display: RawReportRef::context_display,
+            debug: RawReportRef::context_debug,
+        }
     }
 
     /// Formats the entire report using a specific report formatting hook.
@@ -732,20 +736,15 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// println!("{}", formatted);
     /// ```
     #[must_use]
-    pub fn format_with<H: crate::hooks::report_formatter::ReportFormatter>(
+    pub fn format_with<H: report_formatter::ReportFormatter>(
         self,
         hook: &H,
-    ) -> impl core::fmt::Display + core::fmt::Debug {
-        let report = self.into_dynamic().into_uncloneable().into_local();
-        format_helper(
-            (report, hook),
-            |(report, hook), formatter| {
-                hook.format_report(report, formatter, FormattingFunction::Display)
-            },
-            |(report, hook), formatter| {
-                hook.format_report(report, formatter, FormattingFunction::Debug)
-            },
-        )
+    ) -> impl fmt::Display + fmt::Debug {
+        Format2WithFunction {
+            state: hook,
+            value: self.into_dynamic().into_uncloneable().into_local(),
+            formatter: H::format_report,
+        }
     }
 
     /// Gets the preferred formatting style for the context with hook
@@ -773,7 +772,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         self,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
-        crate::hooks::context_formatter::get_preferred_context_formatting_style(
+        context_formatter::get_preferred_context_formatting_style(
             self.into_dynamic().into_uncloneable().into_local(),
             report_formatting_function,
         )
@@ -1014,17 +1013,17 @@ impl<'a, C: ?Sized, T> From<ReportRef<'a, C, Cloneable, T>> for Report<C, Clonea
     }
 }
 
-impl<'a, C: ?Sized, O, T> core::fmt::Display for ReportRef<'a, C, O, T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<'a, C: ?Sized, O, T> fmt::Display for ReportRef<'a, C, O, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
-        crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Display)
+        report_formatter::format_report(report, f, FormattingFunction::Display)
     }
 }
 
-impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+impl<'a, C: ?Sized, O, T> fmt::Debug for ReportRef<'a, C, O, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
-        crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Debug)
+        report_formatter::format_report(report, f, FormattingFunction::Debug)
     }
 }
 

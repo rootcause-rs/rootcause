@@ -1,12 +1,16 @@
 use core::any::TypeId;
 
-use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
+use rootcause_internals::{
+    RawAttachment, RawAttachmentRef,
+    handlers::{AttachmentFormattingStyle, FormattingFunction},
+};
 
 use crate::{
+    format_helpers::{Format2WithFunctions, FormatWithFunctions},
+    hooks::attachment_formatter,
     markers::{Dynamic, SendSync},
     preformatted::{self, PreformattedAttachment},
     report_attachment::ReportAttachment,
-    util::format_helper,
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -214,15 +218,12 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
     #[must_use]
     pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.into_dynamic(),
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::display_attachment(attachment, None, formatter)
-            },
-            |attachment, formatter| {
-                crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
-            },
-        )
+        Format2WithFunctions {
+            state: self.into_dynamic(),
+            value: None,
+            display: attachment_formatter::display_attachment,
+            debug: attachment_formatter::debug_attachment,
+        }
     }
 
     /// Formats the inner attachment data without applying any formatting hooks.
@@ -241,11 +242,11 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`format_inner`]: Self::format_inner
     #[must_use]
     pub fn format_inner_unhooked(self) -> impl core::fmt::Display + core::fmt::Debug {
-        format_helper(
-            self.as_raw_ref(),
-            |attachment, formatter| attachment.attachment_display(formatter),
-            |attachment, formatter| attachment.attachment_debug(formatter),
-        )
+        FormatWithFunctions {
+            state: self.as_raw_ref(),
+            display: RawAttachmentRef::attachment_display,
+            debug: RawAttachmentRef::attachment_debug,
+        }
     }
 
     /// Changes the inner attachment type of the [`ReportAttachmentRef`] to

@@ -3,7 +3,10 @@ use alloc::vec::Vec;
 use rootcause_internals::handlers::{ContextHandler, FormattingFunction};
 
 use crate::{
-    Report, ReportRef, handlers,
+    Report, ReportRef,
+    format_helpers::Format2WithFunction,
+    handlers,
+    hooks::report_formatter::ReportFormatter,
     markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
     report_attachments::ReportAttachments,
     report_collection::{ReportCollectionIntoIter, ReportCollectionIter},
@@ -577,15 +580,11 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
             ReportRef::<Dynamic, Uncloneable, Local>::from_raw_slice(raw)
         };
 
-        crate::util::format_helper(
-            (slice, hook),
-            |(slice, hook), formatter| {
-                hook.format_reports(slice, formatter, FormattingFunction::Display)
-            },
-            |(slice, hook), formatter| {
-                hook.format_reports(slice, formatter, FormattingFunction::Debug)
-            },
-        )
+        Format2WithFunction {
+            state: hook,
+            value: slice,
+            formatter: ReportFormatter::format_reports,
+        }
     }
 
     /// Converts the collection to use type-erased contexts via [`Dynamic`].

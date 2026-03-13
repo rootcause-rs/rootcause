@@ -361,11 +361,11 @@ pub mod report_attachment;
 pub mod report_attachments;
 pub mod report_collection;
 
+pub mod format_helpers;
 mod into_report;
 mod iterator_ext;
 mod report_conversion;
 mod result_ext;
-mod util;
 
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},
