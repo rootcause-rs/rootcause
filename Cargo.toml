@@ -11,7 +11,7 @@ documentation = "https://docs.rs/rootcause"
 rust-version = "1.89"
 
 [workspace]
-members = ["rootcause-internals", "rootcause-backtrace", "rootcause-tracing"]
+members = ["rootcause-internals", "rootcause-backtrace", "rootcause-tracing", "rootcause-opentelemetry"]
 
 [features]
 default = []

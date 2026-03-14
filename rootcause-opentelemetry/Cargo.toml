@@ -1,0 +1,17 @@
+[package]
+name = "rootcause-opentelemetry"
+version = "0.1.0"
+edition = "2024"
+license = "MIT/Apache-2.0"
+categories = ["rust-patterns", "development-tools::debugging"]
+keywords = ["error", "error-handling", "observability", "opentelemetry", "web-standards"]
+description = "Open Telemetry tracing context support for the rootcause error reporting library"
+repository = "https://github.com/rootcause-rs/rootcause"
+documentation = "https://docs.rs/rootcause-opentelemetry"
+rust-version = "1.89"
+
+[dependencies]
+opentelemetry = "0.31"
+
+# Internal
+rootcause = { path = "../", version = "=0.12.1" }
