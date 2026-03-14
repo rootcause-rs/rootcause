@@ -205,7 +205,6 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ) -> fmt::Result;
 
     /// Formats the context using Debug formatting.
-
     fn debug(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
