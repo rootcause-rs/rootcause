@@ -205,7 +205,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ///
     /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
     ///    H>` this is implemented for.
-    unsafe fn display(
+    fn display(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
@@ -219,7 +219,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ///
     /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
     ///    H>` this is implemented for.
-    unsafe fn debug(
+    fn debug(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
@@ -527,25 +527,25 @@ where
     C: 'static,
     H: ContextFormatterHook<C>,
 {
-    unsafe fn display(
+    fn display(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        // SAFETY:
-        // 1. Guaranteed by the caller
-        let report = unsafe { report.downcast_report_unchecked::<C>() };
+        let Some(report) = report.downcast_report::<C>() else {
+            return Err(fmt::Error);
+        };
         self.hook.display(report, formatter)
     }
 
-    unsafe fn debug(
+    fn debug(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        // SAFETY:
-        // 1. Guaranteed by the caller
-        let report = unsafe { report.downcast_report_unchecked::<C>() };
+        let Some(report) = report.downcast_report::<C>() else {
+            return Err(fmt::Error);
+        };
         self.hook.debug(report, formatter)
     }
 
@@ -590,14 +590,7 @@ pub(crate) fn display_context(
             }
 
             if let Some(hook) = context_formatters.get(report.current_context_type_id()) {
-                // SAFETY:
-                // 1. The call to `get` guarantees that the returned hook is of type `Hook<C,
-                //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
-                //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
-                unsafe {
-                    // @add-unsafe-context: StoredHook
-                    return hook.display(report, formatter);
-                }
+                return hook.display(report, formatter);
             }
         }
         fmt::Display::fmt(&report.format_current_context_unhooked(), formatter)
@@ -619,14 +612,7 @@ pub(crate) fn debug_context(
             }
 
             if let Some(hook) = context_formatters.get(report.current_context_type_id()) {
-                // SAFETY:
-                // 1. The call to `get` guarantees that the returned hook is of type `Hook<C,
-                //    H>`, and `TypeId::of<C>() == report.current_context_type_id()`. Therefore
-                //    the type `C` stored in the context matches the `C` from type `Hook<C, H>`.
-                unsafe {
-                    // @add-unsafe-context: StoredHook
-                    return hook.debug(report, formatter);
-                }
+                return hook.debug(report, formatter);
             }
         }
         fmt::Debug::fmt(&report.format_current_context_unhooked(), formatter)

@@ -304,14 +304,7 @@ pub struct AttachmentParent<'a> {
 /// This trait is guaranteed to only be implemented for [`Hook<A, H>`].
 trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the attachment using Display formatting.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure:
-    ///
-    /// 1. The type `A` stored in the attachment matches the `A` from type
-    ///    `Hook<A, H>` this is implemented for.
-    unsafe fn display(
+    fn display(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
@@ -319,14 +312,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ) -> fmt::Result;
 
     /// Formats the attachment using Debug formatting.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure:
-    ///
-    /// 1. The type `A` stored in the attachment matches the `A` from type
-    ///    `Hook<A, H>` this is implemented for.
-    unsafe fn debug(
+    fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
@@ -633,27 +619,29 @@ impl<A, H> StoredHook for Hook<A, H>
 where
     H: AttachmentFormatterHook<A>,
 {
-    unsafe fn display(
+    fn display(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        // SAFETY:
-        // 1. Guaranteed by the caller
-        let attachment = unsafe { attachment.downcast_attachment_unchecked::<A>() };
+        let Some(attachment) = attachment.downcast_attachment::<A>() else {
+            return Err(fmt::Error);
+        };
+
         self.hook.display(attachment, attachment_parent, formatter)
     }
 
-    unsafe fn debug(
+    fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,
         attachment_parent: Option<AttachmentParent<'_>>,
         formatter: &mut fmt::Formatter<'_>,
     ) -> fmt::Result {
-        // SAFETY:
-        // 1. Guaranteed by the caller
-        let attachment = unsafe { attachment.downcast_attachment_unchecked::<A>() };
+        let Some(attachment) = attachment.downcast_attachment::<A>() else {
+            return Err(fmt::Error);
+        };
+
         self.hook.debug(attachment, attachment_parent, formatter)
     }
 
@@ -703,14 +691,7 @@ pub(crate) fn display_attachment(
             }
 
             if let Some(hook) = attachment_formatters.get(attachment.inner_type_id()) {
-                // SAFETY:
-                // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
-                //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
-                //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
-                unsafe {
-                    // @add-unsafe-context: StoredHook
-                    return hook.display(attachment, attachment_parent, formatter);
-                }
+                return hook.display(attachment, attachment_parent, formatter);
             }
         }
         fmt::Display::fmt(&attachment.format_inner_unhooked(), formatter)
@@ -733,14 +714,7 @@ pub(crate) fn debug_attachment(
             }
 
             if let Some(hook) = attachment_formatters.get(attachment.inner_type_id()) {
-                // SAFETY:
-                // 1. The call to `get` guarantees that the returned hook is of type `Hook<A,
-                //    H>`, and `TypeId::of<A>() == attachment.inner_type_id()`. Therefore the
-                //    type `A` stored in the attachment matches the `A` from type `Hook<A, H>`.
-                unsafe {
-                    // @add-unsafe-context: StoredHook
-                    return hook.debug(attachment, attachment_parent, formatter);
-                }
+                return hook.debug(attachment, attachment_parent, formatter);
             }
         }
         fmt::Debug::fmt(&attachment.format_inner_unhooked(), formatter)
