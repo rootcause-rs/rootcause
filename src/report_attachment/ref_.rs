@@ -1,7 +1,7 @@
 use core::any::TypeId;
 
 use rootcause_internals::{
-    RawAttachment, RawAttachmentRef,
+    RawAttachmentRef,
     handlers::{AttachmentFormattingStyle, FormattingFunction},
 };
 
