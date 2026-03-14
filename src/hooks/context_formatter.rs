@@ -198,13 +198,6 @@ where
 /// This trait is guaranteed to only be implemented for [`Hook<C, H>`].
 trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// Formats the context using Display formatting.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure:
-    ///
-    /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
-    ///    H>` this is implemented for.
     fn display(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
@@ -212,13 +205,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ) -> fmt::Result;
 
     /// Formats the context using Debug formatting.
-    ///
-    /// # Safety
-    ///
-    /// The caller must ensure:
-    ///
-    /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
-    ///    H>` this is implemented for.
+
     fn debug(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
