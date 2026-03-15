@@ -120,10 +120,9 @@ impl RawReport {
         RawReportRef {
             // SAFETY:
             // 1. Guaranteed by the invariants on `RawReport`
-            // 2. Guaranteed by the invariants on `RawReportMut` and
-            //    the fact that we are taking a shared reference to `self`
-            // 3. We are creating the `RawReportRef` here, and we are
-            //    not changing the pointer
+            // 2. Guaranteed by the invariants on `RawReportMut` and the fact that we are taking a
+            //    shared reference to `self`
+            // 3. We are creating the `RawReportRef` here, and we are not changing the pointer
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -143,8 +142,7 @@ impl RawReport {
         RawReportMut {
             // SAFETY:
             // 1. The pointer comes from `Arc::into_raw` (guaranteed by `RawReport`'s invariant)
-            // 2. We are creating the `RawReportMut` here, and we are
-            //    not changing the pointer
+            // 2. We are creating the `RawReportMut` here, and we are not changing the pointer
             // 3. Exclusive mutable access is guaranteed by the caller's obligation that no other
             //    references to the inner `ReportData` exist
             ptr: self.ptr,
@@ -434,8 +432,7 @@ impl<'a> RawReportMut<'a> {
         RawReportMut {
             // SAFETY:
             // 1. Guaranteed by invariant on `self`
-            // 2. We are creating the `RawReportMut` here, and we are
-            //    not changing the pointer
+            // 2. We are creating the `RawReportMut` here, and we are not changing the pointer
             // 3. Upheld by mutable borrow of `self`
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
@@ -448,10 +445,9 @@ impl<'a> RawReportMut<'a> {
         RawReportRef {
             // SAFETY:
             // 1. Guaranteed by the invariants on `RawReportMut`
-            // 2. Guaranteed by the invariants on `RawReportMut` and
-            //    the fact that we are taking a shared reference to `self`
-            // 3. We are creating the `RawReportRef` here, and we are
-            //    not changing the pointer
+            // 2. Guaranteed by the invariants on `RawReportMut` and the fact that we are taking a
+            //    shared reference to `self`
+            // 3. We are creating the `RawReportRef` here, and we are not changing the pointer
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -464,10 +460,9 @@ impl<'a> RawReportMut<'a> {
         RawReportRef {
             // SAFETY:
             // 1. Guaranteed by the invariants on `RawReportMut`
-            // 2. Guaranteed by the invariants on `RawReportMut` and
-            //    the fact that we are consuming `self`
-            // 3. We are creating the `RawReportRef` here, and we are
-            //    not changing the pointer
+            // 2. Guaranteed by the invariants on `RawReportMut` and the fact that we are consuming
+            //    `self`
+            // 3. We are creating the `RawReportRef` here, and we are not changing the pointer
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }

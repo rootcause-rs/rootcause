@@ -100,9 +100,9 @@ impl RawAttachment {
             // SAFETY:
             // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
             // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
-            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime
-            //    `'b`, which is valid because we borrow `self` for `'b`, preventing any
-            //    mutation through `self` while the returned reference exists
+            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime `'b`,
+            //    which is valid because we borrow `self` for `'b`, preventing any mutation through
+            //    `self` while the returned reference exists
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -114,8 +114,7 @@ impl RawAttachment {
         RawAttachmentMut {
             // SAFETY:
             // 1. Upheld by invariant on `self`
-            // 2. We are creating the `RawAttachmentMut` here, and we are
-            //    not changing the pointer
+            // 2. We are creating the `RawAttachmentMut` here, and we are not changing the pointer
             // 3. Upheld by mutable borrow of `self`
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
@@ -357,7 +356,8 @@ impl<'a> RawAttachmentMut<'a> {
             // 2. We are creating the `RawAttachmentMut` here, and we are not changing the pointer
             // 3. Exclusive mutable access for lifetime `'b` is guaranteed because:
             //    - The returned `RawAttachmentMut<'b>` contains `PhantomData<&'b mut ...>`
-            //    - This causes the borrow checker to treat the return value as borrowing `self` for `'b`
+            //    - This causes the borrow checker to treat the return value as borrowing `self` for
+            //      `'b`
             //    - Therefore `self` cannot be used while the returned value exists
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
@@ -371,9 +371,9 @@ impl<'a> RawAttachmentMut<'a> {
             // SAFETY:
             // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
             // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
-            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime
-            //    `'b`, which is valid because we borrow `self` for `'b`, preventing any
-            //    mutation through `self` while the returned reference exists
+            // 3. The returned `RawAttachmentRef<'b>` represents shared access for lifetime `'b`,
+            //    which is valid because we borrow `self` for `'b`, preventing any mutation through
+            //    `self` while the returned reference exists
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }
@@ -387,8 +387,9 @@ impl<'a> RawAttachmentMut<'a> {
             // SAFETY:
             // 1. The pointer comes from `Box::into_raw` (guaranteed by `self`'s invariant)
             // 2. We are creating the `RawAttachmentRef` here, and we are not changing the pointer
-            // 3. The returned `RawAttachmentRef<'a>` represents shared access for lifetime
-            //    `'a`, which is valid because we are consuming `self` and turning it into a shared reference
+            // 3. The returned `RawAttachmentRef<'a>` represents shared access for lifetime `'a`,
+            //    which is valid because we are consuming `self` and turning it into a shared
+            //    reference
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
         }

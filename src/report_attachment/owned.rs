@@ -96,13 +96,14 @@ mod limit_field_access {
         /// Creates a lifetime-bound [`RawAttachmentRef`] from the inner
         /// [`RawAttachment`].
         ///
-        /// This returns a raw, read-only reference to the same attachment, but with a
-        /// lifetime tied to the lifetime of `self`.
+        /// This returns a raw, read-only reference to the same attachment, but
+        /// with a lifetime tied to the lifetime of `self`.
         ///
         /// # Guarantees
         ///
-        /// The returned `RawAttachmentRef` refers to the same attachment data as
-        /// this `ReportAttachment`, preserving the attachment's type.
+        /// The returned `RawAttachmentRef` refers to the same attachment data
+        /// as this `ReportAttachment`, preserving the attachment's
+        /// type.
         #[must_use]
         pub(crate) fn as_raw_ref(&self) -> RawAttachmentRef<'_> {
             // SAFETY: We must uphold the safety invariants of the raw field:
@@ -118,22 +119,23 @@ mod limit_field_access {
         /// Creates a lifetime-bound [`RawAttachmentMut`] from the inner
         /// [`RawAttachment`]
         ///
-        /// This returns a raw, mutable reference to the same attachment, but with a
-        /// lifetime tied to the lifetime of `self`.
+        /// This returns a raw, mutable reference to the same attachment, but
+        /// with a lifetime tied to the lifetime of `self`.
         ///
         /// # Guarantees
         ///
-        /// The returned `RawAttachmentMut` refers to the same attachment data as
-        /// this `ReportAttachment`, preserving the attachment's type.
+        /// The returned `RawAttachmentMut` refers to the same attachment data
+        /// as this `ReportAttachment`, preserving the attachment's
+        /// type.
         #[must_use]
         pub(crate) fn as_raw_mut(&mut self) -> RawAttachmentMut<'_> {
             // SAFETY: We must uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameters do not change.
             // 2. Upheld as the type parameters do not change.
-            // 3. While mutation is possible through the `RawAttachmentMut`, it's
-            //    not possible to change the type of the attachment.
-            // 4. While mutation is possible through the `RawAttachmentMut`, it's
-            //    not possible to change the type of the attachment.
+            // 3. While mutation is possible through the `RawAttachmentMut`, it's not
+            //    possible to change the type of the attachment.
+            // 4. While mutation is possible through the `RawAttachmentMut`, it's not
+            //    possible to change the type of the attachment.
             let raw = &mut self.raw;
 
             raw.as_mut()
@@ -358,12 +360,14 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         let raw = self.as_raw_ref();
 
-        // SAFETY: The safety requirements for `ReportAttachmentRef::from_raw` are upheld:
-        // 1. The type parameter `A` is either `Sized` or `Dynamic` (enforced by this type's
-        //    documented invariants)
-        // 2. If `A` is `Sized`, the attachment in `raw` is of type `A` because `as_raw_ref()`
-        //    returns a reference to the same underlying attachment data that this
-        //    `ReportAttachment<A>` wraps, which satisfies this type's invariant
+        // SAFETY: The safety requirements for `ReportAttachmentRef::from_raw` are
+        // upheld:
+        // 1. The type parameter `A` is either `Sized` or `Dynamic` (enforced by this
+        //    type's documented invariants)
+        // 2. If `A` is `Sized`, the attachment in `raw` is of type `A` because
+        //    `as_raw_ref()` returns a reference to the same underlying attachment data
+        //    that this `ReportAttachment<A>` wraps, which satisfies this type's
+        //    invariant
         unsafe { ReportAttachmentRef::from_raw(raw) }
     }
 
@@ -372,12 +376,14 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
         let raw = self.as_raw_mut();
 
-        // SAFETY: The safety requirements for `ReportAttachmentMut::from_raw` are upheld:
-        // 1. The type parameter `A` is either `Sized` or `Dynamic` (enforced by this type's
-        //    documented invariants)
-        // 2. If `A` is `Sized`, the attachment in `raw` is of type `A` because `as_raw_mut()`
-        //    returns a mutable reference to the same underlying attachment data that this
-        //    `ReportAttachment<A>` wraps, which satisfies this type's invariant
+        // SAFETY: The safety requirements for `ReportAttachmentMut::from_raw` are
+        // upheld:
+        // 1. The type parameter `A` is either `Sized` or `Dynamic` (enforced by this
+        //    type's documented invariants)
+        // 2. If `A` is `Sized`, the attachment in `raw` is of type `A` because
+        //    `as_raw_mut()` returns a mutable reference to the same underlying
+        //    attachment data that this `ReportAttachment<A>` wraps, which satisfies
+        //    this type's invariant
         unsafe { ReportAttachmentMut::from_raw(raw) }
     }
 
