@@ -2,12 +2,7 @@ use core::any::TypeId;
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::{
-    markers::{Dynamic, SendSync},
-    preformatted::{self, PreformattedAttachment},
-    report_attachment::ReportAttachment,
-    util::format_helper,
-};
+use crate::{markers::Dynamic, util::format_helper};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -395,32 +390,6 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
             .preferred_formatting_style(report_formatting_function)
-    }
-
-    /// Creates a new attachment, with the inner attachment data preformatted.
-    ///
-    /// This can be useful, as the preformatted attachment is a newly allocated
-    /// object and additionally is [`Send`]+[`Sync`].
-    ///
-    /// See [`PreformattedAttachment`] for more information.
-    ///
-    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
-    /// let attachment = ReportAttachment::new_sendsync(42i32);
-    /// let reference = attachment.as_ref();
-    /// let preformat = reference.preformat();
-    /// assert_eq!(attachment.format_inner().to_string(), preformat.format_inner().to_string());
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
-        ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
-            PreformattedAttachment::new_from_attachment(self),
-        )
     }
 }
 
