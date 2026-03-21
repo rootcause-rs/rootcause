@@ -63,7 +63,7 @@ impl<T> ErrorNoSourceWrapper<T> {
         // the same layout as `T`. The `ErrorNoSourceWrapper` has no safety invariants
         // itself, and it does not allow mutating the inner value, so whatever safety
         // invariants `T` has are preserved.
-        unsafe { &*(inner as *const T as *const ErrorNoSourceWrapper<T>) }
+        unsafe { &*(inner as *const T).cast::<ErrorNoSourceWrapper<T>>() }
     }
 }
 
