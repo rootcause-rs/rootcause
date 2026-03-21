@@ -9,7 +9,7 @@ use crate::{
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
-    util::format_helper,
+    util::{ErrorNoSourceWrapper, format_helper},
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -1164,6 +1164,14 @@ impl<'a, C: ?Sized, T> core::fmt::Display for ReportMut<'a, C, T> {
 impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.as_ref(), f)
+    }
+}
+
+impl<'a, C: ?Sized, T> core::ops::Deref for ReportMut<'a, C, T> {
+    type Target = dyn core::error::Error + 'a;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
     }
 }
 
