@@ -57,13 +57,15 @@ pub(crate) struct ErrorNoSourceWrapper<T>(T);
 
 impl<T> ErrorNoSourceWrapper<T> {
     pub(crate) fn new(inner: &T) -> &Self {
+        let ptr: *const T = core::ptr::from_ref(inner);
+        let ptr: *const ErrorNoSourceWrapper<T> = ptr.cast::<ErrorNoSourceWrapper<T>>();
+
         // SAFETY:
         //
         // This is safe because `ErrorNoSourceWrapper<T>` is `repr(transparent)` and has
         // the same layout as `T`. The `ErrorNoSourceWrapper` has no safety invariants
         // itself, and it does not allow mutating the inner value, so whatever safety
         // invariants `T` has are preserved.
-        let ptr = core::ptr::from_ref(inner).cast::<ErrorNoSourceWrapper<T>>();
         unsafe { &*ptr }
     }
 }
