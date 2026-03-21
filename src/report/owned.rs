@@ -13,6 +13,7 @@ use crate::{
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
+    util::ErrorNoSourceWrapper,
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -1799,6 +1800,14 @@ impl<C: ?Sized, O, T> core::fmt::Display for Report<C, O, T> {
 impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         core::fmt::Debug::fmt(&self.as_uncloneable_ref(), f)
+    }
+}
+
+impl<C: ?Sized, O, T> core::ops::Deref for Report<C, O, T> {
+    type Target = dyn core::error::Error;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
     }
 }
 
