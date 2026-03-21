@@ -13,7 +13,6 @@ use std::env;
 
 use rootcause::{
     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
-    markers::Dynamic,
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
@@ -46,7 +45,7 @@ struct CredentialsFormatter;
 impl AttachmentFormatterHook<ApiCredentials> for CredentialsFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, Dynamic>,
+        _attachment: ReportAttachmentRef<'_, ApiCredentials>,
         report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> rootcause::handlers::AttachmentFormattingStyle {
         use rootcause::handlers::{
@@ -101,7 +100,7 @@ struct DebugSnapshotFormatter;
 impl AttachmentFormatterHook<DebugSnapshot> for DebugSnapshotFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, Dynamic>,
+        _attachment: ReportAttachmentRef<'_, DebugSnapshot>,
         report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> rootcause::handlers::AttachmentFormattingStyle {
         use rootcause::handlers::{

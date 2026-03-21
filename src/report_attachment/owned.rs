@@ -8,7 +8,6 @@ use rootcause_internals::{
 use crate::{
     handlers::{self, AttachmentHandler},
     markers::{self, Dynamic, Local, SendSync},
-    preformatted::PreformattedAttachment,
     report_attachment::{ReportAttachmentMut, ReportAttachmentRef},
 };
 
@@ -385,22 +384,6 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
         //    attachment data that this `ReportAttachment<A>` wraps, which satisfies
         //    this type's invariant
         unsafe { ReportAttachmentMut::from_raw(raw) }
-    }
-
-    /// Creates a new attachment, with the inner attachment data preformatted.
-    ///
-    /// This can be useful, as the preformatted attachment is a newly allocated
-    /// object and additionally is [`Send`]+[`Sync`].
-    ///
-    /// See [`PreformattedAttachment`] for more information.
-    ///
-    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
-    #[must_use]
-    #[track_caller]
-    pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
-        // For implementation reasons, the actual formatting works on
-        // ReportAttachmentRef
-        self.as_ref().preformat()
     }
 }
 

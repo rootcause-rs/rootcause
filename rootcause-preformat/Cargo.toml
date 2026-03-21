@@ -1,0 +1,16 @@
+[package]
+name = "rootcause-preformat"
+version = "0.12.1"
+edition = "2024"
+license = "MIT/Apache-2.0"
+categories = ["rust-patterns", "development-tools::debugging"]
+keywords = ["error", "error-handling", "tracing", "spans", "observability"]
+description = "Preformatting support for the rootcause error reporting library"
+repository = "https://github.com/rootcause-rs/rootcause"
+documentation = "https://docs.rs/rootcause-preformat"
+rust-version = "1.89"
+
+[dependencies]
+
+# Internal dependencies
+rootcause = { path = "../", version = "=0.12.1" }

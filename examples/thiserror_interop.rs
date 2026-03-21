@@ -19,7 +19,7 @@ use rootcause::{ReportConversion, markers, prelude::*};
 use thiserror::Error;
 
 // Shared error types used across patterns
-#[derive(Error, Debug)]
+#[derive(Clone, Error, Debug)]
 #[expect(dead_code, reason = "example code")]
 enum DatabaseError {
     #[error("Connection timeout after {seconds}s")]
@@ -96,10 +96,13 @@ fn process_early_report(user_id: u32) -> Result<String, Report<AppError2>> {
     Ok(data)
 }
 
-// If we want to capture multiple locations, we can use context_transform_nested
-// instead
+// If we want to capture multiple locations, we can clone the context. Alternatively we could use
+// the extensions in rootcause-preformat.
 fn process_early_report_multiple_locations(user_id: u32) -> Result<String, Report<AppError2>> {
-    let data = query_report(user_id).context_transform_nested(AppError2::Database)?;
+    let data = query_report(user_id).map_err(|report| {
+        let current_context = report.current_context().clone();
+        report.context(AppError2::Database(current_context))
+    })?;
     Ok(data)
 }
 

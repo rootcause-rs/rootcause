@@ -318,7 +318,7 @@
 //!     allocating a new root node is to call [`Report::context`].
 //! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable,
 //!   SendSync>`:
-//!   - You can preformat the entire [`Report`] using [`Report::preformat`].
+//!   - You can preformat the entire [`Report`] using [`PreformatReportExt::preformat`].
 //!     This creates an entirely new [`Report`] that has the same structure and
 //!     will look the same as the current one if printed, but all contexts and
 //!     attachments will be replaced with a [`PreformattedContext`] version.
@@ -332,7 +332,8 @@
 //! handling libraries in the Rust ecosystem, including [`anyhow`],
 //! [`thiserror`], and [`error-stack`].
 //!
-//! [`PreformattedContext`]: crate::preformatted::PreformattedContext
+//! [`PreformatReportExt::preformat`]: https://docs.rs/rootcause-preformat/latest/rootcause_preformat/trait.PreformatReportExt.html#method.preformat
+//! [`PreformattedContext`]: https://docs.rs/rootcause-preformat/latest/rootcause_preformat/struct.PreformattedContext.html
 //! [`Mutable`]: crate::markers::Mutable
 //! [`Cloneable`]: crate::markers::Cloneable
 //! [`SendSync`]: crate::markers::SendSync
@@ -351,7 +352,6 @@ mod macros;
 pub mod handlers;
 pub mod hooks;
 pub mod markers;
-pub mod preformatted;
 
 pub mod compat;
 pub mod option_ext;

@@ -80,11 +80,13 @@
 use alloc::{format, string::String};
 use core::any::TypeId;
 
-use rootcause_internals::handlers::{
-    AttachmentFormattingStyle, AttachmentHandler, ContextFormattingStyle, ContextHandler,
+use rootcause::{
+    ReportRef,
+    handlers::{
+        AttachmentFormattingStyle, AttachmentHandler, ContextFormattingStyle, ContextHandler,
+    },
+    report_attachment::ReportAttachmentRef,
 };
-
-use crate::{ReportRef, report_attachment::ReportAttachmentRef};
 
 /// A context that has been preformatted into `String`s for both
 /// `Display` and `Debug`.
@@ -146,11 +148,10 @@ impl PreformattedContext {
             display: format!("{}", report.format_current_context()),
             debug: format!("{:?}", report.format_current_context()),
             display_preferred_formatting_style: report.preferred_context_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Display,
+                rootcause::handlers::FormattingFunction::Display,
             ),
-            debug_preferred_formatting_style: report.preferred_context_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Debug,
-            ),
+            debug_preferred_formatting_style: report
+                .preferred_context_formatting_style(rootcause::handlers::FormattingFunction::Debug),
         }
     }
 
@@ -249,12 +250,10 @@ impl PreformattedAttachment {
             original_type_id: attachment.inner_type_id(),
             display: format!("{}", attachment.format_inner()),
             debug: format!("{:?}", attachment.format_inner()),
-            display_preferred_formatting_style: attachment.preferred_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Display,
-            ),
-            debug_preferred_formatting_style: attachment.preferred_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Debug,
-            ),
+            display_preferred_formatting_style: attachment
+                .preferred_formatting_style(rootcause::handlers::FormattingFunction::Display),
+            debug_preferred_formatting_style: attachment
+                .preferred_formatting_style(rootcause::handlers::FormattingFunction::Debug),
         }
     }
 
@@ -323,13 +322,13 @@ impl ContextHandler<PreformattedContext> for PreformattedHandler {
 
     fn preferred_formatting_style(
         value: &PreformattedContext,
-        report_formatting_function: rootcause_internals::handlers::FormattingFunction,
+        report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> ContextFormattingStyle {
         match report_formatting_function {
-            rootcause_internals::handlers::FormattingFunction::Display => {
+            rootcause::handlers::FormattingFunction::Display => {
                 value.display_preferred_formatting_style
             }
-            rootcause_internals::handlers::FormattingFunction::Debug => {
+            rootcause::handlers::FormattingFunction::Debug => {
                 value.debug_preferred_formatting_style
             }
         }
@@ -353,13 +352,13 @@ impl AttachmentHandler<PreformattedAttachment> for PreformattedHandler {
 
     fn preferred_formatting_style(
         value: &PreformattedAttachment,
-        report_formatting_function: rootcause_internals::handlers::FormattingFunction,
+        report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> AttachmentFormattingStyle {
         match report_formatting_function {
-            rootcause_internals::handlers::FormattingFunction::Display => {
+            rootcause::handlers::FormattingFunction::Display => {
                 value.display_preferred_formatting_style
             }
-            rootcause_internals::handlers::FormattingFunction::Debug => {
+            rootcause::handlers::FormattingFunction::Debug => {
                 value.debug_preferred_formatting_style
             }
         }

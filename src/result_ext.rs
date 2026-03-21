@@ -305,44 +305,6 @@ pub trait ResultExt<V, E> {
         F: FnOnce(E::Context) -> C,
         C: Send + Sync + core::fmt::Display + core::fmt::Debug;
 
-    /// Transforms the error's context while nesting the original report as a
-    /// child.
-    ///
-    /// If `Err`, converts to a [`Report`], preformats it, and wraps it as a
-    /// child under the new context. Report creation hooks run again,
-    /// capturing fresh hook data.
-    /// See [`Report::context_transform_nested`](crate::Report::context_transform_nested) for details.
-    ///
-    /// See also: [`local_context_transform_nested`](ResultExt::local_context_transform_nested) (non-`Send + Sync` version),
-    /// [`context_transform`](ResultExt::context_transform) (preserves
-    /// structure), [`examples/context_methods.rs`] (comparison guide).
-    ///
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use std::io;
-    /// # use rootcause::prelude::*;
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     Io(io::Error)
-    /// }
-    /// # impl std::fmt::Display for AppError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
-    /// # }
-    ///
-    /// let result: Result<String, Report<AppError>> =
-    ///     std::fs::read_to_string("config.toml").context_transform_nested(AppError::Io);
-    /// ```
-    #[track_caller]
-    fn context_transform_nested<C, F>(self, f: F) -> Result<V, Report<C, Mutable, SendSync>>
-    where
-        E: IntoReport<SendSync, Ownership = Mutable>,
-        E::Context: Sized,
-        F: FnOnce(E::Context) -> C,
-        C: Send + Sync + core::fmt::Display + core::fmt::Debug;
-
     /// Converts the error into a [`Report`] and adds the provided attachment to
     /// the [`Report`].
     ///
@@ -785,39 +747,6 @@ pub trait ResultExt<V, E> {
         F: FnOnce(E::Context) -> C,
         C: core::fmt::Display + core::fmt::Debug;
 
-    /// Non-`Send + Sync` version of
-    /// [`context_transform_nested`](ResultExt::context_transform_nested).
-    ///
-    /// Transforms the error's context while nesting the original report as a
-    /// child. Produces a local (non-thread-safe) [`Report`]. Report
-    /// creation hooks run again.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use std::io;
-    /// use std::rc::Rc;
-    /// use rootcause::prelude::*;
-    ///
-    /// #[derive(Debug)]
-    /// enum AppError {
-    ///     Io(Rc<io::Error>)  // Rc is not Send + Sync
-    /// }
-    /// # impl std::fmt::Display for AppError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error") }
-    /// # }
-    ///
-    /// let result: Result<String, Report<AppError, _, markers::Local>> =
-    ///     std::fs::read_to_string("config.toml").local_context_transform_nested(|e| AppError::Io(Rc::new(e)));
-    /// ```
-    #[track_caller]
-    fn local_context_transform_nested<C, F>(self, f: F) -> Result<V, Report<C, Mutable, Local>>
-    where
-        E: IntoReport<Local, Ownership = Mutable>,
-        E::Context: Sized,
-        F: FnOnce(E::Context) -> C,
-        C: core::fmt::Display + core::fmt::Debug;
-
     /// Converts the error into a local (non-thread-safe) [`Report`] and adds
     /// the provided attachment to the [`Report`].
     ///
@@ -1070,20 +999,6 @@ impl<V, E> ResultExt<V, E> for Result<V, E> {
     }
 
     #[inline]
-    fn context_transform_nested<C, F>(self, f: F) -> Result<V, Report<C, Mutable, SendSync>>
-    where
-        E: IntoReport<SendSync, Ownership = Mutable>,
-        E::Context: Sized,
-        F: FnOnce(E::Context) -> C,
-        C: Send + Sync + core::fmt::Display + core::fmt::Debug,
-    {
-        match self {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e.into_report().context_transform_nested(f)),
-        }
-    }
-
-    #[inline]
     fn attach<A>(self, attachment: A) -> Result<V, Report<E::Context, Mutable, SendSync>>
     where
         E: IntoReport<SendSync, Ownership = Mutable>,
@@ -1222,20 +1137,6 @@ impl<V, E> ResultExt<V, E> for Result<V, E> {
         match self {
             Ok(v) => Ok(v),
             Err(e) => Err(e.into_report().context_transform(f)),
-        }
-    }
-
-    #[inline]
-    fn local_context_transform_nested<C, F>(self, f: F) -> Result<V, Report<C, Mutable, Local>>
-    where
-        E: IntoReport<Local, Ownership = Mutable>,
-        E::Context: Sized,
-        F: FnOnce(E::Context) -> C,
-        C: core::fmt::Display + core::fmt::Debug,
-    {
-        match self {
-            Ok(v) => Ok(v),
-            Err(e) => Err(e.into_report().context_transform_nested(f)),
         }
     }
 

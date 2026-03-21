@@ -19,7 +19,7 @@ use rootcause::{
         Hooks, attachment_formatter::AttachmentFormatterHook,
         context_formatter::ContextFormatterHook,
     },
-    markers::{Dynamic, Local, Uncloneable},
+    markers::{Local, Uncloneable},
     prelude::*,
     report_attachment::ReportAttachmentRef,
 };
@@ -54,7 +54,7 @@ struct DatabaseQueryFormatter;
 impl AttachmentFormatterHook<DatabaseQuery> for DatabaseQueryFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, Dynamic>,
+        _attachment: ReportAttachmentRef<'_, DatabaseQuery>,
         formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         match formatting_function {
@@ -100,7 +100,7 @@ struct ActionRequiredFormatter;
 impl AttachmentFormatterHook<ActionRequired> for ActionRequiredFormatter {
     fn preferred_formatting_style(
         &self,
-        _attachment: ReportAttachmentRef<'_, Dynamic>,
+        _attachment: ReportAttachmentRef<'_, ActionRequired>,
         _report_formatting_function: FormattingFunction,
     ) -> AttachmentFormattingStyle {
         AttachmentFormattingStyle {

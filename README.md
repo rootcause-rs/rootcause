@@ -251,6 +251,7 @@ rootcause is designed to be lightweight and extensible. The core library provide
 
 - **[`rootcause-backtrace`](https://docs.rs/rootcause-backtrace)** - Automatic stack trace capture for debugging. Install hooks to attach backtraces to all errors, or use the extension trait to add them selectively.
 - **[`rootcause-tracing`](https://docs.rs/rootcause-tracing)** - Tracing span capture for error reports. Automatically capture and display the active tracing spans when errors occur, providing operation context especially useful in async code.
+- **[`rootcause-preformat`](https://docs.rs/rootcause-preformat)** - Methods for preformatting a reports and attachments. This is mostly useful when you need to go from a `Local` report to a `SendSync` report.
 
 ## Next Steps
 
@@ -302,6 +303,7 @@ The rootcause ecosystem consists of multiple crates:
 
 - **`rootcause-backtrace`** - Optional backtrace capture support. Provides hooks for automatic stack trace collection.
 - **`rootcause-tracing`** - Optional tracing span capture. Provides hooks to attach active tracing spans to error reports.
+- **`rootcause-preformat`** - Provides extension traits for preformatting a report in order to go from `Local` objects to a `SendSync` ones.
 
 The split between `rootcause` and `rootcause-internals` provides a clean API boundary: internals define how data is stored, while the main crate ensures that storage is accessed safely through Rust's type system. This makes it easy to understand the underlying representation while keeping the safe API ergonomic. Extensions integrate via the hook system without requiring changes to core.
 

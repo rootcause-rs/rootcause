@@ -1031,6 +1031,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "rootcause-preformat"
+version = "0.12.1"
+dependencies = [
+ "rootcause",
+]
+
+[[package]]
 name = "rootcause-tracing"
 version = "0.12.1"
 dependencies = [

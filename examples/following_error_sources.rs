@@ -16,7 +16,7 @@
 use rootcause::{
     ReportRef,
     hooks::{Hooks, context_formatter::ContextFormatterHook},
-    markers::{Dynamic, Local, Uncloneable},
+    markers::{Local, Uncloneable},
     prelude::*,
 };
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
@@ -35,7 +35,7 @@ struct ReqwestErrorFormatter;
 impl ContextFormatterHook<reqwest::Error> for ReqwestErrorFormatter {
     fn preferred_context_formatting_style(
         &self,
-        _report: ReportRef<'_, Dynamic, Uncloneable, Local>,
+        _report: ReportRef<'_, reqwest::Error, Uncloneable, Local>,
         report_formatting_function: FormattingFunction,
     ) -> ContextFormattingStyle {
         ContextFormattingStyle {
