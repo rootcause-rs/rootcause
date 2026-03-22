@@ -1803,8 +1803,16 @@ impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     }
 }
 
-impl<C: ?Sized, O, T> core::ops::Deref for Report<C, O, T> {
-    type Target = dyn core::error::Error;
+impl<C: ?Sized, O> core::ops::Deref for Report<C, O, SendSync> {
+    type Target = dyn core::error::Error + Send + Sync + 'static;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> core::ops::Deref for Report<C, O, Local> {
+    type Target = dyn core::error::Error + 'static;
 
     fn deref(&self) -> &Self::Target {
         ErrorNoSourceWrapper::new(self)
