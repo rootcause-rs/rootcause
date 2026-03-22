@@ -9,7 +9,6 @@ use crate::{
     ReportConversion, ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
     markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::{self, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -531,13 +530,13 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # See Also
     ///
-    /// - [`context_transform_nested()`](Report::context_transform_nested) -
-    ///   Wraps original as preformatted child
+    /// - [`ContextTransformNestedExt::context_transform_nested`] - Wraps original as preformatted child
     /// - [`context()`](Report::context) - Adds new parent context
     /// - [`context_to()`](Report::context_to) - Uses
     ///   [`ReportConversion`](crate::ReportConversion) trait
     /// - [`examples/context_methods.rs`] - Comparison guide
     ///
+    /// [`ContextTransformNestedExt::context_transform_nested`]: https://docs.rs/rootcause-preformat/latest/rootcause_preformat/trait.ContextTransformNestedExt.html#method.context_transform_nested
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     #[track_caller]
     pub fn context_transform<F, D>(self, f: F) -> Report<D, Mutable, T>
@@ -549,110 +548,6 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         let new_context = f(context);
 
         Report::from_parts_unhooked::<handlers::Display>(new_context, children, attachments)
-    }
-
-    /// Transforms the context and nests the original report as a preformatted
-    /// child.
-    ///
-    /// Creates a new parent node with fresh hook data (location, backtrace),
-    /// but the original context type is lost—the child becomes
-    /// [`PreformattedContext`] and cannot be downcast.
-    ///
-    /// [`PreformattedContext`]: crate::preformatted::PreformattedContext
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// # #[derive(Debug)]
-    /// # struct LibError;
-    /// # impl std::fmt::Display for LibError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "lib error") }
-    /// # }
-    /// # #[derive(Debug)]
-    /// enum AppError {
-    ///     Lib(LibError)
-    /// }
-    /// # impl std::fmt::Display for AppError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "app error") }
-    /// # }
-    ///
-    /// let lib_report: Report<LibError> = report!(LibError);
-    /// let app_report: Report<AppError> = lib_report.context_transform_nested(AppError::Lib);
-    /// ```
-    ///
-    /// # See Also
-    ///
-    /// - [`context_transform()`](Report::context_transform) - Transforms
-    ///   without nesting
-    /// - [`context()`](Report::context) - Adds new parent, preserves child's
-    ///   type
-    /// - [`preformat_root()`](Report::preformat_root) - Lower-level operation
-    ///   used internally
-    /// - [`examples/context_methods.rs`] - Comparison guide
-    ///
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
-    #[track_caller]
-    pub fn context_transform_nested<F, D>(self, f: F) -> Report<D, Mutable, T>
-    where
-        F: FnOnce(C) -> D,
-        D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
-        PreformattedContext: markers::ObjectMarkerFor<T>,
-    {
-        let (context, report) = self.preformat_root();
-        report.context_custom::<handlers::Display, _>(f(context))
-    }
-
-    /// Extracts the context and returns it with a preformatted version of the
-    /// report.
-    ///
-    /// Returns a tuple: the original typed context and a new report with
-    /// [`PreformattedContext`](crate::preformatted::PreformattedContext)
-    /// containing the string representation. The preformatted report maintains
-    /// the same structure (children and attachments). Useful when you need
-    /// the typed value for processing and the formatted version for display.
-    ///
-    /// This is a lower-level method primarily for custom transformation logic.
-    /// Most users should use
-    /// [`context_transform`](Self::context_transform),
-    /// [`context_transform_nested`](Self::context_transform_nested),
-    /// or [`context_to`](Self::context_to) instead.
-    ///
-    /// See also: [`preformat`](Report::preformat) (formats entire hierarchy),
-    /// [`into_parts`](Report::into_parts) (extracts without formatting),
-    /// [`current_context`](crate::ReportRef::current_context) (reference
-    /// without extraction).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::{preformatted::PreformattedContext, prelude::*};
-    /// # #[derive(Debug)]
-    /// struct MyError {
-    ///     code: u32
-    /// }
-    /// # impl std::fmt::Display for MyError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error {}", self.code) }
-    /// # }
-    ///
-    /// let report: Report<MyError> = report!(MyError { code: 500 });
-    /// let (context, preformatted): (MyError, Report<PreformattedContext>) = report.preformat_root();
-    /// ```
-    pub fn preformat_root(self) -> (C, Report<PreformattedContext, Mutable, T>)
-    where
-        PreformattedContext: markers::ObjectMarkerFor<T>,
-    {
-        let preformatted = PreformattedContext::new_from_context(self.as_ref());
-        let (context, children, attachments) = self.into_parts();
-
-        (
-            context,
-            Report::from_parts_unhooked::<preformatted::PreformattedHandler>(
-                preformatted,
-                children,
-                attachments,
-            ),
-        )
     }
 }
 
@@ -961,7 +856,9 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// - Allocate a new root node using e.g. [`Report::context`].
     /// - If there is a single unique owner of the report, you can use
     ///   [`Report::try_into_mutable`].
-    /// - Preformat the root node using [`Report::preformat`].
+    /// - Preformat the root node using [`PreformatReportExt::preformat`].
+    ///
+    /// [`PreformatReportExt::preformat`]: https://docs.rs/rootcause-preformat/latest/rootcause_preformat/trait.PreformatReportExt.html#method.preformat
     ///
     /// # Examples
     /// ```
@@ -1236,28 +1133,6 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         O: markers::ReportOwnershipMarker,
     {
         self.as_uncloneable_ref().iter_sub_reports()
-    }
-
-    /// Creates a new report, which has the same structure as the current
-    /// report, but has all the contexts and attachments preformatted.
-    ///
-    /// This can be useful, as the new report is mutable because it was just
-    /// created, and additionally the new report is [`Send`]+[`Sync`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
-    /// # #[derive(Default)]
-    /// # struct NonSendSyncError(core::cell::Cell<()>);
-    /// # let non_send_sync_error = NonSendSyncError::default();
-    /// let mut report: Report<NonSendSyncError, Mutable, Local> = report!(non_send_sync_error);
-    /// let preformatted: Report<PreformattedContext, Mutable, SendSync> = report.preformat();
-    /// assert_eq!(format!("{report}"), format!("{preformatted}"));
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
-        self.as_uncloneable_ref().preformat()
     }
 
     /// Returns the [`TypeId`] of the current context.

@@ -3,9 +3,8 @@ use core::any::TypeId;
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
-    Report, ReportIter, ReportRef, handlers,
-    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::PreformattedContext,
+    ReportIter, ReportRef, handlers,
+    markers::{self, Cloneable, Dynamic, Local, SendSync, Uncloneable},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -697,30 +696,6 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// ```
     pub fn iter_sub_reports(&self) -> ReportIter<'_, Cloneable, T> {
         self.as_ref().iter_sub_reports()
-    }
-
-    /// Creates a new report, which has the same structure as the current
-    /// report, but has all the contexts and attachments preformatted.
-    ///
-    /// This can be useful, as the new report is mutable because it was just
-    /// created, and additionally the new report is [`Send`]+[`Sync`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, ReportMut, preformatted::PreformattedContext};
-    /// # #[derive(Default)]
-    /// # struct NonSendSyncError(core::cell::Cell<()>);
-    /// # let non_send_sync_error = NonSendSyncError::default();
-    /// # let mut report = report!(non_send_sync_error);
-    /// let report_mut: ReportMut<'_, NonSendSyncError, markers::Local> = report.as_mut();
-    /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> =
-    ///     report_mut.preformat();
-    /// assert_eq!(format!("{report}"), format!("{preformatted}"));
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
-        self.as_ref().preformat()
     }
 
     /// Returns the [`TypeId`] of the current context.
