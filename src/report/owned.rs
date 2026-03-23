@@ -1803,10 +1803,32 @@ impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     }
 }
 
-impl<C: ?Sized, O, T> core::ops::Deref for Report<C, O, T> {
-    type Target = dyn core::error::Error;
+impl<C: ?Sized, O> core::ops::Deref for Report<C, O, SendSync> {
+    type Target = dyn core::error::Error + Send + Sync + 'static;
 
     fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> core::ops::Deref for Report<C, O, Local> {
+    type Target = dyn core::error::Error + 'static;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> AsRef<dyn core::error::Error + Send + Sync> for Report<C, O, SendSync> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'static) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> AsRef<dyn core::error::Error> for Report<C, O, Local> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'static) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1860,7 +1882,10 @@ from_impls!(
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
+    use core::error::Error as StdError;
+    use core::ops::Deref;
+    use thiserror::Error;
 
     use super::*;
 
@@ -1938,5 +1963,164 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<NonSend, Cloneable, Local>: Copy);
         static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, SendSync>: Copy);
         static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, Local>: Copy);
+    }
+
+    #[derive(Debug, Error)]
+    #[error("boom")]
+    struct Boom;
+
+    #[derive(Debug, Error)]
+    enum Outer {
+        #[error(transparent)]
+        Inner(#[from] Report<Boom>),
+    }
+
+    fn make_report() -> Report<Boom> {
+        Report::new(Boom)
+    }
+
+    fn make_dynamic_report() -> Report<Dynamic> {
+        make_report().into_dynamic()
+    }
+
+    fn make_cloneable_report() -> Report<Boom, Cloneable> {
+        make_report().into_cloneable()
+    }
+
+    fn make_local_report() -> Report<Boom, Mutable, Local> {
+        make_report().into_local()
+    }
+
+    #[test]
+    fn report_derefs_to_dyn_error() {
+        let report = make_report();
+
+        let err: &(dyn StdError + Send + Sync) = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn report_asrefs_to_dyn_error() {
+        let report = make_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn dynamic_report_derefs_to_dyn_error() {
+        let report = make_dynamic_report();
+
+        let err: &dyn StdError = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn dynamic_report_asrefs_to_dyn_error() {
+        let report = make_dynamic_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn cloneable_report_derefs_to_dyn_error() {
+        let report = make_cloneable_report();
+
+        let err: &dyn StdError = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn cloneable_report_asrefs_to_dyn_error() {
+        let report = make_cloneable_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn local_report_derefs_to_dyn_error() {
+        let report = make_local_report();
+
+        let err: &dyn StdError = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn local_report_asrefs_to_dyn_error() {
+        let report = make_local_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn report_deref_supports_error_methods() {
+        let report = make_report();
+
+        assert!(report.source().is_none());
+
+        #[expect(deprecated)]
+        {
+            assert_eq!(
+                report.description(),
+                "description() is deprecated; use Display"
+            );
+        }
+    }
+
+    #[test]
+    fn thiserror_from_works_for_report() {
+        let report = make_report();
+
+        let outer: Outer = report.into();
+
+        match outer {
+            Outer::Inner(inner) => {
+                assert!(inner.to_string().contains("boom"));
+            }
+        }
+    }
+
+    #[test]
+    fn thiserror_question_mark_works_for_report() {
+        fn inner() -> Result<(), Report<Boom>> {
+            Err(make_report())
+        }
+
+        fn outer() -> Result<(), Outer> {
+            inner()?;
+            Ok(())
+        }
+
+        let err = outer().unwrap_err();
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn report_is_usable_where_dyn_error_is_expected() {
+        fn takes_error(err: &dyn StdError) -> String {
+            err.to_string()
+        }
+
+        let report = make_report();
+        assert!(takes_error(report.deref()).contains("boom"));
     }
 }

@@ -1175,6 +1175,13 @@ impl<'a, C: ?Sized, T> core::ops::Deref for ReportMut<'a, C, T> {
     }
 }
 
+impl<'a, C: ?Sized, T> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, T> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
 impl<'a, C: ?Sized, T> Unpin for ReportMut<'a, C, T> {}
 
 impl<'a, C: Sized> From<ReportMut<'a, C, SendSync>> for ReportMut<'a, Dynamic, SendSync> {
@@ -1191,7 +1198,10 @@ impl<'a, C: Sized> From<ReportMut<'a, C, Local>> for ReportMut<'a, Dynamic, Loca
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
+    use core::error::Error as StdError;
+    use core::ops::Deref;
+    use thiserror::Error;
 
     use super::*;
 
@@ -1235,5 +1245,36 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, Local>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, SendSync>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, Local>: Copy, Clone);
+    }
+
+    #[derive(Debug, Error)]
+    #[error("boom")]
+    struct Boom;
+
+    fn make_report() -> Report<Boom> {
+        Report::new(Boom)
+    }
+
+    #[test]
+    fn report_mut_derefs_to_dyn_error() {
+        let mut report = make_report();
+        let report_mut = report.as_mut();
+
+        let err: &dyn StdError = report_mut.deref();
+
+        assert!(err.to_string().contains("boom"));
+        assert!(report.source().is_none());
+    }
+
+    #[test]
+    fn report_mut_asrefs_to_dyn_error() {
+        let mut report = make_report();
+        let report_mut = report.as_mut();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(report_mut);
     }
 }
