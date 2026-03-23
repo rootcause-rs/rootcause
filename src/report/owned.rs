@@ -1819,6 +1819,20 @@ impl<C: ?Sized, O> core::ops::Deref for Report<C, O, Local> {
     }
 }
 
+impl<C: ?Sized, O> AsRef<dyn core::error::Error + Send + Sync> for Report<C, O, SendSync> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'static) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> AsRef<dyn core::error::Error> for Report<C, O, Local> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'static) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
 impl<C: ?Sized, O, T> Unpin for Report<C, O, T> {}
 
 macro_rules! from_impls {
@@ -1987,12 +2001,34 @@ mod tests {
     }
 
     #[test]
+    fn report_asrefs_to_dyn_error() {
+        let report = make_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
     fn dynamic_report_derefs_to_dyn_error() {
         let report = make_dynamic_report();
 
         let err: &dyn StdError = report.deref();
 
         assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn dynamic_report_asrefs_to_dyn_error() {
+        let report = make_dynamic_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
     }
 
     #[test]
@@ -2005,12 +2041,34 @@ mod tests {
     }
 
     #[test]
+    fn cloneable_report_asrefs_to_dyn_error() {
+        let report = make_cloneable_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
     fn local_report_derefs_to_dyn_error() {
         let report = make_local_report();
 
         let err: &dyn StdError = report.deref();
 
         assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn local_report_asrefs_to_dyn_error() {
+        let report = make_local_report();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
     }
 
     #[test]

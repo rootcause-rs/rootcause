@@ -1036,6 +1036,13 @@ impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
     }
 }
 
+impl<'a, C: ?Sized, O, T> AsRef<dyn core::error::Error + 'a> for ReportRef<'a, C, O, T> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
 impl<'a, C: ?Sized, O, T> Unpin for ReportRef<'a, C, O, T> {}
 
 macro_rules! from_impls {
@@ -1215,5 +1222,17 @@ mod tests {
 
         assert!(err.to_string().contains("boom"));
         assert!(report.source().is_none());
+    }
+
+    #[test]
+    fn report_ref_asrefs_to_dyn_error() {
+        let report = make_report();
+        let report_ref = report.as_ref();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(report_ref);
     }
 }
