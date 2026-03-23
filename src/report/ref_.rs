@@ -1086,7 +1086,10 @@ from_impls!(
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
+    use core::error::Error as StdError;
+    use core::ops::Deref;
+    use thiserror::Error;
 
     use super::*;
     use crate::markers::{Mutable, Uncloneable};
@@ -1193,5 +1196,24 @@ mod tests {
         let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
         let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
         assert_eq!(alloc::format!("{report}"), alloc::format!("{preformatted}"));
+    }
+
+    #[derive(Debug, Error)]
+    #[error("boom")]
+    struct Boom;
+
+    fn make_report() -> Report<Boom> {
+        Report::new(Boom)
+    }
+
+    #[test]
+    fn report_ref_derefs_to_dyn_error() {
+        let report = make_report();
+        let report_ref = report.as_ref();
+
+        let err: &dyn StdError = report_ref.deref();
+
+        assert!(err.to_string().contains("boom"));
+        assert!(report.source().is_none());
     }
 }
