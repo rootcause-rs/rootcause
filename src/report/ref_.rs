@@ -1,4 +1,4 @@
-use alloc::vec;
+use alloc::collections::vec_deque::VecDeque;
 use core::any::TypeId;
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
@@ -503,7 +503,7 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// assert_eq!(all_reports.len(), 6);
     /// ```
     pub fn iter_reports(self) -> ReportIter<'a, O, T> {
-        let stack = vec![self.into_dynamic()];
+        let stack = VecDeque::from([self.into_dynamic()]);
         ReportIter::from_raw(stack)
     }
 
