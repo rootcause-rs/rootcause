@@ -202,6 +202,18 @@ impl<'a> RawAttachmentRef<'a> {
         unsafe { this.as_ref() }
     }
 
+    /// Returns a dynamically typed reference to the attachment using [`dyn Any`](core::any::Any).
+    #[inline]
+    pub fn cast_inner_any(self) -> &'a dyn core::any::Any {
+        // SAFETY:
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `AttachmentData`.
+        unsafe {
+            // @add-unsafe-context: AttachmentData
+            self.vtable().as_any(self)
+        }
+    }
+
     /// Returns a [`NonNull`] pointer to the [`AttachmentData`] instance.
     #[inline]
     pub(super) fn as_ptr(self) -> *const AttachmentData<Erased> {

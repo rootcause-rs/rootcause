@@ -55,6 +55,8 @@ pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the handler that was used to create this
     /// [`ReportVtable`].
     handler_type_id: fn() -> TypeId,
+    /// Gets the context as a [`dyn Any`](core::any::Any).
+    as_any: unsafe fn(RawReportRef<'_>) -> &dyn core::any::Any,
     /// Method to drop the [`triomphe::Arc<ReportData<C>>`] instance pointed to
     /// by this pointer.
     drop: unsafe fn(NonNull<ReportData<Erased>>),
@@ -92,6 +94,7 @@ impl ReportVtable {
                 display: display::<C, H>,
                 debug: debug::<C, H>,
                 preferred_context_formatting_style: preferred_context_formatting_style::<C, H>,
+                as_any: as_any::<C>,
             }
         }
     }
@@ -115,6 +118,22 @@ impl ReportVtable {
     #[inline]
     pub(super) fn handler_type_id(&self) -> TypeId {
         (self.handler_type_id)()
+    }
+
+    /// Converts a reference to the report to a [`dyn Any`](core::any::Any) of the context.
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The type `C` matches the actual context type stored behind the `RawReportRef`.
+    pub(super) unsafe fn as_any<'a>(&self, r: RawReportRef<'a>) -> &'a dyn core::any::Any {
+        // SAFETY:
+        // 1. Guaranteed by caller
+        unsafe {
+            // @add-unsafe-context: as_any
+            (self.as_any)(r)
+        }
     }
 
     /// Drops the `triomphe::Arc<ReportData<C>>` instance pointed to by this
@@ -311,6 +330,23 @@ impl ReportVtable {
             (self.preferred_context_formatting_style)(ptr, report_formatting_function)
         }
     }
+}
+
+/// Converts a reference to the report to a [`dyn Any`](core::any::Any) of the context.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored behind the `RawReportRef`.
+unsafe fn as_any<C: 'static>(r: RawReportRef<'_>) -> &dyn core::any::Any {
+    let a = unsafe {
+        // SAFETY
+        // 1. Guaranteed by caller
+        r.context_downcast_unchecked::<C>()
+    };
+
+    a as &dyn core::any::Any
 }
 
 /// Drops the [`triomphe::Arc<ReportData<C>>`] instance pointed to by this

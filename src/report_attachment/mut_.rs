@@ -642,6 +642,11 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
         // 1. Ensured by the caller.
         unsafe { raw.into_attachment_downcast_unchecked() }
     }
+
+    /// TODO
+    pub fn inner_any(&self) -> &dyn core::any::Any {
+        self.as_ref().inner_any()
+    }
 }
 
 impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentMut<'a, A> {

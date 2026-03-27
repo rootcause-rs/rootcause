@@ -49,6 +49,8 @@ pub(crate) struct AttachmentVtable {
     /// Gets the [`TypeId`] of the handler that was used to create this
     /// [`AttachmentVtable`].
     handler_type_id: fn() -> TypeId,
+    /// Gets the inner value of the attachment type as a [`dyn Any`](core::any::Any).
+    as_any: unsafe fn(RawAttachmentRef<'_>) -> &dyn core::any::Any,
     /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this
     /// pointer.
     drop: unsafe fn(NonNull<AttachmentData<Erased>>),
@@ -75,6 +77,7 @@ impl AttachmentVtable {
                 display: display::<A, H>,
                 debug: debug::<A, H>,
                 preferred_formatting_style: preferred_formatting_style::<A, H>,
+                as_any: as_any::<A>,
             }
         }
     }
@@ -98,6 +101,23 @@ impl AttachmentVtable {
     #[inline]
     pub(super) fn handler_type_id(&self) -> TypeId {
         (self.handler_type_id)()
+    }
+
+    /// Converts a reference to the inner attachment to a [`dyn Any`](core::any::Any).
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. The type `A`` matches the actual attachment type stored behind the `RawAttachmentRef`.
+    #[inline]
+    pub(super) unsafe fn as_any<'a>(&self, r: RawAttachmentRef<'a>) -> &'a dyn core::any::Any {
+        // SAFETY:
+        // 1. Guaranteed by caller
+        unsafe {
+            // @add-unsafe-context: as_any
+            (self.as_any)(r)
+        }
     }
 
     /// Drops the `Box<AttachmentData<A>>` instance pointed to by this pointer.
@@ -210,6 +230,23 @@ impl AttachmentVtable {
             (self.preferred_formatting_style)(ptr, report_formatting_function)
         }
     }
+}
+
+/// Converts a reference to the attachment to a [`dyn Any`](core::any::Any) of the inner value.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The type `A`` matches the actual attachment type stored behind the `RawAttachmentRef`.
+unsafe fn as_any<A: 'static>(r: RawAttachmentRef<'_>) -> &dyn core::any::Any {
+    let a = unsafe {
+        // SAFETY
+        // 1. Guaranteed by caller
+        r.attachment_downcast_unchecked::<A>()
+    };
+
+    a as &dyn core::any::Any
 }
 
 /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this pointer.

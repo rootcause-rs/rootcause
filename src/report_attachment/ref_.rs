@@ -515,6 +515,11 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
         // 1. Guaranteed by the caller
         unsafe { raw.attachment_downcast_unchecked() }
     }
+
+    /// TODO
+    pub fn inner_any(self) -> &'a dyn core::any::Any {
+        self.as_raw_ref().cast_inner_any()
+    }
 }
 
 impl<'a, A: ?Sized> core::fmt::Display for ReportAttachmentRef<'a, A> {

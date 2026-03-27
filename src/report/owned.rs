@@ -8,7 +8,9 @@ use rootcause_internals::{
 use crate::{
     ReportConversion, ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
-    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
+    markers::{
+        self, Cloneable, Dynamic, Local, Mutable, ReportOwnershipMarker, SendSync, Uncloneable,
+    },
     preformatted::{self, PreformattedContext},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
@@ -1632,6 +1634,14 @@ impl<O, T> Report<Dynamic, O, T> {
         // 7. This is guaranteed by the invariants of this type.
         // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::from_raw(raw) }
+    }
+
+    /// TODO
+    pub fn current_context_any(&self) -> &dyn core::any::Any
+    where
+        O: ReportOwnershipMarker,
+    {
+        self.as_ref().current_context_any()
     }
 }
 

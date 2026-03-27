@@ -961,6 +961,11 @@ impl<'a, O, T> ReportRef<'a, Dynamic, O, T> {
         // 7. Guaranteed by our own safety invariants.
         unsafe { ReportRef::<C, O, T>::from_raw(raw) }
     }
+
+    /// TODO
+    pub fn current_context_any(self) -> &'a dyn core::any::Any {
+        self.as_raw_ref().cast_inner_any()
+    }
 }
 
 impl<'a, C: ?Sized, T> ReportRef<'a, C, Cloneable, T> {

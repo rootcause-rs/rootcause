@@ -584,6 +584,11 @@ impl<T> ReportAttachment<Dynamic, T> {
         // 4. Guaranteed by the invariants of this type.
         unsafe { ReportAttachment::<A, T>::from_raw(raw) }
     }
+
+    /// TODO
+    pub fn inner_any(&self) -> &dyn core::any::Any {
+        self.as_ref().inner_any()
+    }
 }
 
 impl<A: Sized, T> From<A> for ReportAttachment<A, T>

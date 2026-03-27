@@ -1153,6 +1153,11 @@ impl<'a, T> ReportMut<'a, Dynamic, T> {
         // 7. This is guaranteed by the invariants of this type.
         unsafe { ReportMut::from_raw(raw) }
     }
+
+    /// TODO
+    pub fn current_context_any(&self) -> &dyn core::any::Any {
+        self.as_ref().current_context_any()
+    }
 }
 
 impl<'a, C: ?Sized, T> core::fmt::Display for ReportMut<'a, C, T> {
