@@ -1,10 +1,7 @@
-use alloc::{collections::vec_deque::VecDeque, string::ToString};
+use alloc::collections::vec_deque::VecDeque;
 use core::{iter::FusedIterator, marker::PhantomData};
 
-use crate::{
-    ReportRef,
-    markers::{Dynamic, Uncloneable},
-};
+use crate::{ReportRef, markers::Dynamic};
 
 /// An iterator over a report and all its descendant reports in depth-first
 /// order.
@@ -54,8 +51,8 @@ fn report_tree() -> crate::Report {
 fn join_contexts<'b, OW: 'static>(
     it: impl Iterator<Item = ReportRef<'b, Dynamic, OW>>,
 ) -> alloc::string::String {
+    use alloc::string::ToString;
     use alloc::vec::Vec;
-
     it.into_iter()
         .map(|e: ReportRef<'_, Dynamic, OW>| e.format_current_context().to_string())
         .collect::<Vec<_>>()
@@ -73,13 +70,14 @@ impl<'a, O, T> ReportIter<'a, O, T, DFS> {
     ///
     /// ```rust
     /// # use rootcause::ReportIter;
-    /// let rep = ReportIter::report_tree();
+    /// let rep =
+    /// # panic!("HOW THE FUCK DO I CALL MY HELPER FUNCTIONS YOU FUCKING MODULE SYSTEM");
     /// //        root
     /// //      /     \
     /// //    1         2
     /// //   / \      /  \
     /// // 1.1 1.2  2.1 2.2
-    /// assert_eq!(ReportIter::join_contexts(rep.iter_reports()), "root 1 1.1 1.2 2 2.1 2.2");
+    /// assert_eq!("", "root 1 1.1 1.2 2 2.1 2.2");
     /// ```
     pub fn bfs(self) -> ReportIter<'a, O, T, BFS> {
         ReportIter::from_raw(self.stack)
@@ -92,6 +90,20 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
     /// **Warning:** if this function is called mid-traversal,
     /// the result is unspecified behavior. Nothing unsound will
     /// happen, but the traversal order will not be guaranteed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::ReportIter;
+    /// let rep =
+    /// # panic!("HOW THE FUCK DO I CALL MY HELPER FUNCTIONS YOU FUCKING MODULE SYSTEM");
+    /// //        root
+    /// //      /     \
+    /// //    1         2
+    /// //   / \      /  \
+    /// // 1.1 1.2  2.1 2.2
+    /// assert_eq!("", "root 1 1.1 1.2 2 2.1 2.2");
+    /// ```
     pub fn dfs(self) -> ReportIter<'a, O, T, DFS> {
         ReportIter::from_raw(self.stack)
     }
