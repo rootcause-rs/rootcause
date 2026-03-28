@@ -659,7 +659,7 @@ impl<T> ReportAttachment<Dynamic, T> {
     /// Returns `Some(&A)` if the inner attachment is of type `A`, otherwise
     /// returns `None`.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
