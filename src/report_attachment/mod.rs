@@ -10,6 +10,8 @@
 //! - [`ReportAttachment`]: An owned attachment that can be added to a report
 //! - [`ReportAttachmentRef`]: A reference to an attachment, typically obtained
 //!   from a report
+//! - [`ReportAttachmentMut`]: A mutable to an attachment, typically obtained
+//!   from a report during construction of the report
 //!
 //! # Creating Attachments
 //!

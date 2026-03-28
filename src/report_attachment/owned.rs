@@ -154,8 +154,8 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     /// ```
     /// use rootcause::{prelude::*, report_attachment::ReportAttachment};
     ///
-    /// let attachment = ReportAttachment::new("This is an attachment");
-    /// let mut report = report!("An error occurred");
+    /// let attachment: ReportAttachment<&'static str> = ReportAttachment::new("This is an attachment");
+    /// let mut report: Report = report!("An error occurred");
     /// report.attachments_mut().push(attachment.into_dynamic());
     /// ```
     #[must_use]
@@ -177,7 +177,7 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     /// struct MyAttachmentType {
     ///     data: String,
     /// }
-    /// let attachment = ReportAttachment::new_custom::<handlers::Debug>(MyAttachmentType {
+    /// let attachment: ReportAttachment<MyAttachmentType> = ReportAttachment::new_custom::<handlers::Debug>(MyAttachmentType {
     ///     data: "Important data".to_string(),
     /// });
     /// let mut report = report!("An error occurred");
@@ -552,13 +552,21 @@ impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     ///
     /// # Examples
     ///
-    /// ```rust.compile_fail
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
-    /// let attachment = ReportAttachment::new(42i32);
+    /// ```compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::*};
+    /// // Compilation fails with ambiguous type error
+    /// let attachment : _ = ReportAttachment::new(42i32);
     /// ```
     ///
     /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use rootcause::{prelude::*, report_attachment::*, markers::*};
+    /// // Valid but verbose to write out the full type
+    /// let attachment: ReportAttachment<_, SendSync> = ReportAttachment::new(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::*};
+    /// // Short and sweet
     /// let attachment = ReportAttachment::new_sendsync(42i32);
     /// ```
     #[must_use]
@@ -579,13 +587,21 @@ impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     ///
     /// # Examples
     ///
-    /// ```rust.compile_fail
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
-    /// let attachment = ReportAttachment::new_custom::<Debug>(42i32);
+    /// ```compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::*, handlers::*};
+    /// // Compilation fails with ambiguous type error
+    /// let attachment : _ = ReportAttachment::new_custom::<Debug>(42i32);
     /// ```
     ///
     /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use rootcause::{prelude::*, report_attachment::*, markers::*, handlers::*};
+    /// // Valid but verbose to write out the full type
+    /// let attachment: ReportAttachment<_, SendSync> = ReportAttachment::new_custom::<Debug>(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::*, handlers::*};
+    /// // Short and sweet
     /// let attachment = ReportAttachment::new_sendsync_custom::<Debug>(42i32);
     /// ```
     #[must_use]
@@ -609,13 +625,21 @@ impl<A: Sized> ReportAttachment<A, Local> {
     ///
     /// # Examples
     ///
-    /// ```rust.compile_fail
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
-    /// let attachment = ReportAttachment::new(42i32);
+    /// ```compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::*, handlers::*};
+    /// // Compilation fails with ambiguous type error
+    /// let attachment : _ = ReportAttachment::new(42i32);
     /// ```
     ///
     /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use rootcause::{prelude::*, report_attachment::*, markers::*, handlers::*};
+    /// // Valid but verbose to write out the full type
+    /// let attachment: ReportAttachment<_, Local> = ReportAttachment::new(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::*, handlers::*};
+    /// // Short and sweet
     /// let attachment = ReportAttachment::new_local(42i32);
     /// ```
     #[must_use]
@@ -635,13 +659,21 @@ impl<A: Sized> ReportAttachment<A, Local> {
     ///
     /// # Examples
     ///
-    /// ```rust.compile_fail
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
-    /// let attachment = ReportAttachment::new_custom::<Debug>(42i32);
+    /// ```compile_fail
+    /// # use rootcause::{prelude::*, report_attachment::*, handlers::*};
+    /// // Compilation fails with ambiguous type error
+    /// let attachment : _ = ReportAttachment::new_custom::<Debug>(42i32);
     /// ```
     ///
     /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use rootcause::{prelude::*, report_attachment::*, markers::*, handlers::*};
+    /// // Valid but verbose to write out the full type
+    /// let attachment: ReportAttachment<_, Local> = ReportAttachment::new_custom::<Debug>(42i32);
+    /// ```
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::*, handlers::*};
+    /// // Short and sweet
     /// let attachment = ReportAttachment::new_local_custom::<Debug>(42i32);
     /// ```
     #[must_use]
