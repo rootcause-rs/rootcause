@@ -356,7 +356,7 @@ pub mod preformatted;
 pub mod compat;
 pub mod option_ext;
 pub mod prelude;
-mod report;
+pub(crate) mod report;
 pub mod report_attachment;
 pub mod report_attachments;
 pub mod report_collection;

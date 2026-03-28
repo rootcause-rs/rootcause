@@ -30,8 +30,7 @@ impl<'a, O, T, S> ReportIter<'a, O, T, S> {
     }
 }
 
-#[cfg(test)]
-fn report_tree() -> crate::Report {
+pub(crate) fn generate_report_tree() -> crate::Report {
     use crate::report_collection::ReportCollection;
     use alloc::format;
 
@@ -47,8 +46,7 @@ fn report_tree() -> crate::Report {
         .into_dynamic()
 }
 
-#[cfg(test)]
-fn join_contexts<'b, OW: 'static>(
+pub(crate) fn join_contexts_as_string<'b, OW: 'static>(
     it: impl Iterator<Item = ReportRef<'b, Dynamic, OW>>,
 ) -> alloc::string::String {
     use alloc::string::ToString;
@@ -69,15 +67,28 @@ impl<'a, O, T> ReportIter<'a, O, T, DFS> {
     /// # Examples
     ///
     /// ```rust
-    /// # use rootcause::ReportIter;
-    /// let rep =
-    /// # panic!("HOW THE FUCK DO I CALL MY HELPER FUNCTIONS YOU FUCKING MODULE SYSTEM");
-    /// //        root
-    /// //      /     \
-    /// //    1         2
-    /// //   / \      /  \
-    /// // 1.1 1.2  2.1 2.2
-    /// assert_eq!("", "root 1 1.1 1.2 2 2.1 2.2");
+    /// # use rootcause::{report, ReportIter, report_collection::ReportCollection};
+    /// let rep = /*
+    ///         root
+    ///       /     \
+    ///     1         2
+    ///    / \      /  \
+    ///  1.1 1.2  2.1 2.2 */
+    /// # (1..=2).map(|i| {
+    /// #     (1..=2)
+    /// #         .map(|j| report!(format!("{}.{}", i, j)).into_cloneable())
+    /// #         .collect::<ReportCollection>()
+    /// #         .context(format!("{}", i))
+    /// # })
+    /// # .collect::<ReportCollection>()
+    /// # .context(format!("root")).into_dynamic()
+    /// ;
+    /// assert_eq!(
+    ///     rep.iter_reports().bfs()
+    ///         .map(|e| e.format_current_context().to_string())
+    ///         .collect::<Vec<_>>(),
+    ///     &["root", "1", "2", "1.1", "1.2", "2.1", "2.2"]
+    /// );
     /// ```
     pub fn bfs(self) -> ReportIter<'a, O, T, BFS> {
         ReportIter::from_raw(self.stack)
@@ -94,15 +105,28 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
     /// # Examples
     ///
     /// ```rust
-    /// # use rootcause::ReportIter;
-    /// let rep =
-    /// # panic!("HOW THE FUCK DO I CALL MY HELPER FUNCTIONS YOU FUCKING MODULE SYSTEM");
-    /// //        root
-    /// //      /     \
-    /// //    1         2
-    /// //   / \      /  \
-    /// // 1.1 1.2  2.1 2.2
-    /// assert_eq!("", "root 1 1.1 1.2 2 2.1 2.2");
+    /// # use rootcause::{report, ReportIter, report_collection::ReportCollection};
+    /// let rep = /*
+    ///         root
+    ///       /     \
+    ///     1         2
+    ///    / \      /  \
+    ///  1.1 1.2  2.1 2.2 */
+    /// # (1..=2).map(|i| {
+    /// #     (1..=2)
+    /// #         .map(|j| report!(format!("{}.{}", i, j)).into_cloneable())
+    /// #         .collect::<ReportCollection>()
+    /// #         .context(format!("{}", i))
+    /// # })
+    /// # .collect::<ReportCollection>()
+    /// # .context(format!("root")).into_dynamic()
+    /// ;
+    /// assert_eq!(
+    ///     rep.iter_reports()
+    ///         .map(|e| e.format_current_context().to_string())
+    ///         .collect::<Vec<_>>(),
+    ///     &["root", "1", "1.1", "1.2", "2", "2.1", "2.2"]
+    /// );
     /// ```
     pub fn dfs(self) -> ReportIter<'a, O, T, DFS> {
         ReportIter::from_raw(self.stack)
