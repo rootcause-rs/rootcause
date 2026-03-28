@@ -492,7 +492,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// # Example
     ///
     /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use rootcause::{prelude::*, report_attachment::*};
     /// let mut attachment = ReportAttachment::new_sendsync(41i32);
     /// let mut reference = attachment.as_mut();
     ///
