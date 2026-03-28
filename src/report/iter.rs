@@ -11,14 +11,14 @@ use crate::{ReportRef, markers::Dynamic, report_collection::ReportCollection};
 /// manner, starting from the root report and visiting each child report before
 /// moving to the next sibling.
 #[must_use]
-pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static, Strategy: ?Sized = DFS> {
+pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static, Strategy = DFS> {
     stack: VecDeque<ReportRef<'a, Dynamic, Ownership, ThreadSafety>>,
     _ownership: PhantomData<Ownership>,
     _thread_safety: PhantomData<ThreadSafety>,
-    _traversal: PhantomData<*mut Strategy>,
+    _traversal: PhantomData<Strategy>,
 }
 
-impl<'a, O, T, S: ?Sized> ReportIter<'a, O, T, S> {
+impl<'a, O, T, S> ReportIter<'a, O, T, S> {
     /// Creates a new [`ReportIter`] from a vector of raw report references
     pub(crate) fn from_raw(stack: VecDeque<ReportRef<'a, Dynamic, O, T>>) -> Self {
         Self {
@@ -111,16 +111,16 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
 
 /// Marker type for depth-first traversal in the [`ReportIter`] type.
 pub struct DFS {
-    _not_constructible: NotConstructible,
+    _nope: NotUserConstructible,
 }
 
 /// Marker type for breadth-first traversal in the [`ReportIter`] type.
 pub struct BFS {
-    _not_constructible: NotConstructible,
+    _nope: NotUserConstructible,
 }
 
 #[allow(missing_copy_implementations, reason = "not constructible")]
-struct NotConstructible;
+struct NotUserConstructible;
 
 fn list_children<'a, O: 'static, T>(
     children: &'a ReportCollection<Dynamic, T>,
