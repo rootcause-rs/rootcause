@@ -405,6 +405,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// See [`PreformattedAttachment`] for more information.
     ///
     /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
+    ///
     /// # Examples
     ///
     /// ```
