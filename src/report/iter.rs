@@ -1,7 +1,7 @@
-use alloc::collections::vec_deque::VecDeque;
+use alloc::{collections::vec_deque::VecDeque, vec::Vec};
 use core::{iter::FusedIterator, marker::PhantomData};
 
-use crate::{ReportRef, markers::Dynamic};
+use crate::{ReportRef, markers::Dynamic, report_collection::ReportCollection};
 
 /// An iterator over a report and all its descendant reports in depth-first
 /// order.
@@ -111,12 +111,32 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
 
 /// Marker type for depth-first traversal in the [`ReportIter`] type.
 pub struct DFS {
-    _not_constructible: [()],
+    _not_constructible: NotConstructible,
 }
 
 /// Marker type for breadth-first traversal in the [`ReportIter`] type.
 pub struct BFS {
-    _not_constructible: [()],
+    _not_constructible: NotConstructible,
+}
+
+#[allow(missing_copy_implementations, reason = "not constructible")]
+struct NotConstructible;
+
+fn list_children<'a, O: 'static, T>(
+    children: &'a ReportCollection<Dynamic, T>,
+) -> impl DoubleEndedIterator<Item = ReportRef<'a, Dynamic, O, T>> {
+    children.iter().map(|child_report| {
+        // SAFETY:
+        // 1. At this point we have an instance of a `ReportRef<'a, Dynamic, O, T>` in
+        //    scope.  This means we can invoke the safety invariants of that ReportRef.
+        //    One of the safety invariants of that `ReportRef` is that `O` must either
+        //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
+        //    calling `ReportRef::from_cloneable` using that same `O`.
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportRef::<Dynamic, O, T>::from_cloneable(child_report)
+        }
+    })
 }
 
 impl<'a, O, T> Iterator for ReportIter<'a, O, T, DFS> {
@@ -124,24 +144,7 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T, DFS> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let cur: ReportRef<'a, Dynamic, O, T> = self.stack.pop_back()?;
-
-        let new_children = cur
-            .children()
-            .iter()
-            .map(|child_report| {
-                // SAFETY:
-                // 1. At this point we have an instance of a `ReportRef<'a, Dynamic, O, T>` in
-                //    scope.  This means we can invoke the safety invariants of that ReportRef.
-                //    One of the safety invariants of that `ReportRef` is that `O` must either
-                //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
-                //    calling `ReportRef::from_cloneable` using that same `O`.
-                unsafe {
-                    // @add-unsafe-context: Dynamic
-                    ReportRef::<Dynamic, O, T>::from_cloneable(child_report)
-                }
-            })
-            .rev();
-        self.stack.extend(new_children);
+        self.stack.extend(list_children(cur.children()).rev());
         Some(cur)
     }
 }
@@ -151,20 +154,7 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T, BFS> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let cur: ReportRef<'a, Dynamic, O, T> = self.stack.pop_front()?;
-
-        let new_children = cur.children().iter().map(|child_report| {
-            // SAFETY:
-            // 1. At this point we have an instance of a `ReportRef<'a, Dynamic, O, T>` in
-            //    scope.  This means we can invoke the safety invariants of that ReportRef.
-            //    One of the safety invariants of that `ReportRef` is that `O` must either
-            //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
-            //    calling `ReportRef::from_cloneable` using that same `O`.
-            unsafe {
-                // @add-unsafe-context: Dynamic
-                ReportRef::<Dynamic, O, T>::from_cloneable(child_report)
-            }
-        });
-        self.stack.extend(new_children);
+        self.stack.extend(list_children(cur.children()));
         Some(cur)
     }
 }
