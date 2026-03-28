@@ -408,7 +408,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*,
@@ -465,7 +465,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
 
     /// Returns a reference to the attachment.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
@@ -550,7 +550,7 @@ impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     /// The attachment will use the [`handlers::Display`] handler to format the
     /// attachment.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust.compile_fail
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
@@ -577,7 +577,7 @@ impl<A: Sized + Send + Sync> ReportAttachment<A, SendSync> {
     /// you're having trouble with type inference for the thread safety
     /// parameter.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust.compile_fail
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
@@ -607,7 +607,7 @@ impl<A: Sized> ReportAttachment<A, Local> {
     /// The attachment will use the [`handlers::Display`] handler to format the
     /// attachment.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust.compile_fail
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
@@ -633,7 +633,7 @@ impl<A: Sized> ReportAttachment<A, Local> {
     /// with explicit [`Local`] thread safety. Use this method when you're
     /// having trouble with type inference for the thread safety parameter.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```rust.compile_fail
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
@@ -779,7 +779,7 @@ impl<T> ReportAttachment<Dynamic, T> {
     /// Returns `Ok(attachment)` if the inner attachment is of type `A`,
     /// otherwise returns `Err(self)` with the original [`ReportAttachment`].
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
@@ -815,7 +815,7 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};

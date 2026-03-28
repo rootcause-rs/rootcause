@@ -112,7 +112,7 @@ impl AttachmentHandler<Location> for LocationHandler {
 /// captures the source location where each report is created and attaches
 /// it as a [`Location`] attachment.
 ///
-/// ## Example
+/// ## Examples
 ///
 /// ```
 /// use rootcause::hooks::{Hooks, builtin_hooks::location::LocationHook};

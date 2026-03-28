@@ -115,7 +115,7 @@ fn check_invariants(&self) -> bool { /* ... */ }
 
 - **Rationale**: Intra-doc links enable IDE navigation and rustdoc verification of link validity
 
-## Example Standards
+## Examples Standards
 
 ### Code Example Requirements
 

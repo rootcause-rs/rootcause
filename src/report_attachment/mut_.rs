@@ -286,7 +286,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// Reborrows the [`ReportAttachmentMut`] to return a new
     /// [`ReportAttachmentMut`] with a shorter lifetime.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, *, report_attachments::*};

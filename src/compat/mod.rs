@@ -42,7 +42,7 @@
 //! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits
 //!   and extension traits with descriptive method names
 //!
-//! # Example
+//! # Examples
 //!
 //! Here's how to use the [`IntoRootcause`] trait to convert external errors:
 //!

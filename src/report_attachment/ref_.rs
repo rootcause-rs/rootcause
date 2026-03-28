@@ -333,7 +333,7 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*,
