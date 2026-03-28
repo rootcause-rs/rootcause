@@ -686,7 +686,7 @@ impl<T> ReportAttachment<Dynamic, T> {
     ///
     /// [`inner_type_id()`]: ReportAttachment::inner_type_id
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
