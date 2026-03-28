@@ -293,12 +293,10 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// let mut atch = ReportAttachment::new_custom::<Display, _>(40i32);
     /// {
     ///     let mut atch_mut_1 = atch.as_mut();
-    ///     
     ///     {
     ///         let mut atch_mut_2 = atch_mut_1.as_mut();
     ///         *atch_mut_2.inner_mut() += 1;
     ///     }
-    ///     
     ///     *atch_mut_1 += 1;
     /// }
     /// assert_eq!(atch.inner(), 42i32);
