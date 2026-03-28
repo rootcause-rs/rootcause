@@ -487,7 +487,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`Debug`]: core::fmt::Debug
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*,
