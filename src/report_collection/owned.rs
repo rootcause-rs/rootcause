@@ -633,7 +633,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// # use rootcause::{
     /// #     markers::{Dynamic, SendSync},
     /// #     Report,
