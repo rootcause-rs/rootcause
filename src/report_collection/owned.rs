@@ -449,7 +449,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     ///
     /// # Examples
     ///
-    /// ```rust
+    /// ```
     /// use rootcause::{report, report_collection::ReportCollection};
     ///
     /// let mut collection = ReportCollection::new();
