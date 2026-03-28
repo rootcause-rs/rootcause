@@ -447,7 +447,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*,
