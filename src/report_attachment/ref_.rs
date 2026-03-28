@@ -374,7 +374,8 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
-    /// # Example
+    ///
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*,
