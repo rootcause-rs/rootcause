@@ -441,7 +441,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     ///
-    ///     /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*,
