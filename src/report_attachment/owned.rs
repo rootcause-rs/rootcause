@@ -489,7 +489,7 @@ impl<A: ?Sized, T> ReportAttachment<A, T> {
 
     /// Returns a mutable reference to the attachment.
     ///
-    /// # Example
+    /// # Examples
     ///
     /// ```
     /// # use rootcause::{prelude::*, report_attachment::*};
