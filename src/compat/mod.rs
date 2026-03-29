@@ -39,7 +39,7 @@
 //!   support flexible integration patterns
 //! - **Information preservation**: Maintain error context and formatting across
 //!   conversions where possible
-//! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits
+//! - **Ergonomic APIs**: Use familiar Rust patterns like [`From`]/[`Into`] traits
 //!   and extension traits with descriptive method names
 //!
 //! # Example

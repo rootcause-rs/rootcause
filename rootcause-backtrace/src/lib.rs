@@ -913,7 +913,7 @@ impl FramePath {
 /// Extension trait for attaching backtraces to reports.
 ///
 /// This trait provides methods to easily attach a captured backtrace to a
-/// report or to the error contained within a `Result`.
+/// report or to the error contained within a [`Result`].
 ///
 /// # Examples
 ///
@@ -928,7 +928,7 @@ impl FramePath {
 /// let report = report!(io::Error::other("An error occurred")).attach_backtrace();
 /// ```
 ///
-/// Attach backtrace to a `Result`:
+/// Attach backtrace to a [`Result`]:
 ///
 /// ```
 /// use std::io;

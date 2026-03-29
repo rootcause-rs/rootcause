@@ -145,7 +145,7 @@ use crate::{Report, compat::ReportAsError, markers};
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`anyhow::Error`]'s `Display` implementation
+/// - **Display**: Uses [`anyhow::Error`]'s [`std::fmt::Display`](std::fmt::Display) implementation
 /// - **Debug**: Uses [`anyhow::Error`]'s `Debug` implementation
 /// - **Source**: Uses [`anyhow::Error`]'s `source` method to traverse the error
 ///   chain

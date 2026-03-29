@@ -3,4 +3,5 @@
     "cSpell.userWords": [],
     "cSpell.flagWords": [],
     "cSpell.ignoreWords": [],
+    "rust-analyzer.cargo.features": "all"
 }

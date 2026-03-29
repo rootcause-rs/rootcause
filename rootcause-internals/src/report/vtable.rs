@@ -44,7 +44,7 @@ use crate::{
 ///   `debug`, and `preferred_context_formatting_style` all point to the
 ///   functions defined below
 /// * The concrete pointers are all instantiated with the same context type `C`
-///   and handler type `H` that were used to create this `ReportVtable`.
+///   and handler type `H` that were used to create this [`ReportVtable`].
 pub(crate) struct ReportVtable {
     /// Gets the [`TypeId`] of the context type that was used to create this
     /// [`ReportVtable`].
@@ -58,17 +58,17 @@ pub(crate) struct ReportVtable {
     /// Method to drop the [`triomphe::Arc<ReportData<C>>`] instance pointed to
     /// by this pointer.
     drop: unsafe fn(NonNull<ReportData<Erased>>),
-    /// Clones the `triomphe::Arc<ReportData<C>>` pointed to by this pointer.
+    /// Clones the [`triomphe::Arc<ReportData<C>>`] pointed to by this pointer.
     clone_arc: unsafe fn(NonNull<ReportData<Erased>>) -> RawReport,
     /// Gets the strong count of the [`triomphe::Arc<ReportData<C>>`] pointed to
     /// by this pointer.
     strong_count: unsafe fn(RawReportRef<'_>) -> usize,
-    /// Returns a reference to the source of the error using the `source` method
-    /// on the handler.
+    /// Returns a reference to the source of the error using the
+    /// [`ContextHandler::source`] method.
     source: unsafe fn(RawReportRef<'_>) -> Option<&(dyn core::error::Error + 'static)>,
-    /// Formats the report using the `display` method on the handler.
+    /// Formats the report using the [`ContextHandler::display`] method.
     display: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Formats the report using the `debug` method on the handler.
+    /// Formats the report using the [`ContextHandler::debug] method.
     debug: unsafe fn(RawReportRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     /// Get the formatting style preferred by the context when formatted as part
     /// of a report.
@@ -117,7 +117,7 @@ impl ReportVtable {
         (self.handler_type_id)()
     }
 
-    /// Drops the `triomphe::Arc<ReportData<C>>` instance pointed to by this
+    /// Drops the [`triomphe::Arc<ReportData<C>>`] instance pointed to by this
     /// pointer.
     ///
     /// # Safety
@@ -155,13 +155,16 @@ impl ReportVtable {
     ///
     /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into
     ///    a pointer via [`triomphe::Arc::into_raw`]
-    /// 2. The pointer has full provenance over the `Arc` (i.e., it was not
+    /// 2. The pointer has full provenance over the [`Arc`] (i.e., it was not
     ///    derived from a `&T` reference)
     /// 3. This [`ReportVtable`] must be a vtable for the context type stored in
     ///    the [`ReportData`].
     /// 4. All other references to this report are compatible with shared
-    ///    ownership. Specifically none of them assume that the strong_count is
-    ///    `1`.
+    ///    ownership. Specifically none of them assume that the [`strong_count`] is
+    ///    1.
+    ///
+    /// [`Arc`]: triomphe::Arc
+    /// [`strong_count`]: triomphe::Arc::strong_count
     #[inline]
     pub(super) unsafe fn clone_arc(&self, ptr: NonNull<ReportData<Erased>>) -> RawReport {
         // SAFETY: We know that `self.clone_arc` points to the function `clone_arc::<C>`
@@ -256,7 +259,7 @@ impl ReportVtable {
         }
     }
 
-    /// Formats the given `RawReportRef` using the [`H::debug`] function
+    /// Formats the given [`RawReportRef`] using the [`H::debug`] function
     /// used when creating this [`ReportVtable`].
     ///
     /// [`H::debug`]: ContextHandler::debug
@@ -350,12 +353,14 @@ pub(super) unsafe fn drop<C: 'static>(ptr: NonNull<ReportData<Erased>>) {
 ///
 /// 1. The pointer comes from a [`triomphe::Arc<ReportData<C>>`] turned into a
 ///    pointer via [`triomphe::Arc::into_raw`]
-/// 2. The pointer has full provenance over the `Arc` (i.e., it was not derived
+/// 2. The pointer has full provenance over the [`Arc`] (i.e., it was not derived
 ///    from a `&T` reference)
 /// 3. The context type `C` matches the actual context type stored in the
 ///    [`ReportData`]
 /// 4. All other references to this report are compatible with shared ownership.
 ///    Specifically none of them assume that the strong_count is `1`.
+///
+/// [`Arc`]: triomphe::Arc
 unsafe fn clone_arc<C: 'static>(ptr: NonNull<ReportData<Erased>>) -> RawReport {
     let ptr: *const ReportData<C> = ptr.cast::<ReportData<C>>().as_ptr();
 

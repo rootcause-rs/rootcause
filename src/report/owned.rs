@@ -242,8 +242,8 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// # use rootcause::{prelude::*, markers::{SendSync, Mutable, Local}};
     /// # #[derive(Debug)]
     /// # struct MyError;
-    /// # impl core::error::Error for MyError {}
-    /// # impl core::fmt::Display for MyError { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { unimplemented!() }}
+    /// # impl std::error::Error for MyError {}
+    /// # impl std::fmt::Display for MyError { fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { unimplemented!() }}
     /// let report_sendsync: Report<MyError, Mutable, SendSync> = Report::new(MyError);
     /// let report_local: Report<MyError, Mutable, Local> = Report::new(MyError);
     /// ```
@@ -269,8 +269,8 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     /// # use rootcause::{prelude::*, markers::{SendSync, Local}};
     /// # #[derive(Debug)]
     /// # struct MyError;
-    /// # impl core::error::Error for MyError {}
-    /// # impl core::fmt::Display for MyError { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { unimplemented!() }}
+    /// # impl std::error::Error for MyError {}
+    /// # impl std::fmt::Display for MyError { fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { unimplemented!() }}
     /// let report_sendsync: Report<MyError> = Report::new_custom::<handlers::Debug>(MyError);
     /// let report_local: Report<MyError> = Report::new_custom::<handlers::Display>(MyError);
     /// ```
@@ -1248,7 +1248,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// ```
     /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
     /// # #[derive(Default)]
-    /// # struct NonSendSyncError(core::cell::Cell<()>);
+    /// # struct NonSendSyncError(std::cell::Cell<()>);
     /// # let non_send_sync_error = NonSendSyncError::default();
     /// let mut report: Report<NonSendSyncError, Mutable, Local> = report!(non_send_sync_error);
     /// let preformatted: Report<PreformattedContext, Mutable, SendSync> = report.preformat();
@@ -1265,7 +1265,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::Dynamic};
-    /// # use core::any::TypeId;
+    /// # use std::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let type_id = report.current_context_type_id();
@@ -1285,16 +1285,16 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::Dynamic};
-    /// # use core::any::TypeId;
+    /// # use std::any::TypeId;
     /// # struct MyError;
     /// # let report = report!(MyError).into_cloneable();
     /// let report: Report<MyError> = report!(MyError);
     /// let type_name = report.current_context_type_name();
-    /// assert_eq!(type_name, core::any::type_name::<MyError>());
+    /// assert_eq!(type_name, std::any::type_name::<MyError>());
     ///
     /// let report: Report<Dynamic> = report.into_dynamic();
     /// let type_name = report.current_context_type_name();
-    /// assert_eq!(type_name, core::any::type_name::<MyError>());
+    /// assert_eq!(type_name, std::any::type_name::<MyError>());
     /// ```
     #[must_use]
     pub fn current_context_type_name(&self) -> &'static str {
@@ -1309,8 +1309,8 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::{prelude::*, markers::SendSync};
-    /// # use core::any::TypeId;
-    /// let report = Report::new_sendsync_custom::<handlers::Debug>("error message");
+    /// # use std::any::TypeId;
+    /// let report : Report<&'static str> = Report::new_custom::<handlers::Debug>("error message");
     /// let handler_type = report.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
@@ -1326,9 +1326,9 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::TypeId;
+    /// # use std::any::TypeId;
     /// let report: Report = report!("error message");
-    /// let source: Option<&dyn core::error::Error> = report.current_context_error_source();
+    /// let source: Option<&dyn std::error::Error> = report.current_context_error_source();
     /// assert!(source.is_none()); // The context does not implement Error, so no source
     ///
     /// #[derive(Debug, thiserror::Error)]
@@ -1538,7 +1538,7 @@ impl<O, T> Report<Dynamic, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::TypeId;
+    /// # use std::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let dyn_report: Report = report.into_dynamic();
@@ -1604,7 +1604,7 @@ impl<O, T> Report<Dynamic, O, T> {
     /// # Examples
     /// ```
     /// # use rootcause::prelude::*;
-    /// # use core::any::TypeId;
+    /// # use std::any::TypeId;
     /// # struct MyError;
     /// let report: Report<MyError> = report!(MyError);
     /// let dyn_report: Report = report.into_dynamic();
@@ -1650,8 +1650,8 @@ impl<C: Sized + Send + Sync> Report<C, Mutable, SendSync> {
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct MyError;
-    /// # impl core::error::Error for MyError {}
-    /// # impl core::fmt::Display for MyError { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { unimplemented!() }}
+    /// # impl std::error::Error for MyError {}
+    /// # impl std::fmt::Display for MyError { fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { unimplemented!() }}
     /// let report = Report::new_sendsync(MyError);
     /// ```
     #[track_caller]
@@ -1700,8 +1700,8 @@ impl<C: Sized> Report<C, Mutable, Local> {
     /// # use rootcause::prelude::*;
     /// # #[derive(Debug)]
     /// # struct MyError;
-    /// # impl core::error::Error for MyError {}
-    /// # impl core::fmt::Display for MyError { fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result { unimplemented!() }}
+    /// # impl std::error::Error for MyError {}
+    /// # impl std::fmt::Display for MyError { fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result { unimplemented!() }}
     /// let report = Report::new_local(MyError);
     /// ```
     #[track_caller]
@@ -1735,13 +1735,13 @@ impl<C: Sized> Report<C, Mutable, Local> {
     }
 }
 
-// SAFETY: The `SendSync` marker indicates that all objects in the report are
-// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
+// SAFETY: The SendSync marker indicates that all objects in the report are
+// Send + Sync. Therefore it is safe to implement Send + Sync for the report
 // itself.
 unsafe impl<C: ?Sized, O> Send for Report<C, O, SendSync> {}
 
-// SAFETY: The `SendSync` marker indicates that all objects in the report are
-// `Send`+`Sync`. Therefore it is safe to implement `Send`+`Sync` for the report
+// SAFETY: The SendSync marker indicates that all objects in the report are
+// Send + Sync. Therefore it is safe to implement Send + Sync for the report
 // itself.
 unsafe impl<C: ?Sized, O> Sync for Report<C, O, SendSync> {}
 

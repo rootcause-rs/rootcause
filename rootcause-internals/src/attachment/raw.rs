@@ -52,12 +52,12 @@ pub struct RawAttachment {
     /// this struct exists:
     ///
     /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
-    ///    for some `A` using `Box::into_raw`.
-    /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
-    ///    lifetime of this object.
+    ///    for some `A` using [`Box::into_raw`].
+    /// 2. The pointer will point to the same [`AttachmentData<A>`](AttachmentData)
+    ///    for the entire lifetime of this object.
     /// 3. The pointee is properly initialized for the entire lifetime of this
-    ///    object, except during the execution of the `Drop` implementation.
-    /// 4. The pointer is the sole owner of the `AttachmentData` instance.
+    ///    object, except during the execution of the [`Drop`] implementation.
+    /// 4. The pointer is the sole owner of the [`AttachmentData`] instance.
     ptr: NonNull<AttachmentData<Erased>>,
 }
 
@@ -161,13 +161,12 @@ pub struct RawAttachmentRef<'a> {
     /// The following safety invariants are guaranteed to be upheld as long as
     /// this struct exists:
     ///
-    /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
-    ///    for some `A` using `Box::into_raw`.
-    /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
+    /// 1. The pointer must have been created from a [`Box<AttachmentData<A>>`]
+    ///    for some `A` using [`Box::into_raw`].
+    /// 2. The pointer will point to the same [`AttachmentData<A>`](AttachmentData) for the entire
     ///    lifetime of this object.
-    /// 3. This pointer represents read-only access to the `AttachmentData` for
-    ///    the lifetime `'a` with the same semantics as a `&'a
-    ///    AttachmentData<C>`.
+    /// 3. This pointer represents read-only access to the [`AttachmentData`] for
+    ///    the lifetime `'a` with the same semantics as a [`&'a AttachmentData<C>`](AttachmentData).
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -302,13 +301,13 @@ pub struct RawAttachmentMut<'a> {
     /// The following safety invariants are guaranteed to be upheld as long as
     /// this struct exists:
     ///
-    /// 1. The pointer must have been created from a `Box<AttachmentData<A>>`
-    ///    for some `A` using `Box::into_raw`.
-    /// 2. The pointer will point to the same `AttachmentData<A>` for the entire
+    /// 1. The pointer must have been created from a [`Box<AttachmentData<A>>`]
+    ///    for some `A` using [`Box::into_raw`].
+    /// 2. The pointer will point to the same [`AttachmentData<A>`](AttachmentData) for the entire
     ///    lifetime of this object.
     /// 3. This pointer represents exclusive mutable access to the
-    ///    `AttachmentData` for the lifetime `'a` with the same semantics as a
-    ///    `&'a mut AttachmentData<C>`.
+    ///    [`AttachmentData`] for the lifetime `'a` with the same semantics as a
+    ///    [`&'a mut AttachmentData<C>`](AttachmentData).
     ptr: NonNull<AttachmentData<Erased>>,
 
     /// Marker to tell the compiler that we should
