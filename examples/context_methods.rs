@@ -2,10 +2,15 @@
 //!
 //! This example compares four methods for transforming report contexts:
 //!
-//! - `context()`: Wraps report as child under new context
-//! - `context_to()`: Uses `ReportConversion` trait implementation
-//! - `context_transform()`: Changes context type in-place
-//! - `context_transform_nested()`: Preformats and wraps as child
+//! - [`.context()`]: Wraps report as child under new context
+//! - [`.context_to()`]: Uses [`ReportConversion`] trait implementation
+//! - [`.context_transform()`]: Changes context type in-place
+//! - [`.context_transform_nested()`]: Preformats and wraps as child
+//!
+//! [`.context()`]: Report::context
+//! [`.context_to()`]: Report::context_to
+//! [`.context_transform()`]: Report::context_transform
+//! [`.context_transform_nested()`]: Report::context_transform_nested
 //!
 //! The focus is on understanding **what each method does to the report
 //! structure** and **what information is preserved or lost**.

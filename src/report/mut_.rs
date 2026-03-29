@@ -30,7 +30,7 @@ mod limit_field_access {
     ///
     /// # Key Characteristics
     ///
-    /// - **Not `Copy` or `Clone`**: Ensures exclusive mutable access
+    /// - **Not [`Copy`] or [`Clone`]**: Ensures exclusive mutable access
     /// - **Lifetime-bound**: Tied to the lifetime of the underlying report
     /// - **Two type parameters**: Has context type `C` and thread safety marker
     ///   `T` (no ownership marker since mutable references are always uniquely
@@ -86,18 +86,18 @@ mod limit_field_access {
         ///
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists and must be continue to be upheld as
-        /// long as the inner `RawReportMut` exists:
+        /// long as the inner [`RawReportMut`] exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
-        /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `C` is a `Sized` type: The context embedded in the report must
+        /// 1. `C` must either be a type bounded by [`Sized`], or [`Dynamic`].
+        /// 2. `T` must either be [`SendSync`] or [`Local`](crate::markers::Local).
+        /// 3. If `C` is a [`Sized`] type: The context embedded in the report must
         ///    be of type `C`
-        /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
+        /// 4. The strong count of the underlying [`triomphe::Arc`] is exactly 1.
         /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
-        ///    an assumption that the strong_count is `1`.
+        ///    an assumption that the [`strong_count`](triomphe::Arc::strong_count) is 1.
         /// 7. If `T = SendSync`: All contexts and attachments in the report and
-        ///    all sub-reports must be `Send+Sync`
+        ///    all sub-reports must be [`Send`] and [`Sync`]
         /// 8. If `T = Local`: No other references to this report are allowed to
         ///    have `T = SendSync`
         raw: RawReportMut<'a>,
@@ -112,14 +112,14 @@ mod limit_field_access {
         ///
         /// The caller must ensure:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
-        /// 2. `T` must either be `SendSync` or `Local`.
-        /// 3. If `C` is a `Sized` type: The context embedded in the report must
+        /// 1. `C` must either be a type bounded by [`Sized`], or [`Dynamic`].
+        /// 2. `T` must either be [`SendSync`] or [`Local`](crate::markers::Local).
+        /// 3. If `C` is a [`Sized`] type: The context embedded in the report must
         ///    be of type `C`
-        /// 4. The strong count of the underlying `triomphe::Arc` is exactly 1.
+        /// 4. The strong count of the underlying [`triomphe::Arc`] is exactly 1.
         /// 5. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
-        ///    an assumption that the strong_count is `1`.
+        ///    an assumption that the [`strong_count`](triomphe::Arc::strong_count) is 1.
         /// 6. If `T = SendSync`: All contexts and attachments in the report and
         ///    all sub-reports must be `Send+Sync`
         /// 7. If `T = Local`: No other references to this report are allowed to
@@ -167,7 +167,7 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. If `T = SendSync`, no objects are added to the report through
-        ///    this `RawReportMut` that are not `Send+Sync`
+        ///    this [`RawReportMut`] that are not [`Send`] and [`Sync`]
         #[must_use]
         pub(crate) unsafe fn into_raw_mut(self) -> RawReportMut<'a> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -194,7 +194,7 @@ mod limit_field_access {
         /// The caller must ensure:
         ///
         /// 1. If `T = SendSync`, no objects are added to the report through
-        ///    this `RawReportMut` that are not `Send+Sync`
+        ///    this [`RawReportMut`] that are not `Send+Sync`
         #[must_use]
         pub(crate) unsafe fn as_raw_mut<'b>(&'b mut self) -> RawReportMut<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -848,7 +848,8 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// - Testing different formatters
     /// - Using different formatters in different parts of your application
     ///
-    /// Unlike the default `Display` and `Debug` implementations which use the
+    /// Unlike the default [`.format_current_context()`](Self::format_current_context)'s
+    /// [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug) implementations which use the
     /// globally registered hook, this method uses the hook you provide
     /// directly.
     ///
@@ -951,8 +952,8 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
 impl<'a, T> ReportMut<'a, Dynamic, T> {
     /// Attempts to downcast the current context to a specific type.
     ///
-    /// Returns `Some(&C)` if the current context is of type `C`, otherwise
-    /// returns `None`.
+    /// Returns [`Some(&C)`] if the current context is of type `C`, otherwise
+    /// returns [`None`].
     ///
     /// # Examples
     /// ```
@@ -974,8 +975,8 @@ impl<'a, T> ReportMut<'a, Dynamic, T> {
 
     /// Attempts to downcast the current context to a specific type.
     ///
-    /// Returns `Some(&mut C)` if the current context is of type `C`, otherwise
-    /// returns `None`.
+    /// Returns [`Some(&mut C)`] if the current context is of type `C`, otherwise
+    /// returns [`None`].
     ///
     /// # Examples
     /// ```
@@ -1075,8 +1076,8 @@ impl<'a, T> ReportMut<'a, Dynamic, T> {
 
     /// Attempts to downcast the entire report to a specific context type.
     ///
-    /// Returns `Ok(ReportMut<C>)` if the current context is of type `C`,
-    /// otherwise returns `Err(self)` with the original report.
+    /// Returns [`Ok(ReportMut<C>)`](ReportMut) if the current context is of type `C`,
+    /// otherwise returns [`Err(self)`](Result::Err) with the original report.
     ///
     /// # Examples
     /// ```

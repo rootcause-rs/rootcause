@@ -233,7 +233,7 @@ impl core::fmt::Display for HooksAlreadyInstalledError {
 impl core::error::Error for HooksAlreadyInstalledError {}
 
 impl Hooks {
-    /// Creates a new `Hooks` builder with location tracking.
+    /// Creates a new [`Hooks`] builder with location tracking.
     ///
     /// This is equivalent to using rootcause without installing any hooks - you
     /// get automatic location tracking. Use this as the base when you want to
@@ -264,7 +264,7 @@ impl Hooks {
         }))
     }
 
-    /// Creates a new `Hooks` builder without location tracking.
+    /// Creates a new [`Hooks`] builder without location tracking.
     ///
     /// By default, rootcause automatically tracks source locations where errors
     /// occur. Use this method when you don't want that automatic tracking.
@@ -581,7 +581,7 @@ impl Hooks {
 
 /// A handle to hooks that have been leaked into static memory.
 ///
-/// You get a `HooksHandle` when calling [`Hooks::replace()`], which returns
+/// You get a [`HooksHandle`] when calling [`Hooks::replace()`], which returns
 /// the previously installed hooks. The hooks remain in memory for the lifetime
 /// of the program unless you call the unsafe [`reclaim()`](Self::reclaim)
 /// method.
@@ -596,7 +596,7 @@ impl Hooks {
 ///
 /// # Memory Leak Warning
 ///
-/// Dropping a `HooksHandle` **will leak memory**. This is by design - the hooks
+/// Dropping a [`HooksHandle`] **will leak memory**. This is by design - the hooks
 /// might still be referenced by other threads, so we can't safely deallocate
 /// them. In most applications this is fine since you typically install hooks
 /// once at startup. If you're replacing hooks frequently in tests or hot-reload
@@ -644,17 +644,17 @@ impl Hooks {
 pub struct HooksHandle {
     /// # Safety
     ///
-    /// 1. This pointer points to a valid HookData that has been created by
-    ///    calling `Box::into_raw` on a `Box<HookData>`.
+    /// 1. This pointer points to a valid [`HookData`] that has been created by
+    ///    calling [`Box::into_raw`] on a [`Box<HookData>`].
     /// 2. This struct has exclusive ownership of the pointer. No other
-    ///    `HooksHandle` instances exist pointing to the same data.
+    ///    [`HooksHandle`] instances exist pointing to the same data.
     /// 3. There might exist shared references to the HookData created by
-    ///    `use_hooks`. These references are always temporary (scoped to the
-    ///    `use_hooks` call) and read-only. Deallocation through `reclaim()` is
+    ///    [`use_hooks`]. These references are always temporary (scoped to the
+    ///    [`use_hooks`] call) and read-only. Deallocation through [`reclaim()`](Self::reclaim) is
     ///    only safe when the caller can guarantee no such references exist or
     ///    will be created in the future.
     /// 4. No mutation or deallocation of the pointed-to data will occur until
-    ///    `reclaim()` is called.
+    ///    [`reclaim()`](Self::reclaim) is called.
     hook_data: NonNull<HookData>,
 }
 
@@ -720,16 +720,16 @@ impl HooksHandle {
     /// # Safety
     ///
     /// 1. The caller must guarantee that, if this pointer came from being
-    ///    installed globally, then all calls to `use_hooks` that might have
+    ///    installed globally, then all calls to [`use_hooks`] that might have
     ///    used this pointer have completed, and that no future calls to
-    ///    `use_hooks` will use this pointer.
+    ///    [`use_hooks`] will use this pointer.
     pub unsafe fn reclaim(self) -> Hooks {
         // SAFETY:
         // - We know that the pointer is valid and was obtained from `Box::into_raw`
         //   because of the struct invariant.
         // - We know that we have exclusive ownership of the pointer because of the
         //   struct invariant.
-        // - The caller has guaranteed that all calls to `use_hooks` that might have
+        // - The caller has guaranteed that all calls to use_hooks that might have
         //   used this pointer have completed. Since this is the only way to access the
         //   pointer, we can safely convert it back into a Box here.
         let boxed = unsafe {
@@ -749,15 +749,15 @@ struct GlobalHooks {
     /// # Safety
     ///
     /// 1. This pointer will either be null, or point to a valid HookData that
-    ///    has been created using `Box::into_raw`.
+    ///    has been created using [`Box::into_raw`].
     /// 2. If the pointer is non-null, then it is owned by this struct.
-    /// 3. All writing to the `AtomicPtr` is done using release semantics.
-    /// 4. All reading from the `AtomicPtr` is done using acquire semantics when
+    /// 3. All writing to the [`AtomicPtr`] is done using release semantics.
+    /// 4. All reading from the [`AtomicPtr`] is done using acquire semantics when
     ///    the pointer will be dereferenced and with relaxed semantics
     ///    otherwise.
     /// 5. If the pointer is replaced, then the previous pointer might still be
     ///    referenced by this or other threads in the process of executing
-    ///    `use_hooks`, so it must not be deallocated or mutated until it is
+    ///    [`use_hooks`], so it must not be deallocated or mutated until it is
     ///    certain that all such function calls have completed.
     ptr: AtomicPtr<HookData>,
 }
@@ -773,8 +773,8 @@ impl GlobalHooks {
     ///
     /// # Safety
     ///
-    /// 1. The `new` pointer is valid and points to a `Box<HookData>` that has
-    ///    been turned into a raw pointer using `Box::into_raw`.
+    /// 1. The `new` pointer is valid and points to a [`Box<HookData>`] that has
+    ///    been turned into a raw pointer using [`Box::into_raw`].
     /// 2. On success the function claims ownership of the `new` pointer, and it
     ///    cannot be used by the caller anymore.
     /// 3. On failure, the `new` pointer remains owned by the caller, and no
@@ -798,14 +798,14 @@ impl GlobalHooks {
     ///
     /// # Safety
     ///
-    /// 1. The `new` pointer is valid and points to a `Box<HookData>` that has
-    ///    been turned into a raw pointer using `Box::into_raw`.
+    /// 1. The `new` pointer is valid and points to a [`Box<HookData>`](HookData) that has
+    ///    been turned into a raw pointer using [`Box::into_raw`].
     /// 2. The function claims ownership of the `new` pointer.
-    /// 3. If the function returns `Some(ptr)`, then ownership of that pointer
+    /// 3. If the function returns [`Some(ptr)`], then ownership of that pointer
     ///    is transferred to the caller. The returned pointer is similarly
-    ///    guaranteed to have been created using `Box::into_raw`.
+    ///    guaranteed to have been created using [`Box::into_raw`].
     /// 4. The returned pointer might still be referenced by this or other
-    ///    threads in the process of executing `use_hooks`, so it must not be
+    ///    threads in the process of executing [`use_hooks`], so it must not be
     ///    deallocated or mutated until it is certain that all such function
     ///    calls have completed.
     unsafe fn replace(&self, new: NonNull<HookData>) -> Option<NonNull<HookData>> {
@@ -819,10 +819,10 @@ impl GlobalHooks {
 
 static HOOKS: GlobalHooks = GlobalHooks::new();
 
-/// A trait for calling hook functions with optional `HookData`.
+/// A trait for calling hook functions with optional [`HookData`]
 ///
-/// This is functionally similar to `FnOnce(Option<&HookData>) -> R`, but
-/// adds a `#[track_caller]` to allow `report_creation` hooks to track the
+/// This is functionally similar to [`FnOnce(Option<&HookData>) -> R`](FnOnce), but
+/// adds a `#[track_caller]` to allow [`report_creation`](crate::hooks::report_creation) hooks to track the
 /// caller location.
 pub(crate) trait HookCallback<R> {
     #[track_caller]

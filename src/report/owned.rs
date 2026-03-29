@@ -85,22 +85,22 @@ mod limit_field_access {
         /// The following safety invariants are guaranteed to be upheld as long
         /// as this struct exists:
         ///
-        /// 1. `C` must either be a type bounded by `Sized`, or `Dynamic`.
-        /// 2. `O` must either be `Mutable` or `Cloneable`.
-        /// 3. `T` must either be `SendSync` or `Local`.
-        /// 4. If `C` is a `Sized` type: The context embedded in the report must
+        /// 1. `C` must either be a type bounded by [`Sized`], or [`Dynamic`].
+        /// 2. `O` must either be [`Mutable`] or [`Cloneable`].
+        /// 3. `T` must either be [`SendSync`] or [`Local`].
+        /// 4. If `C` is a [`Sized`] type: The context embedded in the report must
         ///    be of type `C`
         /// 5. If `O = Mutable`: This is the unique owner of the report. More
         ///    specifically this means that the strong count of the underlying
-        ///    `triomphe::Arc` is exactly 1.
+        ///    [`triomphe::Arc`] is exactly 1.
         /// 6. If `O = Cloneable`: All other references to this report are
         ///    compatible with shared ownership. Specifically there are no
-        ///    references with an assumption that the strong_count is `1`.
+        ///    references with an assumption that the [`strong_count`](triomphe::Arc::strong_count) is `1`.
         /// 7. All references to any sub-reports of this report are compatible
         ///    with shared ownership. Specifically there are no references with
         ///    an assumption that the strong_count is `1`.
         /// 8. If `T = SendSync`: All contexts and attachments in the report and
-        ///    all sub-reports must be `Send+Sync`.
+        ///    all sub-reports must be [`Send`] and [`Sync`].
         raw: RawReport,
         _context: PhantomData<Context>,
         _ownership: PhantomData<Ownership>,
