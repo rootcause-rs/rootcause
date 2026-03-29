@@ -82,8 +82,14 @@
 //! - **[`rootcause-backtrace`]** - Automatic stack trace capture for debugging.
 //!   Install hooks to attach backtraces to all errors, or use the extension
 //!   trait to add them selectively.
+//! - **[`rootcause-tracing`]** - Integration with the [`tracing`] crate, annotating
+//!   reports with what span they were created in.
+//! - More to come, including OpenTelemetry integration, and
+//!   a crate of fun extra bits and pieces.
 //!
 //! [`rootcause-backtrace`]: https://docs.rs/rootcause-backtrace
+//! [`tracing`]: https://docs.rs/tracing
+//! [`rootcause-tracing`]: https://docs.rs/rootcause-tracing
 //!
 //! ## Project Goals
 //!
