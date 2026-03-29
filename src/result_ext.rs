@@ -23,6 +23,15 @@ use crate::{
 /// - **Adding attachments**: [`attach`](ResultExt::attach),
 ///   [`attach_with`](ResultExt::attach_with), and variants add supplementary
 ///   data to the error
+/// - **Conversions:**
+///     - [`context_to`](ResultExt::context_to) allows transformation of
+///       contexts using the [`ReportConversion`] trait.
+///     - [`context_transform`](ResultExt::context_transform) uses a closure
+///       to transform contexts.
+///     - [`context_transform_nested`](ResultExt::context_transform_nested)
+///       removes the context, leaving a [`PreformattedContext`] in its place
+///       and then transforms the removed context before creating a new report
+///       with that context, wrapping the old one.
 ///
 /// Each method has a `local_*` variant for working with types that are not
 /// `Send + Sync`.
