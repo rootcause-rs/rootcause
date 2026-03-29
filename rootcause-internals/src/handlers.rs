@@ -176,11 +176,12 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// This method allows the handler to control:
     /// - **Formatting**: Whether to use display or debug formatting
-    /// - **Source-chasing**: Whether to follow the chain of of [`Error::source()`](core::error::Error::source) if [`ContextHandler::source`] returns `Some`, and
-    ///   also how deep to chase.
+    /// - **Source-chasing**: Whether to follow the chain of of
+    ///   [`Error::source()`](core::error::Error::source) if
+    ///   [`ContextHandler::source`] returns `Some`, and also how deep to chase.
     ///
-    /// The default implementation returns the same formatting as the report, with
-    /// no source chasing.
+    /// The default implementation returns the same formatting as the report,
+    /// with no source chasing.
     ///
     /// # Arguments
     ///
@@ -195,7 +196,8 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// Custom handler that flips the report's formatting (not actually intended to be useful):
+    /// Custom handler that flips the report's formatting (not actually intended
+    /// to be useful):
     ///
     /// ```
     /// use rootcause_internals::handlers::{
@@ -412,13 +414,16 @@ pub trait AttachmentHandler<A>: 'static {
 ///
 /// - `function`: Whether to use [`Display`](core::fmt::Display) or
 ///   [`Debug`](core::fmt::Debug) formatting
-/// - `follow_source`: Whether to follow the [`Error::source`](core::error::Error::source)-chain
-///   when [`ContextHandler::source`] returns `Some`.
-/// - `follow_source_depth`: How deep to follow the chain, `None` means no limit.
+/// - `follow_source`: Whether to follow the
+///   [`Error::source`](core::error::Error::source)-chain when
+///   [`ContextHandler::source`] returns `Some`.
+/// - `follow_source_depth`: How deep to follow the chain, `None` means no
+///   limit.
 ///
 /// # Default
 ///
-/// The default is to use [`FormattingFunction::Display`] and not to chase sources at all.
+/// The default is to use [`FormattingFunction::Display`] and not to chase
+/// sources at all.
 ///
 /// # Examples
 ///

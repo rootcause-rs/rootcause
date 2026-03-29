@@ -9,7 +9,7 @@ use crate::{
     preformatted::{self, PreformattedContext},
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
-    util::format_helper,
+    util::{ErrorNoSourceWrapper, format_helper},
 };
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
@@ -1025,6 +1025,14 @@ impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         let report = self.into_dynamic().into_uncloneable().into_local();
         crate::hooks::report_formatter::format_report(report, f, FormattingFunction::Debug)
+    }
+}
+
+impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
+    type Target = dyn core::error::Error + 'a;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
     }
 }
 

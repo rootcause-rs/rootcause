@@ -71,13 +71,14 @@ mod limit_field_access {
         /// Creates a raw reference to the underlying attachment, with a shorter
         /// lifetime.
         ///
-        /// This returns a raw, read-only reference to the same attachment, but with a
-        /// lifetime tied to the lifetime of `self`.
+        /// This returns a raw, read-only reference to the same attachment, but
+        /// with a lifetime tied to the lifetime of `self`.
         ///
         /// # Guarantees
         ///
-        /// The returned `RawAttachmentRef` refers to the same attachment data as
-        /// this `ReportAttachmentMut`, preserving the attachment's type.
+        /// The returned `RawAttachmentRef` refers to the same attachment data
+        /// as this `ReportAttachmentMut`, preserving the attachment's
+        /// type.
         #[must_use]
         pub(crate) fn as_raw_ref<'b>(&'b self) -> RawAttachmentRef<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
@@ -98,13 +99,14 @@ mod limit_field_access {
 
         /// Creates a raw reference to the underlying attachment.
         ///
-        /// This returns a raw, mutable reference to the same attachment, but with a
-        /// lifetime tied to the lifetime of `self`.
+        /// This returns a raw, mutable reference to the same attachment, but
+        /// with a lifetime tied to the lifetime of `self`.
         ///
         /// # Guarantees
         ///
-        /// The returned `RawAttachmentMut` refers to the same attachment data as
-        /// this `ReportAttachmentMut`, preserving the attachment's type.
+        /// The returned `RawAttachmentMut` refers to the same attachment data
+        /// as this `ReportAttachmentMut`, preserving the attachment's
+        /// type.
         pub(crate) fn as_raw_mut<'b>(&'b mut self) -> RawAttachmentMut<'b> {
             // SAFETY: We need to uphold the safety invariants of the raw field:
             // 1. Upheld as the type parameter does not change.
@@ -634,8 +636,8 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
         unsafe { ReportAttachmentMut::from_raw(raw) }
     }
 
-    /// Attempts to downcast the inner attachment data to an immutable reference of type
-    /// `A`.
+    /// Attempts to downcast the inner attachment data to an immutable reference
+    /// of type `A`.
     ///
     /// See [`ReportAttachmentRef::downcast_inner`] for more info.
     pub fn downcast_inner<A>(&self) -> Option<&A>
