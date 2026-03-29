@@ -111,7 +111,7 @@ pub use rootcause_internals::handlers::{
 /// macro when you create a report from a type implementing `std::error::Error`.
 /// You rarely need to specify it explicitly.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```
 /// use std::io;
@@ -243,7 +243,7 @@ where
 /// - **`source` method**: Always returns `None`
 /// - **Preferred formatting**: Same as requested formatting of the report.
 ///
-/// # Example
+/// # Examples
 ///
 /// ```
 /// use rootcause::prelude::*;
@@ -322,7 +322,7 @@ where
 /// - **Debug output**: "An object of type TypeName"
 /// - **Source**: Always returns `None`
 ///
-/// # Example
+/// # Examples
 ///
 /// ```
 /// use rootcause::{handlers, prelude::*};

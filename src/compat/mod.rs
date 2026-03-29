@@ -42,7 +42,7 @@
 //! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits
 //!   and extension traits with descriptive method names
 //!
-//! # Example
+//! # Examples
 //!
 //! Here's how to use the [`IntoRootcause`] trait to convert external errors:
 //!
@@ -201,7 +201,7 @@ pub mod eyre06;
 ///
 /// fn requires_error_trait(err: impl std::error::Error) {}
 ///
-/// let report = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
+/// let report: Report<std::io::Error> = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
 /// let as_error = ReportAsError(report.into_cloneable());
 /// requires_error_trait(as_error);
 /// ```

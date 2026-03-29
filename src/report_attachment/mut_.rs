@@ -210,6 +210,17 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ///
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachmentMut::downcast_attachment`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// let mut known_type = ReportAttachment::new_sendsync(42i32);
+    /// let the_answer = known_type.format_inner().to_string();
+    /// let mutable = known_type.as_mut();
+    /// let unknown_type = mutable.into_dynamic();
+    /// assert_eq!(unknown_type.format_inner().to_string(), the_answer);
+    /// ```
     #[must_use]
     pub fn into_dynamic(self) -> ReportAttachmentMut<'a, Dynamic> {
         let raw = self.into_raw_mut();
@@ -224,6 +235,17 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     }
 
     /// Returns an immutable reference to the attachment.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let the_answer = attachment.format_inner().to_string();
+    /// let mutable = attachment.as_mut();
+    /// let reference = mutable.as_ref();
+    /// assert_eq!(reference.format_inner().to_string(), the_answer);
+    /// ```
     #[must_use]
     pub fn as_ref(&self) -> ReportAttachmentRef<'_, A> {
         let raw = self.as_raw_ref();
@@ -241,6 +263,16 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
 
     /// Consumes the [`ReportAttachmentMut`] and returns a
     /// [`ReportAttachmentRef`] with same lifetime.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let the_answer = attachment.format_inner().to_string();
+    /// let mutable = attachment.as_mut();
+    /// let reference = mutable.into_ref();
+    /// assert_eq!(reference.format_inner().to_string(), the_answer);
+    /// ```
     #[must_use]
     pub fn into_ref(self) -> ReportAttachmentRef<'a, A> {
         let raw = self.into_raw_mut();
@@ -255,6 +287,22 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
 
     /// Reborrows the [`ReportAttachmentMut`] to return a new
     /// [`ReportAttachmentMut`] with a shorter lifetime.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{*, report_attachment::*, handlers::*};
+    /// let mut atch = ReportAttachment::new_sendsync_custom::<Display>(40i32);
+    /// {
+    ///     let mut atch_mut_1 = atch.as_mut();
+    ///     {
+    ///         let mut atch_mut_2 = atch_mut_1.as_mut();
+    ///         *atch_mut_2.inner_mut() += 1;
+    ///     }
+    ///     *atch_mut_1.inner_mut() += 1;
+    /// }
+    /// assert_eq!(atch.inner(), &42i32);
+    /// ```
     #[must_use]
     pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
         let raw = self.as_raw_mut();
@@ -323,6 +371,16 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ///
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let mutable = attachment.as_mut();
+    /// assert_eq!(mutable.inner_handler_type_id(), TypeId::of::<Display>());
+    /// ```
     #[must_use]
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
@@ -342,6 +400,15 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let mutable = attachment.as_mut();
+    /// assert_eq!(mutable.format_inner().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn format_inner(&self) -> impl core::fmt::Display + core::fmt::Debug {
         self.as_ref().format_inner()
@@ -361,6 +428,15 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner`]: Self::format_inner
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let mutable = attachment.as_mut();
+    /// assert_eq!(mutable.format_inner_unhooked().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn format_inner_unhooked(&self) -> impl core::fmt::Display + core::fmt::Debug {
         self.as_ref().format_inner_unhooked()
@@ -382,6 +458,20 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*,
+    /// # report_attachment::ReportAttachment,
+    /// # handlers::*, hooks::builtin_hooks::location::*};
+    ///
+    /// let location = Location { file: "the-answer.rs", line: 42 };
+    /// let mut attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
+    /// let mutable = attachment.as_ref();
+    /// let formatting = mutable.preferred_formatting_style(FormattingFunction::Display);
+    /// assert_eq!(formatting.priority, 20);
+    /// ```
     #[must_use]
     pub fn preferred_formatting_style(
         &self,
@@ -408,6 +498,20 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*,
+    /// # report_attachment::ReportAttachment,
+    /// # handlers::*, hooks::builtin_hooks::location::*};
+    ///
+    /// let location = Location { file: "the-answer.rs", line: 42 };
+    /// let mut attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
+    /// let mutable = attachment.as_ref();
+    /// let formatting = mutable.preferred_formatting_style_unhooked(FormattingFunction::Display);
+    /// assert_eq!(formatting.priority, 20);
+    /// ```
     #[must_use]
     pub fn preferred_formatting_style_unhooked(
         &self,
@@ -425,6 +529,16 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     /// See [`PreformattedAttachment`] for more information.
     ///
     /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let mutable = attachment.as_mut();
+    /// let preformat = mutable.preformat();
+    /// assert_eq!(attachment.format_inner().to_string(), preformat.format_inner().to_string());
+    /// ```
     #[track_caller]
     #[must_use]
     pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
@@ -546,6 +660,23 @@ impl<'a> ReportAttachmentMut<'a, Dynamic> {
     ///    calling [`inner_type_id()`] first.
     ///
     /// [`inner_type_id()`]: ReportAttachmentRef::inner_type_id
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{
+    /// #     markers::Dynamic,
+    /// #     prelude::*,
+    /// #     report_attachment::{ReportAttachment, ReportAttachmentMut},
+    /// # };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let mut attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let mutable: ReportAttachmentMut<'_, Dynamic> = attachment.as_mut();
+    ///
+    /// // SAFETY: We know the attachment contains &str data
+    /// let data: &&str = unsafe { mutable.downcast_inner_unchecked() };
+    /// assert_eq!(*data, "text data");
+    /// ```
     #[must_use]
     pub unsafe fn downcast_inner_unchecked<A>(&self) -> &A
     where

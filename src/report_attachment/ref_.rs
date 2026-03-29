@@ -162,14 +162,12 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ///
     /// # Examples
     /// ```
-    /// use std::any::TypeId;
-    ///
-    /// use rootcause::{
-    ///     markers::Dynamic,
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
-    ///
+    /// # use std::any::TypeId;
+    /// # use rootcause::{
+    /// #     markers::Dynamic,
+    /// #     prelude::*,
+    /// #     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// # };
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
     /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
@@ -193,6 +191,16 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ///
     /// [`handlers::Display`]: crate::handlers::Display
     /// [`handlers::Debug`]: crate::handlers::Debug
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// let reference = attachment.as_ref();
+    /// assert_eq!(reference.inner_handler_type_id(), TypeId::of::<Display>());
+    /// ```
     #[must_use]
     pub fn inner_handler_type_id(self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
@@ -212,6 +220,16 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner_unhooked`]: Self::format_inner_unhooked
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// let reference = attachment.as_ref();
+    /// assert_eq!(reference.format_inner().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn format_inner(self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
@@ -239,6 +257,16 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`format_inner`]: Self::format_inner
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, handlers::*};
+    /// # use std::any::*;
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// let reference = attachment.as_ref();
+    /// assert_eq!(reference.format_inner_unhooked().to_string(), "42");
+    /// ```
     #[must_use]
     pub fn format_inner_unhooked(self) -> impl core::fmt::Display + core::fmt::Debug {
         format_helper(
@@ -264,6 +292,17 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ///
     /// To get back the attachment with a concrete `A` you can use the method
     /// [`ReportAttachmentRef::downcast_attachment`].
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment, markers::*};
+    /// let known_type = ReportAttachment::new_sendsync(42i32);
+    /// let the_answer = known_type.format_inner().to_string();
+    /// let reference = known_type.as_ref();
+    /// let unknown_type = reference.into_dynamic();
+    /// assert_eq!(unknown_type.format_inner().to_string(), the_answer);
+    /// ```
     #[must_use]
     pub fn into_dynamic(self) -> ReportAttachmentRef<'a, Dynamic> {
         let raw = self.as_raw_ref();
@@ -293,6 +332,20 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ///
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*,
+    /// # report_attachment::ReportAttachment,
+    /// # handlers::*, hooks::builtin_hooks::location::*};
+    ///
+    /// let location = Location { file: "the-answer.rs", line: 42 };
+    /// let attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
+    /// let reference = attachment.as_ref();
+    /// let formatting = reference.preferred_formatting_style(FormattingFunction::Display);
+    /// assert_eq!(formatting.priority, 20);
+    /// ```
     #[must_use]
     pub fn preferred_formatting_style(
         self,
@@ -321,6 +374,20 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// [`Display`]: core::fmt::Display
     /// [`Debug`]: core::fmt::Debug
     /// [`preferred_formatting_style`]: Self::preferred_formatting_style
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*,
+    /// # report_attachment::ReportAttachment,
+    /// # handlers::*, hooks::builtin_hooks::location::*};
+    ///
+    /// let location = Location { file: "the-answer.rs", line: 42 };
+    /// let attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
+    /// let reference = attachment.as_ref();
+    /// let formatting = reference.preferred_formatting_style_unhooked(FormattingFunction::Display);
+    /// assert_eq!(formatting.priority, 20);
+    /// ```
     #[must_use]
     pub fn preferred_formatting_style_unhooked(
         self,
@@ -338,6 +405,16 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     /// See [`PreformattedAttachment`] for more information.
     ///
     /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// let reference = attachment.as_ref();
+    /// let preformat = reference.preformat();
+    /// assert_eq!(attachment.format_inner().to_string(), preformat.format_inner().to_string());
+    /// ```
     #[track_caller]
     #[must_use]
     pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
@@ -490,18 +567,18 @@ impl<'a> ReportAttachmentRef<'a, Dynamic> {
     ///
     /// # Examples
     /// ```
-    /// use rootcause::{
-    ///     markers::Dynamic,
-    ///     prelude::*,
-    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
-    /// };
+    /// # use rootcause::{
+    /// #     markers::Dynamic,
+    /// #     prelude::*,
+    /// #     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// # };
     ///
     /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
     /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
-    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
+    /// let reference: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
     ///
     /// // SAFETY: We know the attachment contains &str data
-    /// let data: &&str = unsafe { attachment_ref.downcast_inner_unchecked() };
+    /// let data: &&str = unsafe { reference.downcast_inner_unchecked() };
     /// assert_eq!(*data, "text data");
     /// ```
     #[must_use]

@@ -1310,7 +1310,7 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// ```
     /// # use rootcause::{prelude::*, markers::SendSync};
     /// # use core::any::TypeId;
-    /// let report = Report::new_sendsync_custom::<handlers::Debug>("error message");
+    /// let report : Report<&'static str> = Report::new_custom::<handlers::Debug>("error message");
     /// let handler_type = report.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
