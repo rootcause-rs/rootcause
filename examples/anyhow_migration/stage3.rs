@@ -5,12 +5,16 @@
 //! users.
 //!
 //! **What changed:**
-//! - Internal methods like `flush_internal()` now use rootcause
-//! - Can add rich context (`.attach()`) in internal implementation
-//! - Use `.into_anyhow()` to convert back when returning from trait methods
+//! - Internal methods like [`.flush_internal()`] now use rootcause
+//! - Can add rich context ([`.attach()`]) in internal implementation
+//! - Use [`.into_anyhow()`] to convert back when returning from trait methods
+//!
+//! [`.flush_internal()`]: metrics::MetricsCollector::flush_internal
+//! [`.attach()`]: rootcause::Report::attach
+//! [`.into_anyhow()`]: rootcause::compat::anyhow1::IntoAnyhow::into_anyhow
 //!
 //! **What stayed the same:**
-//! - Public `Metrics` trait still uses `anyhow::Result` (no breaking change)
+//! - Public [`Metrics`](metrics::Metrics) trait still uses [`anyhow::Result`] (no breaking change)
 //! - KV store and application unchanged from stage 2
 
 // -------------------------------------------------------------------------

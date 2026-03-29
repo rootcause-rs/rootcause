@@ -46,7 +46,7 @@ pub(crate) struct ReportData<C: 'static> {
     /// The following safety invariants are guaranteed to be upheld as long as
     /// this struct exists:
     ///
-    /// 1. The vtable must always point to a `ReportVtable` created for the
+    /// 1. The vtable must always point to a [`ReportVtable`] created for the
     ///    actual context type `C` stored below. This is true even when accessed
     ///    via type-erased pointers.
     vtable: &'static ReportVtable,
@@ -220,7 +220,7 @@ impl<'a> RawReportMut<'a> {
     /// The caller must ensure:
     ///
     /// 1. In case there are other references to the same report and they make
-    ///    assumptions about the report children being `Send+Sync`, then those
+    ///    assumptions about the report children being [`Send`] and [`Sync`], then those
     ///    assumptions must be upheld when modifying the children.
     #[inline]
     pub unsafe fn into_children_mut(self) -> &'a mut Vec<RawReport> {
@@ -245,7 +245,7 @@ impl<'a> RawReportMut<'a> {
         unsafe { &mut *children_ptr }
     }
 
-    /// Deconstructs the `RawReportMut` and returns a mutable reference to the
+    /// Deconstructs the [`RawReportMut`] and returns a mutable reference to the
     /// attachments vector.
     ///
     /// # Safety
@@ -253,7 +253,7 @@ impl<'a> RawReportMut<'a> {
     /// The caller must ensure:
     ///
     /// 1. In case there are other references to the same report and they make
-    ///    assumptions about the report attachments being `Send+Sync`, then
+    ///    assumptions about the report attachments being [`Send`] and [`Sync`], then
     ///    those assumptions must be upheld when modifying the attachments.
     #[inline]
     pub unsafe fn into_attachments_mut(self) -> &'a mut Vec<RawAttachment> {

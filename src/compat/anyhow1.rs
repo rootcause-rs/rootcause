@@ -145,9 +145,9 @@ use crate::{Report, compat::ReportAsError, markers};
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`anyhow::Error`]'s `Display` implementation
-/// - **Debug**: Uses [`anyhow::Error`]'s `Debug` implementation
-/// - **Source**: Uses [`anyhow::Error`]'s `source` method to traverse the error
+/// - **Display**: Uses [`anyhow::Error`]'s [`std::fmt::Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses [`anyhow::Error`]'s  [`std::fmt::Debug`](core::fmt::Debug)implementation
+/// - **Source**: Uses [`anyhow::Error`]'s [`source`](core::error::Error::source) method to traverse the error
 ///   chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
@@ -214,7 +214,7 @@ impl<T> IntoRootcause for anyhow::Result<T> {
 
 /// A trait for converting rootcause [`Report`]s into [`anyhow::Error`].
 ///
-/// This trait provides the `.into_anyhow()` method for converting rootcause
+/// This trait provides the [`.into_anyhow()`](IntoAnyhow::into_anyhow) method for converting rootcause
 /// reports into anyhow errors. It's implemented for both [`Report`] and
 /// [`Result<T, Report>`], making it easy to call anyhow-based APIs from
 /// rootcause code.
@@ -252,9 +252,9 @@ impl<T> IntoRootcause for anyhow::Result<T> {
 /// println!("{}", anyhow_err);
 /// ```
 ///
-/// ## Using `From` Instead
+/// ## Using [`From`] Instead
 ///
-/// You can also use the `From` trait for explicit conversions:
+/// You can also use the [`From`] trait for explicit conversions:
 ///
 /// ```
 /// use rootcause::{compat::anyhow1::IntoAnyhow, prelude::*};

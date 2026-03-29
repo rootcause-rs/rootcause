@@ -28,8 +28,8 @@
 //! you control all the code but want to be cautious about breaking changes.
 //!
 //! The example treats each component as if it came from a separate crate:
-//! - `metrics`: A metrics collection library (pretend you depend on this)
-//! - `kv_store`: A key-value store (pretend you depend on this too)
+//! - [`metrics`](v1_original_anyhow::metrics): A metrics collection library (pretend you depend on this)
+//! - [`kv_store`](v1_original_anyhow::kv_store): A key-value store (pretend you depend on this too)
 //! - Your application: The code you're migrating
 //!
 //! # Migration Stages

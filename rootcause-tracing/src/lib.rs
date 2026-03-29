@@ -285,7 +285,7 @@ pub struct SpanCollector {
     /// Whether to capture spans for all reports or only leaf reports (those
     /// without children).
     ///
-    /// When `true`, all reports get span attachments. When `false`, only leaf
+    /// When [`true`](bool), all reports get span attachments. When [`false`](bool), only leaf
     /// reports do.
     pub capture_span_for_reports_with_children: bool,
 }
@@ -383,7 +383,7 @@ impl ReportCreationHook for SpanCollector {
 /// Extension trait for attaching tracing spans to reports.
 ///
 /// This trait provides methods to easily attach the current tracing span
-/// to a report or to the error contained within a `Result`.
+/// to a report or to the error contained within a [`Result`].
 ///
 /// # Examples
 ///
@@ -399,7 +399,7 @@ impl ReportCreationHook for SpanCollector {
 /// }
 /// ```
 ///
-/// Attach tracing span to a `Result`:
+/// Attach tracing span to a [`Result<T, Report>`]:
 ///
 /// ```
 /// use rootcause::{Report, report};

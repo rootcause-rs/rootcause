@@ -127,16 +127,16 @@ use crate::{
 /// A custom handler for boxed error trait objects that delegates to the
 /// underlying error's formatting.
 ///
-/// This handler ensures that boxed errors (`Box<dyn Error>` and `Box<dyn Error
-/// + Send + Sync>`) display identically whether they're used directly or
+/// This handler ensures that boxed errors ([`Box<dyn Error>`] and
+/// ([`Box<dyn Error + Send + Sync>`]) display identically whether they're used directly or
 /// wrapped in a rootcause [`Report`]. You typically don't need to use this
 /// handler directly - it's used automatically by the [`IntoRootcause`] trait.
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses the boxed error's `Display` implementation
-/// - **Debug**: Uses the boxed error's `Debug` implementation
-/// - **Source**: Uses the boxed error's `source` method to traverse the error
+/// - **Display**: Uses the boxed error's [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses the boxed error's [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses the boxed error's [`source`](core::error::Error::source) method to traverse the error
 ///   chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
@@ -217,10 +217,10 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
 
 /// A trait for converting rootcause [`Report`]s into boxed error trait objects.
 ///
-/// This trait provides the `.into_boxed_error()` method for converting
+/// This trait provides the [`.into_boxed_error()`](IntoBoxedError::into_boxed_error) method for converting
 /// rootcause reports into standard Rust error trait objects. It's implemented
 /// for both [`Report`] and [`Result<T, Report>`], making it easy to integrate
-/// with APIs that expect `Box<dyn Error>`.
+/// with APIs that expect [`Box<dyn Error>`].
 ///
 /// The specific type of boxed error depends on the thread safety marker:
 /// - [`SendSync`] reports convert to `Box<dyn Error + Send + Sync>`
@@ -259,9 +259,9 @@ impl ContextHandler<Box<dyn Error>> for BoxedErrorHandler {
 /// println!("{}", boxed_err);
 /// ```
 ///
-/// ## Using `From` Instead
+/// ## Using [`From`] Instead
 ///
-/// You can also use the `From` trait for explicit conversions:
+/// You can also use the [`From`] trait for explicit conversions:
 ///
 /// ```
 /// use std::error::Error;

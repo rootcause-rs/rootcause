@@ -1,7 +1,7 @@
 //! Quick reference for bidirectional boxed error interoperability.
 //!
 //! This example demonstrates all the ways to convert between rootcause
-//! [`Report`]s and boxed error trait objects (`Box<dyn Error>`). This is
+//! [`Report`]s and boxed error trait objects ([`Box<dyn Error>`]). This is
 //! useful for integrating with APIs that expect standard Rust error types.
 //!
 //! # Conversion Overview
@@ -11,9 +11,9 @@
 //!   Error>`
 //!
 //! ## From Rootcause to Boxed Errors
-//! - `.into_boxed_error()` - Convert `Result<T, Report>` or `Report`
-//! - `.into()` - Use `From<Report>` for automatic conversion
-//! - `?` operator - Automatically converts `Report` to `Box<dyn Error>` in
+//! - [`.into_boxed_error()`] - Convert [`Result<T, Report>`] or [`Report`]
+//! - [`.into()`](Into::into) - Use [`From<Report>`] for automatic conversion
+//! - `?` operator - Automatically converts [`Report`] to [`Box<dyn Error>`] in
 //!   functions returning boxed errors
 //!
 //! # Thread Safety

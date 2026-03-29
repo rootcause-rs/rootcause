@@ -255,6 +255,23 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
 
     /// Reborrows the [`ReportAttachmentMut`] to return a new
     /// [`ReportAttachmentMut`] with a shorter lifetime.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::handlers::*;
+    /// # use rootcause::report_attachment::*;
+    /// let mut atch = ReportAttachment::new_sendsync_custom::<Display>(40i32);
+    /// {
+    ///     let mut atch_mut_1 = atch.as_mut();
+    ///     {
+    ///         let mut atch_mut_2 = atch_mut_1.as_mut();
+    ///         *atch_mut_2.inner_mut() += 1;
+    ///     }
+    ///     *atch_mut_1.inner_mut() += 1;
+    /// }
+    /// assert_eq!(atch.inner(), &42i32);
+    /// ```
     #[must_use]
     pub fn as_mut(&mut self) -> ReportAttachmentMut<'_, A> {
         let raw = self.as_raw_mut();

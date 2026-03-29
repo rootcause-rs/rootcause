@@ -362,31 +362,37 @@ pub struct Cloneable;
 
 /// Marker type for non-cloneable report references.
 ///
-/// This marker is used exclusively with [`ReportRef<C,
-/// Uncloneable>`](crate::ReportRef) (not [`Report`](crate::Report)). It
-/// indicates that the reference does not provide the
-/// [`clone_arc`](crate::ReportRef::clone_arc) method to obtain an owned report.
+/// This marker is used exclusively with
+/// [`ReportRef<C, Uncloneable>`](crate::ReportRef) (not [`Report`].
+/// It indicates that the reference does not provide the
+/// [`clone_arc`] method to obtain an owned report.
 ///
-/// Note that `ReportRef` itself is always `Copy` and `Clone` - you can always
-/// copy the reference itself. The `Uncloneable` marker only prevents cloning
-/// the underlying `Arc` to get an owned `Report`.
+/// Note that [`ReportRef`] itself is always [`Copy`] and [`Clone`] - you can always
+/// copy the reference itself. The [`Uncloneable`] marker only prevents cloning
+/// the underlying [`Arc`] to get an owned [`Report`].
 ///
 /// # Common Uses
 ///
-/// `Uncloneable` references typically arise in two situations:
+/// [`Uncloneable`] references typically arise in two situations:
 ///
-/// 1. **Taking a reference to a `Mutable` report**: When you call
-///    [`as_ref`](crate::Report::as_ref) on a `Report<C, Mutable>`, you get a
-///    `ReportRef<C, Uncloneable>` because the underlying report has unique
+/// 1. **Taking a reference to a [`Mutable`] report**: When you call
+///    [`as_ref`] on a [`Report<C, Mutable>`](crate::Report), you get a
+///    [`ReportRef<C, Uncloneable>`](crate::ReportRef) because the underlying report has unique
 ///    ownership.
 ///
-/// 2. **Explicitly restricting cloneability**: You can convert a `ReportRef<C,
-///    Cloneable>` to `ReportRef<C, Uncloneable>` when you want to pass a
-///    reference that explicitly cannot use `clone_arc`, ensuring the recipient
+/// 2. **Explicitly restricting cloneability**: You can convert a
+///     [`ReportRef<C, Cloneable>`](crate::ReportRef) to
+///    [`ReportRef<C, Uncloneable>`](crate::ReportRef) when you want to pass a
+///    reference that explicitly cannot use [`clone_arc`], ensuring the recipient
 ///    can only inspect the report without obtaining ownership. This can be
 ///    useful in APIs that need to accept both cloneable and uncloneable
 ///    references.
 ///
+/// [`as_ref`]: crate::Report::as_ref
+/// [`clone_arc`]: crate::ReportRef::clone_arc
+/// [`ReportRef`]: crate::ReportRef
+/// [`Arc`]: triomphe::Arc
+/// [`Report`]: crate::Report
 ///
 /// # Examples
 ///

@@ -39,7 +39,7 @@
 //!   support flexible integration patterns
 //! - **Information preservation**: Maintain error context and formatting across
 //!   conversions where possible
-//! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits
+//! - **Ergonomic APIs**: Use familiar Rust patterns like [`From`]/[`Into`] traits
 //!   and extension traits with descriptive method names
 //!
 //! # Example
@@ -80,8 +80,8 @@ use crate::{
 /// handling libraries into rootcause reports. It's designed to be implemented
 /// by compatibility modules for different error handling libraries.
 ///
-/// The trait provides the `.into_rootcause()` method, which can convert both
-/// individual error values and `Result` types. This makes it easy to integrate
+/// The trait provides the [`.into_rootcause()`](IntoRootcause::into_rootcause) method, which can convert both
+/// individual error values and [`Result`] types. This makes it easy to integrate
 /// external error types with rootcause's error handling.
 ///
 /// # When to Use
@@ -137,15 +137,15 @@ use crate::{
 pub trait IntoRootcause {
     /// The type produced by the conversion.
     ///
-    /// For error types, this is typically [`Report`]. For `Result` types, this
-    /// is typically `Result<T, Report>`.
+    /// For error types, this is typically [`Report`]. For [`Result`] types, this
+    /// is typically [`Result<T, Report>`].
     type Output;
 
     /// Converts this value into a rootcause type.
     ///
     /// The specific behavior depends on the type being converted:
     /// - For error types: wraps the error in a [`Report`]
-    /// - For `Result` types: converts the error variant while preserving the
+    /// - For [`Result`] types: converts the error variant while preserving the
     ///   success value
     ///
     /// # Examples

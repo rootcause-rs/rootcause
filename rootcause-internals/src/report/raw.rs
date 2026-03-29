@@ -61,12 +61,14 @@ pub struct RawReport {
     /// this struct exists:
     ///
     /// 1. The pointer must have been created from a
-    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
-    ///    `triomphe::Arc::into_raw`.
-    /// 2. The pointer retains full provenance over the `Arc` for the entire
+    ///    [`triomphe::Arc<ReportData<C>>`] for some `C` using
+    ///    [`triomphe::Arc::into_raw`].
+    /// 2. The pointer retains full provenance over the [`Arc`] for the entire
     ///    lifetime of this object (i.e., it was not derived from a `&T`)
-    /// 3. The pointer will point to the same `ReportData<C>` for the entire
+    /// 3. The pointer will point to the same [`ReportData<C>`] for the entire
     ///    lifetime of this object.
+    ///
+    /// [`Arc`]: triomphe::Arc
     ptr: NonNull<ReportData<Erased>>,
 }
 
@@ -194,12 +196,14 @@ pub struct RawReportRef<'a> {
     /// this struct exists:
     ///
     /// 1. The pointer must have been created from a
-    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
-    ///    `triomphe::Arc::into_raw`.
-    /// 2. The pointer retains full provenance over the `Arc` for the entire
+    ///    [`triomphe::Arc<ReportData<C>>`] for some `C` using
+    ///    [`triomphe::Arc::into_raw`].
+    /// 2. The pointer retains full provenance over the [`Arc`] for the entire
     ///    lifetime of this object (i.e., it was not derived from a `&T`)
-    /// 3. The pointer will point to the same `ReportData<C>` for the entire
+    /// 3. The pointer will point to the same [`ReportData<C>`] for the entire
     ///    lifetime of this object.
+    ///
+    /// [`Arc`]: triomphe::Arc
     ptr: NonNull<ReportData<Erased>>,
 
     /// Marker to tell the compiler that we should
@@ -384,16 +388,16 @@ pub struct RawReportMut<'a> {
     /// this struct exists:
     ///
     /// 1. The pointer must have been created from a
-    ///    `triomphe::Arc<ReportData<C>>` for some `C` using
-    ///    `triomphe::Arc::into_raw`.
-    /// 2. The pointer will point to the same `ReportData<C>` for the entire
+    ///    [`triomphe::Arc<ReportData<C>>`] for some `C` using
+    ///    [`triomphe::Arc::into_raw`].
+    /// 2. The pointer will point to the same [`ReportData<C>`] for the entire
     ///    lifetime of this object.
     /// 3. This pointer is valid for exclusive mutable access to the
-    ///    `ReportData` with the same semantics as a `&'a mut ReportData<C>`.
+    ///    [`ReportData`] with the same semantics as a [`&'a mut ReportData<C>`](ReportData).
     ptr: NonNull<ReportData<Erased>>,
 
     /// Marker to tell the compiler that we should
-    /// behave the same as a `&'a mut ReportData<Erased>`
+    /// behave the same as a [`&'a mut ReportData<Erased>`](ReportData)
     _marker: core::marker::PhantomData<&'a mut ReportData<Erased>>,
 }
 
