@@ -23,7 +23,7 @@ compat-error-stack06 = ["dep:error-stack"]
 compat-eyre06 = ["dep:eyre"]
 
 [dependencies]
-hashbrown = { version = "0.16.0", default-features = false }
+hashbrown = { version = "0.17.0", default-features = false }
 indexmap = { version = "2.13.0", default-features = false }
 rustc-hash = { version = "2.1.1", default-features = false }
 triomphe = { version = "0.1.15", default-features = false }
