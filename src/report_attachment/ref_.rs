@@ -3,6 +3,7 @@ use core::any::TypeId;
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
 use crate::{
+    hooks::attachment_formatter::AttachmentParent,
     markers::{Dynamic, SendSync},
     preformatted::{self, PreformattedAttachment},
     report_attachment::ReportAttachment,
@@ -221,6 +222,32 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
             },
             |attachment, formatter| {
                 crate::hooks::attachment_formatter::debug_attachment(attachment, None, formatter)
+            },
+        )
+    }
+
+    /// Formats the inner attachment data with formatting hooks applied
+    /// while passing in an [`AttachmentParent`] as well.
+    #[must_use]
+    pub fn format_inner_with_parent(
+        self,
+        parent: AttachmentParent<'_>,
+    ) -> impl core::fmt::Display + core::fmt::Debug {
+        format_helper(
+            (self.into_dynamic(), parent),
+            |(attachment, parent), formatter| {
+                crate::hooks::attachment_formatter::display_attachment(
+                    attachment,
+                    Some(parent),
+                    formatter,
+                )
+            },
+            |(attachment, parent), formatter| {
+                crate::hooks::attachment_formatter::debug_attachment(
+                    attachment,
+                    Some(parent),
+                    formatter,
+                )
             },
         )
     }

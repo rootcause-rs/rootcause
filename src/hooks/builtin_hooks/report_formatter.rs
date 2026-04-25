@@ -64,7 +64,7 @@ use rootcause_internals::handlers::{
 
 use crate::{
     ReportRef,
-    hooks::report_formatter::ReportFormatter,
+    hooks::{attachment_formatter::AttachmentParent, report_formatter::ReportFormatter},
     markers::{Dynamic, Local, Uncloneable},
     report_attachment::ReportAttachmentRef,
 };
@@ -815,7 +815,11 @@ impl NodeConfig {
 }
 type Appendices<'a> = IndexMap<
     &'static str,
-    Vec<(ReportAttachmentRef<'a, Dynamic>, FormattingFunction)>,
+    Vec<(
+        ReportAttachmentRef<'a, Dynamic>,
+        AttachmentParent<'a>,
+        FormattingFunction,
+    )>,
     rustc_hash::FxBuildHasher,
 >;
 
@@ -841,7 +845,11 @@ impl ReportFormatter for DefaultReportFormatter {
 }
 
 type TmpValueBuffer = String;
-type TmpAttachmentsBuffer<'a> = Vec<(AttachmentFormattingStyle, ReportAttachmentRef<'a, Dynamic>)>;
+type TmpAttachmentsBuffer<'a> = Vec<(
+    AttachmentFormattingStyle,
+    ReportAttachmentRef<'a, Dynamic>,
+    usize,
+)>;
 
 impl<'a, 'b> DefaultFormatterState<'a, 'b> {
     fn new(
@@ -1012,33 +1020,44 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             report
                 .attachments()
                 .iter()
-                .map(|attachment| {
+                .enumerate()
+                .map(|(original_index, attachment)| {
                     (
                         attachment.preferred_formatting_style(self.report_formatting_function),
                         attachment,
+                        original_index,
                     )
                 })
-                .filter(
-                    |(formatting_style, _attachment)| match formatting_style.placement {
+                .filter(|(formatting_style, _attachment, _index)| {
+                    match formatting_style.placement {
                         AttachmentFormattingPlacement::Opaque => {
                             opaque_attachment_count += 1;
                             false
                         }
                         AttachmentFormattingPlacement::Hidden => false,
                         _ => true,
-                    },
-                ),
+                    }
+                }),
         );
         tmp_attachments_buffer
-            .sort_by_key(|(style1, _attachment)| core::cmp::Reverse(style1.priority));
-        for (attachment_index, &(attachment_formatting_style, attachment)) in
+            .sort_by_key(|(style1, _attachment, _index)| core::cmp::Reverse(style1.priority));
+        for (display_index, &(attachment_formatting_style, attachment, original_index)) in
             tmp_attachments_buffer.iter().enumerate()
         {
-            let is_last_attachment = attachment_index + 1 == tmp_attachments_buffer.len();
+            let is_last_attachment = display_index + 1 == tmp_attachments_buffer.len();
+            // `original_index` reflects an attachment's position in the parent report's original
+            // attachment list.
+            // It is independent of any sorting or filtering the formatter may apply for display
+            // purposes.
+            let parent = AttachmentParent {
+                report,
+                attachment_index: original_index,
+            };
             self.format_attachment(
                 tmp_value_buffer,
                 attachment_formatting_style,
                 attachment,
+                parent,
                 is_last_attachment && !has_children,
             )?;
         }
@@ -1098,6 +1117,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
         tmp_value_buffer: &mut TmpValueBuffer,
         attachment_formatting_style: AttachmentFormattingStyle,
         attachment: ReportAttachmentRef<'a, Dynamic>,
+        attachment_parent: AttachmentParent<'a>,
         is_last: bool,
     ) -> fmt::Result {
         match attachment_formatting_style.placement {
@@ -1110,7 +1130,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 self.format_item(
                     tmp_value_buffer,
                     formatting,
-                    attachment.format_inner(),
+                    attachment.format_inner_with_parent(attachment_parent),
                     attachment_formatting_style.function,
                 )?;
             }
@@ -1136,7 +1156,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                         this.format_item(
                             tmp_value_buffer,
                             &self.config.attachment_headered_formatting_data,
-                            attachment.format_inner(),
+                            attachment.format_inner_with_parent(attachment_parent),
                             attachment_formatting_style.function,
                         )?;
                         if let Some(headered_attachment_data_suffix) =
@@ -1151,7 +1171,11 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             }
             AttachmentFormattingPlacement::Appendix { appendix_name } => {
                 let appendices = self.appendices.entry(appendix_name).or_default();
-                appendices.push((attachment, attachment_formatting_style.function));
+                appendices.push((
+                    attachment,
+                    attachment_parent,
+                    attachment_formatting_style.function,
+                ));
                 let formatting = if is_last {
                     &self.config.notice_see_also_last_formatting
                 } else {
@@ -1270,7 +1294,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
 
         let mut is_first = true;
         for (appendix_name, appendices) in &appendices {
-            for (appendix_index, &(attachment, formatting_function)) in
+            for (appendix_index, &(attachment, attachment_parent, formatting_function)) in
                 appendices.iter().enumerate()
             {
                 if is_first {
@@ -1285,7 +1309,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 self.format_item(
                     tmp_value_buffer,
                     &self.config.appendix_body,
-                    attachment.format_inner(),
+                    attachment.format_inner_with_parent(attachment_parent),
                     formatting_function,
                 )?;
             }

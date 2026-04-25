@@ -68,6 +68,11 @@
 //!
 //! See the individual module documentation for detailed integration guides and
 //! migration strategies.
+//!
+//! [`anyhow1`]: https://docs.rs/anyhow/1/anyhow
+//! [`error_stack06`]: https://docs.rs/error-stack/0.6/error_stack
+//! [`error_stack05`]: https://docs.rs/error-stack/0.5/error_stack
+//! [`eyre06`]: https://docs.rs/eyre/0.6/eyre
 
 use crate::{
     Report, ReportRef,
