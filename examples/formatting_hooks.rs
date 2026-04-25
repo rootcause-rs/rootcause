@@ -175,7 +175,7 @@ impl AttachmentFormatterHook<RequestId> for RequestIdFormatter {
         let id = attachment.inner().0;
         // The `parent` is `Some` when the hook is called form a `ReportFormatter`
         // and `None` if the attachment is being formatted in isolation -
-        // such as `attachment.format_inner()` or `println!("{}", attachment_ref`.
+        // such as `attachment.format_inner()` or `println!("{attachment}")`
         match parent {
             Some(parent) => write!(
                 f,
