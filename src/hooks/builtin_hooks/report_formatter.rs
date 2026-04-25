@@ -1040,7 +1040,7 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
                 }),
         );
         tmp_attachments_buffer
-            .sort_by_key(|(style, _attachment, _index)| core::cmp::Reverse(style.priority));
+            .sort_by_key(|(style1, _attachment, _index)| core::cmp::Reverse(style1.priority));
         for (display_index, &(attachment_formatting_style, attachment, original_index)) in
             tmp_attachments_buffer.iter().enumerate()
         {
