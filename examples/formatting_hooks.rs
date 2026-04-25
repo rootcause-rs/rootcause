@@ -16,7 +16,8 @@ use rootcause::{
     ReportRef,
     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
     hooks::{
-        Hooks, attachment_formatter::AttachmentFormatterHook,
+        Hooks,
+        attachment_formatter::{AttachmentFormatterHook, AttachmentParent},
         context_formatter::ContextFormatterHook,
     },
     markers::{Dynamic, Local, Uncloneable},
@@ -144,6 +145,49 @@ impl ContextFormatterHook<ValidationError> for ValidationErrorFormatter {
     }
 }
 
+// Example 4: Parent-aware formatting
+//
+// When the default report formatter walks an error tree, it hands every
+// attachment formatter hook an `AttachmentParent` providing acces to the parent report
+// and the attachment's position in that report's original attachment
+// list.
+// This lets a hook produce output that's contextually aware of where it
+// sits in the tree.
+
+#[derive(Debug)]
+struct RequestId(usize);
+
+impl core::fmt::Display for RequestId {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{}", self.0)
+    }
+}
+
+struct RequestIdFormatter;
+
+impl AttachmentFormatterHook<RequestId> for RequestIdFormatter {
+    fn display(
+        &self,
+        attachment: ReportAttachmentRef<'_, RequestId>,
+        parent: Option<AttachmentParent<'_>>,
+        f: &mut core::fmt::Formatter<'_>,
+    ) -> core::fmt::Result {
+        let id = attachment.inner().0;
+        // The `parent` is `Some` when the hook is called form a `ReportFormatter`
+        // and `None` if the attachment is being formatted in isolation -
+        // such as `attachment.format_inner()` or `println!("{}", attachment_ref`.
+        match parent {
+            Some(parent) => write!(
+                f,
+                "request_id[{id}] (attachment #{} on Report<{}>)",
+                parent.attachment_index,
+                parent.report.current_context_type_name(),
+            ),
+            None => write!(f, "request {id}"),
+        }
+    }
+}
+
 // Example 1: Control attachment placement in output
 // Demonstrates placing verbose diagnostic data in the appendix section instead
 // of inline
@@ -177,11 +221,19 @@ fn demo_context_formatting() -> Result<(), Report> {
     Err(report!(validation).into_dynamic())
 }
 
+fn demo_parent_aware_formatting() -> Result<(), Report> {
+    Err(report!("Outer failure")
+        .attach(RequestId(2))
+        .attach("internal note")
+        .attach(RequestId(1)))
+}
+
 fn main() {
     // Install formatting hooks
     Hooks::new()
         .attachment_formatter::<DatabaseQuery, _>(DatabaseQueryFormatter)
         .attachment_formatter::<ActionRequired, _>(ActionRequiredFormatter)
+        .attachment_formatter::<RequestId, _>(RequestIdFormatter)
         .context_formatter::<ValidationError, _>(ValidationErrorFormatter)
         .install()
         .expect("failed to install hooks");
@@ -200,6 +252,12 @@ fn main() {
 
     println!("Example 3: Context formatting\n");
     match demo_context_formatting() {
+        Ok(()) => println!("Success"),
+        Err(error) => eprintln!("{error}\n"),
+    }
+
+    println!("Example 4: Parent-aware attachment formatting\n");
+    match demo_parent_aware_formatting() {
         Ok(()) => println!("Success"),
         Err(error) => eprintln!("{error}"),
     }
