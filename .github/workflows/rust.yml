@@ -30,6 +30,8 @@ jobs:
           toolchain: ${{ matrix.rust }}
           components: rustfmt, clippy
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run fmt
         run: cargo fmt --check
@@ -59,6 +61,8 @@ jobs:
         with:
           toolchain: stable
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
@@ -80,6 +84,8 @@ jobs:
           toolchain: nightly
           components: miri rust-src
       - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
 
       - name: Run tests with miri
         run: |
