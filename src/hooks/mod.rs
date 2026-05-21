@@ -722,7 +722,24 @@ impl HooksHandle {
     /// 1. The caller must guarantee that, if this pointer came from being
     ///    installed globally, then all calls to [`use_hooks`] that might have
     ///    used this pointer have completed, and that no future calls to
-    ///    [`use_hooks`] will use this pointer.
+    ///    `use_hooks` will use this pointer.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause::hooks::Hooks;
+    ///
+    /// // Install an initial set of hooks; nothing was installed before so we
+    /// // get back `None`.
+    /// assert!(Hooks::new().replace().is_none());
+    ///
+    /// // Install replacement hooks; the previous handle is returned.
+    /// let old_handle = Hooks::new().replace().unwrap();
+    ///
+    /// // SAFETY: Nothing else in this doctest is using the previously
+    /// // installed hooks, so it is safe to reclaim them.
+    /// let _hooks = unsafe { old_handle.reclaim() };
+    /// ```
     pub unsafe fn reclaim(self) -> Hooks {
         // SAFETY:
         // - We know that the pointer is valid and was obtained from `Box::into_raw`

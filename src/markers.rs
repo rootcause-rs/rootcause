@@ -572,6 +572,29 @@ mod sealed_object_marker {
 ///
 /// This trait is sealed and cannot be implemented outside of this crate. You
 /// should use the provided implementations for [`Mutable`] and [`Cloneable`].
+///
+/// # Examples
+///
+/// [`ReportOwnershipMarker`] is typically used as a bound to write functions
+/// that accept both [`Mutable`] and [`Cloneable`] reports:
+///
+/// ```
+/// use rootcause::{
+///     markers::{Cloneable, Mutable, ReportOwnershipMarker},
+///     prelude::*,
+/// };
+///
+/// fn describe<O: ReportOwnershipMarker>(report: Report<&'static str, O>) -> String {
+///     report.current_context().to_string()
+/// }
+///
+/// let context: &'static str = "oops";
+/// let mutable: Report<&str, Mutable> = report!(context);
+/// assert_eq!(describe(mutable), "oops");
+///
+/// let cloneable: Report<&str, Cloneable> = report!(context).into_cloneable();
+/// assert_eq!(describe(cloneable), "oops");
+/// ```
 pub trait ReportOwnershipMarker: sealed_report_ownership_marker::Sealed {
     /// The ownership marker for references to this report type.
     ///
