@@ -232,7 +232,9 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     /// This method is only available when the attachment type is a specific
     /// type, and not [`Dynamic`].
     ///
-    /// ```rust
+    /// # Examples
+    ///
+    /// ```
     /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
     /// let mut attachment = ReportAttachment::new_sendsync(41i32);
     /// {
@@ -240,6 +242,7 @@ impl<A: Sized, T> ReportAttachment<A, T> {
     ///     *the_answer += 1;
     /// }
     /// assert_eq!("42", attachment.format_inner().to_string());
+    /// ```
     #[must_use]
     pub fn inner_mut(&mut self) -> &mut A {
         self.as_mut().into_inner_mut()

@@ -468,7 +468,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ///
     /// let location = Location { file: "the-answer.rs", line: 42 };
     /// let mut attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
-    /// let mutable = attachment.as_ref();
+    /// let mutable = attachment.as_mut();
     /// let formatting = mutable.preferred_formatting_style(FormattingFunction::Display);
     /// assert_eq!(formatting.priority, 20);
     /// ```
@@ -508,7 +508,7 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ///
     /// let location = Location { file: "the-answer.rs", line: 42 };
     /// let mut attachment = ReportAttachment::new_sendsync_custom::<LocationHandler>(location);
-    /// let mutable = attachment.as_ref();
+    /// let mutable = attachment.as_mut();
     /// let formatting = mutable.preferred_formatting_style_unhooked(FormattingFunction::Display);
     /// assert_eq!(formatting.priority, 20);
     /// ```
