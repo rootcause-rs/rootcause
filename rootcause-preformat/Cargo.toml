@@ -1,21 +1,16 @@
 [package]
-name = "rootcause-backtrace"
+name = "rootcause-preformat"
 version = "0.13.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns"]
-keywords = ["error", "error-handling", "ergonomic", "library", "backtrace"]
-description = "Backtraces support for the rootcause error reporting library"
+keywords = ["error", "error-handling", "ergonomic", "library", "preformat"]
+description = "Preformatting support for the rootcause error reporting library"
 repository = "https://github.com/rootcause-rs/rootcause"
-documentation = "https://docs.rs/rootcause-backtrace"
+documentation = "https://docs.rs/rootcause-preformat"
 rust-version = "1.89"
 
 [dependencies]
-backtrace = { version = "0.3.76", default-features = false, features = [
-  "std",
-  "cpp_demangle",
-] }
-unicode-ident = "1.0.24"
 
 # Internal dependencies
 rootcause = { path = "../", version = "=0.13.0" }

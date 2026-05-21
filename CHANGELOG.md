@@ -13,6 +13,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`. `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. Splitting `Deref` by thread-safety marker may break type inference at call sites of `Report::new_custom` / `Report::new`; use `new_sendsync_custom` / `new_local_custom` or explicit annotations to fix. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
 - Doc examples for nearly all public functions [#136](https://github.com/rootcause-rs/rootcause/pull/136).
 
+### Changed
+
+- Moved the preformat functionality out of `rootcause` and into a new companion crate, `rootcause-preformat`. The `preformatted` module, the `preformat`, `preformat_root`, and `context_transform_nested` methods on `Report`/`ReportRef`/`ReportMut`/`ReportAttachment*`/`ResultExt`, and the `display_preformatted`/`debug_preformatted` methods on the formatter-hook traits are removed; `AttachmentFormatterHook::preferred_formatting_style` and `ContextFormatterHook::preferred_context_formatting_style` now take the concrete type rather than `Dynamic`. The functionality is available through the `PreformatReportExt`, `PreformatAttachmentExt`, `PreformatRootExt`, and `ContextTransformNestedExt` extension traits in the new crate. [#148](https://github.com/rootcause-rs/rootcause/pull/148)
+
 ### Fixed
 
 - Fixed cross-compilation support in `rootcause-backtrace` by detecting the path separator from `Location::caller()` at compile time instead of from a build-script-recorded host constant [#134](https://github.com/rootcause-rs/rootcause/pull/134).
