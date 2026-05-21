@@ -904,36 +904,71 @@ impl Backtrace {
     }
 }
 
-impl FramePath {
-    fn new(path: BytesOrWideString<'_>) -> Self {
-        static REGEXES: OnceLock<[regex::Regex; 2]> = OnceLock::new();
-        let [std_regex, registry_regex] = REGEXES.get_or_init(|| {
-            [
-                // Matches Rust standard library paths:
-                // - /lib/rustlib/src/rust/library/{std|core|alloc}/src/...
-                // - /rustc/{40-char-hash}/library/{std|core|alloc}/src/...
-                regex::Regex::new(
-                    r"(?:/lib/rustlib/src/rust|^/rustc/[0-9a-f]{40})/library/(std|core|alloc)/src/.*$",
-                )
-                .expect("built-in regex pattern for std library paths should be valid"),
-                // Matches Cargo registry paths:
-                // - /.cargo/registry/src/{index}-{16-char-hash}/{crate}-{version}/src/...
-                regex::Regex::new(
-                    r"/\.cargo/registry/src/[^/]+-[0-9a-f]{16}/([^./]+)-[0-9]+\.[^/]*/src/.*$",
-                )
-                .expect("built-in regex pattern for cargo registry paths should be valid"),
-            ]
+/// Matches Rust standard library source paths and returns the crate name and byte offset.
+///
+/// Recognised paths:
+/// - `/lib/rustlib/src/rust/library/{std|core|alloc}/src/…`
+/// - `^/rustc/{40-hex-char hash}/library/{std|core|alloc}/src/…`
+fn match_std_library_path(path: &str) -> Option<(&'static str, usize)> {
+    const STD_CRATES: [&str; 3] = ["std", "core", "alloc"];
+
+    let (prefix, after_library) = path.split_once("/library/")?;
+
+    // The prefix must end with "/lib/rustlib/src/rust" or *be* "/rustc/{40 hex chars}"
+    let valid_prefix = prefix.ends_with("/lib/rustlib/src/rust")
+        || prefix.strip_prefix("/rustc/").map_or(false, |hash| {
+            hash.len() == 40 && hash.bytes().all(|b| b.is_ascii_hexdigit())
         });
 
+    if !valid_prefix {
+        return None;
+    }
+
+    // after_library is "{std|core|alloc}/src/…"; split on "/src/" to isolate the crate name.
+    let (crate_name, _) = after_library.split_once("/src/")?;
+    let crate_name = STD_CRATES
+        .iter()
+        .copied()
+        .find(|&name| name == crate_name)?;
+
+    let crate_start = prefix.len() + "/library/".len();
+    Some((crate_name, crate_start))
+}
+
+/// Matches Cargo registry source paths and returns the crate name and its byte offset.
+///
+/// Recognised paths:
+/// - `/.cargo/registry/src/{index}-{16-hex-char hash}/{crate}-{version}/src/…`
+fn match_cargo_registry_path(path: &str) -> Option<(&str, usize)> {
+    let (before_cargo, after_cargo) = path.split_once("/.cargo/registry/src/")?;
+
+    // Consume the "{index}-{16-hex-char}" directory component.
+    let (index_hash, after_index) = after_cargo.split_once('/')?;
+    let (_, hash) = index_hash.rsplit_once('-')?;
+    if hash.len() != 16 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+
+    // after_index is "{crate}-{version}/src/…"; split on "/src/" to isolate "{crate}-{version}".
+    let (crate_version, _) = after_index.split_once("/src/")?;
+
+    // create names + version numbers can be really silly. However crate names can't contain dots
+    // So find the first dot and split (crate-name-0.1.0-alpha into crate-name-0)
+    // Then right split on dash (crate-name-0 to crate-name)
+    let (crate_name, _) = crate_version.split_once('.')?;
+    let (crate_name, _) = crate_name.rsplit_once('-')?;
+
+    let crate_start_abs = before_cargo.len() + "/.cargo/registry/src/".len() + index_hash.len() + 1;
+    Some((crate_name, crate_start_abs))
+}
+
+impl FramePath {
+    fn new(path: BytesOrWideString<'_>) -> Self {
         let path_str = path.to_string();
 
-        if let Some(captures) = std_regex.captures(&path_str) {
+        if let Some((crate_name, crate_start)) = match_std_library_path(&path_str) {
             let raw_path = path.to_str_lossy().into_owned();
-            let crate_capture = captures
-                .get(1)
-                .expect("regex capture group 1 should exist for std library paths");
-            let split = crate_capture.start();
-            let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
+            let (prefix, suffix) = (&path_str[..crate_start - 1], &path_str[crate_start..]);
 
             Self {
                 raw_path,
@@ -942,19 +977,15 @@ impl FramePath {
                     prefix: prefix.to_string(),
                     suffix: suffix.to_string(),
                 }),
-                crate_name: Some(crate_capture.as_str().to_string().into()),
+                crate_name: Some(crate_name.to_string().into()),
             }
-        } else if let Some(captures) = registry_regex.captures(&path_str) {
+        } else if let Some((crate_name, crate_start)) = match_cargo_registry_path(&path_str) {
             let raw_path = path.to_str_lossy().into_owned();
-            let crate_capture = captures
-                .get(1)
-                .expect("regex capture group 1 should exist for cargo registry paths");
-            let split = crate_capture.start();
-            let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
+            let (prefix, suffix) = (&path_str[..crate_start - 1], &path_str[crate_start..]);
 
             Self {
                 raw_path,
-                crate_name: Some(crate_capture.as_str().to_string().into()),
+                crate_name: Some(crate_name.to_string().into()),
                 split_path: Some(FramePrefix {
                     prefix_kind: "CARGO",
                     prefix: prefix.to_string(),
