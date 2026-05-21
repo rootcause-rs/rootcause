@@ -19,7 +19,8 @@ default = []
 # Compatibility traits
 compat-anyhow1 = ["dep:anyhow"]
 compat-error-stack05 = ["dep:error-stack05"]
-compat-error-stack06 = ["dep:error-stack"]
+compat-error-stack06 = ["dep:error-stack06"]
+compat-error-stack07 = ["dep:error-stack07"]
 compat-eyre06 = ["dep:eyre"]
 
 [dependencies]
@@ -30,8 +31,9 @@ triomphe = { version = "0.1.15", default-features = false }
 
 # Optional dependencies
 anyhow = { version = "1.0.102", default-features = false, optional = true }
-error-stack = { version = "0.6.0", default-features = false, optional = true }
 error-stack05 = { package = "error-stack", version = "0.5.0", default-features = false, optional = true }
+error-stack06 = { package = "error-stack", version = "0.6.0", default-features = false, optional = true }
+error-stack07 = { package = "error-stack", version = "0.7.0", default-features = false, optional = true }
 eyre = { version = "0.6.12", default-features = false, optional = true }
 
 # Internal dependencies
@@ -63,7 +65,7 @@ required-features = ["compat-anyhow1"]
 
 [[example]]
 name = "error_stack_interop"
-required-features = ["compat-error-stack06"]
+required-features = ["compat-error-stack07"]
 
 [[example]]
 name = "eyre_interop"
