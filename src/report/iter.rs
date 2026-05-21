@@ -58,3 +58,25 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T> {
 impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> {}
 
 impl<'a, O, T> Unpin for ReportIter<'a, O, T> {}
+
+pub struct DowncastIterator<'a, D, Ownership: 'static, ThreadSafety: 'static> {
+    pub(crate) iter: ReportIter<'a, Ownership, ThreadSafety>,
+    pub(crate) _phantom: PhantomData<D>,
+}
+
+impl<'a, D: 'static, Ownership: 'static, ThreadSafety: 'static> Iterator
+    for DowncastIterator<'a, D, Ownership, ThreadSafety>
+{
+    type Item = &'a D;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(report) = self.iter.next() {
+            let Some(report) = report.downcast_current_context() else {
+                continue;
+            };
+            return Some(report);
+        }
+
+        None
+    }
+}

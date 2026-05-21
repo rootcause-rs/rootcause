@@ -1,4 +1,7 @@
-use core::any::{Any, TypeId};
+use core::{
+    any::{Any, TypeId},
+    marker::PhantomData,
+};
 
 use rootcause_internals::{
     RawReport,
@@ -8,7 +11,10 @@ use rootcause_internals::{
 use crate::{
     ReportConversion, ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
-    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
+    markers::{
+        self, Cloneable, Dynamic, Local, Mutable, ReportOwnershipMarker, SendSync, Uncloneable,
+    },
+    report::iter::DowncastIterator,
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -1558,6 +1564,55 @@ impl<O, T> Report<Dynamic, O, T> {
         // 7. This is guaranteed by the invariants of this type.
         // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::from_raw(raw) }
+    }
+
+    /// Returns an iterator over all contexts in the report hierarchy that can
+    /// be downcast to the specified type `D`.
+    ///
+    /// Iterates over the complete report hierarchy (including this report)
+    /// using [`iter_reports`](Self::iter_reports) and yields references to
+    /// contexts that successfully downcast to `D`.
+    ///
+    /// This is a convenience method combining
+    /// [`iter_reports`](Self::iter_reports) with
+    /// [`downcast_current_context`](Report::downcast_current_context).
+    ///
+    /// See also: [`iter_reports`](Self::iter_reports) for iterating over all
+    /// reports, [`downcast_current_context`](Report::downcast_current_context)
+    /// for downcasting a single report's context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// struct MyError {
+    ///     code: u32,
+    /// }
+    /// # impl std::fmt::Display for MyError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error {}", self.code) }
+    /// # }
+    ///
+    /// let child = report!(MyError { code: 404 }).into_dynamic();
+    /// let mut root = report!(MyError { code: 500 }).into_dynamic();
+    /// root.children_mut().push(child.into_cloneable());
+    ///
+    /// let codes: Vec<u32> = root
+    ///     .iter_downcast_context::<MyError>()
+    ///     .map(|e| e.code)
+    ///     .collect();
+    ///
+    /// assert_eq!(codes, vec![500, 404]);
+    /// ```
+    pub fn iter_downcast_context<D>(&self) -> DowncastIterator<'_, D, O::RefMarker, T>
+    where
+        O: ReportOwnershipMarker,
+        D: 'static,
+    {
+        DowncastIterator {
+            iter: self.iter_reports(),
+            _phantom: PhantomData,
+        }
     }
 }
 
