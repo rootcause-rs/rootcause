@@ -70,7 +70,7 @@ impl<'a, D: 'static, Ownership: 'static, ThreadSafety: 'static> Iterator
     type Item = &'a D;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(report) = self.iter.next() {
+        for report in self.iter.by_ref() {
             let Some(report) = report.downcast_current_context() else {
                 continue;
             };
