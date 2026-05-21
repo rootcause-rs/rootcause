@@ -83,7 +83,7 @@
 //!   Install hooks to attach backtraces to all errors, or use the extension
 //!   trait to add them selectively.
 //! - **[`rootcause-tracing`]** - Integration with the [`tracing`] crate, annotating
-//!   reports with what span they were created in.
+//!   reports with the span they were created in.
 //! - **[`rootcause-preformat`]** - Freeze a report's rendering by turning every
 //!   context and attachment into a `String`, producing a mutable `Send + Sync`
 //!   report regardless of the original types.
@@ -333,7 +333,6 @@
 //!
 //! [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
 //! [`examples/inspecting_errors.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/inspecting_errors.rs
-//! [`rootcause-preformat`]: https://docs.rs/rootcause-preformat
 //!
 //! # Acknowledgements
 //!

@@ -20,13 +20,13 @@ use crate::{
 /// - **Adding context**: [`context`](ResultExt::context),
 ///   [`context_with`](ResultExt::context_with), and variants add a new context
 ///   layer to the error
-/// - **Adding attachments**: [`attach`](ResultExt::attach),
-///   [`attach_with`](ResultExt::attach_with), and variants add supplementary
-///   data to the error
 /// - **Transforming contexts**: [`context_to`](ResultExt::context_to)
 ///   converts the context via the [`ReportConversion`] trait, and
 ///   [`context_transform`](ResultExt::context_transform) transforms it with
 ///   a closure
+/// - **Adding attachments**: [`attach`](ResultExt::attach),
+///   [`attach_with`](ResultExt::attach_with), and variants add supplementary
+///   data to the error
 ///
 /// Each method has a `local_*` variant for working with types that are not
 /// `Send + Sync`.
