@@ -13,7 +13,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a compatibility module for error-stack v0.7 [#169](https://github.com/rootcause-rs/rootcause/pull/169).
 - Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`; `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. May break type inference at some `Report::new*` call sites. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
 - Doc examples for nearly all public functions [#136](https://github.com/rootcause-rs/rootcause/pull/136).
-- Added `AttachmentParent` and `ReportAttachmentRef::format_inner_with_parent`, letting an `AttachmentFormatterHook` discover the report it lives on and its position in that report's attachment list. `AttachmentFormatterHook::display`, `debug`, `display_preformatted` and `debug_preformatted` now take an additional `Option<AttachmentParent<'_>>` parameter; existing implementations must add this parameter (use `_` to ignore). [#163](https://github.com/rootcause-rs/rootcause/pull/163).
+- `AttachmentFormatterHook::display` and `debug` now take an extra `Option<AttachmentParent<'_>>` parameter exposing the parent report and the attachment's index. [#163](https://github.com/rootcause-rs/rootcause/pull/163).
 
 ### Changed
 

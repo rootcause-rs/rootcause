@@ -267,8 +267,36 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         )
     }
 
-    /// Formats the inner attachment data with formatting hooks applied
-    /// while passing in an [`AttachmentParent`] as well.
+    /// Formats the inner attachment data with formatting hooks applied,
+    /// passing the supplied [`AttachmentParent`] to the hook.
+    ///
+    /// This is the variant of [`format_inner`] used by report formatters
+    /// while walking an error tree: it lets the hook see the parent report
+    /// and the attachment's index in that report's attachment list. Use
+    /// [`format_inner`] instead when there is no parent context (for
+    /// example, formatting an attachment in isolation).
+    ///
+    /// [`format_inner`]: Self::format_inner
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::{
+    /// #     hooks::attachment_formatter::AttachmentParent,
+    /// #     prelude::*,
+    /// #     report_attachment::ReportAttachment,
+    /// # };
+    /// let report: Report = report!("outer");
+    /// let attachment = ReportAttachment::new_sendsync(42i32);
+    /// let parent = AttachmentParent {
+    ///     report: report.as_ref().into_dynamic().into_uncloneable().into_local(),
+    ///     attachment_index: 0,
+    /// };
+    /// assert_eq!(
+    ///     attachment.as_ref().format_inner_with_parent(parent).to_string(),
+    ///     "42",
+    /// );
+    /// ```
     #[must_use]
     pub fn format_inner_with_parent(
         self,

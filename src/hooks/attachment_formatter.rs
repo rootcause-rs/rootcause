@@ -302,7 +302,14 @@ where
 pub struct AttachmentParent<'a> {
     /// Reference to the report that contains this attachment
     pub report: ReportRef<'a, Dynamic, Uncloneable, Local>,
-    /// Index of this attachment within the parent report's attachment list
+    /// Index of this attachment within the parent report's attachment list.
+    ///
+    /// By convention this is the attachment's position in
+    /// `report.attachments()` before any priority sorting or placement
+    /// filtering the formatter applies for display purposes. The built-in
+    /// [`DefaultReportFormatter`](crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter)
+    /// upholds this; custom [`ReportFormatter`](crate::hooks::report_formatter::ReportFormatter)
+    /// implementations are encouraged to do the same.
     pub attachment_index: usize,
 }
 
