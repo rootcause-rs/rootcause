@@ -1154,3 +1154,140 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── match_std_library_path ────────────────────────────────────────────────
+
+    #[test]
+    fn std_path_rustlib_std() {
+        let path = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/mod.rs";
+        let (name, pos) = match_std_library_path(path).expect("should match");
+        assert_eq!(name, "std");
+        assert_eq!(&path[pos..], "std/src/io/mod.rs");
+    }
+
+    #[test]
+    fn std_path_rustlib_core() {
+        let path = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs";
+        let (name, pos) = match_std_library_path(path).expect("should match");
+        assert_eq!(name, "core");
+        assert_eq!(&path[pos..], "core/src/option.rs");
+    }
+
+    #[test]
+    fn std_path_rustlib_alloc() {
+        let path = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs";
+        let (name, pos) = match_std_library_path(path).expect("should match");
+        assert_eq!(name, "alloc");
+        assert_eq!(&path[pos..], "alloc/src/vec/mod.rs");
+    }
+
+    #[test]
+    fn std_path_rustc_hash() {
+        let hash = "a".repeat(40);
+        let path = format!("/rustc/{hash}/library/std/src/panicking.rs");
+        let (name, pos) = match_std_library_path(&path).expect("should match");
+        assert_eq!(name, "std");
+        assert_eq!(&path[pos..], "std/src/panicking.rs");
+    }
+
+    #[test]
+    fn std_path_no_match_unknown_crate() {
+        let path = "/lib/rustlib/src/rust/library/unknown/src/lib.rs";
+        assert!(match_std_library_path(path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_rustc_hash_too_short() {
+        let short_hash = "a".repeat(39);
+        let path = format!("/rustc/{short_hash}/library/std/src/lib.rs");
+        assert!(match_std_library_path(&path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_rustc_hash_not_at_root() {
+        let hash = "a".repeat(40);
+        let path = format!("/prefix/rustc/{hash}/library/std/src/lib.rs");
+        assert!(match_std_library_path(&path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_rustc_hash_non_hex() {
+        let hash = "z".repeat(40);
+        let path = format!("/rustc/{hash}/library/std/src/lib.rs");
+        assert!(match_std_library_path(&path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_missing_src_segment() {
+        let path = "/lib/rustlib/src/rust/library/std/nosrc/io.rs";
+        assert!(match_std_library_path(path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_cargo_registry_path() {
+        // A cargo registry path should not match the std matcher.
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.210/src/lib.rs";
+        assert!(match_std_library_path(path).is_none());
+    }
+
+    // ── match_cargo_registry_path ─────────────────────────────────────────────
+
+    #[test]
+    fn cargo_path_simple_crate() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.210/src/lib.rs";
+        let (name, pos) = match_cargo_registry_path(path).expect("should match");
+        assert_eq!(name, "serde");
+        assert_eq!(&path[pos..], "serde-1.0.210/src/lib.rs");
+    }
+
+    #[test]
+    fn cargo_path_hyphenated_crate_name() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/my-cool-crate-0.3.1/src/lib.rs";
+        let (name, pos) = match_cargo_registry_path(path).expect("should match");
+        assert_eq!(name, "my-cool-crate");
+        assert_eq!(&path[pos..], "my-cool-crate-0.3.1/src/lib.rs");
+    }
+
+    #[test]
+    fn cargo_path_prerelease_version() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cratename-1.0.0-2beta/src/lib.rs";
+        let (name, pos) = match_cargo_registry_path(path).expect("should match");
+        assert_eq!(name, "cratename");
+        assert_eq!(&path[pos..], "cratename-1.0.0-2beta/src/lib.rs");
+    }
+
+    #[test]
+    fn cargo_path_no_match_hash_too_short() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba1500/serde-1.0.210/src/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_hash_non_hex() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-zzzzzzzzzzzzzzzz/serde-1.0.210/src/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_missing_src_segment() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.210/nosrc/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_no_version() {
+        let path =
+            "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde/src/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_std_library_path() {
+        let path = "/lib/rustlib/src/rust/library/std/src/io/mod.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+}
