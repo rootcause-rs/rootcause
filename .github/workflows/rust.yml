@@ -67,6 +67,24 @@ jobs:
       - name: Run cargo-deny
         uses: EmbarkStudios/cargo-deny-action@v2
 
+  nightly-doc-checks:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install rust nightly
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          save-if: ${{ github.ref == 'refs/heads/main' }}
+
+      - name: Run nightly doc checks
+        env:
+          RUSTDOCFLAGS: --cfg nightly_extra_checks
+        run: cargo doc --no-deps -p rootcause -p rootcause-backtrace -p rootcause-tracing --all-features
+
   miri:
     strategy:
       fail-fast: false

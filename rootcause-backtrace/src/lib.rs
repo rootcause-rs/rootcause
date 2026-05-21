@@ -7,6 +7,9 @@
     missing_copy_implementations,
     unused_doc_comments
 )]
+// Extra checks on nightly
+#![cfg_attr(nightly_extra_checks, feature(rustdoc_missing_doc_code_examples))]
+#![cfg_attr(nightly_extra_checks, forbid(rustdoc::missing_doc_code_examples))]
 
 //! Stack backtrace attachment collector for rootcause error reports.
 //!
@@ -171,6 +174,23 @@ pub struct Backtrace {
 }
 
 /// A single entry in a stack backtrace.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         match entry {
+///             BacktraceEntry::Frame(_) => { /* a real call */ }
+///             BacktraceEntry::OmittedFrames { count, skipped_crate } => {
+///                 println!("Omitted {count} frames from {skipped_crate}");
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub enum BacktraceEntry {
     /// A normal stack frame.
@@ -188,6 +208,20 @@ pub enum BacktraceEntry {
 ///
 /// Represents one function call in the call stack, including symbol information
 /// and source location if available.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         if let BacktraceEntry::Frame(frame) = entry {
+///             println!("{}", frame.sym_demangled);
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Frame {
     /// The demangled symbol name for this frame.
@@ -202,6 +236,22 @@ pub struct Frame {
 ///
 /// Contains the raw path and processed components for better display
 /// formatting.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         if let BacktraceEntry::Frame(frame) = entry {
+///             if let Some(path) = &frame.frame_path {
+///                 println!("{}", path.raw_path);
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct FramePath {
     /// The raw file path from the debug information.
@@ -216,6 +266,26 @@ pub struct FramePath {
 ///
 /// This struct represents a decomposed file path where a known prefix
 /// has been identified and separated from the rest of the path.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         if let BacktraceEntry::Frame(frame) = entry {
+///             if let Some(prefix) = frame
+///                 .frame_path
+///                 .as_ref()
+///                 .and_then(|p| p.split_path.as_ref())
+///             {
+///                 println!("[{}] {}", prefix.prefix_kind, prefix.suffix);
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct FramePrefix {
     /// The kind of prefix used to identify this prefix.
@@ -236,6 +306,22 @@ pub struct FramePrefix {
 }
 
 /// Handler for formatting [`Backtrace`] attachments.
+///
+/// The const generic `SHOW_FULL_PATH` controls whether file paths are shown
+/// in full or with common prefixes shortened.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::report_attachment::ReportAttachment;
+/// use rootcause_backtrace::{Backtrace, BacktraceFilter, BacktraceHandler};
+///
+/// let backtrace = Backtrace::capture(&BacktraceFilter::DEFAULT)
+///     .unwrap_or(Backtrace { entries: Vec::new(), total_omitted_frames: 0 });
+///
+/// // SHOW_FULL_PATH = false: shortened paths
+/// let _ = ReportAttachment::new_sendsync_custom::<BacktraceHandler<false>>(backtrace);
+/// ```
 #[derive(Copy, Clone)]
 pub struct BacktraceHandler<const SHOW_FULL_PATH: bool>;
 
@@ -660,6 +746,18 @@ const ROOTCAUSE_MATCHER: Option<(&str, usize)> =
 
 impl Backtrace {
     /// Captures the current stack backtrace, applying optional filtering.
+    ///
+    /// Returns `None` if a backtrace could not be captured.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause_backtrace::{Backtrace, BacktraceFilter};
+    ///
+    /// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+    ///     println!("Captured {} frames", bt.entries.len());
+    /// }
+    /// ```
     pub fn capture(filter: &BacktraceFilter) -> Option<Self> {
         let mut initial_filtering = !filter.skipped_initial_crates.is_empty();
         let mut entries: Vec<BacktraceEntry> = Vec::new();
