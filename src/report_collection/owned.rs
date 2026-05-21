@@ -642,7 +642,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
     /// # };
     /// #
     /// let mut collection = ReportCollection::<i32, SendSync>::new();
-    /// let report = Report::new_sendsync_custom::<Display>(42i32).into_cloneable();
+    /// let report = Report::new_custom::<Display>(42i32).into_cloneable();
     /// collection.push(report);
     /// let dynamic = collection.as_dynamic();
     /// let first = dynamic.iter().next().unwrap();
