@@ -73,7 +73,7 @@
 
 use crate::{
     Report, ReportRef,
-    markers::{self, Dynamic},
+    markers::{self, Cloneable, Dynamic, Local},
 };
 
 /// A trait for converting external error types into rootcause [`Report`]s.
@@ -245,5 +245,63 @@ impl<C: ?Sized, O, T> From<Report<C, O, T>> for ReportAsError<C, T> {
 impl<C: ?Sized, T> From<ReportRef<'_, C, markers::Cloneable, T>> for ReportAsError<C, T> {
     fn from(value: ReportRef<'_, C, markers::Cloneable, T>) -> Self {
         ReportAsError(value.clone_arc())
+    }
+}
+
+/// Utility wrapper type for pretty-printing reports when returning
+/// `Result<(), Report>` from main.
+///
+/// When returning a `Result` value from `main`, the error will always be formatted
+/// with [`Debug`](core::fmt::Debug)-formatting, which results in `Debug`-formatting
+/// for attachments and contexts. For context see the [`Termination`](std::process::Termination) trait.
+///
+/// This wrapper ensures `Display`-formatting of a report when returned from main.
+///
+/// ```should_panic
+/// # use rootcause::compat::MainReport;
+/// # use rootcause::bail;
+/// fn main() -> Result<(), MainReport> {
+///     bail!("Oh no!")
+/// }
+/// ```
+///
+/// ```output
+///  ● Oh no!         ← {}-formatted string
+///  ╰ <some path>
+/// ```
+///
+/// Contrast and compare:
+///
+/// ```should_panic
+/// # use rootcause::Report;
+/// # use rootcause::bail;
+/// fn main() -> Result<(), Report> {
+///     bail!("Oh no!")
+/// }
+/// ```
+///
+/// ```output
+///  ● "Oh no!"       ← {:?}-formatted string
+///  ╰ <some path>    ← locations are always {}-formatted
+/// ```
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct MainReport(Report<Dynamic, Cloneable, Local>);
+
+impl<C: ?Sized + 'static, O: 'static, T: 'static> From<Report<C, O, T>> for MainReport {
+    fn from(value: Report<C, O, T>) -> Self {
+        Self(value.into_dynamic().into_cloneable().into_local())
+    }
+}
+
+impl From<MainReport> for Report<Dynamic, Cloneable, Local> {
+    fn from(value: MainReport) -> Self {
+        value.0
+    }
+}
+
+impl core::fmt::Debug for MainReport {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.0, f)
     }
 }

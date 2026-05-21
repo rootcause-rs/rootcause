@@ -9,9 +9,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- `&dyn Any` accessors for contexts and attachments via `current_context_as_any(_mut)` on `Report`/`ReportRef`/`ReportMut` and `inner_as_any(_mut)` on `ReportAttachment`/`ReportAttachmentRef`/`ReportAttachmentMut` [#151](https://github.com/rootcause-rs/rootcause/issues/151).
 - Added a compatibility module for error-stack v0.7 [#169](https://github.com/rootcause-rs/rootcause/pull/169).
-- Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`. `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. Splitting `Deref` by thread-safety marker may break type inference at call sites of `Report::new_custom` / `Report::new`; use `new_sendsync_custom` / `new_local_custom` or explicit annotations to fix. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
+- Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`; `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. May break type inference at some `Report::new*` call sites. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
 - Doc examples for nearly all public functions [#136](https://github.com/rootcause-rs/rootcause/pull/136).
+
+### Changed
+
+- Moved the preformat functionality out of `rootcause` into the new `rootcause-preformat` companion crate. The `preformatted` module, the `preformat*` methods, and the `display_preformatted`/`debug_preformatted` formatter-hook methods are removed; use the `Preformat*Ext` and `ContextTransformNestedExt` traits from the new crate. `AttachmentFormatterHook::preferred_formatting_style` and `ContextFormatterHook::preferred_context_formatting_style` now take a concrete type instead of `Dynamic`. [#148](https://github.com/rootcause-rs/rootcause/pull/148)
 
 ### Fixed
 
@@ -38,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Fixed some issues with using rootcause-backtrace on windows [#118](https://github.com/rootcause-rs/rootcause/pull/94), [#120](https://github.com/rootcause-rs/rootcause/pull/120), [#121](https://github.com/rootcause-rs/rootcause/pull/121).
+- Fixed some issues with using rootcause-backtrace on windows [#118](https://github.com/rootcause-rs/rootcause/pull/118), [#120](https://github.com/rootcause-rs/rootcause/pull/120), [#121](https://github.com/rootcause-rs/rootcause/pull/121).
 
 ## [0.11.1] - 2026-01-03
 
@@ -88,7 +93,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a new `compat` module added poulated it with `eyre` and `error-stack` compatibility [#55](https://github.com/rootcause-rs/rootcause/pull/55)
+- Added a new `compat` module and populated it with `eyre` and `error-stack` compatibility [#55](https://github.com/rootcause-rs/rootcause/pull/55)
 - Added a `format_with_hook` method on reports to format a report using a specific hook [#57](https://github.com/rootcause-rs/rootcause/pull/57)
 
 ### Changed
@@ -121,8 +126,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- More docs, examples, README [#40](https://github.com/rootcause-rs/rootcause/pull/40)
-- More docs, examples, README [#41](https://github.com/rootcause-rs/rootcause/pull/41)
+- More docs, examples, README [#40](https://github.com/rootcause-rs/rootcause/pull/40), [#41](https://github.com/rootcause-rs/rootcause/pull/41)
 
 ## [0.6.0] - 2025-10-29
 

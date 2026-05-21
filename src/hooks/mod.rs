@@ -378,7 +378,6 @@ impl Hooks {
     /// use rootcause::{
     ///     handlers::{AttachmentFormattingPlacement, AttachmentFormattingStyle, FormattingFunction},
     ///     hooks::{Hooks, attachment_formatter::AttachmentFormatterHook},
-    ///     markers::Dynamic,
     ///     report_attachment::ReportAttachmentRef,
     /// };
     ///
@@ -388,7 +387,7 @@ impl Hooks {
     /// impl AttachmentFormatterHook<MyData> for MyFormatter {
     ///     fn preferred_formatting_style(
     ///         &self,
-    ///         _: ReportAttachmentRef<'_, Dynamic>,
+    ///         _: ReportAttachmentRef<'_, MyData>,
     ///         _: FormattingFunction,
     ///     ) -> AttachmentFormattingStyle {
     ///         AttachmentFormattingStyle {

@@ -30,7 +30,10 @@
 //! - Thread-safe sharing when the context type is `Send + Sync`
 
 use alloc::vec::Vec;
-use core::{any::TypeId, ptr::NonNull};
+use core::{
+    any::{Any, TypeId},
+    ptr::NonNull,
+};
 
 use crate::{
     attachment::RawAttachment,
@@ -341,6 +344,22 @@ impl<'a> RawReportRef<'a> {
         }
     }
 
+    /// Returns a [`&dyn Any`](Any) view of the context.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref`.
+    #[inline]
+    pub fn context_as_any(self) -> &'a (dyn Any + 'static) {
+        let vtable = self.vtable();
+        // SAFETY:
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `ReportData`.
+        unsafe {
+            // @add-unsafe-context: ReportData
+            vtable.context_as_any(self)
+        }
+    }
+
     /// Gets the strong_count of the inner [`triomphe::Arc`].
     #[inline]
     pub fn strong_count(self) -> usize {
@@ -476,6 +495,23 @@ impl<'a> RawReportMut<'a> {
     #[inline]
     pub(super) fn into_mut_ptr(self) -> *mut ReportData<Erased> {
         self.ptr.as_ptr()
+    }
+
+    /// Consumes this [`RawReportMut`] and returns a [`&mut dyn Any`](Any) view
+    /// of the context with the same lifetime.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    #[inline]
+    pub fn into_context_as_any_mut(self) -> &'a mut (dyn Any + 'static) {
+        let vtable = self.as_ref().vtable();
+        // SAFETY:
+        // 1. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
+        //    data in the `ReportData`.
+        unsafe {
+            // @add-unsafe-context: ReportData
+            vtable.context_as_any_mut(self)
+        }
     }
 }
 
@@ -866,5 +902,28 @@ mod tests {
         static_assertions::assert_not_impl_any!(RawReport: Send, Sync);
         static_assertions::assert_not_impl_any!(RawReportRef<'_>: Send, Sync);
         static_assertions::assert_not_impl_any!(RawReportMut<'_>: Send, Sync);
+    }
+
+    #[test]
+    fn test_raw_report_context_as_any() {
+        let report = RawReport::new::<i32, HandlerI32>(42, vec![], vec![]);
+        let any = report.as_ref().context_as_any();
+        assert_eq!(any.downcast_ref::<i32>(), Some(&42));
+        assert!(any.downcast_ref::<String>().is_none());
+    }
+
+    #[test]
+    fn test_raw_report_context_as_any_mut() {
+        let mut report = RawReport::new::<i32, HandlerI32>(41, vec![], vec![]);
+
+        // SAFETY: We have unique ownership of the report
+        let report_mut = unsafe { report.as_mut() };
+        let any = report_mut.into_context_as_any_mut();
+        *any.downcast_mut::<i32>().unwrap() += 1;
+
+        assert_eq!(
+            unsafe { report.as_ref().context_downcast_unchecked::<i32>() },
+            &42
+        );
     }
 }

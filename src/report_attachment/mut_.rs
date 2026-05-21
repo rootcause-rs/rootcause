@@ -1,12 +1,8 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::{
-    markers::{Dynamic, SendSync},
-    preformatted::PreformattedAttachment,
-    report_attachment::{ReportAttachment, ReportAttachmentRef},
-};
+use crate::{markers::Dynamic, report_attachment::ReportAttachmentRef};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -386,6 +382,76 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
+    /// Returns a [`&dyn Any`](Any) view of the inner attachment.
+    ///
+    /// This works whether the attachment type `A` is known at compile time or
+    /// erased to [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use core::any::Any;
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let attachment_mut = attachment.as_mut();
+    /// let any: &dyn Any = attachment_mut.inner_as_any();
+    /// assert_eq!(any.downcast_ref::<i32>(), Some(&42));
+    /// ```
+    #[must_use]
+    pub fn inner_as_any(&self) -> &(dyn Any + 'static) {
+        self.as_raw_ref().attachment_as_any()
+    }
+
+    /// Returns a [`&mut dyn Any`](Any) view of the inner attachment.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use core::any::Any;
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32);
+    /// {
+    ///     let mut attachment_mut = attachment.as_mut();
+    ///     let any: &mut dyn Any = attachment_mut.inner_as_any_mut();
+    ///     if let Some(n) = any.downcast_mut::<i32>() {
+    ///         *n += 1;
+    ///     }
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
+    #[must_use]
+    pub fn inner_as_any_mut(&mut self) -> &mut (dyn Any + 'static) {
+        self.as_mut().into_inner_as_any_mut()
+    }
+
+    /// Consumes the [`ReportAttachmentMut`] and returns a [`&mut dyn Any`](Any)
+    /// view of the inner attachment with the same lifetime.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use core::any::Any;
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32);
+    /// {
+    ///     let attachment_mut = attachment.as_mut();
+    ///     let any: &mut dyn Any = attachment_mut.into_inner_as_any_mut();
+    ///     if let Some(n) = any.downcast_mut::<i32>() {
+    ///         *n += 1;
+    ///     }
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
+    #[must_use]
+    pub fn into_inner_as_any_mut(self) -> &'a mut (dyn Any + 'static) {
+        let raw = self.into_raw_mut();
+        raw.into_attachment_as_any_mut()
+    }
+
     /// Formats the inner attachment data with formatting hooks applied.
     ///
     /// This method formats the attachment using both its handler and any global
@@ -519,30 +585,6 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
             .preferred_formatting_style(report_formatting_function)
-    }
-
-    /// Creates a new attachment, with the inner attachment data preformatted.
-    ///
-    /// This can be useful, as the preformatted attachment is a newly allocated
-    /// object and additionally is [`Send`]+[`Sync`].
-    ///
-    /// See [`PreformattedAttachment`] for more information.
-    ///
-    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
-    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
-    /// let mutable = attachment.as_mut();
-    /// let preformat = mutable.preformat();
-    /// assert_eq!(attachment.format_inner().to_string(), preformat.format_inner().to_string());
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(&self) -> ReportAttachment<PreformattedAttachment, SendSync> {
-        self.as_ref().preformat()
     }
 }
 

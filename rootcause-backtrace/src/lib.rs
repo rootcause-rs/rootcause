@@ -940,10 +940,10 @@ fn match_std_library_path(path: &str) -> Option<(&'static str, usize)> {
 /// Recognised paths:
 /// - `/.cargo/registry/src/{index}-{16-hex-char hash}/{crate}-{version}/src/…`
 fn match_cargo_registry_path(path: &str) -> Option<(&str, usize)> {
-    let (before_cargo, after_cargo) = path.split_once("/.cargo/registry/src/")?;
+    let (before_registry, after_registry) = path.split_once("/registry/src/")?;
 
     // Consume the "{index}-{16-hex-char}" directory component.
-    let (index_hash, after_index) = after_cargo.split_once('/')?;
+    let (index_hash, after_index) = after_registry.split_once('/')?;
     let (_, hash) = index_hash.rsplit_once('-')?;
     if hash.len() != 16 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
         return None;
@@ -958,7 +958,7 @@ fn match_cargo_registry_path(path: &str) -> Option<(&str, usize)> {
     let (crate_name, _) = crate_version.split_once('.')?;
     let (crate_name, _) = crate_name.rsplit_once('-')?;
 
-    let crate_start_abs = before_cargo.len() + "/.cargo/registry/src/".len() + index_hash.len() + 1;
+    let crate_start_abs = before_registry.len() + "/registry/src/".len() + index_hash.len() + 1;
     Some((crate_name, crate_start_abs))
 }
 

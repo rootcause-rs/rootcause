@@ -1,43 +1,7 @@
-//! Preformatted context and attachment types.
+//! Preformatted context and attachment storage types.
 //!
-//! # Overview
-//!
-//! This module provides types that store preformatted `String` representations
-//! of report contexts and attachments. These types are primarily used through
-//! the [`Report::preformat`] method, which converts any report into a version
-//! where all contexts and attachments have been formatted into strings.
-//!
-//! # Why Preformat?
-//!
-//! Preformatting a report is useful in several scenarios:
-//!
-//! - **Regaining mutability**: After preformatting, you get back a [`Mutable`]
-//!   report even if the original was [`Cloneable`], allowing you to add more
-//!   context or attachments to the root node.
-//! - **Thread safety**: Non-`Send`/`Sync` error types can be preformatted to
-//!   create a `Send + Sync` report that can be transferred across thread
-//!   boundaries.
-//! - **Preserving formatting**: The preformatted version will always display
-//!   the same way, even if the original types or handlers are no longer
-//!   available.
-//!
-//! # Usage
-//!
-//! The typical usage is to call [`Report::preformat`] on an existing report:
-//!
-//! ```
-//! use rootcause::{
-//!     markers::{Mutable, SendSync},
-//!     preformatted::PreformattedContext,
-//!     prelude::*,
-//! };
-//!
-//! let report: Report = report!("database connection failed");
-//! let preformatted: Report<PreformattedContext, Mutable, SendSync> = report.preformat();
-//!
-//! // The preformatted report displays identically to the original
-//! assert_eq!(format!("{}", report), format!("{}", preformatted));
-//! ```
+//! See the [crate-level documentation](crate) for an overview of preformatting
+//! and the extension traits that produce these types.
 //!
 //! # Non-Send/Sync Example
 //!
@@ -46,9 +10,9 @@
 //!
 //! use rootcause::{
 //!     markers::{Local, SendSync},
-//!     preformatted::PreformattedContext,
 //!     prelude::*,
 //! };
+//! use rootcause_preformat::{PreformatReportExt, PreformattedContext};
 //!
 //! // Cell is !Send and !Sync
 //! #[derive(Debug)]
@@ -72,27 +36,25 @@
 //! // Now it can be sent across threads
 //! // std::thread::spawn(move || { ... send_sync_report ... });
 //! ```
-//!
-//! [`Report::preformat`]: crate::Report::preformat
-//! [`Mutable`]: crate::markers::Mutable
-//! [`Cloneable`]: crate::markers::Cloneable
 
 use alloc::{format, string::String};
 use core::any::TypeId;
 
-use rootcause_internals::handlers::{
-    AttachmentFormattingStyle, AttachmentHandler, ContextFormattingStyle, ContextHandler,
+use rootcause::{
+    ReportRef,
+    handlers::{
+        AttachmentFormattingStyle, AttachmentHandler, ContextFormattingStyle, ContextHandler,
+    },
+    report_attachment::ReportAttachmentRef,
 };
-
-use crate::{ReportRef, report_attachment::ReportAttachmentRef};
 
 /// A context that has been preformatted into `String`s for both
 /// `Display` and `Debug`.
 ///
 /// This type stores the formatted output of a context along with metadata about
 /// the original type and preferred formatting styles. It's created
-/// automatically by [`Report::preformat`] and should not typically be
-/// constructed manually.
+/// automatically by [`PreformatReportExt::preformat`] and should not typically
+/// be constructed manually.
 ///
 /// # Stored Information
 ///
@@ -106,7 +68,8 @@ use crate::{ReportRef, report_attachment::ReportAttachmentRef};
 /// ```
 /// use core::any::TypeId;
 ///
-/// use rootcause::{preformatted::PreformattedContext, prelude::*};
+/// use rootcause::prelude::*;
+/// use rootcause_preformat::{PreformatReportExt, PreformattedContext};
 ///
 /// #[derive(Debug)]
 /// struct MyError;
@@ -128,7 +91,7 @@ use crate::{ReportRef, report_attachment::ReportAttachmentRef};
 /// );
 /// ```
 ///
-/// [`Report::preformat`]: crate::Report::preformat
+/// [`PreformatReportExt::preformat`]: crate::PreformatReportExt::preformat
 /// [`original_type_id`]: PreformattedContext::original_type_id
 /// [`TypeId`]: core::any::TypeId
 pub struct PreformattedContext {
@@ -146,11 +109,10 @@ impl PreformattedContext {
             display: format!("{}", report.format_current_context()),
             debug: format!("{:?}", report.format_current_context()),
             display_preferred_formatting_style: report.preferred_context_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Display,
+                rootcause::handlers::FormattingFunction::Display,
             ),
-            debug_preferred_formatting_style: report.preferred_context_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Debug,
-            ),
+            debug_preferred_formatting_style: report
+                .preferred_context_formatting_style(rootcause::handlers::FormattingFunction::Debug),
         }
     }
 
@@ -165,7 +127,8 @@ impl PreformattedContext {
     /// ```
     /// use core::any::TypeId;
     ///
-    /// use rootcause::{preformatted::PreformattedContext, prelude::*};
+    /// use rootcause::prelude::*;
+    /// use rootcause_preformat::{PreformatReportExt, PreformattedContext};
     ///
     /// #[derive(Debug)]
     /// struct DatabaseError {
@@ -200,8 +163,8 @@ impl PreformattedContext {
 ///
 /// This type stores the formatted output of an attachment along with metadata
 /// about the original type and preferred formatting styles. It's created
-/// automatically by [`Report::preformat`] and should not typically be
-/// constructed manually.
+/// automatically by [`PreformatReportExt::preformat`] and should not typically
+/// be constructed manually.
 ///
 /// # Stored Information
 ///
@@ -213,9 +176,8 @@ impl PreformattedContext {
 /// # Examples
 ///
 /// ```
-/// use core::any::TypeId;
-///
-/// use rootcause::{preformatted::PreformattedAttachment, prelude::*};
+/// use rootcause::prelude::*;
+/// use rootcause_preformat::PreformatReportExt;
 ///
 /// // When a report is preformatted, all attachments become PreformattedAttachment
 /// let report: Report = report!("error").attach("some data");
@@ -229,7 +191,7 @@ impl PreformattedContext {
 /// }
 /// ```
 ///
-/// [`Report::preformat`]: crate::Report::preformat
+/// [`PreformatReportExt::preformat`]: crate::PreformatReportExt::preformat
 /// [`original_type_id`]: PreformattedAttachment::original_type_id
 /// [`TypeId`]: core::any::TypeId
 pub struct PreformattedAttachment {
@@ -249,12 +211,10 @@ impl PreformattedAttachment {
             original_type_id: attachment.inner_type_id(),
             display: format!("{}", attachment.format_inner()),
             debug: format!("{:?}", attachment.format_inner()),
-            display_preferred_formatting_style: attachment.preferred_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Display,
-            ),
-            debug_preferred_formatting_style: attachment.preferred_formatting_style(
-                rootcause_internals::handlers::FormattingFunction::Debug,
-            ),
+            display_preferred_formatting_style: attachment
+                .preferred_formatting_style(rootcause::handlers::FormattingFunction::Display),
+            debug_preferred_formatting_style: attachment
+                .preferred_formatting_style(rootcause::handlers::FormattingFunction::Debug),
         }
     }
 
@@ -268,9 +228,8 @@ impl PreformattedAttachment {
     /// # Examples
     ///
     /// ```
-    /// use core::any::TypeId;
-    ///
-    /// use rootcause::{preformatted::PreformattedAttachment, prelude::*};
+    /// use rootcause::prelude::*;
+    /// use rootcause_preformat::{PreformatReportExt, PreformattedAttachment};
     ///
     /// let report: Report = report!("error").attach(42u32);
     /// let preformatted = report.preformat();
@@ -323,13 +282,13 @@ impl ContextHandler<PreformattedContext> for PreformattedHandler {
 
     fn preferred_formatting_style(
         value: &PreformattedContext,
-        report_formatting_function: rootcause_internals::handlers::FormattingFunction,
+        report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> ContextFormattingStyle {
         match report_formatting_function {
-            rootcause_internals::handlers::FormattingFunction::Display => {
+            rootcause::handlers::FormattingFunction::Display => {
                 value.display_preferred_formatting_style
             }
-            rootcause_internals::handlers::FormattingFunction::Debug => {
+            rootcause::handlers::FormattingFunction::Debug => {
                 value.debug_preferred_formatting_style
             }
         }
@@ -353,13 +312,13 @@ impl AttachmentHandler<PreformattedAttachment> for PreformattedHandler {
 
     fn preferred_formatting_style(
         value: &PreformattedAttachment,
-        report_formatting_function: rootcause_internals::handlers::FormattingFunction,
+        report_formatting_function: rootcause::handlers::FormattingFunction,
     ) -> AttachmentFormattingStyle {
         match report_formatting_function {
-            rootcause_internals::handlers::FormattingFunction::Display => {
+            rootcause::handlers::FormattingFunction::Display => {
                 value.display_preferred_formatting_style
             }
-            rootcause_internals::handlers::FormattingFunction::Debug => {
+            rootcause::handlers::FormattingFunction::Debug => {
                 value.debug_preferred_formatting_style
             }
         }

@@ -1,11 +1,10 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
-    Report, ReportIter, ReportRef, handlers,
-    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::PreformattedContext,
+    ReportIter, ReportRef, handlers,
+    markers::{self, Cloneable, Dynamic, Local, SendSync, Uncloneable},
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -215,6 +214,13 @@ mod limit_field_access {
             raw.reborrow()
         }
     }
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`] and [`Send`], thus by definition the reference itself is [`Send`]
+    unsafe impl<'a, C: ?Sized> Send for ReportMut<'a, C, SendSync> {}
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`] and [`ReportMut`] is [`Send`] then [`&ReportMut`] is also [`Send`],
+    // which is the same as saying [`ReportMut`] is [`Sync`].
+    unsafe impl<'a, C: ?Sized> Sync for ReportMut<'a, C, SendSync> {}
 }
 pub use limit_field_access::ReportMut;
 
@@ -403,6 +409,9 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     ///
     /// If you want more direct control over the attachments, you can use the
     /// [`Report::attachments_mut`].
+    ///
+    /// [`Report`]: crate::Report
+    /// [`Report::attachments_mut`]: crate::Report::attachments_mut
     ///
     /// # Examples
     /// ```
@@ -699,30 +708,6 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
         self.as_ref().iter_sub_reports()
     }
 
-    /// Creates a new report, which has the same structure as the current
-    /// report, but has all the contexts and attachments preformatted.
-    ///
-    /// This can be useful, as the new report is mutable because it was just
-    /// created, and additionally the new report is [`Send`]+[`Sync`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, ReportMut, preformatted::PreformattedContext};
-    /// # #[derive(Default)]
-    /// # struct NonSendSyncError(core::cell::Cell<()>);
-    /// # let non_send_sync_error = NonSendSyncError::default();
-    /// # let mut report = report!(non_send_sync_error);
-    /// let report_mut: ReportMut<'_, NonSendSyncError, markers::Local> = report.as_mut();
-    /// let preformatted: Report<PreformattedContext, markers::Mutable, markers::SendSync> =
-    ///     report_mut.preformat();
-    /// assert_eq!(format!("{report}"), format!("{preformatted}"));
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
-        self.as_ref().preformat()
-    }
-
     /// Returns the [`TypeId`] of the current context.
     ///
     /// # Examples
@@ -782,6 +767,82 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().context_handler_type_id()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the current context.
+    ///
+    /// This is the most general accessor for the current context: it works
+    /// whether the context type `C` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// For mutable access, use [`current_context_as_any_mut`] or
+    /// [`into_current_context_as_any_mut`].
+    ///
+    /// [`Dynamic`]: crate::markers::Dynamic
+    /// [`current_context_as_any_mut`]: ReportMut::current_context_as_any_mut
+    /// [`into_current_context_as_any_mut`]: ReportMut::into_current_context_as_any_mut
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # struct MyError;
+    /// # let mut report = report!(MyError);
+    /// let report_mut = report.as_mut();
+    /// let any: &dyn Any = report_mut.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any(&self) -> &(dyn Any + 'static) {
+        self.as_raw_ref().context_as_any()
+    }
+
+    /// Returns a [`&mut dyn Any`](Any) view of the current context.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let mut report_mut = report.as_mut();
+    /// let any: &mut dyn Any = report_mut.current_context_as_any_mut();
+    /// if let Some(s) = any.downcast_mut::<String>() {
+    ///     s.push_str(" and that's bad");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any_mut(&mut self) -> &mut (dyn Any + 'static) {
+        self.as_mut().into_current_context_as_any_mut()
+    }
+
+    /// Consumes the [`ReportMut`] and returns a [`&mut dyn Any`](Any) view of
+    /// the current context with the same lifetime.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let report_mut = report.as_mut();
+    /// let any: &mut dyn Any = report_mut.into_current_context_as_any_mut();
+    /// if let Some(s) = any.downcast_mut::<String>() {
+    ///     s.push_str(" and that's bad");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn into_current_context_as_any_mut(self) -> &'a mut (dyn Any + 'static) {
+        // SAFETY:
+        // 1. We are not adding any objects
+        let raw = unsafe { self.into_raw_mut() };
+        raw.into_context_as_any_mut()
     }
 
     /// Returns the error source if the context implements [`Error`].
@@ -1167,11 +1228,7 @@ impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
     }
 }
 
-// `Report<_, _, SendSync>` derefs to `dyn Error + Send + Sync`. This isn't
-// split the same way because `ReportRef` / `ReportMut` aren't `Send + Sync`
-// today. See https://github.com/rootcause-rs/rootcause/issues/173 for whether
-// that could change.
-impl<'a, C: ?Sized, T> core::ops::Deref for ReportMut<'a, C, T> {
+impl<'a, C: ?Sized> core::ops::Deref for ReportMut<'a, C, Local> {
     type Target = dyn core::error::Error + 'a;
 
     fn deref(&self) -> &Self::Target {
@@ -1179,9 +1236,26 @@ impl<'a, C: ?Sized, T> core::ops::Deref for ReportMut<'a, C, T> {
     }
 }
 
-impl<'a, C: ?Sized, T> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, T> {
+impl<'a, C: ?Sized> core::ops::Deref for ReportMut<'a, C, SendSync> {
+    type Target = dyn core::error::Error + Send + Sync + 'a;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, Local> {
     #[inline(always)]
     fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized> AsRef<dyn core::error::Error + Send + Sync + 'a>
+    for ReportMut<'a, C, SendSync>
+{
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1208,6 +1282,7 @@ mod tests {
     use thiserror::Error;
 
     use super::*;
+    use crate::Report;
 
     #[allow(dead_code)]
     struct NonSend(*const ());
@@ -1215,10 +1290,10 @@ mod tests {
 
     #[test]
     fn test_report_mut_send_sync() {
-        static_assertions::assert_not_impl_any!(ReportMut<'static, (), SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, String, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, (), SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, String, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, NonSend, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, Dynamic, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportMut<'static, (), Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, String, Local>: Send, Sync);
@@ -1275,7 +1350,7 @@ mod tests {
         let mut report = make_report();
         let report_mut = report.as_mut();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 

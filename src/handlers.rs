@@ -27,12 +27,12 @@
 //! [`AttachmentHandler::preferred_formatting_style`] methods allow handlers to
 //! specify whether they prefer [`Display`](core::fmt::Display) or
 //! [`Debug`](core::fmt::Debug) formatting when shown in a report. The default
-//! behavior is to always use `Display` formatting, regardless of how the report
-//! itself is being formatted.
+//! behavior is to match how the report itself is being formatted: when the
+//! report is displayed with `{}` the `display` method is used, and when it is
+//! debug-formatted with `{:?}` the `debug` method is used.
 //!
 //! All built-in handlers ([`Error`], [`Display`], [`struct@Debug`], [`Any`])
-//! use this default behavior, which means they use their `display` method even
-//! when the report is being debug-formatted with `{:?}`.
+//! use this default behavior.
 //!
 //! ## 2. Attachment Placement
 //!
@@ -159,6 +159,21 @@ where
 /// types like configuration objects, request parameters, or descriptive
 /// messages.
 ///
+/// ⚠️ When returning a `Result` value from `main`, the error will always be formatted
+/// with [`Debug`](core::fmt::Debug)-formatting, which results in `Debug`-formatting
+/// for attachments and contexts using this handler.
+///
+/// The [`Termination`](std::process::Termination) implementation
+/// for `Result` is unfortunately a blanket `impl` for every `Err`-return implementing
+/// `fmt::Debug`, and so [`Report`](crate::Report) can't override it. (This also means
+/// every other type is affected by this.)
+///
+/// However, this functionality is explicitly stated to be provided 'for convenience',
+/// and we believe that for a larger project, it is more likely that the user will
+/// want to directly handle any errors.
+///
+/// For smaller projects, see [`MainReport`](crate::compat::MainReport).
+///
 /// # Examples
 ///
 /// ```
@@ -266,9 +281,10 @@ where
 /// assert!(display_output.contains("InternalState"));
 /// assert!(!display_output.contains("connection_count")); // Details not shown
 ///
-/// // Debug formatting also uses the handler's Display method (the default behavior)
+/// // Debug formatting uses the handler's `debug` method, which delegates to the
+/// // type's `Debug` impl — so the full state is shown.
 /// let debug_output = format!("{:?}", report);
-/// assert!(debug_output.contains("InternalState"));
+/// assert!(debug_output.contains("connection_count"));
 /// ```
 #[derive(Copy, Clone)]
 pub struct Debug;

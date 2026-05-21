@@ -1,13 +1,8 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::{
-    markers::{Dynamic, SendSync},
-    preformatted::{self, PreformattedAttachment},
-    report_attachment::ReportAttachment,
-    util::format_helper,
-};
+use crate::{markers::Dynamic, util::format_helper};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
@@ -206,6 +201,35 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
         self.as_raw_ref().attachment_handler_type_id()
     }
 
+    /// Returns a [`&dyn Any`](Any) view of the inner attachment.
+    ///
+    /// This is the most general accessor for the inner attachment: it works
+    /// whether the attachment type `A` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// # Examples
+    /// ```
+    /// use core::any::Any;
+    ///
+    /// use rootcause::{
+    ///     markers::Dynamic,
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
+    /// let any: &dyn Any = attachment_ref.inner_as_any();
+    /// assert_eq!(any.downcast_ref::<&str>(), Some(&"text data"));
+    /// ```
+    #[must_use]
+    pub fn inner_as_any(self) -> &'a (dyn Any + 'static) {
+        self.as_raw_ref().attachment_as_any()
+    }
+
     /// Formats the inner attachment data with formatting hooks applied.
     ///
     /// This method formats the attachment using both its handler and any global
@@ -395,32 +419,6 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     ) -> AttachmentFormattingStyle {
         self.as_raw_ref()
             .preferred_formatting_style(report_formatting_function)
-    }
-
-    /// Creates a new attachment, with the inner attachment data preformatted.
-    ///
-    /// This can be useful, as the preformatted attachment is a newly allocated
-    /// object and additionally is [`Send`]+[`Sync`].
-    ///
-    /// See [`PreformattedAttachment`] for more information.
-    ///
-    /// [`PreformattedAttachment`](crate::preformatted::PreformattedAttachment)
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
-    /// let attachment = ReportAttachment::new_sendsync(42i32);
-    /// let reference = attachment.as_ref();
-    /// let preformat = reference.preformat();
-    /// assert_eq!(attachment.format_inner().to_string(), preformat.format_inner().to_string());
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(self) -> ReportAttachment<PreformattedAttachment, SendSync> {
-        ReportAttachment::new_custom::<preformatted::PreformattedHandler>(
-            PreformattedAttachment::new_from_attachment(self),
-        )
     }
 }
 
