@@ -1,4 +1,4 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
@@ -199,6 +199,35 @@ impl<'a, A: ?Sized> ReportAttachmentRef<'a, A> {
     #[must_use]
     pub fn inner_handler_type_id(self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the inner attachment.
+    ///
+    /// This is the most general accessor for the inner attachment: it works
+    /// whether the attachment type `A` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// # Examples
+    /// ```
+    /// use core::any::Any;
+    ///
+    /// use rootcause::{
+    ///     markers::Dynamic,
+    ///     prelude::*,
+    ///     report_attachment::{ReportAttachment, ReportAttachmentRef},
+    /// };
+    ///
+    /// let attachment: ReportAttachment<&str> = ReportAttachment::new("text data");
+    /// let attachment: ReportAttachment<Dynamic> = attachment.into_dynamic();
+    /// let attachment_ref: ReportAttachmentRef<'_, Dynamic> = attachment.as_ref();
+    /// let any: &dyn Any = attachment_ref.inner_as_any();
+    /// assert_eq!(any.downcast_ref::<&str>(), Some(&"text data"));
+    /// ```
+    #[must_use]
+    pub fn inner_as_any(self) -> &'a (dyn Any + 'static) {
+        self.as_raw_ref().attachment_as_any()
     }
 
     /// Formats the inner attachment data with formatting hooks applied.

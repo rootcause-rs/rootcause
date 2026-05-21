@@ -1,4 +1,4 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::{
     RawReport,
@@ -658,6 +658,29 @@ impl<C: ?Sized, T> Report<C, Mutable, T> {
     pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
         self.as_mut().into_attachments_mut()
     }
+
+    /// Returns a [`&mut dyn Any`](Any) view of the current context.
+    ///
+    /// This works whether the context type `C` is known at compile time or
+    /// erased to [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// [`Dynamic`]: crate::markers::Dynamic
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// let mut report: Report<String> = report!(String::from("An error occurred"));
+    /// let any: &mut dyn Any = report.current_context_as_any_mut();
+    /// if let Some(s) = any.downcast_mut::<String>() {
+    ///     s.push_str(" and that's bad");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any_mut(&mut self) -> &mut (dyn Any + 'static) {
+        self.as_mut().into_current_context_as_any_mut()
+    }
 }
 
 impl<C: ?Sized, O, T> Report<C, O, T> {
@@ -1191,6 +1214,35 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_uncloneable_ref().current_context_handler_type_id()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the current context.
+    ///
+    /// This is the most general accessor for the current context: it works
+    /// whether the context type `C` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// [`Dynamic`]: crate::markers::Dynamic
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # struct MyError;
+    /// let report: Report<MyError> = report!(MyError);
+    /// let any: &dyn Any = report.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    ///
+    /// // Also works for Dynamic reports
+    /// let report: Report = report.into_dynamic();
+    /// let any: &dyn Any = report.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any(&self) -> &(dyn Any + 'static) {
+        self.as_uncloneable_ref().current_context_as_any()
     }
 
     /// Returns the error source if the context implements [`Error`].

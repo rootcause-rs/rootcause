@@ -1,4 +1,4 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
@@ -760,6 +760,82 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().context_handler_type_id()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the current context.
+    ///
+    /// This is the most general accessor for the current context: it works
+    /// whether the context type `C` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// For mutable access, use [`current_context_as_any_mut`] or
+    /// [`into_current_context_as_any_mut`].
+    ///
+    /// [`Dynamic`]: crate::markers::Dynamic
+    /// [`current_context_as_any_mut`]: ReportMut::current_context_as_any_mut
+    /// [`into_current_context_as_any_mut`]: ReportMut::into_current_context_as_any_mut
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # struct MyError;
+    /// # let mut report = report!(MyError);
+    /// let report_mut = report.as_mut();
+    /// let any: &dyn Any = report_mut.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any(&self) -> &(dyn Any + 'static) {
+        self.as_raw_ref().context_as_any()
+    }
+
+    /// Returns a [`&mut dyn Any`](Any) view of the current context.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let mut report_mut = report.as_mut();
+    /// let any: &mut dyn Any = report_mut.current_context_as_any_mut();
+    /// if let Some(s) = any.downcast_mut::<String>() {
+    ///     s.push_str(" and that's bad");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any_mut(&mut self) -> &mut (dyn Any + 'static) {
+        self.as_mut().into_current_context_as_any_mut()
+    }
+
+    /// Consumes the [`ReportMut`] and returns a [`&mut dyn Any`](Any) view of
+    /// the current context with the same lifetime.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # let mut report: Report<String> = report!("An error occurred".to_string());
+    /// let report_mut = report.as_mut();
+    /// let any: &mut dyn Any = report_mut.into_current_context_as_any_mut();
+    /// if let Some(s) = any.downcast_mut::<String>() {
+    ///     s.push_str(" and that's bad");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn into_current_context_as_any_mut(self) -> &'a mut (dyn Any + 'static) {
+        // SAFETY:
+        // 1. We are not adding any objects
+        let raw = unsafe { self.into_raw_mut() };
+        raw.into_context_as_any_mut()
     }
 
     /// Returns the error source if the context implements [`Error`].

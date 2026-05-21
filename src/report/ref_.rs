@@ -1,5 +1,5 @@
 use alloc::vec;
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
@@ -597,6 +597,34 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     #[must_use]
     pub fn current_context_type_name(self) -> &'static str {
         self.as_raw_ref().context_type_name()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the current context.
+    ///
+    /// This is the most general accessor for the current context: it works
+    /// whether the context type `C` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportRef, markers::Dynamic};
+    /// # use core::any::Any;
+    /// # struct MyError;
+    /// # let report = report!(MyError).into_cloneable();
+    /// let report_ref: ReportRef<'_, MyError> = report.as_ref();
+    /// let any: &dyn Any = report_ref.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    ///
+    /// // Also works for Dynamic reports
+    /// let dyn_ref: ReportRef<'_, Dynamic> = report_ref.into_dynamic();
+    /// let any: &dyn Any = dyn_ref.current_context_as_any();
+    /// assert_eq!(any.downcast_ref::<MyError>().map(|_| ()), Some(()));
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any(self) -> &'a (dyn Any + 'static) {
+        self.as_raw_ref().context_as_any()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.

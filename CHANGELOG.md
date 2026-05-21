@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Added `current_context_as_any` / `current_context_as_any_mut` on `Report`/`ReportRef`/`ReportMut` and `inner_as_any` / `inner_as_any_mut` on `ReportAttachment`/`ReportAttachmentRef`/`ReportAttachmentMut` for `&dyn Any` access to contexts and attachments [#151](https://github.com/rootcause-rs/rootcause/issues/151).
 - Added a compatibility module for error-stack v0.7 [#169](https://github.com/rootcause-rs/rootcause/pull/169).
 - Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`. `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. Splitting `Deref` by thread-safety marker may break type inference at call sites of `Report::new_custom` / `Report::new`; use `new_sendsync_custom` / `new_local_custom` or explicit annotations to fix. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
 - Doc examples for nearly all public functions [#136](https://github.com/rootcause-rs/rootcause/pull/136).
