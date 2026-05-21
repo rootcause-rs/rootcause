@@ -9,8 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- Added a compatibility module for error-stack v0.7.
+- Added a compatibility module for error-stack v0.7 [#169](https://github.com/rootcause-rs/rootcause/pull/169).
 - Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`. `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. Splitting `Deref` by thread-safety marker may break type inference at call sites of `Report::new_custom` / `Report::new`; use `new_sendsync_custom` / `new_local_custom` or explicit annotations to fix. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
+- Doc examples for nearly all public functions [#136](https://github.com/rootcause-rs/rootcause/pull/136).
+
+### Fixed
+
+- Fixed cross-compilation support in `rootcause-backtrace` by detecting the path separator from `Location::caller()` at compile time instead of from a build-script-recorded host constant [#134](https://github.com/rootcause-rs/rootcause/pull/134).
 
 ## [0.12.1] - 2026-02-19
 
