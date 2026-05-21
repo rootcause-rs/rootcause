@@ -1028,10 +1028,21 @@ impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     }
 }
 
+// `Report<_, _, SendSync>` derefs to `dyn Error + Send + Sync`. This isn't
+// split the same way because `ReportRef` / `ReportMut` aren't `Send + Sync`
+// today. See https://github.com/rootcause-rs/rootcause/issues/173 for whether
+// that could change.
 impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
     type Target = dyn core::error::Error + 'a;
 
     fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized, O, T> AsRef<dyn core::error::Error + 'a> for ReportRef<'a, C, O, T> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1086,7 +1097,10 @@ from_impls!(
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
+    use core::error::Error as StdError;
+    use core::ops::Deref;
+    use thiserror::Error;
 
     use super::*;
     use crate::markers::{Mutable, Uncloneable};
@@ -1193,5 +1207,36 @@ mod tests {
         let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
         let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
         assert_eq!(alloc::format!("{report}"), alloc::format!("{preformatted}"));
+    }
+
+    #[derive(Debug, Error)]
+    #[error("boom")]
+    struct Boom;
+
+    fn make_report() -> Report<Boom> {
+        Report::new(Boom)
+    }
+
+    #[test]
+    fn report_ref_derefs_to_dyn_error() {
+        let report = make_report();
+        let report_ref = report.as_ref();
+
+        let err: &dyn StdError = report_ref.deref();
+
+        assert!(err.to_string().contains("boom"));
+        assert!(report.source().is_none());
+    }
+
+    #[test]
+    fn report_ref_asrefs_to_dyn_error() {
+        let report = make_report();
+        let report_ref = report.as_ref();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(report_ref);
     }
 }
