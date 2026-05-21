@@ -253,7 +253,7 @@ impl<C: ?Sized, T> From<ReportRef<'_, C, markers::Cloneable, T>> for ReportAsErr
 ///
 /// When returning a `Result` value from `main`, the error will always be formatted
 /// with [`Debug`](core::fmt::Debug)-formatting, which results in `Debug`-formatting
-/// for attachments and contexts. (c.f. [`Termination`](std::process::Termination)).
+/// for attachments and contexts. For context see the [`Termination`](std::process::Termination)) trait.
 ///
 /// This wrapper ensures `Display`-formatting of a report when returned from main.
 ///
