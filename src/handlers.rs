@@ -174,8 +174,6 @@ where
 ///
 /// For smaller projects, see [`MainReport`](crate::compat::MainReport).
 ///
-/// We have provided a
-///
 /// # Examples
 ///
 /// ```
