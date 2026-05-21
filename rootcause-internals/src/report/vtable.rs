@@ -17,7 +17,7 @@
 //! with specific types `C` and `H` at compile time.
 
 use core::{
-    any::{self, TypeId},
+    any::{self, Any, TypeId},
     ptr::NonNull,
 };
 
@@ -25,7 +25,7 @@ use crate::{
     handlers::{ContextFormattingStyle, ContextHandler, FormattingFunction},
     report::{
         data::ReportData,
-        raw::{RawReport, RawReportRef},
+        raw::{RawReport, RawReportMut, RawReportRef},
     },
     util::Erased,
 };
@@ -74,6 +74,10 @@ pub(crate) struct ReportVtable {
     /// of a report.
     preferred_context_formatting_style:
         unsafe fn(RawReportRef<'_>, FormattingFunction) -> ContextFormattingStyle,
+    /// Returns a `&dyn Any` view of the context.
+    context_as_any: unsafe fn(RawReportRef<'_>) -> &(dyn Any + 'static),
+    /// Returns a `&mut dyn Any` view of the context.
+    context_as_any_mut: unsafe fn(RawReportMut<'_>) -> &mut (dyn Any + 'static),
 }
 
 impl ReportVtable {
@@ -92,6 +96,8 @@ impl ReportVtable {
                 display: display::<C, H>,
                 debug: debug::<C, H>,
                 preferred_context_formatting_style: preferred_context_formatting_style::<C, H>,
+                context_as_any: context_as_any::<C>,
+                context_as_any_mut: context_as_any_mut::<C>,
             }
         }
     }
@@ -311,6 +317,58 @@ impl ReportVtable {
             (self.preferred_context_formatting_style)(ptr, report_formatting_function)
         }
     }
+
+    /// Returns a `&dyn Any` reference to the context using the function pointer
+    /// stored in this [`ReportVtable`].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportRef`].
+    #[inline]
+    pub(super) unsafe fn context_as_any<'a>(
+        &self,
+        ptr: RawReportRef<'a>,
+    ) -> &'a (dyn Any + 'static) {
+        // SAFETY: We know that `self.context_as_any` points to the function
+        // `context_as_any::<C>` below. That function's safety requirements are
+        // upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // @add-unsafe-context: context_as_any
+            // @add-unsafe-context: RawReportRef
+            // @add-unsafe-context: ReportData
+            (self.context_as_any)(ptr)
+        }
+    }
+
+    /// Returns a `&mut dyn Any` reference to the context using the function
+    /// pointer stored in this [`ReportVtable`].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. This [`ReportVtable`] must be a vtable for the context type stored in
+    ///    the [`RawReportMut`].
+    #[inline]
+    pub(super) unsafe fn context_as_any_mut<'a>(
+        &self,
+        ptr: RawReportMut<'a>,
+    ) -> &'a mut (dyn Any + 'static) {
+        // SAFETY: We know that `self.context_as_any_mut` points to the function
+        // `context_as_any_mut::<C>` below. That function's safety requirements
+        // are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // @add-unsafe-context: context_as_any_mut
+            // @add-unsafe-context: RawReportMut
+            // @add-unsafe-context: ReportData
+            (self.context_as_any_mut)(ptr)
+        }
+    }
 }
 
 /// Drops the [`triomphe::Arc<ReportData<C>>`] instance pointed to by this
@@ -464,6 +522,36 @@ unsafe fn preferred_context_formatting_style<C: 'static, H: ContextHandler<C>>(
     // 1. Guaranteed by the caller
     let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
     H::preferred_formatting_style(context, report_formatting_function)
+}
+
+/// Returns a `&dyn Any` view of the context.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
+unsafe fn context_as_any<'a, C: 'static>(ptr: RawReportRef<'a>) -> &'a (dyn Any + 'static) {
+    // SAFETY:
+    // 1. Guaranteed by the caller
+    let context: &C = unsafe { ptr.context_downcast_unchecked::<C>() };
+    context as &(dyn Any + 'static)
+}
+
+/// Returns a `&mut dyn Any` view of the context.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The type `C` matches the actual context type stored in the [`ReportData`]
+unsafe fn context_as_any_mut<'a, C: 'static>(
+    ptr: RawReportMut<'a>,
+) -> &'a mut (dyn Any + 'static) {
+    // SAFETY:
+    // 1. Guaranteed by the caller
+    let context: &mut C = unsafe { ptr.into_context_downcast_unchecked::<C>() };
+    context as &mut (dyn Any + 'static)
 }
 
 #[cfg(test)]

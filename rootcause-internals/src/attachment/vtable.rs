@@ -18,12 +18,15 @@
 
 use alloc::boxed::Box;
 use core::{
-    any::{self, TypeId},
+    any::{self, Any, TypeId},
     ptr::NonNull,
 };
 
 use crate::{
-    attachment::{data::AttachmentData, raw::RawAttachmentRef},
+    attachment::{
+        data::AttachmentData,
+        raw::{RawAttachmentMut, RawAttachmentRef},
+    },
     handlers::{AttachmentFormattingStyle, AttachmentHandler, FormattingFunction},
     util::Erased,
 };
@@ -60,6 +63,10 @@ pub(crate) struct AttachmentVtable {
     /// part of a report.
     preferred_formatting_style:
         unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
+    /// Returns a `&dyn Any` view of the attachment.
+    attachment_as_any: unsafe fn(RawAttachmentRef<'_>) -> &(dyn Any + 'static),
+    /// Returns a `&mut dyn Any` view of the attachment.
+    attachment_as_any_mut: unsafe fn(RawAttachmentMut<'_>) -> &mut (dyn Any + 'static),
 }
 
 impl AttachmentVtable {
@@ -75,6 +82,8 @@ impl AttachmentVtable {
                 display: display::<A, H>,
                 debug: debug::<A, H>,
                 preferred_formatting_style: preferred_formatting_style::<A, H>,
+                attachment_as_any: attachment_as_any::<A>,
+                attachment_as_any_mut: attachment_as_any_mut::<A>,
             }
         }
     }
@@ -210,6 +219,58 @@ impl AttachmentVtable {
             (self.preferred_formatting_style)(ptr, report_formatting_function)
         }
     }
+
+    /// Returns a `&dyn Any` reference to the attachment using the function
+    /// pointer stored in this [`AttachmentVtable`].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment type
+    ///    stored in the [`RawAttachmentRef`].
+    #[inline]
+    pub(super) unsafe fn attachment_as_any<'a>(
+        &self,
+        ptr: RawAttachmentRef<'a>,
+    ) -> &'a (dyn Any + 'static) {
+        // SAFETY: We know that the `self.attachment_as_any` field points to the
+        // function `attachment_as_any::<A>` below. That function's safety
+        // requirements are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // @add-unsafe-context: attachment_as_any
+            // @add-unsafe-context: RawAttachmentRef
+            // @add-unsafe-context: AttachmentData
+            (self.attachment_as_any)(ptr)
+        }
+    }
+
+    /// Returns a `&mut dyn Any` reference to the attachment using the function
+    /// pointer stored in this [`AttachmentVtable`].
+    ///
+    /// # Safety
+    ///
+    /// The caller must ensure:
+    ///
+    /// 1. This [`AttachmentVtable`] must be a vtable for the attachment type
+    ///    stored in the [`RawAttachmentMut`].
+    #[inline]
+    pub(super) unsafe fn attachment_as_any_mut<'a>(
+        &self,
+        ptr: RawAttachmentMut<'a>,
+    ) -> &'a mut (dyn Any + 'static) {
+        // SAFETY: We know that the `self.attachment_as_any_mut` field points to
+        // the function `attachment_as_any_mut::<A>` below. That function's
+        // safety requirements are upheld:
+        // 1. Guaranteed by the caller
+        unsafe {
+            // @add-unsafe-context: attachment_as_any_mut
+            // @add-unsafe-context: RawAttachmentMut
+            // @add-unsafe-context: AttachmentData
+            (self.attachment_as_any_mut)(ptr)
+        }
+    }
 }
 
 /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this pointer.
@@ -292,6 +353,40 @@ unsafe fn preferred_formatting_style<A: 'static, H: AttachmentHandler<A>>(
     // 1. Guaranteed by the caller
     let attachment: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
     H::preferred_formatting_style(attachment, report_formatting_function)
+}
+
+/// Returns a `&dyn Any` view of the attachment.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The type `A` matches the actual attachment type stored in the
+///    [`AttachmentData`]
+unsafe fn attachment_as_any<'a, A: 'static>(
+    ptr: RawAttachmentRef<'a>,
+) -> &'a (dyn Any + 'static) {
+    // SAFETY:
+    // 1. Guaranteed by the caller
+    let attachment: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
+    attachment as &(dyn Any + 'static)
+}
+
+/// Returns a `&mut dyn Any` view of the attachment.
+///
+/// # Safety
+///
+/// The caller must ensure:
+///
+/// 1. The type `A` matches the actual attachment type stored in the
+///    [`AttachmentData`]
+unsafe fn attachment_as_any_mut<'a, A: 'static>(
+    ptr: RawAttachmentMut<'a>,
+) -> &'a mut (dyn Any + 'static) {
+    // SAFETY:
+    // 1. Guaranteed by the caller
+    let attachment: &mut A = unsafe { ptr.into_attachment_downcast_unchecked::<A>() };
+    attachment as &mut (dyn Any + 'static)
 }
 
 #[cfg(test)]

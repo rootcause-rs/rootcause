@@ -1,4 +1,4 @@
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
@@ -384,6 +384,76 @@ impl<'a, A: ?Sized> ReportAttachmentMut<'a, A> {
     #[must_use]
     pub fn inner_handler_type_id(&self) -> TypeId {
         self.as_raw_ref().attachment_handler_type_id()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the inner attachment.
+    ///
+    /// This works whether the attachment type `A` is known at compile time or
+    /// erased to [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use core::any::Any;
+    /// let mut attachment = ReportAttachment::new_sendsync(42i32);
+    /// let attachment_mut = attachment.as_mut();
+    /// let any: &dyn Any = attachment_mut.inner_as_any();
+    /// assert_eq!(any.downcast_ref::<i32>(), Some(&42));
+    /// ```
+    #[must_use]
+    pub fn inner_as_any(&self) -> &(dyn Any + 'static) {
+        self.as_raw_ref().attachment_as_any()
+    }
+
+    /// Returns a [`&mut dyn Any`](Any) view of the inner attachment.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use core::any::Any;
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32);
+    /// {
+    ///     let mut attachment_mut = attachment.as_mut();
+    ///     let any: &mut dyn Any = attachment_mut.inner_as_any_mut();
+    ///     if let Some(n) = any.downcast_mut::<i32>() {
+    ///         *n += 1;
+    ///     }
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
+    #[must_use]
+    pub fn inner_as_any_mut(&mut self) -> &mut (dyn Any + 'static) {
+        self.as_mut().into_inner_as_any_mut()
+    }
+
+    /// Consumes the [`ReportAttachmentMut`] and returns a [`&mut dyn Any`](Any)
+    /// view of the inner attachment with the same lifetime.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, report_attachment::ReportAttachment};
+    /// # use core::any::Any;
+    /// let mut attachment = ReportAttachment::new_sendsync(41i32);
+    /// {
+    ///     let attachment_mut = attachment.as_mut();
+    ///     let any: &mut dyn Any = attachment_mut.into_inner_as_any_mut();
+    ///     if let Some(n) = any.downcast_mut::<i32>() {
+    ///         *n += 1;
+    ///     }
+    /// }
+    /// assert_eq!(attachment.format_inner().to_string(), "42");
+    /// ```
+    #[must_use]
+    pub fn into_inner_as_any_mut(self) -> &'a mut (dyn Any + 'static) {
+        let raw = self.into_raw_mut();
+        raw.into_attachment_as_any_mut()
     }
 
     /// Formats the inner attachment data with formatting hooks applied.

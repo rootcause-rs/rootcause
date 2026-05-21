@@ -23,7 +23,10 @@
 //! attachments.
 
 use alloc::boxed::Box;
-use core::{any::TypeId, ptr::NonNull};
+use core::{
+    any::{Any, TypeId},
+    ptr::NonNull,
+};
 
 use crate::{
     attachment::data::AttachmentData,
@@ -256,6 +259,22 @@ impl<'a> RawAttachmentRef<'a> {
         }
     }
 
+    /// Returns a [`&dyn Any`](Any) view of the attachment.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref`.
+    #[inline]
+    pub fn attachment_as_any(self) -> &'a (dyn Any + 'static) {
+        let vtable = self.vtable();
+        // SAFETY:
+        // 1. The vtable returned by `self.vtable()` is guaranteed to match the data in
+        //    the `AttachmentData`.
+        unsafe {
+            // @add-unsafe-context: AttachmentData
+            vtable.attachment_as_any(self)
+        }
+    }
+
     /// The formatting style preferred by the attachment when formatted as part
     /// of a report.
     ///
@@ -376,6 +395,23 @@ impl<'a> RawAttachmentMut<'a> {
             //    `self` while the returned reference exists
             ptr: self.ptr,
             _marker: core::marker::PhantomData,
+        }
+    }
+
+    /// Consumes this [`RawAttachmentMut`] and returns a [`&mut dyn Any`](Any)
+    /// view of the attachment with the same lifetime.
+    ///
+    /// The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    #[inline]
+    pub fn into_attachment_as_any_mut(self) -> &'a mut (dyn Any + 'static) {
+        let vtable = self.as_ref().vtable();
+        // SAFETY:
+        // 1. The vtable returned by `self.as_ref().vtable()` is guaranteed to match the
+        //    data in the `AttachmentData`.
+        unsafe {
+            // @add-unsafe-context: AttachmentData
+            vtable.attachment_as_any_mut(self)
         }
     }
 
@@ -583,5 +619,24 @@ mod tests {
         static_assertions::assert_not_impl_any!(RawAttachment: Send, Sync);
         static_assertions::assert_not_impl_any!(RawAttachmentRef<'_>: Send, Sync);
         static_assertions::assert_not_impl_any!(RawAttachmentMut<'_>: Send, Sync);
+    }
+
+    #[test]
+    fn test_raw_attachment_as_any() {
+        let attachment = RawAttachment::new::<i32, HandlerI32>(42);
+        let any = attachment.as_ref().attachment_as_any();
+        assert_eq!(any.downcast_ref::<i32>(), Some(&42));
+        assert!(any.downcast_ref::<String>().is_none());
+    }
+
+    #[test]
+    fn test_raw_attachment_as_any_mut() {
+        let mut attachment = RawAttachment::new::<i32, HandlerI32>(41);
+        let any = attachment.as_mut().into_attachment_as_any_mut();
+        *any.downcast_mut::<i32>().unwrap() += 1;
+        assert_eq!(
+            unsafe { *attachment.as_ref().attachment_downcast_unchecked::<i32>() },
+            42
+        );
     }
 }
