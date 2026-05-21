@@ -506,10 +506,7 @@ mod tests {
         for preformatted in [&from_owned, &from_ref, &from_mut] {
             assert_eq!(format!("{}", preformatted.format_inner()), display);
             assert_eq!(format!("{:?}", preformatted.format_inner()), debug);
-            assert_eq!(
-                preformatted.inner().original_type_id(),
-                TypeId::of::<u32>(),
-            );
+            assert_eq!(preformatted.inner().original_type_id(), TypeId::of::<u32>(),);
         }
     }
 }
