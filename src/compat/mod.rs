@@ -17,6 +17,8 @@
 //!   handling library (requires the `compat-error-stack05` feature flag)
 //! - [`error_stack06`] - Integration with the `error-stack` 0.6.x error
 //!   handling library (requires the `compat-error-stack06` feature flag)
+//! - [`error_stack07`] - Integration with the `error-stack` 0.7.x error
+//!   handling library (requires the `compat-error-stack07` feature flag)
 //! - [`eyre06`] - Integration with the `eyre` 0.6.x error handling library
 //!   (requires the `compat-eyre06` feature flag)
 //!
@@ -42,7 +44,7 @@
 //! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits
 //!   and extension traits with descriptive method names
 //!
-//! # Example
+//! # Examples
 //!
 //! Here's how to use the [`IntoRootcause`] trait to convert external errors:
 //!
@@ -76,7 +78,7 @@
 
 use crate::{
     Report, ReportRef,
-    markers::{self, Dynamic},
+    markers::{self, Cloneable, Dynamic, Local},
 };
 
 /// A trait for converting external error types into rootcause [`Report`]s.
@@ -103,14 +105,15 @@ use crate::{
 /// handling libraries:
 /// - [`anyhow1`] module provides implementations for [`anyhow::Error`] and
 ///   [`anyhow::Result<T>`]
-/// - [`error_stack05`] and [`error_stack06`] modules provide implementations
-///   for [`error_stack::Report<C>`] and `Result<T, error_stack::Report<C>>`
+/// - [`error_stack05`], [`error_stack06`], and [`error_stack07`] modules
+///   provide implementations for [`error_stack::Report<C>`] and `Result<T,
+///   error_stack::Report<C>>`
 /// - [`eyre06`] module provides implementations for [`eyre::Report`] and
 ///   [`eyre::Result<T>`]
 ///
 /// [`anyhow::Error`]: ::anyhow::Error
 /// [`anyhow::Result<T>`]: ::anyhow::Result
-/// [`error_stack::Report<C>`]: ::error_stack::Report
+/// [`error_stack::Report<C>`]: ::error_stack07::Report
 ///
 /// # Examples
 ///
@@ -179,6 +182,10 @@ pub mod error_stack05;
 #[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack06")))]
 pub mod error_stack06;
 
+#[cfg(feature = "compat-error-stack07")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack07")))]
+pub mod error_stack07;
+
 #[cfg(feature = "compat-eyre06")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compat-eyre06")))]
 pub mod eyre06;
@@ -206,7 +213,7 @@ pub mod eyre06;
 ///
 /// fn requires_error_trait(err: impl std::error::Error) {}
 ///
-/// let report = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
+/// let report: Report<std::io::Error> = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
 /// let as_error = ReportAsError(report.into_cloneable());
 /// requires_error_trait(as_error);
 /// ```
@@ -243,5 +250,63 @@ impl<C: ?Sized, O, T> From<Report<C, O, T>> for ReportAsError<C, T> {
 impl<C: ?Sized, T> From<ReportRef<'_, C, markers::Cloneable, T>> for ReportAsError<C, T> {
     fn from(value: ReportRef<'_, C, markers::Cloneable, T>) -> Self {
         ReportAsError(value.clone_arc())
+    }
+}
+
+/// Utility wrapper type for pretty-printing reports when returning
+/// `Result<(), Report>` from main.
+///
+/// When returning a `Result` value from `main`, the error will always be formatted
+/// with [`Debug`](core::fmt::Debug)-formatting, which results in `Debug`-formatting
+/// for attachments and contexts. For context see the [`Termination`](std::process::Termination) trait.
+///
+/// This wrapper ensures `Display`-formatting of a report when returned from main.
+///
+/// ```should_panic
+/// # use rootcause::compat::MainReport;
+/// # use rootcause::bail;
+/// fn main() -> Result<(), MainReport> {
+///     bail!("Oh no!")
+/// }
+/// ```
+///
+/// ```output
+///  ● Oh no!         ← {}-formatted string
+///  ╰ <some path>
+/// ```
+///
+/// Contrast and compare:
+///
+/// ```should_panic
+/// # use rootcause::Report;
+/// # use rootcause::bail;
+/// fn main() -> Result<(), Report> {
+///     bail!("Oh no!")
+/// }
+/// ```
+///
+/// ```output
+///  ● "Oh no!"       ← {:?}-formatted string
+///  ╰ <some path>    ← locations are always {}-formatted
+/// ```
+#[derive(Clone)]
+#[repr(transparent)]
+pub struct MainReport(Report<Dynamic, Cloneable, Local>);
+
+impl<C: ?Sized + 'static, O: 'static, T: 'static> From<Report<C, O, T>> for MainReport {
+    fn from(value: Report<C, O, T>) -> Self {
+        Self(value.into_dynamic().into_cloneable().into_local())
+    }
+}
+
+impl From<MainReport> for Report<Dynamic, Cloneable, Local> {
+    fn from(value: MainReport) -> Self {
+        value.0
+    }
+}
+
+impl core::fmt::Debug for MainReport {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        core::fmt::Display::fmt(&self.0, f)
     }
 }

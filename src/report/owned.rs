@@ -1,4 +1,7 @@
-use core::any::TypeId;
+use core::{
+    any::{Any, TypeId},
+    marker::PhantomData,
+};
 
 use rootcause_internals::{
     RawReport,
@@ -8,8 +11,10 @@ use rootcause_internals::{
 use crate::{
     ReportConversion, ReportIter, ReportMut, ReportRef,
     handlers::{self, ContextHandler},
-    markers::{self, Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::{self, PreformattedContext},
+    markers::{
+        self, Cloneable, Dynamic, Local, Mutable, ReportOwnershipMarker, SendSync, Uncloneable,
+    },
+    report::iter::DowncastIterator,
     report_attachment::ReportAttachment,
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
@@ -531,13 +536,13 @@ impl<C: Sized, T> Report<C, Mutable, T> {
     ///
     /// # See Also
     ///
-    /// - [`context_transform_nested()`](Report::context_transform_nested) -
-    ///   Wraps original as preformatted child
+    /// - [`ContextTransformNestedExt::context_transform_nested`] - Wraps original as preformatted child
     /// - [`context()`](Report::context) - Adds new parent context
     /// - [`context_to()`](Report::context_to) - Uses
     ///   [`ReportConversion`](crate::ReportConversion) trait
     /// - [`examples/context_methods.rs`] - Comparison guide
     ///
+    /// [`ContextTransformNestedExt::context_transform_nested`]: https://docs.rs/rootcause-preformat/latest/rootcause_preformat/trait.ContextTransformNestedExt.html#method.context_transform_nested
     /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
     #[track_caller]
     pub fn context_transform<F, D>(self, f: F) -> Report<D, Mutable, T>
@@ -549,110 +554,6 @@ impl<C: Sized, T> Report<C, Mutable, T> {
         let new_context = f(context);
 
         Report::from_parts_unhooked::<handlers::Display>(new_context, children, attachments)
-    }
-
-    /// Transforms the context and nests the original report as a preformatted
-    /// child.
-    ///
-    /// Creates a new parent node with fresh hook data (location, backtrace),
-    /// but the original context type is lost—the child becomes
-    /// [`PreformattedContext`] and cannot be downcast.
-    ///
-    /// [`PreformattedContext`]: crate::preformatted::PreformattedContext
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::prelude::*;
-    /// # #[derive(Debug)]
-    /// # struct LibError;
-    /// # impl std::fmt::Display for LibError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "lib error") }
-    /// # }
-    /// # #[derive(Debug)]
-    /// enum AppError {
-    ///     Lib(LibError)
-    /// }
-    /// # impl std::fmt::Display for AppError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "app error") }
-    /// # }
-    ///
-    /// let lib_report: Report<LibError> = report!(LibError);
-    /// let app_report: Report<AppError> = lib_report.context_transform_nested(AppError::Lib);
-    /// ```
-    ///
-    /// # See Also
-    ///
-    /// - [`context_transform()`](Report::context_transform) - Transforms
-    ///   without nesting
-    /// - [`context()`](Report::context) - Adds new parent, preserves child's
-    ///   type
-    /// - [`preformat_root()`](Report::preformat_root) - Lower-level operation
-    ///   used internally
-    /// - [`examples/context_methods.rs`] - Comparison guide
-    ///
-    /// [`examples/context_methods.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/context_methods.rs
-    #[track_caller]
-    pub fn context_transform_nested<F, D>(self, f: F) -> Report<D, Mutable, T>
-    where
-        F: FnOnce(C) -> D,
-        D: markers::ObjectMarkerFor<T> + core::fmt::Display + core::fmt::Debug,
-        PreformattedContext: markers::ObjectMarkerFor<T>,
-    {
-        let (context, report) = self.preformat_root();
-        report.context_custom::<handlers::Display, _>(f(context))
-    }
-
-    /// Extracts the context and returns it with a preformatted version of the
-    /// report.
-    ///
-    /// Returns a tuple: the original typed context and a new report with
-    /// [`PreformattedContext`](crate::preformatted::PreformattedContext)
-    /// containing the string representation. The preformatted report maintains
-    /// the same structure (children and attachments). Useful when you need
-    /// the typed value for processing and the formatted version for display.
-    ///
-    /// This is a lower-level method primarily for custom transformation logic.
-    /// Most users should use
-    /// [`context_transform`](Self::context_transform),
-    /// [`context_transform_nested`](Self::context_transform_nested),
-    /// or [`context_to`](Self::context_to) instead.
-    ///
-    /// See also: [`preformat`](Report::preformat) (formats entire hierarchy),
-    /// [`into_parts`](Report::into_parts) (extracts without formatting),
-    /// [`current_context`](crate::ReportRef::current_context) (reference
-    /// without extraction).
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// # use rootcause::{preformatted::PreformattedContext, prelude::*};
-    /// # #[derive(Debug)]
-    /// struct MyError {
-    ///     code: u32
-    /// }
-    /// # impl std::fmt::Display for MyError {
-    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error {}", self.code) }
-    /// # }
-    ///
-    /// let report: Report<MyError> = report!(MyError { code: 500 });
-    /// let (context, preformatted): (MyError, Report<PreformattedContext>) = report.preformat_root();
-    /// ```
-    pub fn preformat_root(self) -> (C, Report<PreformattedContext, Mutable, T>)
-    where
-        PreformattedContext: markers::ObjectMarkerFor<T>,
-    {
-        let preformatted = PreformattedContext::new_from_context(self.as_ref());
-        let (context, children, attachments) = self.into_parts();
-
-        (
-            context,
-            Report::from_parts_unhooked::<preformatted::PreformattedHandler>(
-                preformatted,
-                children,
-                attachments,
-            ),
-        )
     }
 }
 
@@ -763,6 +664,29 @@ impl<C: ?Sized, T> Report<C, Mutable, T> {
     pub fn attachments_mut(&mut self) -> &mut ReportAttachments<T> {
         self.as_mut().into_attachments_mut()
     }
+
+    /// Returns a [`&mut dyn Any`](Any) view of the current context.
+    ///
+    /// This works whether the context type `C` is known at compile time or
+    /// erased to [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_mut`.
+    ///
+    /// [`Dynamic`]: crate::markers::Dynamic
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// let mut report: Report<String> = report!(String::from("An error occurred"));
+    /// let any: &mut dyn Any = report.current_context_as_any_mut();
+    /// if let Some(s) = any.downcast_mut::<String>() {
+    ///     s.push_str(" and that's bad");
+    /// }
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any_mut(&mut self) -> &mut (dyn Any + 'static) {
+        self.as_mut().into_current_context_as_any_mut()
+    }
 }
 
 impl<C: ?Sized, O, T> Report<C, O, T> {
@@ -837,10 +761,9 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// (`::<Type>`).
     ///
     /// See also: [`context_transform`](Self::context_transform) for direct
-    /// conversion,
-    /// [`context_transform_nested`](Self::context_transform_nested) for
-    /// wrapping, [`examples/thiserror_interop.rs`] for integration
-    /// patterns.
+    /// conversion, `context_transform_nested` (in the
+    /// [`rootcause-preformat`](https://docs.rs/rootcause-preformat) crate) for
+    /// wrapping, [`examples/thiserror_interop.rs`] for integration patterns.
     ///
     /// [`examples/thiserror_interop.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/thiserror_interop.rs
     ///
@@ -961,7 +884,9 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// - Allocate a new root node using e.g. [`Report::context`].
     /// - If there is a single unique owner of the report, you can use
     ///   [`Report::try_into_mutable`].
-    /// - Preformat the root node using [`Report::preformat`].
+    /// - Preformat the root node using [`PreformatReportExt::preformat`].
+    ///
+    /// [`PreformatReportExt::preformat`]: https://docs.rs/rootcause-preformat/latest/rootcause_preformat/trait.PreformatReportExt.html#method.preformat
     ///
     /// # Examples
     /// ```
@@ -1238,28 +1163,6 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
         self.as_uncloneable_ref().iter_sub_reports()
     }
 
-    /// Creates a new report, which has the same structure as the current
-    /// report, but has all the contexts and attachments preformatted.
-    ///
-    /// This can be useful, as the new report is mutable because it was just
-    /// created, and additionally the new report is [`Send`]+[`Sync`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
-    /// # #[derive(Default)]
-    /// # struct NonSendSyncError(core::cell::Cell<()>);
-    /// # let non_send_sync_error = NonSendSyncError::default();
-    /// let mut report: Report<NonSendSyncError, Mutable, Local> = report!(non_send_sync_error);
-    /// let preformatted: Report<PreformattedContext, Mutable, SendSync> = report.preformat();
-    /// assert_eq!(format!("{report}"), format!("{preformatted}"));
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(&self) -> Report<PreformattedContext, Mutable, SendSync> {
-        self.as_uncloneable_ref().preformat()
-    }
-
     /// Returns the [`TypeId`] of the current context.
     ///
     /// # Examples
@@ -1310,13 +1213,42 @@ impl<C: ?Sized, O, T> Report<C, O, T> {
     /// ```
     /// # use rootcause::{prelude::*, markers::SendSync};
     /// # use core::any::TypeId;
-    /// let report = Report::new_sendsync_custom::<handlers::Debug>("error message");
+    /// let report : Report<&'static str> = Report::new_custom::<handlers::Debug>("error message");
     /// let handler_type = report.current_context_handler_type_id();
     /// assert_eq!(handler_type, TypeId::of::<handlers::Debug>());
     /// ```
     #[must_use]
     pub fn current_context_handler_type_id(&self) -> TypeId {
         self.as_uncloneable_ref().current_context_handler_type_id()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the current context.
+    ///
+    /// This is the most general accessor for the current context: it works
+    /// whether the context type `C` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// [`Dynamic`]: crate::markers::Dynamic
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # use core::any::Any;
+    /// # struct MyError;
+    /// let report: Report<MyError> = report!(MyError);
+    /// let any: &dyn Any = report.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    ///
+    /// // Also works for Dynamic reports
+    /// let report: Report = report.into_dynamic();
+    /// let any: &dyn Any = report.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any(&self) -> &(dyn Any + 'static) {
+        self.as_uncloneable_ref().current_context_as_any()
     }
 
     /// Returns the error source if the context implements [`Error`].
@@ -1633,6 +1565,55 @@ impl<O, T> Report<Dynamic, O, T> {
         // 8. This is guaranteed by the invariants of this type.
         unsafe { Report::from_raw(raw) }
     }
+
+    /// Returns an iterator over all contexts in the report hierarchy that can
+    /// be downcast to the specified type `D`.
+    ///
+    /// Iterates over the complete report hierarchy (including this report)
+    /// using [`iter_reports`](Self::iter_reports) and yields references to
+    /// contexts that successfully downcast to `D`.
+    ///
+    /// This is a convenience method combining
+    /// [`iter_reports`](Self::iter_reports) with
+    /// [`downcast_current_context`](Report::downcast_current_context).
+    ///
+    /// See also: [`iter_reports`](Self::iter_reports) for iterating over all
+    /// reports, [`downcast_current_context`](Report::downcast_current_context)
+    /// for downcasting a single report's context.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// # #[derive(Debug)]
+    /// struct MyError {
+    ///     code: u32,
+    /// }
+    /// # impl std::fmt::Display for MyError {
+    /// #     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result { write!(f, "error {}", self.code) }
+    /// # }
+    ///
+    /// let child = report!(MyError { code: 404 }).into_dynamic();
+    /// let mut root = report!(MyError { code: 500 }).into_dynamic();
+    /// root.children_mut().push(child.into_cloneable());
+    ///
+    /// let codes: Vec<u32> = root
+    ///     .iter_downcast_context::<MyError>()
+    ///     .map(|e| e.code)
+    ///     .collect();
+    ///
+    /// assert_eq!(codes, vec![500, 404]);
+    /// ```
+    pub fn iter_downcast_context<D>(&self) -> DowncastIterator<'_, D, O::RefMarker, T>
+    where
+        O: ReportOwnershipMarker,
+        D: 'static,
+    {
+        DowncastIterator {
+            iter: self.iter_reports(),
+            _phantom: PhantomData,
+        }
+    }
 }
 
 impl<C: Sized + Send + Sync> Report<C, Mutable, SendSync> {
@@ -1803,10 +1784,32 @@ impl<C: ?Sized, O, T> core::fmt::Debug for Report<C, O, T> {
     }
 }
 
-impl<C: ?Sized, O, T> core::ops::Deref for Report<C, O, T> {
-    type Target = dyn core::error::Error;
+impl<C: ?Sized, O> core::ops::Deref for Report<C, O, SendSync> {
+    type Target = dyn core::error::Error + Send + Sync + 'static;
 
     fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> core::ops::Deref for Report<C, O, Local> {
+    type Target = dyn core::error::Error + 'static;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> AsRef<dyn core::error::Error + Send + Sync> for Report<C, O, SendSync> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'static) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<C: ?Sized, O> AsRef<dyn core::error::Error> for Report<C, O, Local> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'static) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1860,7 +1863,10 @@ from_impls!(
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
+    use core::error::Error as StdError;
+    use core::ops::Deref;
+    use thiserror::Error;
 
     use super::*;
 
@@ -1938,5 +1944,156 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<NonSend, Cloneable, Local>: Copy);
         static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, SendSync>: Copy);
         static_assertions::assert_not_impl_any!(Report<Dynamic, Cloneable, Local>: Copy);
+    }
+
+    #[derive(Debug, Error)]
+    #[error("boom")]
+    struct Boom;
+
+    #[derive(Debug, Error)]
+    enum Outer {
+        #[error(transparent)]
+        Inner(#[from] Report<Boom>),
+    }
+
+    fn make_report() -> Report<Boom> {
+        Report::new(Boom)
+    }
+
+    fn make_dynamic_report() -> Report<Dynamic> {
+        make_report().into_dynamic()
+    }
+
+    fn make_cloneable_report() -> Report<Boom, Cloneable> {
+        make_report().into_cloneable()
+    }
+
+    fn make_local_report() -> Report<Boom, Mutable, Local> {
+        make_report().into_local()
+    }
+
+    #[test]
+    fn report_derefs_to_dyn_error() {
+        let report = make_report();
+
+        let err: &(dyn StdError + Send + Sync) = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn report_asrefs_to_dyn_error() {
+        let report = make_report();
+
+        fn takes_asref(err: impl AsRef<dyn StdError + Send + Sync>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn dynamic_report_derefs_to_dyn_error() {
+        let report = make_dynamic_report();
+
+        let err: &dyn StdError = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn dynamic_report_asrefs_to_dyn_error() {
+        let report = make_dynamic_report();
+
+        fn takes_asref(err: impl AsRef<dyn StdError + Send + Sync>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn cloneable_report_derefs_to_dyn_error() {
+        let report = make_cloneable_report();
+
+        let err: &dyn StdError = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn cloneable_report_asrefs_to_dyn_error() {
+        let report = make_cloneable_report();
+
+        fn takes_asref(err: impl AsRef<dyn StdError + Send + Sync>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn local_report_derefs_to_dyn_error() {
+        let report = make_local_report();
+
+        let err: &dyn StdError = report.deref();
+
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn local_report_asrefs_to_dyn_error() {
+        let report = make_local_report();
+
+        fn takes_asref(err: impl AsRef<dyn StdError>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(&report);
+    }
+
+    #[test]
+    fn report_deref_supports_error_methods() {
+        let report = make_report();
+
+        assert!(report.source().is_none());
+    }
+
+    #[test]
+    fn thiserror_from_works_for_report() {
+        let report = make_report();
+
+        let outer: Outer = report.into();
+
+        match outer {
+            Outer::Inner(inner) => {
+                assert!(inner.to_string().contains("boom"));
+            }
+        }
+    }
+
+    #[test]
+    fn thiserror_question_mark_works_for_report() {
+        fn inner() -> Result<(), Report<Boom>> {
+            Err(make_report())
+        }
+
+        fn outer() -> Result<(), Outer> {
+            inner()?;
+            Ok(())
+        }
+
+        let err = outer().unwrap_err();
+        assert!(err.to_string().contains("boom"));
+    }
+
+    #[test]
+    fn report_is_usable_where_dyn_error_is_expected() {
+        fn takes_error(err: &dyn StdError) -> String {
+            err.to_string()
+        }
+
+        let report = make_report();
+        assert!(takes_error(report.deref()).contains("boom"));
     }
 }

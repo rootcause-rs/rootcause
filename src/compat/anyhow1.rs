@@ -199,7 +199,7 @@ impl IntoRootcause for anyhow::Error {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<AnyhowHandler>(self).into_dynamic()
+        Report::new_sendsync_custom::<AnyhowHandler>(self).into_dynamic()
     }
 }
 

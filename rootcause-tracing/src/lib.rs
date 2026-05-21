@@ -7,6 +7,9 @@
     missing_copy_implementations,
     unused_doc_comments
 )]
+// Extra checks on nightly
+#![cfg_attr(nightly_extra_checks, feature(rustdoc_missing_doc_code_examples))]
+#![cfg_attr(nightly_extra_checks, forbid(rustdoc::missing_doc_code_examples))]
 
 //! Tracing span capture for rootcause error reports.
 //!
@@ -102,6 +105,17 @@ use tracing_subscriber::{
 };
 
 /// Handler for formatting [`Span`] attachments.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::report_attachment::ReportAttachment;
+/// use rootcause_tracing::SpanHandler;
+/// use tracing::Span;
+///
+/// let span = Span::current();
+/// let _ = ReportAttachment::new_sendsync_custom::<SpanHandler>(span);
+/// ```
 #[derive(Copy, Clone)]
 pub struct SpanHandler;
 
