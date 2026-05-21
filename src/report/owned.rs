@@ -2004,7 +2004,7 @@ mod tests {
     fn report_asrefs_to_dyn_error() {
         let report = make_report();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+        fn takes_asref(err: impl AsRef<dyn StdError + Send + Sync>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 
@@ -2024,7 +2024,7 @@ mod tests {
     fn dynamic_report_asrefs_to_dyn_error() {
         let report = make_dynamic_report();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+        fn takes_asref(err: impl AsRef<dyn StdError + Send + Sync>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 
@@ -2044,7 +2044,7 @@ mod tests {
     fn cloneable_report_asrefs_to_dyn_error() {
         let report = make_cloneable_report();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
+        fn takes_asref(err: impl AsRef<dyn StdError + Send + Sync>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 
@@ -2064,7 +2064,7 @@ mod tests {
     fn local_report_asrefs_to_dyn_error() {
         let report = make_local_report();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+        fn takes_asref(err: impl AsRef<dyn StdError>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 
@@ -2076,14 +2076,6 @@ mod tests {
         let report = make_report();
 
         assert!(report.source().is_none());
-
-        #[expect(deprecated)]
-        {
-            assert_eq!(
-                report.description(),
-                "description() is deprecated; use Display"
-            );
-        }
     }
 
     #[test]
