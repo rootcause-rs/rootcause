@@ -199,7 +199,7 @@ impl IntoRootcause for eyre::Report {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<EyreHandler>(self).into_dynamic()
+        Report::new_sendsync_custom::<EyreHandler>(self).into_dynamic()
     }
 }
 

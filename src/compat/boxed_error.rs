@@ -360,7 +360,7 @@ impl IntoRootcause for Box<dyn Error + Send + Sync> {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<BoxedErrorHandler>(self).into_dynamic()
+        Report::new_sendsync_custom::<BoxedErrorHandler>(self).into_dynamic()
     }
 }
 
@@ -369,7 +369,7 @@ impl IntoRootcause for Box<dyn Error> {
 
     #[inline(always)]
     fn into_rootcause(self) -> Self::Output {
-        Report::new_custom::<BoxedErrorHandler>(self).into_dynamic()
+        Report::new_local_custom::<BoxedErrorHandler>(self).into_dynamic()
     }
 }
 
