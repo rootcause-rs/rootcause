@@ -1,17 +1,15 @@
-use alloc::{collections::vec_deque::VecDeque, vec::Vec};
+use alloc::collections::vec_deque::VecDeque;
 use core::{iter::FusedIterator, marker::PhantomData};
 
 use crate::{ReportRef, markers::Dynamic, report_collection::ReportCollection};
 
-/// An iterator over a report and all its descendant reports in depth-first
-/// order.
+/// An iterator over a report and all its descendant reports.
 ///
 /// This iterator yields [`ReportRef`] items, which are references to the reports
-/// in the hierarchy. The iterator traverses the report tree in a depth-first
-/// manner, starting from the root report and visiting each child report before
-/// moving to the next sibling.
+/// in the hierarchy. By default the traversal is depth-first; use
+/// [`ReportIter::bfs`] to switch to breadth-first.
 #[must_use]
-pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static, Strategy = DFS> {
+pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static, Strategy = Dfs> {
     stack: VecDeque<ReportRef<'a, Dynamic, Ownership, ThreadSafety>>,
     _ownership: PhantomData<Ownership>,
     _thread_safety: PhantomData<ThreadSafety>,
@@ -19,7 +17,7 @@ pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static, Strategy = 
 }
 
 impl<'a, O, T, S> ReportIter<'a, O, T, S> {
-    /// Creates a new [`ReportIter`] from a vector of raw report references
+    /// Creates a new [`ReportIter`] from a deque of raw report references
     pub(crate) fn from_raw(stack: VecDeque<ReportRef<'a, Dynamic, O, T>>) -> Self {
         Self {
             stack,
@@ -30,36 +28,7 @@ impl<'a, O, T, S> ReportIter<'a, O, T, S> {
     }
 }
 
-#[allow(unused, reason = "doctest")]
-pub(crate) fn generate_report_tree() -> crate::Report {
-    use crate::report_collection::ReportCollection;
-    use alloc::format;
-
-    (1..=2)
-        .map(|i| {
-            (1..=2)
-                .map(|j| report!(format!("{}.{}", i, j)).into_cloneable())
-                .collect::<ReportCollection>()
-                .context(format!("{}", i))
-        })
-        .collect::<ReportCollection>()
-        .context(format!("root"))
-        .into_dynamic()
-}
-
-#[allow(unused, reason = "doctest")]
-pub(crate) fn join_contexts_as_string<'b, OW: 'static>(
-    it: impl Iterator<Item = ReportRef<'b, Dynamic, OW>>,
-) -> alloc::string::String {
-    use alloc::string::ToString;
-    use alloc::vec::Vec;
-    it.into_iter()
-        .map(|e: ReportRef<'_, Dynamic, OW>| e.format_current_context().to_string())
-        .collect::<Vec<_>>()
-        .join(" ")
-}
-
-impl<'a, O, T> ReportIter<'a, O, T, DFS> {
+impl<'a, O, T> ReportIter<'a, O, T, Dfs> {
     /// Convert this traversal to a breadth-first search.
     ///
     /// **Warning:** if this function is called mid-traversal,
@@ -83,7 +52,7 @@ impl<'a, O, T> ReportIter<'a, O, T, DFS> {
     /// #         .context(format!("{}", i))
     /// # })
     /// # .collect::<ReportCollection>()
-    /// # .context(format!("root")).into_dynamic()
+    /// # .context("root").into_dynamic()
     /// ;
     /// assert_eq!(
     ///     rep.iter_reports().bfs()
@@ -92,12 +61,12 @@ impl<'a, O, T> ReportIter<'a, O, T, DFS> {
     ///     &["root", "1", "2", "1.1", "1.2", "2.1", "2.2"]
     /// );
     /// ```
-    pub fn bfs(self) -> ReportIter<'a, O, T, BFS> {
+    pub fn bfs(self) -> ReportIter<'a, O, T, Bfs> {
         ReportIter::from_raw(self.stack)
     }
 }
 
-impl<'a, O, T> ReportIter<'a, O, T, BFS> {
+impl<'a, O, T> ReportIter<'a, O, T, Bfs> {
     /// Convert this traversal to a depth-first search.
     ///
     /// **Warning:** if this function is called mid-traversal,
@@ -121,7 +90,7 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
     /// #         .context(format!("{}", i))
     /// # })
     /// # .collect::<ReportCollection>()
-    /// # .context(format!("root")).into_dynamic()
+    /// # .context("root").into_dynamic()
     /// ;
     /// assert_eq!(
     ///     rep.iter_reports()
@@ -130,18 +99,18 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
     ///     &["root", "1", "1.1", "1.2", "2", "2.1", "2.2"]
     /// );
     /// ```
-    pub fn dfs(self) -> ReportIter<'a, O, T, DFS> {
+    pub fn dfs(self) -> ReportIter<'a, O, T, Dfs> {
         ReportIter::from_raw(self.stack)
     }
 }
 
 /// Marker type for depth-first traversal in the [`ReportIter`] type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct DFS;
+pub struct Dfs;
 
 /// Marker type for breadth-first traversal in the [`ReportIter`] type.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct BFS;
+pub struct Bfs;
 
 fn list_children<'a, O: 'static, T>(
     children: &'a ReportCollection<Dynamic, T>,
@@ -160,7 +129,7 @@ fn list_children<'a, O: 'static, T>(
     })
 }
 
-impl<'a, O, T> Iterator for ReportIter<'a, O, T, DFS> {
+impl<'a, O, T> Iterator for ReportIter<'a, O, T, Dfs> {
     type Item = ReportRef<'a, Dynamic, O, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -170,7 +139,7 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T, DFS> {
     }
 }
 
-impl<'a, O, T> Iterator for ReportIter<'a, O, T, BFS> {
+impl<'a, O, T> Iterator for ReportIter<'a, O, T, Bfs> {
     type Item = ReportRef<'a, Dynamic, O, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -180,8 +149,8 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T, BFS> {
     }
 }
 
-impl<'a, O, T> FusedIterator for ReportIter<'a, O, T, DFS> {}
-impl<'a, O, T> FusedIterator for ReportIter<'a, O, T, BFS> {}
+impl<'a, O, T> FusedIterator for ReportIter<'a, O, T, Dfs> {}
+impl<'a, O, T> FusedIterator for ReportIter<'a, O, T, Bfs> {}
 
 impl<'a, O, T, S> Unpin for ReportIter<'a, O, T, S> {}
 
