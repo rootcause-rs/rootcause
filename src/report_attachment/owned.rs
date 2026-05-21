@@ -883,7 +883,11 @@ impl<T> ReportAttachment<Dynamic, T> {
         unsafe { ReportAttachment::<A, T>::from_raw(raw) }
     }
 
-    /// TODO
+    /// Access the attachment data using the [`Any`](core::any::Any) trait.
+    ///
+    /// This method is useful when interfacing with other dynamically typed
+    /// code that relies on the standard library, rather than this crate's
+    /// bespoke systems.
     pub fn inner_any(&self) -> &dyn core::any::Any {
         self.as_ref().inner_any()
     }
