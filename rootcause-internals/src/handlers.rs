@@ -38,7 +38,7 @@
 ///
 /// - [`preferred_formatting_style`](ContextHandler::preferred_formatting_style):
 ///   Specifies whether to use display or debug formatting when embedded in a report.
-///   The default implementation always prefers display formatting.
+///   The default implementation matches the formatting of the report itself.
 ///
 /// # Examples
 ///
@@ -258,8 +258,8 @@ pub trait ContextHandler<C>: 'static {
 ///
 /// - [`preferred_formatting_style`](AttachmentHandler::preferred_formatting_style):
 ///   Specifies formatting preferences including placement (inline/appendix) and
-///   whether to use display or debug formatting. The default implementation prefers
-///   inline display formatting.
+///   whether to use display or debug formatting. The default implementation uses
+///   inline placement with the same formatting function as the report itself.
 ///
 /// # Examples
 ///

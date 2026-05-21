@@ -6,7 +6,7 @@ use crate::{ReportRef, markers::Dynamic};
 /// An iterator over a report and all its descendant reports in depth-first
 /// order.
 ///
-/// This iterator yields `ReportRef` items, which are references to the reports
+/// This iterator yields [`ReportRef`] items, which are references to the reports
 /// in the hierarchy. The iterator traverses the report tree in a depth-first
 /// manner, starting from the root report and visiting each child report before
 /// moving to the next sibling.
@@ -58,3 +58,34 @@ impl<'a, O, T> Iterator for ReportIter<'a, O, T> {
 impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> {}
 
 impl<'a, O, T> Unpin for ReportIter<'a, O, T> {}
+
+/// An iterator over all contexts that can successfully be downcasted to `D`, belonging
+/// a report and all its decendants in a depth-first order.
+///
+/// This iterator yields `&D` items, which are references to the reports' contexts
+/// in the hierarchy.
+pub struct DowncastIterator<'a, D, Ownership: 'static, ThreadSafety: 'static> {
+    pub(crate) iter: ReportIter<'a, Ownership, ThreadSafety>,
+    pub(crate) _phantom: PhantomData<D>,
+}
+
+impl<'a, D: 'static, Ownership: 'static, ThreadSafety: 'static> Iterator
+    for DowncastIterator<'a, D, Ownership, ThreadSafety>
+{
+    type Item = &'a D;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for report in self.iter.by_ref() {
+            let Some(report) = report.downcast_current_context() else {
+                continue;
+            };
+            return Some(report);
+        }
+
+        None
+    }
+}
+
+impl<'a, D: 'static, O, T> FusedIterator for DowncastIterator<'a, D, O, T> {}
+
+impl<'a, D, O, T> Unpin for DowncastIterator<'a, D, O, T> {}

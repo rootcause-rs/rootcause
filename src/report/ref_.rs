@@ -1,12 +1,11 @@
 use alloc::vec;
-use core::any::TypeId;
+use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{ContextFormattingStyle, FormattingFunction};
 
 use crate::{
     Report, ReportIter,
-    markers::{Cloneable, Dynamic, Local, Mutable, SendSync, Uncloneable},
-    preformatted::{self, PreformattedContext},
+    markers::{Cloneable, Dynamic, Local, SendSync, Uncloneable},
     report_attachments::ReportAttachments,
     report_collection::ReportCollection,
     util::{ErrorNoSourceWrapper, format_helper},
@@ -558,40 +557,6 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
         ReportIter::from_raw(stack)
     }
 
-    /// Creates a new report, which has the same structure as the current
-    /// report, but has all the contexts and attachments preformatted.
-    ///
-    /// This can be useful, as the new report is mutable because it was just
-    /// created, and additionally the new report is [`Send`]+[`Sync`].
-    ///
-    /// # Examples
-    /// ```
-    /// # use rootcause::{prelude::*, preformatted::PreformattedContext, ReportRef, markers::{Uncloneable, Mutable, SendSync, Local}};
-    /// # #[derive(Default)]
-    /// # struct NonSendSyncError(core::cell::Cell<()>);
-    /// # let non_send_sync_error = NonSendSyncError::default();
-    /// # let report = report!(non_send_sync_error);
-    /// let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
-    /// let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
-    /// assert_eq!(format!("{report}"), format!("{preformatted}"));
-    /// ```
-    #[track_caller]
-    #[must_use]
-    pub fn preformat(self) -> Report<PreformattedContext, Mutable, SendSync> {
-        let preformatted_context = PreformattedContext::new_from_context(self);
-        Report::from_parts_unhooked::<preformatted::PreformattedHandler>(
-            preformatted_context,
-            self.children()
-                .iter()
-                .map(|sub_report| sub_report.preformat())
-                .collect(),
-            self.attachments()
-                .iter()
-                .map(|attachment| attachment.preformat().into_dynamic())
-                .collect(),
-        )
-    }
-
     /// Returns the [`TypeId`] of the current context.
     ///
     /// # Examples
@@ -632,6 +597,34 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     #[must_use]
     pub fn current_context_type_name(self) -> &'static str {
         self.as_raw_ref().context_type_name()
+    }
+
+    /// Returns a [`&dyn Any`](Any) view of the current context.
+    ///
+    /// This is the most general accessor for the current context: it works
+    /// whether the context type `C` is known at compile time or erased to
+    /// [`Dynamic`]. The returned reference can be downcast using
+    /// `<dyn Any>::downcast_ref` and interoperates with
+    /// any code that accepts `&dyn Any`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, ReportRef, markers::Dynamic};
+    /// # use core::any::Any;
+    /// # struct MyError;
+    /// # let report = report!(MyError).into_cloneable();
+    /// let report_ref: ReportRef<'_, MyError> = report.as_ref();
+    /// let any: &dyn Any = report_ref.current_context_as_any();
+    /// assert!(any.is::<MyError>());
+    ///
+    /// // Also works for Dynamic reports
+    /// let dyn_ref: ReportRef<'_, Dynamic> = report_ref.into_dynamic();
+    /// let any: &dyn Any = dyn_ref.current_context_as_any();
+    /// assert_eq!(any.downcast_ref::<MyError>().map(|_| ()), Some(()));
+    /// ```
+    #[must_use]
+    pub fn current_context_as_any(self) -> &'a (dyn Any + 'static) {
+        self.as_raw_ref().context_as_any()
     }
 
     /// Returns the [`TypeId`] of the handler used for the current context.
@@ -1028,10 +1021,21 @@ impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     }
 }
 
+// `Report<_, _, SendSync>` derefs to `dyn Error + Send + Sync`. This isn't
+// split the same way because `ReportRef` / `ReportMut` aren't `Send + Sync`
+// today. See https://github.com/rootcause-rs/rootcause/issues/173 for whether
+// that could change.
 impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
     type Target = dyn core::error::Error + 'a;
 
     fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized, O, T> AsRef<dyn core::error::Error + 'a> for ReportRef<'a, C, O, T> {
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1086,7 +1090,10 @@ from_impls!(
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::String;
+    use alloc::string::{String, ToString};
+    use core::error::Error as StdError;
+    use core::ops::Deref;
+    use thiserror::Error;
 
     use super::*;
     use crate::markers::{Mutable, Uncloneable};
@@ -1178,20 +1185,34 @@ mod tests {
         static_assertions::assert_not_impl_any!(Report<Dynamic, Mutable, SendSync>: From<ReportRef<'static, Dynamic, Uncloneable, SendSync>>);
     }
 
+    #[derive(Debug, Error)]
+    #[error("boom")]
+    struct Boom;
+
+    fn make_report() -> Report<Boom> {
+        Report::new(Boom)
+    }
+
     #[test]
-    fn test_preformat() {
-        use crate::{
-            ReportRef,
-            markers::{Local, Mutable, SendSync, Uncloneable},
-            preformatted::PreformattedContext,
-            prelude::*,
-        };
-        #[derive(Default)]
-        struct NonSendSyncError(core::cell::Cell<()>);
-        let non_send_sync_error = NonSendSyncError::default();
-        let report = report!(non_send_sync_error);
-        let report_ref: ReportRef<'_, NonSendSyncError, Uncloneable, Local> = report.as_ref();
-        let preformatted: Report<PreformattedContext, Mutable, SendSync> = report_ref.preformat();
-        assert_eq!(alloc::format!("{report}"), alloc::format!("{preformatted}"));
+    fn report_ref_derefs_to_dyn_error() {
+        let report = make_report();
+        let report_ref = report.as_ref();
+
+        let err: &dyn StdError = report_ref.deref();
+
+        assert!(err.to_string().contains("boom"));
+        assert!(report.source().is_none());
+    }
+
+    #[test]
+    fn report_ref_asrefs_to_dyn_error() {
+        let report = make_report();
+        let report_ref = report.as_ref();
+
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+            assert!(err.as_ref().to_string().contains("boom"));
+        }
+
+        takes_asref(report_ref);
     }
 }

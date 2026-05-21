@@ -1,6 +1,6 @@
 [package]
 name = "rootcause"
-version = "0.12.1"
+version = "0.13.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns", "no-std"]
@@ -11,7 +11,12 @@ documentation = "https://docs.rs/rootcause"
 rust-version = "1.89"
 
 [workspace]
-members = ["rootcause-internals", "rootcause-backtrace", "rootcause-tracing"]
+members = [
+  "rootcause-internals",
+  "rootcause-backtrace",
+  "rootcause-tracing",
+  "rootcause-preformat",
+]
 
 [features]
 default = []
@@ -19,39 +24,41 @@ default = []
 # Compatibility traits
 compat-anyhow1 = ["dep:anyhow"]
 compat-error-stack05 = ["dep:error-stack05"]
-compat-error-stack06 = ["dep:error-stack"]
+compat-error-stack06 = ["dep:error-stack06"]
+compat-error-stack07 = ["dep:error-stack07"]
 compat-eyre06 = ["dep:eyre"]
 
 [dependencies]
-hashbrown = { version = "0.16.0", default-features = false }
-indexmap = { version = "2.13.0", default-features = false }
-rustc-hash = { version = "2.1.1", default-features = false }
+hashbrown = { version = "0.17.1", default-features = false }
+indexmap = { version = "2.14.0", default-features = false }
+rustc-hash = { version = "2.1.2", default-features = false }
 triomphe = { version = "0.1.15", default-features = false }
 
 # Optional dependencies
-anyhow = { version = "1.0.100", default-features = false, optional = true }
-error-stack = { version = "0.6.0", default-features = false, optional = true }
+anyhow = { version = "1.0.102", default-features = false, optional = true }
 error-stack05 = { package = "error-stack", version = "0.5.0", default-features = false, optional = true }
+error-stack06 = { package = "error-stack", version = "0.6.0", default-features = false, optional = true }
+error-stack07 = { package = "error-stack", version = "0.7.0", default-features = false, optional = true }
 eyre = { version = "0.6.12", default-features = false, optional = true }
 
 # Internal dependencies
-rootcause-internals = { path = "rootcause-internals", version = "=0.12.1" }
+rootcause-internals = { path = "rootcause-internals", version = "=0.13.0" }
 
 [dev-dependencies]
-derive_more = { version = "2.1.0", default-features = false, features = [
+derive_more = { version = "2.1.1", default-features = false, features = [
   "error",
   "from",
   "display",
 ] }
 eyre = { version = "0.6.12", features = ["auto-install"] }
-indexmap = "2.13.0"
-reqwest = "0.13.2"
-serde_json = "1.0.145"
+indexmap = "2.14.0"
+reqwest = "0.13.3"
+serde_json = "1.0.149"
 static_assertions = "1.1.0"
-thiserror = "2.0.17"
-tokio = { version = "1.50.0", features = ["macros", "rt-multi-thread"] }
+thiserror = "2.0.18"
+tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
 tracing = { version = "0.1.44", features = ["attributes"] }
-tracing-subscriber = { version = "0.3.22", features = ["registry"] }
+tracing-subscriber = { version = "0.3.23", features = ["registry"] }
 
 [[example]]
 name = "anyhow_interop"
@@ -63,7 +70,7 @@ required-features = ["compat-anyhow1"]
 
 [[example]]
 name = "error_stack_interop"
-required-features = ["compat-error-stack06"]
+required-features = ["compat-error-stack07"]
 
 [[example]]
 name = "eyre_interop"

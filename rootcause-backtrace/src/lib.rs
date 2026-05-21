@@ -7,6 +7,9 @@
     missing_copy_implementations,
     unused_doc_comments
 )]
+// Extra checks on nightly
+#![cfg_attr(nightly_extra_checks, feature(rustdoc_missing_doc_code_examples))]
+#![cfg_attr(nightly_extra_checks, forbid(rustdoc::missing_doc_code_examples))]
 
 //! Stack backtrace attachment collector for rootcause error reports.
 //!
@@ -171,6 +174,23 @@ pub struct Backtrace {
 }
 
 /// A single entry in a stack backtrace.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         match entry {
+///             BacktraceEntry::Frame(_) => { /* a real call */ }
+///             BacktraceEntry::OmittedFrames { count, skipped_crate } => {
+///                 println!("Omitted {count} frames from {skipped_crate}");
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub enum BacktraceEntry {
     /// A normal stack frame.
@@ -188,6 +208,20 @@ pub enum BacktraceEntry {
 ///
 /// Represents one function call in the call stack, including symbol information
 /// and source location if available.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         if let BacktraceEntry::Frame(frame) = entry {
+///             println!("{}", frame.sym_demangled);
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct Frame {
     /// The demangled symbol name for this frame.
@@ -202,6 +236,22 @@ pub struct Frame {
 ///
 /// Contains the raw path and processed components for better display
 /// formatting.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         if let BacktraceEntry::Frame(frame) = entry {
+///             if let Some(path) = &frame.frame_path {
+///                 println!("{}", path.raw_path);
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct FramePath {
     /// The raw file path from the debug information.
@@ -216,6 +266,26 @@ pub struct FramePath {
 ///
 /// This struct represents a decomposed file path where a known prefix
 /// has been identified and separated from the rest of the path.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause_backtrace::{Backtrace, BacktraceEntry, BacktraceFilter};
+///
+/// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+///     for entry in &bt.entries {
+///         if let BacktraceEntry::Frame(frame) = entry {
+///             if let Some(prefix) = frame
+///                 .frame_path
+///                 .as_ref()
+///                 .and_then(|p| p.split_path.as_ref())
+///             {
+///                 println!("[{}] {}", prefix.prefix_kind, prefix.suffix);
+///             }
+///         }
+///     }
+/// }
+/// ```
 #[derive(Debug, Clone)]
 pub struct FramePrefix {
     /// The kind of prefix used to identify this prefix.
@@ -236,6 +306,22 @@ pub struct FramePrefix {
 }
 
 /// Handler for formatting [`Backtrace`] attachments.
+///
+/// The const generic `SHOW_FULL_PATH` controls whether file paths are shown
+/// in full or with common prefixes shortened.
+///
+/// # Examples
+///
+/// ```
+/// use rootcause::report_attachment::ReportAttachment;
+/// use rootcause_backtrace::{Backtrace, BacktraceFilter, BacktraceHandler};
+///
+/// let backtrace = Backtrace::capture(&BacktraceFilter::DEFAULT)
+///     .unwrap_or(Backtrace { entries: Vec::new(), total_omitted_frames: 0 });
+///
+/// // SHOW_FULL_PATH = false: shortened paths
+/// let _ = ReportAttachment::new_sendsync_custom::<BacktraceHandler<false>>(backtrace);
+/// ```
 #[derive(Copy, Clone)]
 pub struct BacktraceHandler<const SHOW_FULL_PATH: bool>;
 
@@ -660,6 +746,18 @@ const ROOTCAUSE_MATCHER: Option<(&str, usize)> =
 
 impl Backtrace {
     /// Captures the current stack backtrace, applying optional filtering.
+    ///
+    /// Returns `None` if a backtrace could not be captured.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use rootcause_backtrace::{Backtrace, BacktraceFilter};
+    ///
+    /// if let Some(bt) = Backtrace::capture(&BacktraceFilter::DEFAULT) {
+    ///     println!("Captured {} frames", bt.entries.len());
+    /// }
+    /// ```
     pub fn capture(filter: &BacktraceFilter) -> Option<Self> {
         let mut initial_filtering = !filter.skipped_initial_crates.is_empty();
         let mut entries: Vec<BacktraceEntry> = Vec::new();
@@ -806,36 +904,71 @@ impl Backtrace {
     }
 }
 
+/// Matches Rust standard library source paths and returns the crate name and byte offset.
+///
+/// Recognised paths:
+/// - `/lib/rustlib/src/rust/library/{std|core|alloc}/src/…`
+/// - `^/rustc/{40-hex-char hash}/library/{std|core|alloc}/src/…`
+fn match_std_library_path(path: &str) -> Option<(&'static str, usize)> {
+    const STD_CRATES: [&str; 3] = ["std", "core", "alloc"];
+
+    let (prefix, after_library) = path.split_once("/library/")?;
+
+    // The prefix must end with "/lib/rustlib/src/rust" or *be* "/rustc/{40 hex chars}"
+    let valid_prefix = prefix.ends_with("/lib/rustlib/src/rust")
+        || prefix
+            .strip_prefix("/rustc/")
+            .is_some_and(|hash| hash.len() == 40 && hash.bytes().all(|b| b.is_ascii_hexdigit()));
+
+    if !valid_prefix {
+        return None;
+    }
+
+    // after_library is "{std|core|alloc}/src/…"; split on "/src/" to isolate the crate name.
+    let (crate_name, _) = after_library.split_once("/src/")?;
+    let crate_name = STD_CRATES
+        .iter()
+        .copied()
+        .find(|&name| name == crate_name)?;
+
+    let crate_start = prefix.len() + "/library/".len();
+    Some((crate_name, crate_start))
+}
+
+/// Matches Cargo registry source paths and returns the crate name and its byte offset.
+///
+/// Recognised paths:
+/// - `/.cargo/registry/src/{index}-{16-hex-char hash}/{crate}-{version}/src/…`
+fn match_cargo_registry_path(path: &str) -> Option<(&str, usize)> {
+    let (before_registry, after_registry) = path.split_once("/registry/src/")?;
+
+    // Consume the "{index}-{16-hex-char}" directory component.
+    let (index_hash, after_index) = after_registry.split_once('/')?;
+    let (_, hash) = index_hash.rsplit_once('-')?;
+    if hash.len() != 16 || !hash.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return None;
+    }
+
+    // after_index is "{crate}-{version}/src/…"; split on "/src/" to isolate "{crate}-{version}".
+    let (crate_version, _) = after_index.split_once("/src/")?;
+
+    // create names + version numbers can be really silly. However crate names can't contain dots
+    // So find the first dot and split (crate-name-0.1.0-alpha into crate-name-0)
+    // Then right split on dash (crate-name-0 to crate-name)
+    let (crate_name, _) = crate_version.split_once('.')?;
+    let (crate_name, _) = crate_name.rsplit_once('-')?;
+
+    let crate_start_abs = before_registry.len() + "/registry/src/".len() + index_hash.len() + 1;
+    Some((crate_name, crate_start_abs))
+}
+
 impl FramePath {
     fn new(path: BytesOrWideString<'_>) -> Self {
-        static REGEXES: OnceLock<[regex::Regex; 2]> = OnceLock::new();
-        let [std_regex, registry_regex] = REGEXES.get_or_init(|| {
-            [
-                // Matches Rust standard library paths:
-                // - /lib/rustlib/src/rust/library/{std|core|alloc}/src/...
-                // - /rustc/{40-char-hash}/library/{std|core|alloc}/src/...
-                regex::Regex::new(
-                    r"(?:/lib/rustlib/src/rust|^/rustc/[0-9a-f]{40})/library/(std|core|alloc)/src/.*$",
-                )
-                .expect("built-in regex pattern for std library paths should be valid"),
-                // Matches Cargo registry paths:
-                // - /.cargo/registry/src/{index}-{16-char-hash}/{crate}-{version}/src/...
-                regex::Regex::new(
-                    r"/\.cargo/registry/src/[^/]+-[0-9a-f]{16}/([^./]+)-[0-9]+\.[^/]*/src/.*$",
-                )
-                .expect("built-in regex pattern for cargo registry paths should be valid"),
-            ]
-        });
-
         let path_str = path.to_string();
 
-        if let Some(captures) = std_regex.captures(&path_str) {
+        if let Some((crate_name, crate_start)) = match_std_library_path(&path_str) {
             let raw_path = path.to_str_lossy().into_owned();
-            let crate_capture = captures
-                .get(1)
-                .expect("regex capture group 1 should exist for std library paths");
-            let split = crate_capture.start();
-            let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
+            let (prefix, suffix) = (&path_str[..crate_start - 1], &path_str[crate_start..]);
 
             Self {
                 raw_path,
@@ -844,19 +977,15 @@ impl FramePath {
                     prefix: prefix.to_string(),
                     suffix: suffix.to_string(),
                 }),
-                crate_name: Some(crate_capture.as_str().to_string().into()),
+                crate_name: Some(crate_name.to_string().into()),
             }
-        } else if let Some(captures) = registry_regex.captures(&path_str) {
+        } else if let Some((crate_name, crate_start)) = match_cargo_registry_path(&path_str) {
             let raw_path = path.to_str_lossy().into_owned();
-            let crate_capture = captures
-                .get(1)
-                .expect("regex capture group 1 should exist for cargo registry paths");
-            let split = crate_capture.start();
-            let (prefix, suffix) = (&path_str[..split - 1], &path_str[split..]);
+            let (prefix, suffix) = (&path_str[..crate_start - 1], &path_str[crate_start..]);
 
             Self {
                 raw_path,
-                crate_name: Some(crate_capture.as_str().to_string().into()),
+                crate_name: Some(crate_name.to_string().into()),
                 split_path: Some(FramePrefix {
                     prefix_kind: "CARGO",
                     prefix: prefix.to_string(),
@@ -1023,5 +1152,142 @@ where
             Ok(v) => Ok(v),
             Err(report) => Err(report.attach_backtrace_with_filter(filter)),
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    // ── match_std_library_path ────────────────────────────────────────────────
+
+    #[test]
+    fn std_path_rustlib_std() {
+        let path = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/std/src/io/mod.rs";
+        let (name, pos) = match_std_library_path(path).expect("should match");
+        assert_eq!(name, "std");
+        assert_eq!(&path[pos..], "std/src/io/mod.rs");
+    }
+
+    #[test]
+    fn std_path_rustlib_core() {
+        let path = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core/src/option.rs";
+        let (name, pos) = match_std_library_path(path).expect("should match");
+        assert_eq!(name, "core");
+        assert_eq!(&path[pos..], "core/src/option.rs");
+    }
+
+    #[test]
+    fn std_path_rustlib_alloc() {
+        let path = "/home/user/.rustup/toolchains/stable-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/alloc/src/vec/mod.rs";
+        let (name, pos) = match_std_library_path(path).expect("should match");
+        assert_eq!(name, "alloc");
+        assert_eq!(&path[pos..], "alloc/src/vec/mod.rs");
+    }
+
+    #[test]
+    fn std_path_rustc_hash() {
+        let hash = "a".repeat(40);
+        let path = format!("/rustc/{hash}/library/std/src/panicking.rs");
+        let (name, pos) = match_std_library_path(&path).expect("should match");
+        assert_eq!(name, "std");
+        assert_eq!(&path[pos..], "std/src/panicking.rs");
+    }
+
+    #[test]
+    fn std_path_no_match_unknown_crate() {
+        let path = "/lib/rustlib/src/rust/library/unknown/src/lib.rs";
+        assert!(match_std_library_path(path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_rustc_hash_too_short() {
+        let short_hash = "a".repeat(39);
+        let path = format!("/rustc/{short_hash}/library/std/src/lib.rs");
+        assert!(match_std_library_path(&path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_rustc_hash_not_at_root() {
+        let hash = "a".repeat(40);
+        let path = format!("/prefix/rustc/{hash}/library/std/src/lib.rs");
+        assert!(match_std_library_path(&path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_rustc_hash_non_hex() {
+        let hash = "z".repeat(40);
+        let path = format!("/rustc/{hash}/library/std/src/lib.rs");
+        assert!(match_std_library_path(&path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_missing_src_segment() {
+        let path = "/lib/rustlib/src/rust/library/std/nosrc/io.rs";
+        assert!(match_std_library_path(path).is_none());
+    }
+
+    #[test]
+    fn std_path_no_match_cargo_registry_path() {
+        // A cargo registry path should not match the std matcher.
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.210/src/lib.rs";
+        assert!(match_std_library_path(path).is_none());
+    }
+
+    // ── match_cargo_registry_path ─────────────────────────────────────────────
+
+    #[test]
+    fn cargo_path_simple_crate() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.210/src/lib.rs";
+        let (name, pos) = match_cargo_registry_path(path).expect("should match");
+        assert_eq!(name, "serde");
+        assert_eq!(&path[pos..], "serde-1.0.210/src/lib.rs");
+    }
+
+    #[test]
+    fn cargo_path_hyphenated_crate_name() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/my-cool-crate-0.3.1/src/lib.rs";
+        let (name, pos) = match_cargo_registry_path(path).expect("should match");
+        assert_eq!(name, "my-cool-crate");
+        assert_eq!(&path[pos..], "my-cool-crate-0.3.1/src/lib.rs");
+    }
+
+    #[test]
+    fn cargo_path_prerelease_version() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/cratename-1.0.0-2beta/src/lib.rs";
+        let (name, pos) = match_cargo_registry_path(path).expect("should match");
+        assert_eq!(name, "cratename");
+        assert_eq!(&path[pos..], "cratename-1.0.0-2beta/src/lib.rs");
+    }
+
+    #[test]
+    fn cargo_path_no_match_hash_too_short() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba1500/serde-1.0.210/src/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_hash_non_hex() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-zzzzzzzzzzzzzzzz/serde-1.0.210/src/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_missing_src_segment() {
+        let path = "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde-1.0.210/nosrc/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_no_version() {
+        let path =
+            "/home/user/.cargo/registry/src/index.crates.io-6f17d22bba15001f/serde/src/lib.rs";
+        assert!(match_cargo_registry_path(path).is_none());
+    }
+
+    #[test]
+    fn cargo_path_no_match_std_library_path() {
+        let path = "/lib/rustlib/src/rust/library/std/src/io/mod.rs";
+        assert!(match_cargo_registry_path(path).is_none());
     }
 }

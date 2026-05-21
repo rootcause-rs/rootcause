@@ -322,15 +322,16 @@
 //!   - You can allocate a new root node and set the current node as a child of
 //!     the new node. The new root node will be [`Mutable`]. One method for
 //!     allocating a new root node is to call [`Report::context`].
-//! - From `Report<*, *, *>` to `Report<PreformattedContext, Mutable,
-//!   SendSync>`:
-//!   - You can preformat the entire [`Report`] using [`Report::preformat`].
-//!     This creates an entirely new [`Report`] that has the same structure and
-//!     will look the same as the current one if printed, but all contexts and
-//!     attachments will be replaced with a [`PreformattedContext`] version.
+//! - From `Report<*, *, *>` to a preformatted report:
+//!   - The companion [`rootcause-preformat`] crate provides a `preformat`
+//!     extension method that creates an entirely new [`Report`] with the same
+//!     structure but with all contexts and attachments replaced by
+//!     `PreformattedContext` / `PreformattedAttachment`. The result is
+//!     [`Mutable`] and `Send + Sync` regardless of the original markers.
 //!
 //! [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
 //! [`examples/inspecting_errors.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/inspecting_errors.rs
+//! [`rootcause-preformat`]: https://docs.rs/rootcause-preformat
 //!
 //! # Acknowledgements
 //!
@@ -338,7 +339,6 @@
 //! handling libraries in the Rust ecosystem, including [`anyhow`],
 //! [`thiserror`], and [`error-stack`].
 //!
-//! [`PreformattedContext`]: crate::preformatted::PreformattedContext
 //! [`Mutable`]: crate::markers::Mutable
 //! [`Cloneable`]: crate::markers::Cloneable
 //! [`SendSync`]: crate::markers::SendSync
@@ -357,7 +357,6 @@ mod macros;
 pub mod handlers;
 pub mod hooks;
 pub mod markers;
-pub mod preformatted;
 
 pub mod compat;
 pub mod option_ext;
@@ -375,7 +374,12 @@ mod util;
 
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},
-    report::{iter::ReportIter, mut_::ReportMut, owned::Report, ref_::ReportRef},
+    report::{
+        iter::{DowncastIterator, ReportIter},
+        mut_::ReportMut,
+        owned::Report,
+        ref_::ReportRef,
+    },
     report_conversion::ReportConversion,
 };
 
