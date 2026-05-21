@@ -214,6 +214,13 @@ mod limit_field_access {
             raw.reborrow()
         }
     }
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`] and [`Send`], thus by definition the reference itself is [`Send`]
+    unsafe impl<'a, C: ?Sized> Send for ReportMut<'a, C, SendSync> {}
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`] and [`ReportMut`] is [`Send`] then [`&ReportMut`] is also [`Send`],
+    // which is the same as saying [`ReportMut`] is [`Sync`].
+    unsafe impl<'a, C: ?Sized> Sync for ReportMut<'a, C, SendSync> {}
 }
 pub use limit_field_access::ReportMut;
 
@@ -1270,10 +1277,10 @@ mod tests {
 
     #[test]
     fn test_report_mut_send_sync() {
-        static_assertions::assert_not_impl_any!(ReportMut<'static, (), SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, String, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, (), SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, String, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, NonSend, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportMut<'static, Dynamic, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportMut<'static, (), Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportMut<'static, String, Local>: Send, Sync);

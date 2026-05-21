@@ -225,6 +225,13 @@ mod limit_field_access {
     // 6. This remains true for both the original and the copy
     // 7. This remains true for both the original and the copy
     impl<'a, C: ?Sized, O, T> Copy for ReportRef<'a, C, O, T> {}
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`], thus by definition the reference itself is [`Send`]
+    unsafe impl<'a, C: ?Sized, O> Send for ReportRef<'a, C, O, SendSync> {}
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`] and [`ReportRef`] is [`Send`] then [`&ReportRef`] is also [`Send`],
+    // which is the same as saying [`ReportRef`] is [`Sync`].
+    unsafe impl<'a, C: ?Sized, O> Sync for ReportRef<'a, C, O, SendSync> {}
 }
 pub use limit_field_access::ReportRef;
 
@@ -1104,14 +1111,14 @@ mod tests {
 
     #[test]
     fn test_report_ref_send_sync() {
-        static_assertions::assert_not_impl_any!(ReportRef<'static, (), Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, (), Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, String, Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, String, Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, NonSend, Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, NonSend, Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, Dynamic, Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, Dynamic, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, (), Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, (), Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, String, Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, String, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, NonSend, Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, NonSend, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, Dynamic, Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, Dynamic, Cloneable, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportRef<'static, (), Uncloneable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportRef<'static, (), Cloneable, Local>: Send, Sync);
