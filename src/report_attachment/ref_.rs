@@ -2,9 +2,7 @@ use core::any::{Any, TypeId};
 
 use rootcause_internals::handlers::{AttachmentFormattingStyle, FormattingFunction};
 
-use crate::{
-    hooks::attachment_formatter::AttachmentParent, markers::Dynamic, util::format_helper,
-};
+use crate::{hooks::attachment_formatter::AttachmentParent, markers::Dynamic, util::format_helper};
 
 /// FIXME: Once rust-lang/rust#132922 gets resolved, we can make the `raw` field
 /// an unsafe field and remove this module.
