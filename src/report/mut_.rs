@@ -909,7 +909,8 @@ impl<'a, C: ?Sized, T> ReportMut<'a, C, T> {
     /// - Testing different formatters
     /// - Using different formatters in different parts of your application
     ///
-    /// Unlike the default `Display` and `Debug` implementations which use the
+    /// Unlike the default [`Display`](core::fmt::Display) and
+    /// [`Debug`](core::fmt::Debug) implementations which use the
     /// globally registered hook, this method uses the hook you provide
     /// directly.
     ///

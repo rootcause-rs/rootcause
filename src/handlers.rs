@@ -258,7 +258,7 @@ where
 /// # Formatting Behavior
 ///
 /// - **`display` method**: Shows "Context of type `TypeName`"
-/// - **`debug` method**: Uses the type's `Debug` implementation
+/// - **`debug` method**: Uses the type's [`Debug`](core::fmt::Debug) implementation
 /// - **`source` method**: Always returns `None`
 /// - **Preferred formatting**: Same as requested formatting of the report.
 ///
