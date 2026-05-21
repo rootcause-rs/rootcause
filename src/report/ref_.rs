@@ -225,6 +225,13 @@ mod limit_field_access {
     // 6. This remains true for both the original and the copy
     // 7. This remains true for both the original and the copy
     impl<'a, C: ?Sized, O, T> Copy for ReportRef<'a, C, O, T> {}
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`], thus by definition the reference itself is [`Send`]
+    unsafe impl<'a, C: ?Sized, O> Send for ReportRef<'a, C, O, SendSync> {}
+
+    // SAFETY: The [`Report`] we are referencing is [`Sync`] and [`ReportRef`] is [`Send`] then [`&ReportRef`] is also [`Send`],
+    // which is the same as saying [`ReportRef`] is [`Sync`].
+    unsafe impl<'a, C: ?Sized, O> Sync for ReportRef<'a, C, O, SendSync> {}
 }
 pub use limit_field_access::ReportRef;
 
@@ -1021,11 +1028,7 @@ impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     }
 }
 
-// `Report<_, _, SendSync>` derefs to `dyn Error + Send + Sync`. This isn't
-// split the same way because `ReportRef` / `ReportMut` aren't `Send + Sync`
-// today. See https://github.com/rootcause-rs/rootcause/issues/173 for whether
-// that could change.
-impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
+impl<'a, C: ?Sized, O> core::ops::Deref for ReportRef<'a, C, O, Local> {
     type Target = dyn core::error::Error + 'a;
 
     fn deref(&self) -> &Self::Target {
@@ -1033,9 +1036,26 @@ impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
     }
 }
 
-impl<'a, C: ?Sized, O, T> AsRef<dyn core::error::Error + 'a> for ReportRef<'a, C, O, T> {
+impl<'a, C: ?Sized, O> core::ops::Deref for ReportRef<'a, C, O, SendSync> {
+    type Target = dyn core::error::Error + Send + Sync + 'a;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized, O> AsRef<dyn core::error::Error + 'a> for ReportRef<'a, C, O, Local> {
     #[inline(always)]
     fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized, O> AsRef<dyn core::error::Error + Send + Sync + 'a>
+    for ReportRef<'a, C, O, SendSync>
+{
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1104,14 +1124,14 @@ mod tests {
 
     #[test]
     fn test_report_ref_send_sync() {
-        static_assertions::assert_not_impl_any!(ReportRef<'static, (), Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, (), Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, String, Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, String, Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, NonSend, Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, NonSend, Cloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, Dynamic, Uncloneable, SendSync>: Send, Sync);
-        static_assertions::assert_not_impl_any!(ReportRef<'static, Dynamic, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, (), Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, (), Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, String, Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, String, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, NonSend, Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, NonSend, Cloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, Dynamic, Uncloneable, SendSync>: Send, Sync);
+        static_assertions::assert_impl_any!(ReportRef<'static, Dynamic, Cloneable, SendSync>: Send, Sync);
 
         static_assertions::assert_not_impl_any!(ReportRef<'static, (), Uncloneable, Local>: Send, Sync);
         static_assertions::assert_not_impl_any!(ReportRef<'static, (), Cloneable, Local>: Send, Sync);
@@ -1209,7 +1229,7 @@ mod tests {
         let report = make_report();
         let report_ref = report.as_ref();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 
