@@ -17,6 +17,8 @@
 //!   handling library (requires the `compat-error-stack05` feature flag)
 //! - [`error_stack06`] - Integration with the `error-stack` 0.6.x error
 //!   handling library (requires the `compat-error-stack06` feature flag)
+//! - [`error_stack07`] - Integration with the `error-stack` 0.7.x error
+//!   handling library (requires the `compat-error-stack07` feature flag)
 //! - [`eyre06`] - Integration with the `eyre` 0.6.x error handling library
 //!   (requires the `compat-eyre06` feature flag)
 //!
@@ -42,7 +44,7 @@
 //! - **Ergonomic APIs**: Use familiar Rust patterns like `From`/`Into` traits
 //!   and extension traits with descriptive method names
 //!
-//! # Example
+//! # Examples
 //!
 //! Here's how to use the [`IntoRootcause`] trait to convert external errors:
 //!
@@ -98,14 +100,15 @@ use crate::{
 /// handling libraries:
 /// - [`anyhow1`] module provides implementations for [`anyhow::Error`] and
 ///   [`anyhow::Result<T>`]
-/// - [`error_stack05`] and [`error_stack06`] modules provide implementations
-///   for [`error_stack::Report<C>`] and `Result<T, error_stack::Report<C>>`
+/// - [`error_stack05`], [`error_stack06`], and [`error_stack07`] modules
+///   provide implementations for [`error_stack::Report<C>`] and `Result<T,
+///   error_stack::Report<C>>`
 /// - [`eyre06`] module provides implementations for [`eyre::Report`] and
 ///   [`eyre::Result<T>`]
 ///
 /// [`anyhow::Error`]: ::anyhow::Error
 /// [`anyhow::Result<T>`]: ::anyhow::Result
-/// [`error_stack::Report<C>`]: ::error_stack::Report
+/// [`error_stack::Report<C>`]: ::error_stack07::Report
 ///
 /// # Examples
 ///
@@ -174,6 +177,10 @@ pub mod error_stack05;
 #[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack06")))]
 pub mod error_stack06;
 
+#[cfg(feature = "compat-error-stack07")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack07")))]
+pub mod error_stack07;
+
 #[cfg(feature = "compat-eyre06")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compat-eyre06")))]
 pub mod eyre06;
@@ -201,7 +208,7 @@ pub mod eyre06;
 ///
 /// fn requires_error_trait(err: impl std::error::Error) {}
 ///
-/// let report = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
+/// let report: Report<std::io::Error> = Report::new_sendsync(std::io::Error::from(std::io::ErrorKind::NotFound));
 /// let as_error = ReportAsError(report.into_cloneable());
 /// requires_error_trait(as_error);
 /// ```
