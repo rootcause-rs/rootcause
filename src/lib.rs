@@ -84,12 +84,16 @@
 //!   trait to add them selectively.
 //! - **[`rootcause-tracing`]** - Integration with the [`tracing`] crate, annotating
 //!   reports with what span they were created in.
+//! - **[`rootcause-preformat`]** - Freeze a report's rendering by turning every
+//!   context and attachment into a `String`, producing a mutable `Send + Sync`
+//!   report regardless of the original types.
 //! - More to come, including OpenTelemetry integration, and
 //!   a crate of fun extra bits and pieces.
 //!
 //! [`rootcause-backtrace`]: https://docs.rs/rootcause-backtrace
 //! [`tracing`]: https://docs.rs/tracing
 //! [`rootcause-tracing`]: https://docs.rs/rootcause-tracing
+//! [`rootcause-preformat`]: https://docs.rs/rootcause-preformat
 //!
 //! ## Project Goals
 //!
