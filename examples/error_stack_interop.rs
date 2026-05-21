@@ -6,7 +6,7 @@
 //! # Running this Example
 //!
 //! ```bash
-//! cargo run --example error_stack_interop --features compat-error-stack06
+//! cargo run --example error_stack_interop --features compat-error-stack07
 //! ```
 //!
 //! # Conversion Overview
@@ -21,10 +21,11 @@
 //! - `?` operator - Automatically converts `Report` to `error_stack::Report` in
 //!   error-stack functions
 
+use error_stack07 as error_stack;
 // Import only what we need to avoid conflicting with error-stack's attach trait
 use rootcause::{
     Report, bail,
-    compat::{IntoRootcause, error_stack06::IntoErrorStack},
+    compat::{IntoRootcause, error_stack07::IntoErrorStack},
 };
 
 // ============================================================================
