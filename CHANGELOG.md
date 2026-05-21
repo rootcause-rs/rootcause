@@ -10,6 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - Added a compatibility module for error-stack v0.7.
+- Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`. `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. Splitting `Deref` by thread-safety marker may break type inference at call sites of `Report::new_custom` / `Report::new`; use `new_sendsync_custom` / `new_local_custom` or explicit annotations to fix. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
 
 ## [0.12.1] - 2026-02-19
 
