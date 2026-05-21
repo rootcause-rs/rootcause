@@ -61,9 +61,9 @@ fn main() {
     println!("{report2}\n");
     assert_eq!(report2.iter_sub_reports().count(), 0);
 
-    // Clones the context to preserve multiple locations, while preserving the original
-    // context type
-    println!("Using context_transform_nested():");
+    // Clones the context to preserve multiple locations, while preserving the
+    // original context type
+    println!("Using cloned context + context():");
     let report3 = parse_error("not_a_number");
     let report3_context = report3.current_context().clone();
     let report3 = report3.context(AppError::Parse(report3_context));
@@ -74,7 +74,7 @@ fn main() {
         std::any::TypeId::of::<std::num::ParseIntError>()
     );
 
-    // context_to() - Uses ReportConversion impl (context_transform_nested in this
+    // context_to() - Uses ReportConversion impl (clone + context() in this
     // example)
     println!("Using context_to():");
     let report4: Report<AppError> = parse_error("not_a_number").context_to::<AppError>();
