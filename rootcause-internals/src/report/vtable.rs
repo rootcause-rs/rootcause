@@ -545,9 +545,7 @@ unsafe fn context_as_any<'a, C: 'static>(ptr: RawReportRef<'a>) -> &'a (dyn Any 
 /// The caller must ensure:
 ///
 /// 1. The type `C` matches the actual context type stored in the [`ReportData`]
-unsafe fn context_as_any_mut<'a, C: 'static>(
-    ptr: RawReportMut<'a>,
-) -> &'a mut (dyn Any + 'static) {
+unsafe fn context_as_any_mut<'a, C: 'static>(ptr: RawReportMut<'a>) -> &'a mut (dyn Any + 'static) {
     // SAFETY:
     // 1. Guaranteed by the caller
     let context: &mut C = unsafe { ptr.into_context_downcast_unchecked::<C>() };

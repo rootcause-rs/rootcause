@@ -363,9 +363,7 @@ unsafe fn preferred_formatting_style<A: 'static, H: AttachmentHandler<A>>(
 ///
 /// 1. The type `A` matches the actual attachment type stored in the
 ///    [`AttachmentData`]
-unsafe fn attachment_as_any<'a, A: 'static>(
-    ptr: RawAttachmentRef<'a>,
-) -> &'a (dyn Any + 'static) {
+unsafe fn attachment_as_any<'a, A: 'static>(ptr: RawAttachmentRef<'a>) -> &'a (dyn Any + 'static) {
     // SAFETY:
     // 1. Guaranteed by the caller
     let attachment: &A = unsafe { ptr.attachment_downcast_unchecked::<A>() };
