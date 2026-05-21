@@ -102,7 +102,7 @@
 //! let local_report: Report<Rc<String>, markers::Mutable, markers::Local> = report!(local_data);
 //! // local_report cannot be sent to another thread - won't compile
 //! ```
-
+/// [`anyhow1`]: https://docs.rs/anyhow/1/anyhow
 use crate::ReportMut;
 
 /// Marker type for reports with dynamic (type-erased) context.
@@ -229,6 +229,7 @@ use crate::ReportMut;
 /// See [`examples/error_coercion.rs`] for a complete guide to type conversions.
 ///
 /// [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
+/// [`anyhow::Error`]: https://docs.rs/anyhow
 pub struct Dynamic {
     /// This field ensures `Dynamic` is an unsized type.
     ///

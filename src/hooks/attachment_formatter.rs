@@ -415,6 +415,13 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// * `attachment_parent` - Optional context about the parent report
     /// * `formatter` - The formatter to write output to
     ///
+    /// Note: `attachment_parent` is `Some` when [`Self::display`] is called from a
+    /// [`ReportFormatter`](crate::hooks::report_formatter::ReportFormatter)
+    /// (such as the built-in
+    /// [`DefaultReportFormatter`](crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter))
+    /// that calls
+    /// [`format_inner_with_parent`](crate::report_attachment::ReportAttachmentRef::format_inner_with_parent)).
+    ///
     /// # Examples
     ///
     /// ```
