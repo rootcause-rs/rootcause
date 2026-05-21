@@ -30,6 +30,7 @@ impl<'a, O, T, S> ReportIter<'a, O, T, S> {
     }
 }
 
+#[allow(unused, reason = "doctest")]
 pub(crate) fn generate_report_tree() -> crate::Report {
     use crate::report_collection::ReportCollection;
     use alloc::format;
@@ -46,6 +47,7 @@ pub(crate) fn generate_report_tree() -> crate::Report {
         .into_dynamic()
 }
 
+#[allow(unused, reason = "doctest")]
 pub(crate) fn join_contexts_as_string<'b, OW: 'static>(
     it: impl Iterator<Item = ReportRef<'b, Dynamic, OW>>,
 ) -> alloc::string::String {
