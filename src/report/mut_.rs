@@ -1228,11 +1228,7 @@ impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
     }
 }
 
-// `Report<_, _, SendSync>` derefs to `dyn Error + Send + Sync`. This isn't
-// split the same way because `ReportRef` / `ReportMut` aren't `Send + Sync`
-// today. See https://github.com/rootcause-rs/rootcause/issues/173 for whether
-// that could change.
-impl<'a, C: ?Sized, T> core::ops::Deref for ReportMut<'a, C, T> {
+impl<'a, C: ?Sized> core::ops::Deref for ReportMut<'a, C, Local> {
     type Target = dyn core::error::Error + 'a;
 
     fn deref(&self) -> &Self::Target {
@@ -1240,9 +1236,26 @@ impl<'a, C: ?Sized, T> core::ops::Deref for ReportMut<'a, C, T> {
     }
 }
 
-impl<'a, C: ?Sized, T> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, T> {
+impl<'a, C: ?Sized> core::ops::Deref for ReportMut<'a, C, SendSync> {
+    type Target = dyn core::error::Error + Send + Sync + 'a;
+
+    fn deref(&self) -> &Self::Target {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, Local> {
     #[inline(always)]
     fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
+        ErrorNoSourceWrapper::new(self)
+    }
+}
+
+impl<'a, C: ?Sized> AsRef<dyn core::error::Error + Send + Sync + 'a>
+    for ReportMut<'a, C, SendSync>
+{
+    #[inline(always)]
+    fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
@@ -1337,7 +1350,7 @@ mod tests {
         let mut report = make_report();
         let report_mut = report.as_mut();
 
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + 'a>) {
+        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
             assert!(err.as_ref().to_string().contains("boom"));
         }
 
