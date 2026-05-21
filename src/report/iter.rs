@@ -59,6 +59,11 @@ impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> {}
 
 impl<'a, O, T> Unpin for ReportIter<'a, O, T> {}
 
+/// An iterator over all contexts that can successfully be downcasted to [`D`], belonging
+/// a report and all its decendants in a depth-first order.
+///
+/// This iterator yields [`&D`] items, which are references to the reports' contexts
+/// in the hierarchy.
 pub struct DowncastIterator<'a, D, Ownership: 'static, ThreadSafety: 'static> {
     pub(crate) iter: ReportIter<'a, Ownership, ThreadSafety>,
     pub(crate) _phantom: PhantomData<D>,

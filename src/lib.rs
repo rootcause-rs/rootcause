@@ -368,7 +368,12 @@ mod util;
 
 pub use self::{
     into_report::{IntoReport, IntoReportCollection},
-    report::{iter::ReportIter, mut_::ReportMut, owned::Report, ref_::ReportRef},
+    report::{
+        iter::{DowncastIterator, ReportIter},
+        mut_::ReportMut,
+        owned::Report,
+        ref_::ReportRef,
+    },
     report_conversion::ReportConversion,
 };
 
