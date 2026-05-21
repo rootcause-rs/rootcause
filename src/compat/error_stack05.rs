@@ -125,9 +125,10 @@
 //! The [`ErrorStackHandler`] delegates to error-stack's own formatting
 //! implementation, ensuring that converted reports display exactly as they
 //! would in pure error-stack code. This includes:
-//! - Display formatting via [`error_stack::Report`]'s `Display` implementation
-//! - Debug formatting via [`error_stack::Report`]'s `Debug` implementation
-//! - Source chain navigation via the context's `source` method
+//! - Display formatting via [`error_stack::Report`]'s [`Display`](core::fmt::Display) implementation
+//! - Debug formatting via [`error_stack::Report`]'s [`Debug`](core::fmt::Debug) implementation
+//! - Source chain navigation via the context's
+//!   [`source`](core::error::Error::source) method
 //!
 //! When converting from rootcause to error-stack, the entire [`Report`]
 //! structure (including all contexts and attachments) is preserved and
@@ -156,10 +157,10 @@ use crate::{
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`error_stack::Report`]'s `Display` implementation
-/// - **Debug**: Uses [`error_stack::Report`]'s `Debug` implementation
-/// - **Source**: Uses the current context's `source` method to traverse the
-///   error chain
+/// - **Display**: Uses [`error_stack::Report`]'s [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses [`error_stack::Report`]'s [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses the current context's
+///   [`source`](core::error::Error::source) method to traverse the error chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
 ///

@@ -4,7 +4,7 @@
 //! they include the active span context showing which operations were running.
 //!
 //! If you currently use `tracing_subscriber::fmt::init()`, this shows how to
-//! expand that setup to add `RootcauseLayer`.
+//! expand that setup to add [`RootcauseLayer`](rootcause_tracing::RootcauseLayer).
 
 use rootcause::{hooks::Hooks, prelude::*};
 use rootcause_tracing::{RootcauseLayer, SpanCollector};

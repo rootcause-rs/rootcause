@@ -122,9 +122,10 @@
 //! The [`AnyhowHandler`] delegates to anyhow's own formatting implementation,
 //! ensuring that converted errors display exactly as they would in pure anyhow
 //! code. This includes:
-//! - Display formatting via [`anyhow::Error`]'s `Display` implementation
-//! - Debug formatting via [`anyhow::Error`]'s `Debug` implementation
-//! - Source chain navigation via [`anyhow::Error`]'s `source` method
+//! - Display formatting via [`anyhow::Error`]'s [`Display`](core::fmt::Display) implementation
+//! - Debug formatting via [`anyhow::Error`]'s [`Debug`](core::fmt::Debug) implementation
+//! - Source chain navigation via [`anyhow::Error`]'s
+//!   [`source`](core::error::Error::source) method
 //!
 //! When converting from rootcause to anyhow, the entire [`Report`] structure
 //! (including all contexts and attachments) is preserved and formatted
@@ -145,10 +146,10 @@ use crate::{Report, compat::ReportAsError, markers};
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`anyhow::Error`]'s `Display` implementation
-/// - **Debug**: Uses [`anyhow::Error`]'s `Debug` implementation
-/// - **Source**: Uses [`anyhow::Error`]'s `source` method to traverse the error
-///   chain
+/// - **Display**: Uses [`anyhow::Error`]'s [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses [`anyhow::Error`]'s [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses [`anyhow::Error`]'s [`source`](core::error::Error::source)
+///   method to traverse the error chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
 ///

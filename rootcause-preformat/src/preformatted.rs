@@ -49,7 +49,7 @@ use rootcause::{
 };
 
 /// A context that has been preformatted into `String`s for both
-/// `Display` and `Debug`.
+/// [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug).
 ///
 /// This type stores the formatted output of a context along with metadata about
 /// the original type and preferred formatting styles. It's created
@@ -59,9 +59,10 @@ use rootcause::{
 /// # Stored Information
 ///
 /// - The original type's [`TypeId`] (accessible via [`original_type_id`])
-/// - Preformatted `Display` output as a `String`
-/// - Preformatted `Debug` output as a `String`
-/// - Preferred formatting styles for both `Display` and `Debug`
+/// - Preformatted [`Display`](core::fmt::Display) output as a `String`
+/// - Preformatted [`Debug`](core::fmt::Debug) output as a `String`
+/// - Preferred formatting styles for both [`Display`](core::fmt::Display)
+///   and [`Debug`](core::fmt::Debug)
 ///
 /// # Examples
 ///
@@ -159,7 +160,7 @@ impl PreformattedContext {
 }
 
 /// An attachment that has been preformatted into `String`s for both
-/// `Display` and `Debug`.
+/// [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug).
 ///
 /// This type stores the formatted output of an attachment along with metadata
 /// about the original type and preferred formatting styles. It's created
@@ -169,9 +170,10 @@ impl PreformattedContext {
 /// # Stored Information
 ///
 /// - The original type's [`TypeId`] (accessible via [`original_type_id`])
-/// - Preformatted `Display` output as a `String`
-/// - Preformatted `Debug` output as a `String`
-/// - Preferred formatting styles for both `Display` and `Debug`
+/// - Preformatted [`Display`](core::fmt::Display) output as a `String`
+/// - Preformatted [`Debug`](core::fmt::Debug) output as a `String`
+/// - Preferred formatting styles for both [`Display`](core::fmt::Display)
+///   and [`Debug`](core::fmt::Debug)
 ///
 /// # Examples
 ///

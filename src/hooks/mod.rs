@@ -31,8 +31,9 @@
 //!   structure)
 //! - Redact or transform sensitive data in error messages
 //!
-//! **If you just need to customize a single error**, use `.attach()` or
-//! handlers (see [`examples/custom_handler.rs`]) instead of hooks.
+//! **If you just need to customize a single error**, use
+//! [`.attach()`](crate::Report::attach) or handlers (see
+//! [`examples/custom_handler.rs`]) instead of hooks.
 //!
 //! [`examples/custom_handler.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/custom_handler.rs
 //!
@@ -233,7 +234,7 @@ impl core::fmt::Display for HooksAlreadyInstalledError {
 impl core::error::Error for HooksAlreadyInstalledError {}
 
 impl Hooks {
-    /// Creates a new `Hooks` builder with location tracking.
+    /// Creates a new [`Hooks`] builder with location tracking.
     ///
     /// This is equivalent to using rootcause without installing any hooks - you
     /// get automatic location tracking. Use this as the base when you want to
@@ -264,7 +265,7 @@ impl Hooks {
         }))
     }
 
-    /// Creates a new `Hooks` builder without location tracking.
+    /// Creates a new [`Hooks`] builder without location tracking.
     ///
     /// By default, rootcause automatically tracks source locations where errors
     /// occur. Use this method when you don't want that automatic tracking.
@@ -580,7 +581,7 @@ impl Hooks {
 
 /// A handle to hooks that have been leaked into static memory.
 ///
-/// You get a `HooksHandle` when calling [`Hooks::replace()`], which returns
+/// You get a [`HooksHandle`] when calling [`Hooks::replace()`], which returns
 /// the previously installed hooks. The hooks remain in memory for the lifetime
 /// of the program unless you call the unsafe [`reclaim()`](Self::reclaim)
 /// method.
@@ -595,7 +596,7 @@ impl Hooks {
 ///
 /// # Memory Leak Warning
 ///
-/// Dropping a `HooksHandle` **will leak memory**. This is by design - the hooks
+/// Dropping a [`HooksHandle`] **will leak memory**. This is by design - the hooks
 /// might still be referenced by other threads, so we can't safely deallocate
 /// them. In most applications this is fine since you typically install hooks
 /// once at startup. If you're replacing hooks frequently in tests or hot-reload
@@ -709,7 +710,7 @@ impl HooksHandle {
         Some(Self { hook_data })
     }
 
-    /// Reclaims ownership of the leaked hooks, returning them as a `Hooks`
+    /// Reclaims ownership of the leaked hooks, returning them as a [`Hooks`]
     /// instance.
     ///
     /// **⚠ WARNING: This function is almost impossible to use safely. Do not

@@ -50,7 +50,9 @@
 //! ## [`Error`]
 //!
 //! For types implementing [`std::error::Error`](core::error::Error). Delegates
-//! to the type's `Display`, `Debug`, and `source` implementations. This is the
+//! to the type's [`Display`](core::fmt::Display),
+//! [`Debug`](core::fmt::Debug), and
+//! [`source`](core::error::Error::source) implementations. This is the
 //! default handler for error types.
 //!
 //! ## [`Display`]
@@ -103,13 +105,14 @@ pub use rootcause_internals::handlers::{
 /// This handler delegates to the error type's existing implementations of
 /// [`Error::source`](core::error::Error::source),
 /// [`Display`](core::fmt::Display), and [`Debug`](core::fmt::Debug). This is
-/// the default handler for any type that implements the `Error` trait.
+/// the default handler for any type that implements the
+/// [`Error`](core::error::Error) trait.
 ///
 /// # When to Use
 ///
 /// This handler is automatically selected by the [`report!`](crate::report!)
-/// macro when you create a report from a type implementing `std::error::Error`.
-/// You rarely need to specify it explicitly.
+/// macro when you create a report from a type implementing
+/// [`std::error::Error`]. You rarely need to specify it explicitly.
 ///
 /// # Examples
 ///
@@ -147,17 +150,18 @@ where
 /// Handler for types implementing [`Display`](core::fmt::Display) and
 /// [`Debug`](core::fmt::Debug).
 ///
-/// This handler delegates to the type's `Display` and `Debug` implementations
-/// for formatting. This is suitable for custom context types that aren't errors
-/// but can be meaningfully displayed. The [`source`](ContextHandler::source)
-/// method always returns `None` since these types don't have error sources.
+/// This handler delegates to the type's [`Display`](core::fmt::Display) and
+/// [`Debug`](core::fmt::Debug) implementations for formatting. This is suitable
+/// for custom context types that aren't errors but can be meaningfully
+/// displayed. The [`source`](ContextHandler::source) method always returns
+/// `None` since these types don't have error sources.
 ///
 /// # When to Use
 ///
-/// This handler is automatically selected for types that implement `Display`
-/// and `Debug` but not `std::error::Error`. This is ideal for custom context
-/// types like configuration objects, request parameters, or descriptive
-/// messages.
+/// This handler is automatically selected for types that implement
+/// [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug) but not
+/// [`std::error::Error`]. This is ideal for custom context types like
+/// configuration objects, request parameters, or descriptive messages.
 ///
 /// ⚠️ When returning a `Result` value from `main`, the error will always be formatted
 /// with [`Debug`](core::fmt::Debug)-formatting, which results in `Debug`-formatting
@@ -239,17 +243,17 @@ where
 
 /// Handler for types implementing [`Debug`](core::fmt::Debug).
 ///
-/// This handler uses the type's `Debug` implementation for the `debug` method,
-/// but shows a generic message like "Context of type `TypeName`" for the
-/// `display` method. This is useful for types that have debug information but
-/// don't implement `Display`.
+/// This handler uses the type's [`Debug`](core::fmt::Debug) implementation for
+/// the `debug` method, but shows a generic message like "Context of type
+/// `TypeName`" for the `display` method. This is useful for types that have
+/// debug information but don't implement [`Display`](core::fmt::Display).
 ///
 /// # When to Use
 ///
-/// This handler is automatically selected for types that implement `Debug` but
-/// not `Display`. This is useful for internal data structures or types where
-/// displaying the full debug output as the primary message would be too
-/// verbose.
+/// This handler is automatically selected for types that implement
+/// [`Debug`](core::fmt::Debug) but not [`Display`](core::fmt::Display). This is
+/// useful for internal data structures or types where displaying the full
+/// debug output as the primary message would be too verbose.
 ///
 /// # Formatting Behavior
 ///
@@ -322,9 +326,10 @@ where
 /// Handler for any type, regardless of implemented traits.
 ///
 /// This is the most generic handler, working with any type without requiring
-/// `Display`, `Debug`, or `Error` implementations. Both `Display` and `Debug`
-/// output show "An object of type TypeName" using
-/// [`type_name`](core::any::type_name).
+/// [`Display`](core::fmt::Display), [`Debug`](core::fmt::Debug), or
+/// [`Error`](core::error::Error) implementations. Both
+/// [`Display`](core::fmt::Display) and [`Debug`](core::fmt::Debug) output show
+/// "An object of type TypeName" using [`type_name`](core::any::type_name).
 ///
 /// # When to Use
 ///

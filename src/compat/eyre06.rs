@@ -122,9 +122,10 @@
 //! The [`EyreHandler`] delegates to eyre's own formatting implementation,
 //! ensuring that converted reports display exactly as they would in pure eyre
 //! code. This includes:
-//! - Display formatting via [`eyre::Report`]'s `Display` implementation
-//! - Debug formatting via [`eyre::Report`]'s `Debug` implementation
-//! - Source chain navigation via [`eyre::Report`]'s `source` method
+//! - Display formatting via [`eyre::Report`]'s [`Display`](core::fmt::Display) implementation
+//! - Debug formatting via [`eyre::Report`]'s [`Debug`](core::fmt::Debug) implementation
+//! - Source chain navigation via [`eyre::Report`]'s
+//!   [`source`](core::error::Error::source) method
 //!
 //! When converting from rootcause to eyre, the entire [`Report`] structure
 //! (including all contexts and attachments) is preserved and formatted
@@ -145,10 +146,10 @@ use crate::{Report, compat::ReportAsError, markers};
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`eyre::Report`]'s `Display` implementation
-/// - **Debug**: Uses [`eyre::Report`]'s `Debug` implementation
-/// - **Source**: Uses [`eyre::Report`]'s `source` method to traverse the error
-///   chain
+/// - **Display**: Uses [`eyre::Report`]'s [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses [`eyre::Report`]'s [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses [`eyre::Report`]'s [`source`](core::error::Error::source)
+///   method to traverse the error chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
 ///

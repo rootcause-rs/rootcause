@@ -107,7 +107,7 @@ use crate::ReportMut;
 
 /// Marker type for reports with dynamic (type-erased) context.
 ///
-/// `Dynamic` is used as the context type parameter in
+/// [`Dynamic`] is used as the context type parameter in
 /// [`Report<Dynamic, O, T>`](crate::Report) to indicate that the actual error
 /// type at the root is not known at compile time. This is the default behavior
 /// and is similar to [`anyhow::Error`] - any error type
@@ -115,17 +115,17 @@ use crate::ReportMut;
 ///
 /// # Key Properties
 ///
-/// - **Zero-cost type erasure**: No actual instance of `Dynamic` is ever
+/// - **Zero-cost type erasure**: No actual instance of [`Dynamic`] is ever
 ///   stored. It's purely a marker type used at the type level.
 /// - **Automatic conversions**: The `?` operator automatically converts any
 ///   error type into `Report<Dynamic>`.
 /// - **Flexible propagation**: When you just need errors to propagate upward
-///   with context, `Dynamic` is the right choice.
+///   with context, [`Dynamic`] is the right choice.
 ///
 /// # When to Use Dynamic
 ///
 /// Use `Report<Dynamic>` (or just [`Report`](crate::Report), which defaults to
-/// `Dynamic`) when:
+/// [`Dynamic`]) when:
 /// - You're propagating errors upward and don't need to pattern match on
 ///   specific error types
 /// - You want the flexibility to return different error types from the same
@@ -230,9 +230,9 @@ use crate::ReportMut;
 ///
 /// [`examples/error_coercion.rs`]: https://github.com/rootcause-rs/rootcause/blob/main/examples/error_coercion.rs
 pub struct Dynamic {
-    /// This field ensures `Dynamic` is an unsized type.
+    /// This field ensures [`Dynamic`] is an unsized type.
     ///
-    /// Since the `Dynamic` type itself is never instantiated, the choice
+    /// Since the [`Dynamic`] type itself is never instantiated, the choice
     /// of an unsized type here is purely to enforce that property at the type
     /// level.
     _phantom_unsized: [()],
@@ -249,7 +249,7 @@ pub struct Dynamic {
 ///
 /// # Available Operations
 ///
-/// With `Mutable` ownership, you can:
+/// With [`Mutable`] ownership, you can:
 /// - Add attachments with [`attach`](crate::Report::attach)
 /// - Add parent context with [`context`](crate::Report::context)
 /// - Get mutable access with [`as_mut`](crate::Report::as_mut)
@@ -294,21 +294,21 @@ pub struct Mutable;
 /// For [`ReportRef<C, Cloneable>`](crate::ReportRef), the marker enables the
 /// [`clone_arc`](crate::ReportRef::clone_arc) method, which clones the
 /// underlying `Arc` to produce an owned [`Report<C, Cloneable,
-/// T>`](crate::Report). Note that `ReportRef` itself is always `Copy` and
-/// `Clone` regardless of the ownership marker - the `Cloneable`
-/// marker specifically enables converting the reference back to an owned
-/// report.
+/// T>`](crate::Report). Note that [`ReportRef`](crate::ReportRef) itself is
+/// always `Copy` and `Clone` regardless of the ownership marker - the
+/// [`Cloneable`] marker specifically enables converting the reference back to
+/// an owned report.
 ///
 /// # When to Use
 ///
-/// Use `Cloneable` reports when you need to:
+/// Use [`Cloneable`] reports when you need to:
 /// - Share an error report across multiple code paths
 /// - Store reports in collections that require `Clone`
 /// - Return the same error from multiple places without deep copying
 ///
 /// # Converting to Cloneable
 ///
-/// Convert a [`Mutable`] report to `Cloneable` using
+/// Convert a [`Mutable`] report to [`Cloneable`] using
 /// [`into_cloneable`](crate::Report::into_cloneable):
 ///
 /// ```
@@ -344,7 +344,7 @@ pub struct Mutable;
 /// process_error(report.into_cloneable());
 /// ```
 ///
-/// Using `clone_arc` on report references:
+/// Using [`clone_arc`](crate::ReportRef::clone_arc) on report references:
 ///
 /// ```
 /// use rootcause::{ReportRef, prelude::*};
@@ -367,22 +367,24 @@ pub struct Cloneable;
 /// indicates that the reference does not provide the
 /// [`clone_arc`](crate::ReportRef::clone_arc) method to obtain an owned report.
 ///
-/// Note that `ReportRef` itself is always `Copy` and `Clone` - you can always
-/// copy the reference itself. The `Uncloneable` marker only prevents cloning
-/// the underlying `Arc` to get an owned `Report`.
+/// Note that [`ReportRef`](crate::ReportRef) itself is always `Copy` and
+/// `Clone` - you can always copy the reference itself. The [`Uncloneable`]
+/// marker only prevents cloning the underlying `Arc` to get an owned
+/// [`Report`](crate::Report).
 ///
 /// # Common Uses
 ///
-/// `Uncloneable` references typically arise in two situations:
+/// [`Uncloneable`] references typically arise in two situations:
 ///
-/// 1. **Taking a reference to a `Mutable` report**: When you call
+/// 1. **Taking a reference to a [`Mutable`] report**: When you call
 ///    [`as_ref`](crate::Report::as_ref) on a `Report<C, Mutable>`, you get a
 ///    `ReportRef<C, Uncloneable>` because the underlying report has unique
 ///    ownership.
 ///
 /// 2. **Explicitly restricting cloneability**: You can convert a `ReportRef<C,
 ///    Cloneable>` to `ReportRef<C, Uncloneable>` when you want to pass a
-///    reference that explicitly cannot use `clone_arc`, ensuring the recipient
+///    reference that explicitly cannot use
+///    [`clone_arc`](crate::ReportRef::clone_arc), ensuring the recipient
 ///    can only inspect the report without obtaining ownership. This can be
 ///    useful in APIs that need to accept both cloneable and uncloneable
 ///    references.
@@ -390,7 +392,7 @@ pub struct Cloneable;
 ///
 /// # Examples
 ///
-/// Taking a reference to a `Mutable` report:
+/// Taking a reference to a [`Mutable`] report:
 ///
 /// ```
 /// use rootcause::{ReportRef, prelude::*};
@@ -407,7 +409,7 @@ pub struct Cloneable;
 /// // let owned = report_ref.clone_arc(); // ❌ Method not available
 /// ```
 ///
-/// Explicitly converting to `Uncloneable`:
+/// Explicitly converting to [`Uncloneable`]:
 ///
 /// ```
 /// use rootcause::{ReportRef, prelude::*};
@@ -435,7 +437,7 @@ pub struct Uncloneable;
 /// - Most standard library types
 /// - Types explicitly designed for concurrent use
 ///
-/// Use `SendSync` (the default) unless you have a specific need for
+/// Use [`SendSync`] (the default) unless you have a specific need for
 /// thread-local data.
 ///
 /// # Examples
@@ -468,7 +470,7 @@ pub struct SendSync;
 ///
 /// # When to Use
 ///
-/// Use `Local` when your error context or attachments contain:
+/// Use [`Local`] when your error context or attachments contain:
 /// - `Rc<T>` or `Weak<T>` (use `Arc<T>` for thread-safe alternative)
 /// - Raw pointers (`*const T`, `*mut T`)
 /// - Types that wrap thread-local storage
@@ -558,9 +560,9 @@ mod sealed_object_marker {
 /// The `RefMarker` associated type determines what kind of reference you get
 /// when calling [`as_ref`](crate::Report::as_ref):
 /// - For [`Mutable`], this is [`Uncloneable`] (the reference cannot use
-///   `clone_arc`)
+///   [`clone_arc`](crate::ReportRef::clone_arc))
 /// - For [`Cloneable`], this is [`Cloneable`] (the reference can use
-///   `clone_arc`)
+///   [`clone_arc`](crate::ReportRef::clone_arc))
 ///
 /// # Implementation
 ///

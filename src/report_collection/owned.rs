@@ -229,7 +229,7 @@ mod limit_field_access {
 pub use limit_field_access::ReportCollection;
 
 impl<C: ?Sized, T> ReportCollection<C, T> {
-    /// Creates a new, empty `ReportCollection`.
+    /// Creates a new, empty [`ReportCollection`].
     ///
     /// The collection will be initially empty and will have no capacity
     /// allocated. This method is equivalent to calling
@@ -259,7 +259,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
         unsafe { Self::from_raw(reports) }
     }
 
-    /// Creates a new, empty `ReportCollection` with the specified capacity.
+    /// Creates a new, empty [`ReportCollection`] with the specified capacity.
     ///
     /// The collection will be able to hold at least `capacity` reports without
     /// reallocating. If you plan to add a known number of reports to the
@@ -801,7 +801,7 @@ impl<C: ?Sized, T> ReportCollection<C, T> {
 }
 
 impl<C: ?Sized> ReportCollection<C, SendSync> {
-    /// Creates a new, empty `ReportCollection` with [`SendSync`] thread safety.
+    /// Creates a new, empty [`ReportCollection`] with [`SendSync`] thread safety.
     ///
     /// This is equivalent to calling [`new()`](Self::new) but makes the thread
     /// safety marker explicit. The resulting collection can be safely sent
@@ -822,7 +822,7 @@ impl<C: ?Sized> ReportCollection<C, SendSync> {
 }
 
 impl<C: ?Sized> ReportCollection<C, Local> {
-    /// Creates a new, empty `ReportCollection` with [`Local`] thread safety.
+    /// Creates a new, empty [`ReportCollection`] with [`Local`] thread safety.
     ///
     /// This creates a collection that is not [`Send`] or [`Sync`], meaning it
     /// cannot be transferred between threads or shared across threads. This
