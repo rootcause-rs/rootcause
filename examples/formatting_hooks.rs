@@ -148,7 +148,7 @@ impl ContextFormatterHook<ValidationError> for ValidationErrorFormatter {
 // Example 4: Parent-aware formatting
 //
 // When the default report formatter walks an error tree, it hands every
-// attachment formatter hook an `AttachmentParent` providing acces to the parent report
+// attachment formatter hook an `AttachmentParent` providing access to the parent report
 // and the attachment's position in that report's original attachment
 // list.
 // This lets a hook produce output that's contextually aware of where it

@@ -255,6 +255,17 @@ where
 /// to understand the attachment's position or relationship to its containing
 /// report.
 ///
+/// An [`AttachmentFormatterHook`] receives `Some(AttachmentParent)` when the
+/// attachment is being formatted via
+/// [`ReportAttachmentRef::format_inner_with_parent`], which the built-in
+/// [`DefaultReportFormatter`](crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter)
+/// uses when walking an error tree. It is `None` when the attachment is being
+/// formatted in isolation via [`ReportAttachmentRef::format_inner`] (for
+/// example, `attachment.format_inner().to_string()`).
+///
+/// [`ReportAttachmentRef::format_inner`]: crate::report_attachment::ReportAttachmentRef::format_inner
+/// [`ReportAttachmentRef::format_inner_with_parent`]: crate::report_attachment::ReportAttachmentRef::format_inner_with_parent
+///
 /// # Examples
 ///
 /// ```
@@ -401,15 +412,9 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// # Arguments
     ///
     /// * `attachment` - Reference to the attachment being formatted
-    /// * `attachment_parent` - Optional context about the parent report
+    /// * `attachment_parent` - Optional context about the parent report. See
+    ///   [`AttachmentParent`] for when this is `Some` vs `None`.
     /// * `formatter` - The formatter to write output to
-    ///
-    /// Note: `attachment_parent` is `Some` when [`Self::display`] is called from a
-    /// [`ReportFormatter`](crate::hooks::report_formatter::ReportFormatter)
-    /// (such as the built-in
-    /// [`DefaultReportFormatter`](crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter))
-    /// that calls
-    /// [`format_inner_with_parent`](crate::report_attachment::ReportAttachmentRef::format_inner_with_parent)).
     ///
     /// # Examples
     ///
