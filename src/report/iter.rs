@@ -85,3 +85,7 @@ impl<'a, D: 'static, Ownership: 'static, ThreadSafety: 'static> Iterator
         None
     }
 }
+
+impl<'a, D: 'static, O, T> FusedIterator for DowncastIterator<'a, D, O, T> {}
+
+impl<'a, D, O, T> Unpin for DowncastIterator<'a, D, O, T> {}
