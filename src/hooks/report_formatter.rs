@@ -110,11 +110,11 @@ use crate::{
 ///     indentation: usize,
 ///     formatter: &mut fmt::Formatter<'_>,
 /// ) -> fmt::Result {
-///     for _ in 0..indentation {
-///         write!(formatter, "  ")?;
+///     let space = "  ".repeat(indentation);
+///     writeln!(formatter, "{space}{}:", report.format_current_context_unhooked())?;
+///     for attachment in report.attachments() {
+///        writeln!(formatter, "{space}- {}", attachment.format_inner_unhooked())?;
 ///     }
-///     writeln!(formatter, "{}:", report.format_current_context_unhooked())?;
-///     // TODO: Also format the attachments
 ///     for subreport in report.children() {
 ///         format_indented(subreport.into_uncloneable(), indentation + 1, formatter)?;
 ///     }

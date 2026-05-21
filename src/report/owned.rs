@@ -1636,7 +1636,11 @@ impl<O, T> Report<Dynamic, O, T> {
         unsafe { Report::from_raw(raw) }
     }
 
-    /// TODO
+    /// Access the current context using the [`Any`](core::any::Any) trait.
+    ///
+    /// This method is useful when interfacing with other dynamically typed
+    /// code that relies on the standard library, rather than this crate's
+    /// bespoke systems.
     pub fn current_context_any(&self) -> &dyn core::any::Any
     where
         O: ReportOwnershipMarker,
