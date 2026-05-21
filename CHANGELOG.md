@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- Added a compatibility module for error-stack v0.7.
+
 ## [0.12.1] - 2026-02-19
 
 ### Added
