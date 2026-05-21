@@ -159,6 +159,21 @@ where
 /// types like configuration objects, request parameters, or descriptive
 /// messages.
 ///
+/// ⚠️ When returning a `Result` value from `main`, the error will always be formatted
+/// with [`Debug`](core::fmt::Debug)-formatting, which results in `Debug`-formatting
+/// for attachments and contexts using this handler.
+///
+/// The [`Termination`](std::process::Termination) implementation
+/// for `Result` is unfortunately a blanket `impl` for every `Err`-return implementing
+/// `fmt::Debug`, and so [`Report`](crate::Report) can't override it. (This also means
+/// every other type is affected by this.)
+///
+/// However, this functionality is explicitly stated to be provided 'for convenience',
+/// and we believe that for a larger project, it is more likely that the user will
+/// want to directly handle any errors.
+///
+/// For smaller projects, see [`MainReport`](crate::compat::MainReport).
+///
 /// # Examples
 ///
 /// ```
