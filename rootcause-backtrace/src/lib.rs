@@ -916,9 +916,9 @@ fn match_std_library_path(path: &str) -> Option<(&'static str, usize)> {
 
     // The prefix must end with "/lib/rustlib/src/rust" or *be* "/rustc/{40 hex chars}"
     let valid_prefix = prefix.ends_with("/lib/rustlib/src/rust")
-        || prefix.strip_prefix("/rustc/").is_some_and(|hash| {
-            hash.len() == 40 && hash.bytes().all(|b| b.is_ascii_hexdigit())
-        });
+        || prefix
+            .strip_prefix("/rustc/")
+            .is_some_and(|hash| hash.len() == 40 && hash.bytes().all(|b| b.is_ascii_hexdigit()));
 
     if !valid_prefix {
         return None;
