@@ -20,3 +20,6 @@ unicode-ident = "1.0.24"
 
 # Internal dependencies
 rootcause = { path = "../", version = "=0.12.1" }
+
+[lints.rust]
+unexpected_cfgs = { level = "allow", check-cfg = ['cfg(nightly_extra_checks)'] }
