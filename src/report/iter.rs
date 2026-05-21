@@ -134,17 +134,12 @@ impl<'a, O, T> ReportIter<'a, O, T, BFS> {
 }
 
 /// Marker type for depth-first traversal in the [`ReportIter`] type.
-pub struct DFS {
-    _nope: NotUserConstructible,
-}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct DFS;
 
 /// Marker type for breadth-first traversal in the [`ReportIter`] type.
-pub struct BFS {
-    _nope: NotUserConstructible,
-}
-
-#[allow(missing_copy_implementations, reason = "not constructible")]
-struct NotUserConstructible;
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct BFS;
 
 fn list_children<'a, O: 'static, T>(
     children: &'a ReportCollection<Dynamic, T>,
