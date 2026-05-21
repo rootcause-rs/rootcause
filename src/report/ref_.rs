@@ -1028,6 +1028,10 @@ impl<'a, C: ?Sized, O, T> core::fmt::Debug for ReportRef<'a, C, O, T> {
     }
 }
 
+// `Report<_, _, SendSync>` derefs to `dyn Error + Send + Sync`. This isn't
+// split the same way because `ReportRef` / `ReportMut` aren't `Send + Sync`
+// today. See https://github.com/rootcause-rs/rootcause/issues/173 for whether
+// that could change.
 impl<'a, C: ?Sized, O, T> core::ops::Deref for ReportRef<'a, C, O, T> {
     type Target = dyn core::error::Error + 'a;
 
