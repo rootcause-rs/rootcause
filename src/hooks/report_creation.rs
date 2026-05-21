@@ -11,7 +11,7 @@
 //!
 //! 1. **Closures** - Simplest: Just return a value to attach
 //!
-//!    ```rust
+//!    ```
 //!    # use rootcause::hooks::Hooks;
 //!    Hooks::new().attachment_collector(|| "some data")
 //!    # ;
