@@ -6,12 +6,16 @@
 //! **What changed:**
 //! - KV store methods split into public (anyhow) and internal (rootcause)
 //!   versions
-//! - Use `.into_rootcause()` when calling metrics (still anyhow)
-//! - Use `.into_anyhow()` when returning from public methods
-//! - Rich error context with `.attach()` in internal methods
+//! - Use [`.into_rootcause()`] when calling metrics (still anyhow)
+//! - Use [`.into_anyhow()`] when returning from public methods
+//! - Rich error context with [`.attach()`] in internal methods
+//!
+//! [`.into_rootcause()`]: rootcause::compat::IntoRootcause::into_rootcause
+//! [`.attach()`]: rootcause::Report::attach
+//! [`.into_anyhow()`]: rootcause::compat::anyhow1::IntoAnyhow::into_anyhow
 //!
 //! **What stayed the same:**
-//! - Public KV store API still uses `anyhow::Result` (no breaking change)
+//! - Public KV store API still uses [`anyhow::Result`] (no breaking change)
 //! - Metrics and application unchanged from stage 3
 pub mod metrics {
     use std::collections::HashMap;

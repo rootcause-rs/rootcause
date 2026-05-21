@@ -13,13 +13,17 @@
 //! # Conversion Overview
 //!
 //! ## From Anyhow to Rootcause
-//! - `.into_rootcause()` - Convert `anyhow::Result<T>` or `anyhow::Error`
+//! - [`.into_rootcause()`] - Convert [`anyhow::Result<T>`] or [`anyhow::Error`]
 //!
 //! ## From Rootcause to Anyhow
-//! - `.into_anyhow()` - Convert `Result<T, Report>` or `Report`
-//! - `.into()` - Use `From<Report>` for automatic conversion
-//! - `?` operator - Automatically converts `Report` to `anyhow::Error` in
+//! - [`.into_anyhow()`] - Convert [`Result<T, Report>`] or [`Report`]
+//! - [`.into()`](Into::into) - Use [`From<Report>`] for automatic conversion
+//! - `?` operator - Automatically converts [`Report`] to [`anyhow::Error`] in
 //!   anyhow functions
+//!
+//! [`.into_rootcause()`]: rootcause::compat::IntoRootcause::into_rootcause
+//! [`.attach()`]: rootcause::Report::attach
+//! [`.into_anyhow()`]: rootcause::compat::anyhow1::IntoAnyhow::into_anyhow
 
 // Import only what we need to avoid conflicting with anyhow's Context trait
 use rootcause::{

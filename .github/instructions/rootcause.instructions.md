@@ -44,7 +44,7 @@ Different visibility levels require different levels of documentation detail:
 ````rust
 /// Creates a report with the given context.
 ///
-/// This is the primary way to create reports. Use the `report!()` macro
+/// This is the primary way to create reports. Use the [`report!()`](crate::report) macro
 /// for more convenient report creation with format string support.
 ///
 /// # Examples

@@ -156,9 +156,9 @@ use crate::{
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`error_stack::Report`]'s `Display` implementation
-/// - **Debug**: Uses [`error_stack::Report`]'s `Debug` implementation
-/// - **Source**: Uses the current context's `source` method to traverse the
+/// - **Display**: Uses [`error_stack::Report`]'s [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses [`error_stack::Report`]'s [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses the current context's [`source`](core::error::Error::source) method to traverse the
 ///   error chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
@@ -227,7 +227,7 @@ where
 
 /// A trait for converting rootcause [`Report`]s into [`error_stack::Report`].
 ///
-/// This trait provides the `.into_error_stack()` method for converting
+/// This trait provides the [`.into_error_stack()`](IntoErrorStack::into_error_stack) method for converting
 /// rootcause reports into error-stack reports. It's implemented for both
 /// [`Report`] and [`Result<T, Report>`], making it easy to call
 /// error-stack-based APIs from rootcause code.
@@ -267,9 +267,9 @@ where
 /// println!("{}", es_report);
 /// ```
 ///
-/// ## Using `From` Instead
+/// ## Using [`From`] Instead
 ///
-/// You can also use the `From` trait for explicit conversions:
+/// You can also use the [`From`] trait for explicit conversions:
 ///
 /// ```
 /// # use error_stack05 as error_stack;

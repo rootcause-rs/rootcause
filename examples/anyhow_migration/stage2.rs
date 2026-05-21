@@ -5,8 +5,8 @@
 //! features like `.attach()` without touching any dependencies.
 //!
 //! **What changed:**
-//! - Application's `main` module now returns `Result<(), Report>`
-//! - Use `.into_rootcause()` when calling dependency methods
+//! - Application's [`main`] module now returns [`Result<(), Report>`]
+//! - Use [`.into_rootcause()`](crate""") when calling dependency methods
 //! - Can now use `.attach()`, rich context, and other rootcause features
 //!
 //! **What stayed the same:**

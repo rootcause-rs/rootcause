@@ -145,9 +145,9 @@ use crate::{Report, compat::ReportAsError, markers};
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses [`eyre::Report`]'s `Display` implementation
-/// - **Debug**: Uses [`eyre::Report`]'s `Debug` implementation
-/// - **Source**: Uses [`eyre::Report`]'s `source` method to traverse the error
+/// - **Display**: Uses [`eyre::Report`]'s [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses [`eyre::Report`]'s [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses [`eyre::Report`]'s [`source`](core::error::Error::source) method to traverse the error
 ///   chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
@@ -214,7 +214,7 @@ impl<T> IntoRootcause for eyre::Result<T> {
 
 /// A trait for converting rootcause [`Report`]s into [`eyre::Report`].
 ///
-/// This trait provides the `.into_eyre()` method for converting rootcause
+/// This trait provides the [`.into_eyre()`](IntoEyre::into_eyre) method for converting rootcause
 /// reports into eyre reports. It's implemented for both [`Report`] and
 /// [`Result<T, Report>`], making it easy to call eyre-based APIs from
 /// rootcause code.
@@ -252,9 +252,9 @@ impl<T> IntoRootcause for eyre::Result<T> {
 /// println!("{}", eyre_err);
 /// ```
 ///
-/// ## Using `From` Instead
+/// ## Using [`From`] Instead
 ///
-/// You can also use the `From` trait for explicit conversions:
+/// You can also use the [`From`] trait for explicit conversions:
 ///
 /// ```
 /// use rootcause::prelude::*;

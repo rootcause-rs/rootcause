@@ -18,8 +18,8 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// # Automatic Implementations
 ///
 /// This trait is automatically implemented for:
-/// - All types implementing `std::error::Error` (converts to new `Report`)
-/// - Existing `Report` instances (performs identity or marker conversion)
+/// - All types implementing [`core::error::Error`] (converts to new [`Report`])
+/// - Existing [`Report`] instances (performs identity or marker conversion)
 ///
 /// # Thread Safety
 ///
@@ -27,17 +27,17 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// - [`markers::SendSync`]: Report can be sent across threads
 /// - [`markers::Local`]: Report is restricted to the current thread
 ///
-/// When converting from `SendSync` to `Local`, the conversion always succeeds.
-/// Converting from `Local` to `SendSync` is only available if the context type
-/// is `Send + Sync`.
+/// When converting from [`SendSync`] to [`Local`], the conversion always succeeds.
+/// Converting from [`Local`] to [`SendSync`] is only available if the context type
+/// is [`Send`] and [`Sync`]
 ///
 /// # Typical Usage
 ///
 /// Most applications won't need to call this trait directly. Instead, consider:
 /// - Using [`report!`](crate::report!) to create reports from errors or strings
 /// - Using [`ResultExt`](crate::result_ext::ResultExt) methods to add context
-///   to `Result` types
-/// - Using the `From` trait for generic type conversions
+///   to [`Result`] types
+/// - Using the [`From`] trait for generic type conversions
 ///
 /// # Examples
 ///

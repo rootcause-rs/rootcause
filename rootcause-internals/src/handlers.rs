@@ -15,14 +15,19 @@
 /// # When to Implement
 ///
 /// You typically don't need to implement this trait directly. The rootcause
-/// library provides built-in handlers (`Error`, `Display`, `Debug`, `Any`) that
+/// library provides built-in handlers ([`Error`], [`Display`], [`Debug`], [`Any`]) that
 /// cover most use cases.
+///
+/// [`Error`]: https://docs.rs/rootcause/latest/rootcause/handlers/struct.Error.html
+/// [`Debug`]: https://docs.rs/rootcause/latest/rootcause/handlers/struct.Debug.html
+/// [`Display`]: https://docs.rs/rootcause/latest/rootcause/handlers/struct.Display.html
+/// [`Any`]: https://docs.rs/rootcause/latest/rootcause/handlers/struct.Any.html
 ///
 /// Implement this trait when you need custom formatting behavior that the
 /// built-in handlers don't provide, such as:
 /// - Custom source chain navigation for types that don't implement
-///   `std::error::Error`
-/// - Special display formatting that differs from the type's `Display`
+///   [`std::error::Error`]
+/// - Special display formatting that differs from the type's [`Display`](core::fmt::Display)
 ///   implementation
 /// - Dynamic formatting based on the context value
 ///
@@ -85,13 +90,15 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Returns
     ///
-    /// - `Some(&dyn Error)` if this context has an underlying error source
-    /// - `None` if this context is a leaf in the error chain
+    /// - [`Some(&dyn Error)`](core::error::Error::source) if this context has an underlying error source
+    /// - [`None`] if this context is a leaf in the error chain
     ///
     /// # Examples
     ///
-    /// For types implementing `std::error::Error`, delegate to their `source`
+    /// For types implementing [`std::error::Error`](core::error::Error), delegate to their [`source`]
     /// method:
+    ///
+    /// [`source`]: core::error::Error::source
     ///
     /// ```
     /// use std::error::Error;
@@ -176,9 +183,8 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// This method allows the handler to control:
     /// - **Formatting**: Whether to use display or debug formatting
-    /// - **Source-chasing**: Whether to follow the chain of of
-    ///   [`Error::source()`](core::error::Error::source) if
-    ///   [`ContextHandler::source`] returns `Some`, and also how deep to chase.
+    /// - **Source-chasing**: Whether to follow the chain of of [`Error::source()`](core::error::Error::source) if [`ContextHandler::source`] returns [`Some`], and
+    ///   also how deep to chase.
     ///
     /// The default implementation returns the same formatting as the report,
     /// with no source chasing.
@@ -414,11 +420,9 @@ pub trait AttachmentHandler<A>: 'static {
 ///
 /// - `function`: Whether to use [`Display`](core::fmt::Display) or
 ///   [`Debug`](core::fmt::Debug) formatting
-/// - `follow_source`: Whether to follow the
-///   [`Error::source`](core::error::Error::source)-chain when
-///   [`ContextHandler::source`] returns `Some`.
-/// - `follow_source_depth`: How deep to follow the chain, `None` means no
-///   limit.
+/// - `follow_source`: Whether to follow the [`Error::source`](core::error::Error::source)-chain
+///   when [`ContextHandler::source`] returns [`Some`].
+/// - `follow_source_depth`: How deep to follow the chain, `None` means no limit.
 ///
 /// # Default
 ///
@@ -449,7 +453,7 @@ pub struct ContextFormattingStyle {
     /// formatting
     pub follow_source: bool,
     /// The maximum depth to follow the [`core::error::Error`] source chain when
-    /// formatting. Setting to `None` means unlimited depth.
+    /// formatting. Setting to [`None`] means unlimited depth.
     pub follow_source_depth: Option<usize>,
 }
 
@@ -514,8 +518,13 @@ pub struct AttachmentFormattingStyle {
 ///
 /// # Variants
 ///
-/// - **`Display`** (default): Use the `display` method
-/// - **`Debug`**: Use the `debug` method
+/// - **[`Display`]** (default): Use the [`ContextHandler::display`]
+///   or [`AttachmentHandler::display`] method
+/// - **[`Debug`]**: Use the [`ContextHandler::debug`]
+///   or [`AttachmentHandler::debug`] method
+///
+/// [`Debug`]: FormattingFunction::Debug
+/// [`Display`]: FormattingFunction::Display
 ///
 /// # Examples
 ///
@@ -530,10 +539,12 @@ pub struct AttachmentFormattingStyle {
 /// ```
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 pub enum FormattingFunction {
-    /// Prefer display formatting via the `display` method.
+    /// Prefer display formatting via the
+    /// [`ContextHandler::display`]/[`AttachmentHandler::display`] method.
     #[default]
     Display,
-    /// Prefer debug formatting via the `debug` method.
+    /// Prefer debug formatting via the
+    ///  [`ContextHandler::debug`]/[`AttachmentHandler::debug`] method.
     Debug,
 }
 

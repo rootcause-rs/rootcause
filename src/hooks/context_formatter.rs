@@ -129,8 +129,8 @@ use crate::{
 pub(crate) struct HookMap {
     /// # Safety Invariant
     ///
-    /// The hook stored under `TypeId::of::<C>()` is guaranteed to be an
-    /// instance of the type `Hook<C, H>`.
+    /// The hook stored under [`TypeId::of::<C>()`](core::any::TypeId::of) is guaranteed to be an
+    /// instance of the type [`Hook<C, H>`].
     map: HashMap<TypeId, Box<dyn StoredHook>, rustc_hash::FxBuildHasher>,
 }
 
@@ -144,7 +144,7 @@ impl HookMap {
     /// Retrieves the formatter hook for the specified context
     /// type.
     ///
-    /// The returned hook is guaranteed to be an instance of type `Hook<C, H>`,
+    /// The returned hook is guaranteed to be an instance of type [`Hook<C, H>`],
     /// where `TypeId::of::<C>() == type_id`.
     fn get(&self, type_id: TypeId) -> Option<&dyn StoredHook> {
         Some(&**self.map.get(&type_id)?)
@@ -203,8 +203,8 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
-    ///    H>` this is implemented for.
+    /// 1. The type `C` stored in the context matches the `C` from type
+    ///    [`Hook<C, H>`] this is implemented for.
     unsafe fn display(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,
@@ -217,8 +217,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     ///
     /// The caller must ensure:
     ///
-    /// 1. The type `C` stored in the context matches the `C` from type `Hook<C,
-    ///    H>` this is implemented for.
+    /// 1. The type `C` stored in the context matches the `C` from type [`Hook<C, H>`] this is implemented for.
     unsafe fn debug(
         &self,
         report: ReportRef<'_, Dynamic, Uncloneable, Local>,

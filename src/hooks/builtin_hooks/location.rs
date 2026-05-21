@@ -34,7 +34,7 @@ pub struct Location {
 impl Location {
     /// Capture the caller's source code location.
     ///
-    /// This function uses Rust's built-in `core::panic::Location::caller()` to
+    /// This function uses Rust's built-in [`core::panic::Location::caller()`] to
     /// obtain the file and line number of the code that invoked it.
     ///
     /// # Examples

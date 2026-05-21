@@ -4,9 +4,12 @@
 //! This stage shows the final, clean state with no conversions needed.
 //!
 //! **What changed:**
-//! - `Metrics` trait now uses `Result<(), Report>` (**breaking change**)
-//! - All `.into_rootcause()` and `.into_anyhow()` calls removed
+//! - [`Metrics`](metrics::Metrics) trait now uses [`Result<(), Report>`] (**breaking change**)
+//! - All [`.into_rootcause()`] and [`.into_anyhow()`] calls removed
 //! - Clean, consistent rootcause usage throughout
+//!
+//! [`.into_rootcause()`]: rootcause::compat::IntoRootcause::into_rootcause
+//! [`.into_anyhow()`]: rootcause::compat::anyhow1::IntoAnyhow::into_anyhow
 //!
 //! **Benefits:**
 //! - No conversion overhead

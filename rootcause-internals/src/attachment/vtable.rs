@@ -52,12 +52,12 @@ pub(crate) struct AttachmentVtable {
     /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this
     /// pointer.
     drop: unsafe fn(NonNull<AttachmentData<Erased>>),
-    /// Formats the attachment using the `display` method on the handler.
+    /// Formats the attachment using the [`AttachmentHandler::display`] method.
     display: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
-    /// Formats the attachment using the `debug` method on the handler.
+    /// Formats the attachment using the [`AttachmentHandler::debug`] method on the handler.
     debug: unsafe fn(RawAttachmentRef<'_>, &mut core::fmt::Formatter<'_>) -> core::fmt::Result,
     /// Get the formatting style preferred by the attachment when formatted as
-    /// part of a report.
+    /// part of a report, according to [`AttachmentHandler::preferred_formatting_style`].
     preferred_formatting_style:
         unsafe fn(RawAttachmentRef<'_>, FormattingFunction) -> AttachmentFormattingStyle,
 }
@@ -100,7 +100,7 @@ impl AttachmentVtable {
         (self.handler_type_id)()
     }
 
-    /// Drops the `Box<AttachmentData<A>>` instance pointed to by this pointer.
+    /// Drops the [`Box<AttachmentData<A>>`] instance pointed to by this pointer.
     ///
     /// # Safety
     ///

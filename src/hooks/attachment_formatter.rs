@@ -187,8 +187,8 @@ use crate::{
 pub(crate) struct HookMap {
     /// # Safety Invariant
     ///
-    /// The hook stored under `TypeId::of::<A>()` is guaranteed to be an
-    /// instance of the type `Hook<A, H>`.
+    /// The hook stored under [`TypeId::of::<A>()`](core::any::TypeId::of) is guaranteed to be an
+    /// instance of the type [`Hook<A, H>`].
     map: HashMap<TypeId, Box<dyn StoredHook>, rustc_hash::FxBuildHasher>,
 }
 
@@ -202,7 +202,7 @@ impl HookMap {
     /// Retrieves the formatter hook for the specified attachment
     /// type.
     ///
-    /// The returned hook is guaranteed to be an instance of type `Hook<A, H>`,
+    /// The returned hook is guaranteed to be an instance of type [`Hook<A, H>`],
     /// where `TypeId::of::<A>() == type_id`.
     fn get(&self, type_id: TypeId) -> Option<&dyn StoredHook> {
         Some(&**self.map.get(&type_id)?)
@@ -310,7 +310,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// The caller must ensure:
     ///
     /// 1. The type `A` stored in the attachment matches the `A` from type
-    ///    `Hook<A, H>` this is implemented for.
+    ///    [`Hook<A, H>`] this is implemented for.
     unsafe fn display(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,
@@ -325,7 +325,7 @@ trait StoredHook: 'static + Send + Sync + core::fmt::Debug {
     /// The caller must ensure:
     ///
     /// 1. The type `A` stored in the attachment matches the `A` from type
-    ///    `Hook<A, H>` this is implemented for.
+    ///    [`Hook<A, H>`] this is implemented for.
     unsafe fn debug(
         &self,
         attachment: ReportAttachmentRef<'_, Dynamic>,
