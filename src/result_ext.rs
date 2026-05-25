@@ -232,9 +232,9 @@ pub trait ResultExt<V, E> {
     ///
     /// If `Err`, converts the error into a [`Report`] and transforms it using
     /// the [`ReportConversion`] implementation. Implement
-    /// [`ReportConversion`] once to define conversions, then use `context_to()`
-    /// at call sites. The target type `C` is typically inferred from the return
-    /// type.
+    /// [`ReportConversion`] once to define conversions, then use
+    /// [`context_to`](ResultExt::context_to) at call sites. The target type
+    /// `C` is typically inferred from the return type.
     ///
     /// See also: [`local_context_to`](ResultExt::local_context_to) (non-`Send +
     /// Sync` version), [`examples/thiserror_interop.rs`] (integration

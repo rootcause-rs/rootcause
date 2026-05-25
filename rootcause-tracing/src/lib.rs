@@ -20,7 +20,7 @@
 //!
 //! You add [`RootcauseLayer`] to your tracing subscriber alongside your
 //! existing layers (formatting, filtering, log forwarding, etc.). While your
-//! other layers do their work, `RootcauseLayer` quietly captures span field
+//! other layers do their work, [`RootcauseLayer`] quietly captures span field
 //! values in the background for use in error reports.
 //!
 //! # Quick Start

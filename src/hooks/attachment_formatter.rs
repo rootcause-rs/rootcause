@@ -118,8 +118,9 @@
 //!
 //! ## Suppressing display of Attachments
 //!
-//! Omit noisy or unnecessary information by setting placement to `Opaque`
-//! when formatting as display:
+//! Omit noisy or unnecessary information by setting placement to
+//! [`Opaque`](crate::handlers::AttachmentFormattingPlacement::Opaque) when
+//! formatting as display:
 //!
 //! ```
 //! use rootcause::{

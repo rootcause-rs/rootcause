@@ -18,8 +18,8 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// # Automatic Implementations
 ///
 /// This trait is automatically implemented for:
-/// - All types implementing `std::error::Error` (converts to new `Report`)
-/// - Existing `Report` instances (performs identity or marker conversion)
+/// - All types implementing [`std::error::Error`] (converts to new [`Report`])
+/// - Existing [`Report`] instances (performs identity or marker conversion)
 ///
 /// # Thread Safety
 ///
@@ -27,9 +27,10 @@ use crate::{markers, prelude::Report, report_collection::ReportCollection};
 /// - [`markers::SendSync`]: Report can be sent across threads
 /// - [`markers::Local`]: Report is restricted to the current thread
 ///
-/// When converting from `SendSync` to `Local`, the conversion always succeeds.
-/// Converting from `Local` to `SendSync` is only available if the context type
-/// is `Send + Sync`.
+/// When converting from [`SendSync`](markers::SendSync) to
+/// [`Local`](markers::Local), the conversion always succeeds. Converting from
+/// [`Local`](markers::Local) to [`SendSync`](markers::SendSync) is only
+/// available if the context type is `Send + Sync`.
 ///
 /// # Typical Usage
 ///
@@ -123,17 +124,17 @@ where
 /// # Automatic Implementations
 ///
 /// This trait is automatically implemented for:
-/// - All types implementing `std::error::Error` (creates single-item
+/// - All types implementing [`std::error::Error`] (creates single-item
 ///   collection)
-/// - `Report` instances (creates single-item collection)
-/// - `ReportCollection` instances (identity or marker conversion)
+/// - [`Report`] instances (creates single-item collection)
+/// - [`ReportCollection`] instances (identity or marker conversion)
 ///
 /// # Typical Usage
 ///
 /// Most applications won't need to call this trait directly. Instead, consider:
 /// - Using iterator methods: `iter.map(|e| report!(e)).collect()`
 /// - Using `From` trait implementations for type conversions
-/// - Using `ReportCollection::new()` or builder methods
+/// - Using [`ReportCollection::new()`] or builder methods
 ///
 /// # Examples
 ///
