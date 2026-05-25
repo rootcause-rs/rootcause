@@ -134,10 +134,10 @@ use crate::{
 ///
 /// # Implementation Details
 ///
-/// - **Display**: Uses the boxed error's `Display` implementation
-/// - **Debug**: Uses the boxed error's `Debug` implementation
-/// - **Source**: Uses the boxed error's `source` method to traverse the error
-///   chain
+/// - **Display**: Uses the boxed error's [`Display`](core::fmt::Display) implementation
+/// - **Debug**: Uses the boxed error's [`Debug`](core::fmt::Debug) implementation
+/// - **Source**: Uses the boxed error's [`source`](core::error::Error::source)
+///   method to traverse the error chain
 /// - **Formatting style**: Matches the report's formatting function (Display or
 ///   Debug)
 ///

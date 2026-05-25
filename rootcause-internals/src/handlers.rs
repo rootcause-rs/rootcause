@@ -21,9 +21,9 @@
 /// Implement this trait when you need custom formatting behavior that the
 /// built-in handlers don't provide, such as:
 /// - Custom source chain navigation for types that don't implement
-///   `std::error::Error`
-/// - Special display formatting that differs from the type's `Display`
-///   implementation
+///   [`core::error::Error`]
+/// - Special display formatting that differs from the type's
+///   [`Display`](core::fmt::Display) implementation
 /// - Dynamic formatting based on the context value
 ///
 /// # Required Methods
@@ -90,8 +90,8 @@ pub trait ContextHandler<C>: 'static {
     ///
     /// # Examples
     ///
-    /// For types implementing `std::error::Error`, delegate to their `source`
-    /// method:
+    /// For types implementing [`core::error::Error`], delegate to their
+    /// [`source`](core::error::Error::source) method:
     ///
     /// ```
     /// use std::error::Error;
@@ -514,8 +514,9 @@ pub struct AttachmentFormattingStyle {
 ///
 /// # Variants
 ///
-/// - **`Display`** (default): Use the `display` method
-/// - **`Debug`**: Use the `debug` method
+/// - **[`Display`](FormattingFunction::Display)** (default): Use the
+///   `display` method
+/// - **[`Debug`](FormattingFunction::Debug)**: Use the `debug` method
 ///
 /// # Examples
 ///

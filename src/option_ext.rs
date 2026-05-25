@@ -75,7 +75,7 @@ pub struct NoneError {
 }
 
 impl NoneError {
-    /// Creates a new `NoneError` for the given type.
+    /// Creates a new [`NoneError`] for the given type.
     ///
     /// # Examples
     ///
@@ -315,9 +315,9 @@ pub trait OptionExt<V> {
     ///
     /// If `None`, creates a [`Report<NoneError>`] and transforms it using
     /// the [`ReportConversion`] implementation. Implement
-    /// [`ReportConversion`] once to define conversions, then use `context_to()`
-    /// at call sites. The target type `C` is typically inferred from the return
-    /// type.
+    /// [`ReportConversion`] once to define conversions, then use
+    /// [`context_to`](OptionExt::context_to) at call sites. The target type
+    /// `C` is typically inferred from the return type.
     ///
     /// See also: [`local_context_to`](OptionExt::local_context_to) (non-`Send +
     /// Sync` version).

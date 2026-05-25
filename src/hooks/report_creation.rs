@@ -5,7 +5,8 @@
 //! that creates the errors.
 //!
 //! **Note:** Hooks affect ALL errors globally. If you only need to attach data
-//! to a specific error, use `.attach()` directly instead of hooks.
+//! to a specific error, use [`.attach()`](crate::Report::attach) directly
+//! instead of hooks.
 //!
 //! # Hook Types (use in order of complexity)
 //!

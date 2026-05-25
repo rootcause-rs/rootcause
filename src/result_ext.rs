@@ -20,6 +20,10 @@ use crate::{
 /// - **Adding context**: [`context`](ResultExt::context),
 ///   [`context_with`](ResultExt::context_with), and variants add a new context
 ///   layer to the error
+/// - **Transforming contexts**: [`context_to`](ResultExt::context_to)
+///   converts the context via the [`ReportConversion`] trait, and
+///   [`context_transform`](ResultExt::context_transform) transforms it with
+///   a closure
 /// - **Adding attachments**: [`attach`](ResultExt::attach),
 ///   [`attach_with`](ResultExt::attach_with), and variants add supplementary
 ///   data to the error
@@ -228,9 +232,9 @@ pub trait ResultExt<V, E> {
     ///
     /// If `Err`, converts the error into a [`Report`] and transforms it using
     /// the [`ReportConversion`] implementation. Implement
-    /// [`ReportConversion`] once to define conversions, then use `context_to()`
-    /// at call sites. The target type `C` is typically inferred from the return
-    /// type.
+    /// [`ReportConversion`] once to define conversions, then use
+    /// [`context_to`](ResultExt::context_to) at call sites. The target type
+    /// `C` is typically inferred from the return type.
     ///
     /// See also: [`local_context_to`](ResultExt::local_context_to) (non-`Send +
     /// Sync` version), [`examples/thiserror_interop.rs`] (integration
