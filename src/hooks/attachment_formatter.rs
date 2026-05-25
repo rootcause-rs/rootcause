@@ -304,10 +304,10 @@ pub struct AttachmentParent<'a> {
     pub report: ReportRef<'a, Dynamic, Uncloneable, Local>,
     /// Index of this attachment within the parent report's attachment list.
     ///
-    /// By convention this is the attachment's position in
-    /// `report.attachments()` before any priority sorting or placement
-    /// filtering the formatter applies for display purposes. The built-in
-    /// [`DefaultReportFormatter`](crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter)
+    /// By convention this is the attachment's stable position in
+    /// `report.attachments()`, independent of any priority sorting or
+    /// placement filtering the formatter applies for display purposes. The
+    /// built-in [`DefaultReportFormatter`](crate::hooks::builtin_hooks::report_formatter::DefaultReportFormatter)
     /// upholds this; custom [`ReportFormatter`](crate::hooks::report_formatter::ReportFormatter)
     /// implementations are encouraged to do the same.
     pub attachment_index: usize,
@@ -466,7 +466,8 @@ pub trait AttachmentFormatterHook<A>: 'static + Send + Sync {
     /// # Arguments
     ///
     /// * `attachment` - Reference to the attachment being formatted
-    /// * `attachment_parent` - Optional context about the parent report
+    /// * `attachment_parent` - Optional context about the parent report. See
+    ///   [`AttachmentParent`] for when this is `Some` vs `None`.
     /// * `formatter` - The formatter to write output to
     ///
     /// # Examples
