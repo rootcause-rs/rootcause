@@ -34,6 +34,8 @@
 //! - **[`handlers`]**: Built-in error handlers for common scenarios
 //! - **[`markers`]**: Type markers for controlling report behavior
 //! - **[`report_attachment!`]**: Macro for attaching contextual data
+//! - **[`IntoRootcause`]**: Conversion trait for converting other kinds of
+//!   errors into [`Report`]s
 //!
 //! # When to Use the Prelude
 //!
