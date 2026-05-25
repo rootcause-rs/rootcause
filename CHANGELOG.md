@@ -13,11 +13,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Added a compatibility module for error-stack v0.7 [#169](https://github.com/rootcause-rs/rootcause/pull/169).
 - Implement `Deref<Target = dyn Error>` and `AsRef<dyn Error>` for `Report`, `ReportRef` and `ReportMut`; `Report<_, _, SendSync>` targets `dyn Error + Send + Sync`. May break type inference at some `Report::new*` call sites. [#147](https://github.com/rootcause-rs/rootcause/pull/147), [#149](https://github.com/rootcause-rs/rootcause/pull/149)
 - Doc examples for nearly all public functions [#136](https://github.com/rootcause-rs/rootcause/pull/136).
-- `AttachmentFormatterHook::display` and `debug` now take an extra `Option<AttachmentParent<'_>>` parameter exposing the parent report and the attachment's index. [#163](https://github.com/rootcause-rs/rootcause/pull/163).
+- `ReportAttachmentRef::format_inner_with_parent` for formatting an attachment with parent-report context. [#163](https://github.com/rootcause-rs/rootcause/pull/163).
 
 ### Changed
 
 - Moved the preformat functionality out of `rootcause` into the new `rootcause-preformat` companion crate. The `preformatted` module, the `preformat*` methods, and the `display_preformatted`/`debug_preformatted` formatter-hook methods are removed; use the `Preformat*Ext` and `ContextTransformNestedExt` traits from the new crate. `AttachmentFormatterHook::preferred_formatting_style` and `ContextFormatterHook::preferred_context_formatting_style` now take a concrete type instead of `Dynamic`. [#148](https://github.com/rootcause-rs/rootcause/pull/148)
+- `DefaultReportFormatter` now populates the `AttachmentParent` argument when invoking `AttachmentFormatterHook::display`/`debug` (previously always `None`), exposing the parent report and the attachment's pre-sort index. [#163](https://github.com/rootcause-rs/rootcause/pull/163).
 
 ### Fixed
 

@@ -173,7 +173,7 @@ impl AttachmentFormatterHook<RequestId> for RequestIdFormatter {
         f: &mut core::fmt::Formatter<'_>,
     ) -> core::fmt::Result {
         let id = attachment.inner().0;
-        // The `parent` is `Some` when the hook is called form a `ReportFormatter`
+        // The `parent` is `Some` when the hook is called from a `ReportFormatter`
         // and `None` if the attachment is being formatted in isolation -
         // such as `attachment.format_inner()` or `println!("{attachment}")`
         match parent {
