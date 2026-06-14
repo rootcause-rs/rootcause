@@ -38,7 +38,7 @@ triomphe = { version = "0.1.15", default-features = false }
 anyhow = { version = "1.0.102", default-features = false, optional = true }
 error-stack05 = { package = "error-stack", version = "0.5.0", default-features = false, optional = true }
 error-stack06 = { package = "error-stack", version = "0.6.0", default-features = false, optional = true }
-error-stack07 = { package = "error-stack", version = "0.7.0", default-features = false, optional = true }
+error-stack07 = { package = "error-stack", version = "0.7.1", default-features = false, optional = true }
 eyre = { version = "0.6.12", default-features = false, optional = true }
 
 # Internal dependencies
@@ -52,8 +52,8 @@ derive_more = { version = "2.1.1", default-features = false, features = [
 ] }
 eyre = { version = "0.6.12", features = ["auto-install"] }
 indexmap = "2.14.0"
-reqwest = "0.13.3"
-serde_json = "1.0.149"
+reqwest = "0.13.4"
+serde_json = "1.0.150"
 static_assertions = "1.1.0"
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }

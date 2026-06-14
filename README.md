@@ -226,7 +226,7 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-rootcause = "0.12.1"
+rootcause = "0.13.0"
 ```
 
 Use `Report` as your error type:
