@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-06-14
+
 ### Added
 
 - `&dyn Any` accessors for contexts and attachments via `current_context_as_any(_mut)` on `Report`/`ReportRef`/`ReportMut` and `inner_as_any(_mut)` on `ReportAttachment`/`ReportAttachmentRef`/`ReportAttachmentMut` [#151](https://github.com/rootcause-rs/rootcause/issues/151).
@@ -203,7 +205,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.12.1...HEAD
+[Unreleased]: https://github.com/rootcause-rs/rootcause/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/rootcause-rs/rootcause/compare/v0.12.1...v0.13.0
 [0.12.1]: https://github.com/rootcause-rs/rootcause/compare/v0.12.0...v0.12.1
 [0.12.0]: https://github.com/rootcause-rs/rootcause/compare/v0.11.1...v0.12.0
 [0.11.1]: https://github.com/rootcause-rs/rootcause/compare/v0.11.0...v0.11.1
