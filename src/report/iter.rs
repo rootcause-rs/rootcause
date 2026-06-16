@@ -1,63 +1,158 @@
-use alloc::vec::Vec;
+use alloc::collections::vec_deque::VecDeque;
 use core::{iter::FusedIterator, marker::PhantomData};
 
-use crate::{ReportRef, markers::Dynamic};
+use crate::{ReportRef, markers::Dynamic, report_collection::ReportCollection};
 
-/// An iterator over a report and all its descendant reports in depth-first
-/// order.
+/// An iterator over a report and all its descendant reports.
 ///
 /// This iterator yields [`ReportRef`] items, which are references to the reports
-/// in the hierarchy. The iterator traverses the report tree in a depth-first
-/// manner, starting from the root report and visiting each child report before
-/// moving to the next sibling.
+/// in the hierarchy. By default the traversal is depth-first; use
+/// [`ReportIter::bfs`] to switch to breadth-first.
 #[must_use]
-pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static> {
-    stack: Vec<ReportRef<'a, Dynamic, Ownership, ThreadSafety>>,
+pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static, Strategy = Dfs> {
+    stack: VecDeque<ReportRef<'a, Dynamic, Ownership, ThreadSafety>>,
     _ownership: PhantomData<Ownership>,
     _thread_safety: PhantomData<ThreadSafety>,
+    _traversal: PhantomData<Strategy>,
 }
 
-impl<'a, O, T> ReportIter<'a, O, T> {
-    /// Creates a new [`ReportIter`] from a vector of raw report references
-    pub(crate) fn from_raw(stack: Vec<ReportRef<'a, Dynamic, O, T>>) -> Self {
+impl<'a, O, T, S> ReportIter<'a, O, T, S> {
+    /// Creates a new [`ReportIter`] from a deque of raw report references
+    pub(crate) fn from_raw(stack: VecDeque<ReportRef<'a, Dynamic, O, T>>) -> Self {
         Self {
             stack,
             _ownership: PhantomData,
             _thread_safety: PhantomData,
+            _traversal: PhantomData,
         }
     }
 }
 
-impl<'a, O, T> Iterator for ReportIter<'a, O, T> {
+impl<'a, O, T> ReportIter<'a, O, T, Dfs> {
+    /// Convert this traversal to a breadth-first search.
+    ///
+    /// **Warning:** if this function is called mid-traversal,
+    /// the result is unspecified behavior. Nothing unsound will
+    /// happen, but the traversal order will not be guaranteed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::{report, ReportIter, report_collection::ReportCollection};
+    /// let rep = /*
+    ///         root
+    ///       /     \
+    ///     1         2
+    ///    / \      /  \
+    ///  1.1 1.2  2.1 2.2 */
+    /// # (1..=2).map(|i| {
+    /// #     (1..=2)
+    /// #         .map(|j| report!(format!("{}.{}", i, j)).into_cloneable())
+    /// #         .collect::<ReportCollection>()
+    /// #         .context(format!("{}", i))
+    /// # })
+    /// # .collect::<ReportCollection>()
+    /// # .context("root").into_dynamic()
+    /// ;
+    /// assert_eq!(
+    ///     rep.iter_reports().bfs()
+    ///         .map(|e| e.format_current_context().to_string())
+    ///         .collect::<Vec<_>>(),
+    ///     &["root", "1", "2", "1.1", "1.2", "2.1", "2.2"]
+    /// );
+    /// ```
+    pub fn bfs(self) -> ReportIter<'a, O, T, Bfs> {
+        ReportIter::from_raw(self.stack)
+    }
+}
+
+impl<'a, O, T> ReportIter<'a, O, T, Bfs> {
+    /// Convert this traversal to a depth-first search.
+    ///
+    /// **Warning:** if this function is called mid-traversal,
+    /// the result is unspecified behavior. Nothing unsound will
+    /// happen, but the traversal order will not be guaranteed.
+    ///
+    /// # Examples
+    ///
+    /// ```rust
+    /// # use rootcause::{report, ReportIter, report_collection::ReportCollection};
+    /// let rep = /*
+    ///         root
+    ///       /     \
+    ///     1         2
+    ///    / \      /  \
+    ///  1.1 1.2  2.1 2.2 */
+    /// # (1..=2).map(|i| {
+    /// #     (1..=2)
+    /// #         .map(|j| report!(format!("{}.{}", i, j)).into_cloneable())
+    /// #         .collect::<ReportCollection>()
+    /// #         .context(format!("{}", i))
+    /// # })
+    /// # .collect::<ReportCollection>()
+    /// # .context("root").into_dynamic()
+    /// ;
+    /// assert_eq!(
+    ///     rep.iter_reports()
+    ///         .map(|e| e.format_current_context().to_string())
+    ///         .collect::<Vec<_>>(),
+    ///     &["root", "1", "1.1", "1.2", "2", "2.1", "2.2"]
+    /// );
+    /// ```
+    pub fn dfs(self) -> ReportIter<'a, O, T, Dfs> {
+        ReportIter::from_raw(self.stack)
+    }
+}
+
+/// Marker type for depth-first traversal in the [`ReportIter`] type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Dfs;
+
+/// Marker type for breadth-first traversal in the [`ReportIter`] type.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub struct Bfs;
+
+fn list_children<'a, O: 'static, T>(
+    children: &'a ReportCollection<Dynamic, T>,
+) -> impl DoubleEndedIterator<Item = ReportRef<'a, Dynamic, O, T>> {
+    children.iter().map(|child_report| {
+        // SAFETY:
+        // 1. At this point we have an instance of a `ReportRef<'a, Dynamic, O, T>` in
+        //    scope.  This means we can invoke the safety invariants of that ReportRef.
+        //    One of the safety invariants of that `ReportRef` is that `O` must either
+        //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
+        //    calling `ReportRef::from_cloneable` using that same `O`.
+        unsafe {
+            // @add-unsafe-context: Dynamic
+            ReportRef::<Dynamic, O, T>::from_cloneable(child_report)
+        }
+    })
+}
+
+impl<'a, O, T> Iterator for ReportIter<'a, O, T, Dfs> {
     type Item = ReportRef<'a, Dynamic, O, T>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let cur: ReportRef<'a, Dynamic, O, T> = self.stack.pop()?;
-
-        let new_children = cur
-            .children()
-            .iter()
-            .map(|child_report| {
-                // SAFETY:
-                // 1. At this point we have an instance of a `ReportRef<'a, Dynamic, O, T>` in
-                //    scope.  This means we can invoke the safety invariants of that ReportRef.
-                //    One of the safety invariants of that `ReportRef` is that `O` must either
-                //    be `Cloneable` or `Uncloneable`. But this fulfills our requirements for
-                //    calling `ReportRef::from_cloneable` using that same `O`.
-                unsafe {
-                    // @add-unsafe-context: Dynamic
-                    ReportRef::<Dynamic, O, T>::from_cloneable(child_report)
-                }
-            })
-            .rev();
-        self.stack.extend(new_children);
+        let cur: ReportRef<'a, Dynamic, O, T> = self.stack.pop_back()?;
+        self.stack.extend(list_children(cur.children()).rev());
         Some(cur)
     }
 }
 
-impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> {}
+impl<'a, O, T> Iterator for ReportIter<'a, O, T, Bfs> {
+    type Item = ReportRef<'a, Dynamic, O, T>;
 
-impl<'a, O, T> Unpin for ReportIter<'a, O, T> {}
+    fn next(&mut self) -> Option<Self::Item> {
+        let cur: ReportRef<'a, Dynamic, O, T> = self.stack.pop_front()?;
+        self.stack.extend(list_children(cur.children()));
+        Some(cur)
+    }
+}
+
+impl<'a, O, T> FusedIterator for ReportIter<'a, O, T, Dfs> {}
+impl<'a, O, T> FusedIterator for ReportIter<'a, O, T, Bfs> {}
+
+impl<'a, O, T, S> Unpin for ReportIter<'a, O, T, S> {}
 
 /// An iterator over all contexts that can successfully be downcasted to `D`, belonging
 /// a report and all its decendants in a depth-first order.
