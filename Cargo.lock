@@ -980,7 +980,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "anyhow",
  "derive_more",
@@ -1004,7 +1004,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-backtrace"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "backtrace",
  "rootcause",
@@ -1013,7 +1013,7 @@ dependencies = [
 
 [[package]]
 name = "rootcause-internals"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "static_assertions",
  "triomphe",
@@ -1021,14 +1021,14 @@ dependencies = [
 
 [[package]]
 name = "rootcause-preformat"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "rootcause",
 ]
 
 [[package]]
 name = "rootcause-tracing"
-version = "0.13.0"
+version = "0.14.0"
 dependencies = [
  "rootcause",
  "thiserror",
