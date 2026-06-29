@@ -1,6 +1,6 @@
 [package]
 name = "rootcause"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns", "no-std"]
@@ -42,7 +42,7 @@ error-stack07 = { package = "error-stack", version = "0.7.1", default-features =
 eyre = { version = "0.6.12", default-features = false, optional = true }
 
 # Internal dependencies
-rootcause-internals = { path = "rootcause-internals", version = "=0.13.0" }
+rootcause-internals = { path = "rootcause-internals", version = "=0.14.0" }
 
 [dev-dependencies]
 derive_more = { version = "2.1.1", default-features = false, features = [
