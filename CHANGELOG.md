@@ -9,11 +9,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
-- `as_dyn_error()` on `Report`, `ReportRef`, and `ReportMut` for an explicit `&dyn Error` view; the `SendSync` variants return `dyn Error + Send + Sync` [#144](https://github.com/rootcause-rs/rootcause/issues/144).
+- `as_dyn_error()` on `Report`, `ReportRef`, and `ReportMut` for an explicit `&dyn Error` view; the `SendSync` variants return `dyn Error + Send + Sync` [#189](https://github.com/rootcause-rs/rootcause/pull/189).
 
 ### Removed
 
-- The `Deref<Target = dyn Error>` impls on `Report`, `ReportRef`, and `ReportMut` (added in 0.13.0), which broke type inference and interfered with `into_report()` and `Report::from(...)`. Use `as_dyn_error()` or the `AsRef<dyn Error>` impls instead [#144](https://github.com/rootcause-rs/rootcause/issues/144).
+- The `Deref<Target = dyn Error>` impls on `Report`, `ReportRef`, and `ReportMut` (added in 0.13.0), which broke type inference and interfered with `into_report()` and `Report::from(...)`. Use `as_dyn_error()` or the `AsRef<dyn Error>` impls instead [#189](https://github.com/rootcause-rs/rootcause/pull/189).
 
 ## [0.13.0] - 2026-06-14
 
