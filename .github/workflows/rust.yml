@@ -91,6 +91,13 @@ jobs:
       matrix:
         # The windows miri support doesn't seem to be working well currently
         os: [ubuntu-latest, macos-latest]
+        # Run under both aliasing models. The two are not nested: some UB is
+        # only caught by one model, so testing both maximizes coverage.
+        borrow-model:
+          - name: Stacked Borrows
+            flags: ""
+          - name: Tree Borrows
+            flags: "-Zmiri-tree-borrows"
 
     runs-on: ${{ matrix.os }}
 
@@ -105,13 +112,13 @@ jobs:
         with:
           save-if: ${{ github.ref == 'refs/heads/main' }}
 
-      - name: Run tests with miri
+      - name: Run tests with miri (${{ matrix.borrow-model.name }})
         run: |
-          export MIRIFLAGS="-Zmiri-strict-provenance"
+          export MIRIFLAGS="-Zmiri-strict-provenance ${{ matrix.borrow-model.flags }}"
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing -p rootcause-preformat --all-targets
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing -p rootcause-preformat --all-features --all-targets
 
-          export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn"
+          export MIRIFLAGS="-Zmiri-strict-provenance -Zmiri-isolation-error=warn ${{ matrix.borrow-model.flags }}"
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing -p rootcause-preformat --doc
           cargo miri test -p rootcause -p rootcause-internals -p rootcause-tracing -p rootcause-preformat --doc --all-features
 
