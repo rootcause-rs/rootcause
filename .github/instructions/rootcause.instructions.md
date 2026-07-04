@@ -7,80 +7,55 @@ applyTo: "**/*.rs"
 
 This document establishes consistent standards for documentation across the rootcause library.
 
-## Overall Tone and Voice
+## Core Philosophy
 
-- **Technical but approachable**: Assume readers are Rust developers but may be new to advanced error handling concepts
-- **Clear and direct**: Avoid unnecessary jargon while being precise about technical details
-- **Helpful and encouraging**: Guide users toward success rather than just documenting what exists
+Documentation length tracks the amount of non-obvious information, not the item's visibility. `Vec::push` in std is two lines plus an example; the `Vec` type-level doc is an essay. Follow the same shape here: rich narrative at the crate/module/type level, lean contracts at the method level.
+
+The guiding principles:
+
+1. **Every sentence must beat the signature.** A doc sentence earns its place by telling the reader something they cannot see from the item's name and types. "Converts the error into a [`Report`]" on `fn into_report(self) -> Report<E>` fails this test. If nothing non-obvious remains, a single crisp summary line is a complete docstring.
+2. **Document the contract, not the paraphrase.** Method prose is for what the signature can't say: allocation and cloning semantics (Arc refcount bump vs deep copy), whether hooks run, `#[track_caller]` location capture, effect on children and attachments, formatting interplay, panics.
+3. **Push shared explanation up; keep siblings thin.** A method family (e.g. the `attach*` methods, the [`OptionExt`] methods, the `into_*` conversions) gets one thorough trait- or module-level explanation with when-to-use-which guidance. Each sibling then gets a one-liner plus a link. Never stamp a doc template across siblings: visible repetition trains readers to skip docs.
+4. **Every example must assert something.** See [Example Standards](#example-standards).
+5. **Right layer, no repetition.** Crate docs teach the problem and the mental model; module docs explain the subsystem's role and lifecycle; item docs state the contract. Don't restate a higher layer in a lower one.
+6. **State behavior positively.** Say what the code does. Drop clauses that justify what it doesn't do ("...rather than exposing it via the source chain"). Don't add `compile_fail` doctests to assert negative type contracts; positive type contracts belong in compile-time unit tests (e.g. an `assert_send_sync` helper). In conceptual docs such as the [`markers`] module, a compile-fail example is acceptable only where the failure itself is the lesson being taught.
+7. **Direct sentences, no filler.** Write "Allocates a new root node containing the context.", not "This allows you to...", "You can use this to...", or similar scaffolding.
 
 ## Documentation Depth by Visibility
 
-Different visibility levels require different levels of documentation detail:
-
 ### Public Items (`pub`)
 
-**These are the user-facing API and require comprehensive documentation:**
-
-- Complete documentation with multiple examples showing different use cases
-- Clear explanations of when and why to use the item
-- Full cross-references to related functionality
-- Panics, errors, and safety sections when applicable
-- Multiple examples demonstrating different scenarios
-- Target audience: Library users
-- **Required** for all public items
+- **Required** for all public items.
+- A summary line stating the contract; further prose only where the contract has non-obvious parts (see principle 2).
+- An example that asserts concrete behavior (see [Example Standards](#example-standards)).
+- Panics, errors, and safety sections when applicable.
+- Cross-references to the family-level explanation and closely related items.
+- Target audience: library users.
 
 ### Internal Items (`pub(crate)`, private, or private modules)
 
-**These are implementation details for maintainers:**
-
-- Brief, concise documentation explaining what it does and why it exists
-- No need for extensive examples or multiple scenarios
-- Focus on implementation details rather than user-facing usage
-- Target audience: Library developers and contributors
-- **Optional** - add documentation when it meaningfully helps readers understand the implementation, but it's not required for all internal items
-
-**Example:**
-
-````rust
-/// Creates a report with the given context.
-///
-/// This is the primary way to create reports. Use the `report!()` macro
-/// for more convenient report creation with format string support.
-///
-/// # Examples
-///
-/// ```
-/// use rootcause::prelude::*;
-/// let report: Report<&str> = Report::new("error message");
-/// ```
-pub fn new(context: C) -> Report { /* ... */ }
-
-/// Internal helper to construct a report without triggering hooks.
-///
-/// Used by preformat() to avoid infinite recursion.
-pub(crate) fn from_parts_unhooked(/* ... */) -> Report { /* ... */ }
-
-// Helper to validate report structure invariants.
-fn check_invariants(&self) -> bool { /* ... */ }
-````
+- **Optional**: add documentation when it meaningfully helps readers understand the implementation.
+- Brief and concise: what it does and why it exists.
+- No examples required.
+- Target audience: library developers and contributors.
 
 ## Structure Patterns
 
-### Module-Level Documentation (`//!`)
+### Crate- and Module-Level Documentation (`//!`)
 
-1. **Hook line** (1-2 sentences): What this module/crate does
-2. **Overview section**: Broader context and main concepts (2-3 paragraphs)
-3. **Core concepts section** (if complex): Break down key ideas with examples
-4. **Usage examples**: Show common patterns
-5. **Cross-references**: Link to related modules/types
+1. **Hook line** (1-2 sentences): what this module/crate does
+2. **Overview**: the mental model and how this subsystem fits into the whole
+3. **Core concepts** (if complex): key ideas, decision guidance (when to use which variant), lifecycle (e.g. when hooks run and what they see)
+4. **Usage examples**: realistic multi-step scenarios (this is where the rich examples live, not on individual methods)
+5. **Cross-references**: link to related modules/types
 
 ### Item-Level Documentation (`///`)
 
-1. **Summary line**: One sentence describing what the item does
-2. **Detailed explanation** (if needed): How it works, when to use it
-3. **Examples**: Practical usage demonstration
-4. **Errors/Panics/Safety** (if applicable): Important behavioral notes
-5. **See also**: Cross-references to related items
+1. **Summary line**: one sentence stating the contract
+2. **Detailed explanation** (only if the contract has non-obvious parts)
+3. **Example**: a concrete behavioral assertion
+4. **Errors/Panics/Safety** (if applicable)
+5. **See also**: link to the family-level explanation where one exists
 
 ## Language Conventions
 
@@ -93,14 +68,6 @@ fn check_invariants(&self) -> bool { /* ... */ }
 - **"attachment data"** for the actual data stored in attachments
 - **"handler"** for types that process contexts/attachments
 - **"hook"** for customization points in the reporting process
-
-### Common Phrases
-
-- "This allows you to..." (not "This lets you...")
-- "You can use this to..." (for explaining purpose)
-- "Returns a new..." (for constructors)
-- "Converts this..." (for transformation methods)
-- "Note that..." (for important caveats)
 
 ### Code References
 
@@ -117,50 +84,47 @@ fn check_invariants(&self) -> bool { /* ... */ }
 
 ## Example Standards
 
-### Code Example Requirements
+Every public item carries an example, enforced in CI by the `rustdoc::missing_doc_code_examples` lint. Doctests are executable contracts: they pin down observable behavior and CI keeps them honest.
 
-- **Always include type annotations**: Use explicit types on let bindings to help readers understand what they're working with. Only leave out the type annotations when they are truly obvious from context.
-- **Use imports**: Prefer `use` statements over full type paths in examples
-- **Prefer `report!()` macro**: Use `report!()` instead of `Report::new()` unless specifically demonstrating the constructor
-- **Include informative type parameters**: Only show type parameters that help the reader understand the example
-- **Use `'_` for lifetimes**: When lifetime parameters are needed, use `'_` unless the specific lifetime is important
-- **Use `std` in examples**: While this is a `no_std` crate, documentation examples run as normal Rust. Prefer `std::` imports (e.g., `std::error::Error`, `std::fmt`) over `core::` or `alloc::` in examples, as they are more familiar and easier for readers to understand. The actual library code should still use `core::` and `alloc::` appropriately.
+### What an Example Must Show
 
-### Good Example Structure
+An example must **assert concrete behavior**: an input→output assertion or rendered output, ideally the behavior that distinguishes this method from its siblings. A bare invocation proves nothing:
 
-````rust
-/// Creates a new report with the given context.
-///
-/// This allocates a new root node containing the provided context.
-/// The report starts with no children or attachments.
-///
-/// # Examples
-///
-/// ```
-/// use rootcause::prelude::*;
-///
-/// let report: Report<&str> = report!("Something went wrong");
-/// println!("{}", report);
-/// ```
-///
-/// For formatted messages:
-///
-/// ```
-/// use rootcause::prelude::*;
-///
-/// let error_code = 404;
-/// let report: Report = report!("Error {}: Not found", error_code);
-/// println!("{}", report);
-/// ```
-///
-/// # See Also
-///
-/// - [`Report::context`] for adding context to existing reports
-/// - [`IntoReport::into_report`] for converting from other error types
-pub fn new(context: C) -> Report<C, Mutable, SendSync> {
-    // implementation
-}
-````
+```rust
+// Bad: only proves the method can be called
+let value: Option<String> = None;
+let result = value.ok_or_report();
+assert!(result.is_err());
+```
+
+Since error rendering is this crate's product, the rootcause analog of std's `assert_eq!(v.len(), 3)` is usually an assertion on rendered output or report structure:
+
+```rust
+// Good: pins down what the reader can't guess from the signature
+let value: Option<String> = None;
+let report = value.ok_or_report().unwrap_err();
+assert!(format!("{report}").contains("String"));
+```
+
+Sibling methods each keep their own example, and the examples differ where the behavior differs (as `Option::is_some`/`is_none` do in std).
+
+If an item genuinely has nothing to assert (e.g. a marker unit struct), skip the example with an explicit per-item opt-out:
+
+```rust
+#[cfg_attr(nightly_extra_checks, allow(rustdoc::missing_doc_code_examples))]
+```
+
+The `cfg_attr` gate is required: the lint is unstable, so a bare `#[allow(...)]` triggers an `unknown_lints` warning on stable rustdoc. The opt-out is visible in diffs and greppable, so skipping stays a deliberate, reviewed decision.
+
+### Example Mechanics
+
+- **Method examples are 2-5 visible lines**: use `# ` hidden lines for setup so the visible code is only the point being made. Richer multi-step scenarios belong in type- or module-level docs.
+- **Always compile**: examples run as doctests.
+- **Always include type annotations**: use explicit types on let bindings to help readers understand what they're working with. Only leave out the type annotations when they are truly obvious from context.
+- **Use imports**: prefer `use` statements over full type paths; `use rootcause::prelude::*;` for most examples.
+- **Prefer `report!()` macro**: use `report!()` instead of `Report::new()` unless specifically demonstrating the constructor.
+- **Use `'_` for lifetimes**: when lifetime parameters are needed, use `'_` unless the specific lifetime is important.
+- **Use `std` in examples**: while this is a `no_std` crate, documentation examples run as normal Rust. Prefer `std::` imports (e.g., `std::error::Error`, `std::fmt`) over `core::` or `alloc::` in examples. The actual library code should still use `core::` and `alloc::` appropriately.
 
 ### `report!()` Macro Usage
 
@@ -186,10 +150,10 @@ let report: Report<MyError> = report!(custom_error);
 
 ### Type Parameter Guidelines
 
-- **Context type (`C`)**: Include when it helps understanding (e.g., `Report<MyError>`, `Report<&str>`)
-- **Ownership marker**: Usually omit `Mutable` unless comparing with `Cloneable`
-- **Thread safety marker**: Usually omit `SendSync` unless comparing with `Local` or when `Local` is used
-- **`Dynamic`**: Usually omit (it's the default) unless explicitly demonstrating type erasure or comparing with typed reports
+- **Context type (`C`)**: include when it helps understanding (e.g., `Report<MyError>`, `Report<&str>`)
+- **Ownership marker**: usually omit `Mutable` unless comparing with `Cloneable`
+- **Thread safety marker**: usually omit `SendSync` unless comparing with `Local` or when `Local` is used
+- **`Dynamic`**: usually omit (it's the default) unless explicitly demonstrating type erasure or comparing with typed reports
 
 **Good examples:**
 
@@ -217,27 +181,6 @@ Use consistent table formatting with proper alignment:
 | `Type<Param3, Param4>` | ❌        | ✅        | Another clear description                       |
 ```
 
-## Section Naming
-
-### Standard Section Headers
-
-- **Overview** - High-level introduction
-- **Core Concepts** - Key ideas users need to understand
-- **Usage Examples** - Common patterns and use cases
-- **Variants** or **Configuration** - Different ways to use the API
-- **Converting Between Types** - Transformation patterns
-- **Performance Notes** - When relevant to user decisions
-- **Limitations** - Important constraints or trade-offs
-- **See Also** - Cross-references and related functionality
-
-### Method Documentation Sections
-
-- **Examples** - Always include when helpful
-- **Panics** - When the method can panic
-- **Errors** - For fallible operations
-- **Safety** - For unsafe methods
-- **Performance** - When non-obvious performance characteristics exist
-
 ## Cross-Reference Patterns
 
 - Link to types on first mention in a section: [`Report`]
@@ -246,55 +189,9 @@ Use consistent table formatting with proper alignment:
 - Use relative links for internal modules: [`crate::handlers`]
 - Group related links in "See Also" sections
 
-## Code Example Guidelines
-
-- **Always compile**: Use `# ` for hidden setup code if needed
-- **Show realistic usage**: Avoid trivial examples unless demonstrating basic syntax
-- **Include error handling**: Show how errors propagate in examples
-- **Use consistent imports**: Prefer `use rootcause::prelude::*;` or specific imports
-- **Keep examples focused**: One concept per example
-- **Demonstrate the `report!()` macro**: Use it as the primary way to create reports
-- **Show type inference**: Let readers see how types flow through the API
-- **Prefer `std` in examples**: Documentation examples should use `std::` types and imports (e.g., `std::error::Error`, `std::fmt::Display`) rather than `core::` or `alloc::`, as readers are more familiar with the standard library. The library implementation itself remains `no_std` compatible.
-
-## Import Patterns
-
-### Preferred Import Styles
-
-**For most examples:**
-
-```rust
-use rootcause::prelude::*;
-```
-
-**For specific functionality:**
-
-```rust
-use rootcause::{Report, report};
-use rootcause::handlers::Display;
-```
-
-**Avoid in examples unless necessary:**
-
-```rust
-// Too verbose for examples
-rootcause::Report::<&str, rootcause::markers::Mutable, rootcause::markers::SendSync>
-```
-
 ## Related Guidelines
 
 This document focuses on documentation standards. For Rust coding conventions and API design, see [`rust.instructions.md`](rust.instructions.md).
-
-## Avoiding Common Issues
-
-- **Don't assume prior knowledge** of error handling libraries
-- **Explain the "why"** not just the "what" for complex features
-- **Use active voice** when possible
-- **Break up long paragraphs** with subheadings or lists
-- **Test code examples** - they should actually compile and run
-- **Keep line lengths reasonable** in documentation (80-100 chars)
-- **Show type annotations** to help readers understand the API
-- **Prefer macros over constructors** in examples unless specifically teaching about constructors
 
 ## Testing Documentation
 
@@ -310,16 +207,13 @@ Without `--all-features`, some cross-references between feature-gated items may 
 
 For each documentation update, verify:
 
-- [ ] Summary sentence clearly explains the purpose
-- [ ] Technical terms are defined on first use
-- [ ] Examples compile and demonstrate real usage
-- [ ] Cross-references use correct syntax and resolve properly
-- [ ] Tables are properly formatted and aligned
-- [ ] Tone is consistent with established voice
-- [ ] No typos or grammatical errors
-- [ ] Links to external resources are current and accurate
-- [ ] Examples use type annotations on let bindings
-- [ ] Examples prefer `report!()` macro over `Report::new()`
-- [ ] Type parameters shown are informative and not overwhelming
-- [ ] Import statements are included and follow preferred patterns
+- [ ] Every sentence says something the signature doesn't
+- [ ] The contract is stated where applicable: cloning/allocation semantics, hook behavior, panics, safety
+- [ ] No filler phrasing ("This allows you to...") and no template stamped across sibling items
+- [ ] Method families are explained once at trait/module level; siblings link to it
+- [ ] Examples assert concrete behavior (input→output or rendered output), not bare invocation
+- [ ] Method examples are 2-5 visible lines with `# ` hidden setup; rich scenarios live at type/module level
+- [ ] Examples use type annotations and prefer `report!()` over `Report::new()`
+- [ ] Behavior is stated positively; no justifications for what the code doesn't do
+- [ ] Cross-references use intra-doc links and resolve properly
 - [ ] Documentation builds successfully with `cargo doc --all-features --no-deps`
