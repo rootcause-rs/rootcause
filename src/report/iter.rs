@@ -4,12 +4,37 @@ use core::{iter::FusedIterator, marker::PhantomData};
 use crate::{ReportRef, markers::Dynamic};
 
 /// An iterator over a report and all its descendant reports in depth-first
-/// order.
+/// pre-order.
 ///
 /// This iterator yields [`ReportRef`] items, which are references to the reports
-/// in the hierarchy. The iterator traverses the report tree in a depth-first
-/// manner, starting from the root report and visiting each child report before
-/// moving to the next sibling.
+/// in the hierarchy. The traversal order is guaranteed to be depth-first
+/// pre-order: each report is yielded before its descendants, and each child's
+/// entire subtree is yielded before the next sibling. Children are visited in
+/// the order they appear in [`ReportRef::children`].
+///
+/// # Examples
+///
+/// ```
+/// # use rootcause::prelude::*;
+/// # let mut a: Report = report!("a");
+/// # a.children_mut().push(report!("a1").into_cloneable());
+/// # a.children_mut().push(report!("a2").into_cloneable());
+/// # let mut b: Report = report!("b");
+/// # b.children_mut().push(report!("b1").into_cloneable());
+/// # let mut root: Report = report!("root");
+/// # root.children_mut().push(a.into_cloneable());
+/// # root.children_mut().push(b.into_cloneable());
+/// // The report tree:      root
+/// //                      /    \
+/// //                     a      b
+/// //                    / \      \
+/// //                   a1  a2     b1
+/// let order: Vec<String> = root
+///     .iter_reports()
+///     .map(|report| report.format_current_context().to_string())
+///     .collect();
+/// assert_eq!(order, ["root", "a", "a1", "a2", "b", "b1"]);
+/// ```
 #[must_use]
 pub struct ReportIter<'a, Ownership: 'static, ThreadSafety: 'static> {
     stack: Vec<ReportRef<'a, Dynamic, Ownership, ThreadSafety>>,
@@ -59,11 +84,12 @@ impl<'a, O, T> FusedIterator for ReportIter<'a, O, T> {}
 
 impl<'a, O, T> Unpin for ReportIter<'a, O, T> {}
 
-/// An iterator over all contexts that can successfully be downcasted to `D`, belonging
-/// a report and all its decendants in a depth-first order.
+/// An iterator over all contexts that can successfully be downcasted to `D`,
+/// belonging to a report and all its descendants.
 ///
 /// This iterator yields `&D` items, which are references to the reports' contexts
-/// in the hierarchy.
+/// in the hierarchy. Matches are yielded in the same guaranteed depth-first
+/// pre-order as [`ReportIter`].
 pub struct DowncastIterator<'a, D, Ownership: 'static, ThreadSafety: 'static> {
     pub(crate) iter: ReportIter<'a, Ownership, ThreadSafety>,
     pub(crate) _phantom: PhantomData<D>,

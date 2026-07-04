@@ -462,9 +462,8 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// Returns an iterator over the complete report hierarchy including this
     /// report.
     ///
-    /// The iterator visits reports in a depth-first order: it first visits the
-    /// current report, then recursively visits each child report and all of
-    /// their descendants before moving to the next sibling. Unlike
+    /// The iterator yields this report first, followed by its descendants in
+    /// the depth-first pre-order guaranteed by [`ReportIter`]. Unlike
     /// [`ReportRef::iter_sub_reports`], this method includes the report on
     /// which it was called as the first item in the iteration.
     ///
@@ -516,9 +515,8 @@ impl<'a, C: ?Sized, O, T> ReportRef<'a, C, O, T> {
     /// Returns an iterator over child reports in the report hierarchy
     /// (excluding this report).
     ///
-    /// The iterator visits reports in a depth-first order: it first visits the
-    /// current report's children, then recursively visits each child report
-    /// and all of their descendants before moving to the next sibling.
+    /// The iterator yields the descendants of this report in the depth-first
+    /// pre-order guaranteed by [`ReportIter`].
     /// Unlike [`ReportRef::iter_reports`], this method does NOT include the
     /// report on which it was called - only its descendants.
     ///
