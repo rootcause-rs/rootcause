@@ -1045,10 +1045,6 @@ impl<'a, 'b> DefaultFormatterState<'a, 'b> {
             tmp_attachments_buffer.iter().enumerate()
         {
             let is_last_attachment = display_index + 1 == tmp_attachments_buffer.len();
-            // `original_index` reflects an attachment's position in the parent report's original
-            // attachment list.
-            // It is independent of any sorting or filtering the formatter may apply for display
-            // purposes.
             let parent = AttachmentParent {
                 report,
                 attachment_index: original_index,
