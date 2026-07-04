@@ -10,10 +10,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 
 - `as_dyn_error()` on `Report`, `ReportRef`, and `ReportMut` for an explicit `&dyn Error` view; the `SendSync` variants return `dyn Error + Send + Sync` [#189](https://github.com/rootcause-rs/rootcause/pull/189).
+- Added a compatibility module for error-stack v0.8 (behind the `compat-error-stack08` feature flag) [#191](https://github.com/rootcause-rs/rootcause/pull/191).
 
 ### Removed
 
 - The `Deref<Target = dyn Error>` impls on `Report`, `ReportRef`, and `ReportMut` (added in 0.13.0), which broke type inference and interfered with `into_report()` and `Report::from(...)`. Use `as_dyn_error()` or the `AsRef<dyn Error>` impls instead [#189](https://github.com/rootcause-rs/rootcause/pull/189).
+- The compatibility modules for error-stack v0.5, v0.6, and v0.7 (`compat-error-stack05`, `compat-error-stack06`, and `compat-error-stack07` feature flags). All error-stack versions before 0.8.0 are affected by the soundness issue [RUSTSEC-2026-0198](https://rustsec.org/advisories/RUSTSEC-2026-0198); use the new `compat-error-stack08` module instead [#191](https://github.com/rootcause-rs/rootcause/pull/191).
 
 ## [0.13.0] - 2026-06-14
 

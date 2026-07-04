@@ -235,27 +235,9 @@ checksum = "877a4ace8713b0bcf2a4e7eec82529c029f1d0619886d18145fea96c3ffe5c0f"
 
 [[package]]
 name = "error-stack"
-version = "0.5.0"
+version = "0.8.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "fe413319145d1063f080f27556fd30b1d70b01e2ba10c2a6e40d4be982ffc5d1"
-dependencies = [
- "rustc_version",
-]
-
-[[package]]
-name = "error-stack"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b878b3fac9613c3c7f22eb70bc8a3c6ebdc03cc11479ee60fde1692d747fd45f"
-dependencies = [
- "rustc_version",
-]
-
-[[package]]
-name = "error-stack"
-version = "0.7.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c179ac93a7a9670668c9c1558269344d224aecf2fb089bf0e215e8adf1c73643"
+checksum = "d01a8d4d427153bae0c38ca68d7912cbf9903fdcc97ecac18801738b3656a46d"
 dependencies = [
  "rustc_version",
 ]
@@ -984,9 +966,7 @@ version = "0.14.0"
 dependencies = [
  "anyhow",
  "derive_more",
- "error-stack 0.5.0",
- "error-stack 0.6.0",
- "error-stack 0.7.1",
+ "error-stack",
  "eyre",
  "hashbrown",
  "indexmap",

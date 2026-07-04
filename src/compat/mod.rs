@@ -13,12 +13,8 @@
 //!   (requires the `compat-anyhow1` feature flag)
 //! - [`boxed_error`] - Convert reports to and from boxed error trait objects
 //!   (`Box<dyn Error>` and `Box<dyn Error + Send + Sync>`)
-//! - [`error_stack05`] - Integration with the `error-stack` 0.5.x error
-//!   handling library (requires the `compat-error-stack05` feature flag)
-//! - [`error_stack06`] - Integration with the `error-stack` 0.6.x error
-//!   handling library (requires the `compat-error-stack06` feature flag)
-//! - [`error_stack07`] - Integration with the `error-stack` 0.7.x error
-//!   handling library (requires the `compat-error-stack07` feature flag)
+//! - [`error_stack08`] - Integration with the `error-stack` 0.8.x error
+//!   handling library (requires the `compat-error-stack08` feature flag)
 //! - [`eyre06`] - Integration with the `eyre` 0.6.x error handling library
 //!   (requires the `compat-eyre06` feature flag)
 //!
@@ -100,15 +96,14 @@ use crate::{
 /// handling libraries:
 /// - [`anyhow1`] module provides implementations for [`anyhow::Error`] and
 ///   [`anyhow::Result<T>`]
-/// - [`error_stack05`], [`error_stack06`], and [`error_stack07`] modules
-///   provide implementations for [`error_stack::Report<C>`] and `Result<T,
-///   error_stack::Report<C>>`
+/// - [`error_stack08`] module provides implementations for
+///   [`error_stack::Report<C>`] and `Result<T, error_stack::Report<C>>`
 /// - [`eyre06`] module provides implementations for [`eyre::Report`] and
 ///   [`eyre::Result<T>`]
 ///
 /// [`anyhow::Error`]: ::anyhow::Error
 /// [`anyhow::Result<T>`]: ::anyhow::Result
-/// [`error_stack::Report<C>`]: ::error_stack07::Report
+/// [`error_stack::Report<C>`]: ::error_stack08::Report
 ///
 /// # Examples
 ///
@@ -169,17 +164,9 @@ pub mod boxed_error;
 #[cfg_attr(docsrs, doc(cfg(feature = "compat-anyhow1")))]
 pub mod anyhow1;
 
-#[cfg(feature = "compat-error-stack05")]
-#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack05")))]
-pub mod error_stack05;
-
-#[cfg(feature = "compat-error-stack06")]
-#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack06")))]
-pub mod error_stack06;
-
-#[cfg(feature = "compat-error-stack07")]
-#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack07")))]
-pub mod error_stack07;
+#[cfg(feature = "compat-error-stack08")]
+#[cfg_attr(docsrs, doc(cfg(feature = "compat-error-stack08")))]
+pub mod error_stack08;
 
 #[cfg(feature = "compat-eyre06")]
 #[cfg_attr(docsrs, doc(cfg(feature = "compat-eyre06")))]
@@ -195,7 +182,7 @@ pub mod eyre06;
 ///
 /// You typically don't need to use this type directly - it's used automatically
 /// by conversion traits like [`anyhow1::IntoAnyhow`] and
-/// [`error_stack06::IntoErrorStack`].
+/// [`error_stack08::IntoErrorStack`].
 ///
 /// # Type Parameters
 ///
