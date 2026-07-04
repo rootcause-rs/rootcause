@@ -1,6 +1,6 @@
 [package]
 name = "rootcause"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns", "no-std"]
@@ -23,9 +23,7 @@ default = []
 
 # Compatibility traits
 compat-anyhow1 = ["dep:anyhow"]
-compat-error-stack05 = ["dep:error-stack05"]
-compat-error-stack06 = ["dep:error-stack06"]
-compat-error-stack07 = ["dep:error-stack07"]
+compat-error-stack08 = ["dep:error-stack08"]
 compat-eyre06 = ["dep:eyre"]
 
 [dependencies]
@@ -35,14 +33,12 @@ rustc-hash = { version = "2.1.2", default-features = false }
 triomphe = { version = "0.1.15", default-features = false }
 
 # Optional dependencies
-anyhow = { version = "1.0.102", default-features = false, optional = true }
-error-stack05 = { package = "error-stack", version = "0.5.0", default-features = false, optional = true }
-error-stack06 = { package = "error-stack", version = "0.6.0", default-features = false, optional = true }
-error-stack07 = { package = "error-stack", version = "0.7.0", default-features = false, optional = true }
+anyhow = { version = "1.0.103", default-features = false, optional = true }
+error-stack08 = { package = "error-stack", version = "0.8.0", default-features = false, optional = true }
 eyre = { version = "0.6.12", default-features = false, optional = true }
 
 # Internal dependencies
-rootcause-internals = { path = "rootcause-internals", version = "=0.13.0" }
+rootcause-internals = { path = "rootcause-internals", version = "=0.14.0" }
 
 [dev-dependencies]
 derive_more = { version = "2.1.1", default-features = false, features = [
@@ -52,8 +48,8 @@ derive_more = { version = "2.1.1", default-features = false, features = [
 ] }
 eyre = { version = "0.6.12", features = ["auto-install"] }
 indexmap = "2.14.0"
-reqwest = "0.13.3"
-serde_json = "1.0.149"
+reqwest = "0.13.4"
+serde_json = "1.0.150"
 static_assertions = "1.1.0"
 thiserror = "2.0.18"
 tokio = { version = "1.52.3", features = ["macros", "rt-multi-thread"] }
@@ -70,7 +66,7 @@ required-features = ["compat-anyhow1"]
 
 [[example]]
 name = "error_stack_interop"
-required-features = ["compat-error-stack07"]
+required-features = ["compat-error-stack08"]
 
 [[example]]
 name = "eyre_interop"

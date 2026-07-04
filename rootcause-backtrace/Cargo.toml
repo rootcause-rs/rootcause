@@ -1,6 +1,6 @@
 [package]
 name = "rootcause-backtrace"
-version = "0.13.0"
+version = "0.14.0"
 edition = "2024"
 license = "MIT/Apache-2.0"
 categories = ["rust-patterns"]
@@ -18,7 +18,7 @@ backtrace = { version = "0.3.76", default-features = false, features = [
 unicode-ident = "1.0.24"
 
 # Internal dependencies
-rootcause = { path = "../", version = "=0.13.0" }
+rootcause = { path = "../", version = "=0.14.0" }
 
 [lints.rust]
 unexpected_cfgs = { level = "allow", check-cfg = ['cfg(nightly_extra_checks)'] }

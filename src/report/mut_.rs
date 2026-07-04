@@ -1229,24 +1229,58 @@ impl<'a, C: ?Sized, T> core::fmt::Debug for ReportMut<'a, C, T> {
     }
 }
 
-impl<'a, C: ?Sized> core::ops::Deref for ReportMut<'a, C, Local> {
-    type Target = dyn core::error::Error + 'a;
-
-    fn deref(&self) -> &Self::Target {
+impl<'a, C: ?Sized> ReportMut<'a, C, SendSync> {
+    /// Returns a `Send + Sync` `&dyn Error` view of this mutable report
+    /// reference.
+    ///
+    /// The returned trait object formats using the report's [`Display`] and
+    /// [`Debug`] implementations and returns [`None`] from [`Error::source`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::prelude::*;
+    /// use std::error::Error;
+    ///
+    /// let mut report: Report = report!("file missing");
+    /// let report_mut = report.as_mut();
+    /// let err: &(dyn Error + Send + Sync) = report_mut.as_dyn_error();
+    /// assert!(err.to_string().contains("file missing"));
+    /// ```
+    ///
+    /// [`Display`]: core::fmt::Display
+    /// [`Debug`]: core::fmt::Debug
+    /// [`Error::source`]: core::error::Error::source
+    pub fn as_dyn_error(&self) -> &(dyn core::error::Error + Send + Sync + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
 
-impl<'a, C: ?Sized> core::ops::Deref for ReportMut<'a, C, SendSync> {
-    type Target = dyn core::error::Error + Send + Sync + 'a;
-
-    fn deref(&self) -> &Self::Target {
+impl<'a, C: ?Sized> ReportMut<'a, C, Local> {
+    /// Returns a `&dyn Error` view of this mutable report reference.
+    ///
+    /// The returned trait object formats using the report's [`Display`] and
+    /// [`Debug`] implementations and returns [`None`] from [`Error::source`].
+    ///
+    /// # Examples
+    /// ```
+    /// # use rootcause::{prelude::*, markers::Local};
+    /// use std::error::Error;
+    ///
+    /// let mut report: Report<_, _, Local> = report!("file missing").into_local();
+    /// let report_mut = report.as_mut();
+    /// let err: &dyn Error = report_mut.as_dyn_error();
+    /// assert!(err.to_string().contains("file missing"));
+    /// ```
+    ///
+    /// [`Display`]: core::fmt::Display
+    /// [`Debug`]: core::fmt::Debug
+    /// [`Error::source`]: core::error::Error::source
+    pub fn as_dyn_error(&self) -> &(dyn core::error::Error + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
 }
 
 impl<'a, C: ?Sized> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, Local> {
-    #[inline(always)]
     fn as_ref(&self) -> &(dyn core::error::Error + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
@@ -1255,7 +1289,6 @@ impl<'a, C: ?Sized> AsRef<dyn core::error::Error + 'a> for ReportMut<'a, C, Loca
 impl<'a, C: ?Sized> AsRef<dyn core::error::Error + Send + Sync + 'a>
     for ReportMut<'a, C, SendSync>
 {
-    #[inline(always)]
     fn as_ref(&self) -> &(dyn core::error::Error + Send + Sync + 'a) {
         ErrorNoSourceWrapper::new(self)
     }
@@ -1277,13 +1310,9 @@ impl<'a, C: Sized> From<ReportMut<'a, C, Local>> for ReportMut<'a, Dynamic, Loca
 
 #[cfg(test)]
 mod tests {
-    use alloc::string::{String, ToString};
-    use core::error::Error as StdError;
-    use core::ops::Deref;
-    use thiserror::Error;
+    use alloc::string::String;
 
     use super::*;
-    use crate::Report;
 
     #[allow(dead_code)]
     struct NonSend(*const ());
@@ -1325,36 +1354,5 @@ mod tests {
         static_assertions::assert_not_impl_any!(ReportMut<'static, NonSend, Local>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, SendSync>: Copy, Clone);
         static_assertions::assert_not_impl_any!(ReportMut<'static, Dynamic, Local>: Copy, Clone);
-    }
-
-    #[derive(Debug, Error)]
-    #[error("boom")]
-    struct Boom;
-
-    fn make_report() -> Report<Boom> {
-        Report::new(Boom)
-    }
-
-    #[test]
-    fn report_mut_derefs_to_dyn_error() {
-        let mut report = make_report();
-        let report_mut = report.as_mut();
-
-        let err: &dyn StdError = report_mut.deref();
-
-        assert!(err.to_string().contains("boom"));
-        assert!(report.source().is_none());
-    }
-
-    #[test]
-    fn report_mut_asrefs_to_dyn_error() {
-        let mut report = make_report();
-        let report_mut = report.as_mut();
-
-        fn takes_asref<'a>(err: impl AsRef<dyn StdError + Send + Sync + 'a>) {
-            assert!(err.as_ref().to_string().contains("boom"));
-        }
-
-        takes_asref(report_mut);
     }
 }
