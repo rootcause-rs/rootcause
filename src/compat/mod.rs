@@ -68,7 +68,7 @@
 //! migration strategies.
 
 use crate::{
-    Report, ReportRef,
+    IntoReport, Report, ReportRef,
     markers::{self, Cloneable, Dynamic, Local},
 };
 
@@ -275,9 +275,9 @@ impl<C: ?Sized, T> From<ReportRef<'_, C, markers::Cloneable, T>> for ReportAsErr
 #[repr(transparent)]
 pub struct MainReport(Report<Dynamic, Cloneable, Local>);
 
-impl<C: ?Sized + 'static, O: 'static, T: 'static> From<Report<C, O, T>> for MainReport {
-    fn from(value: Report<C, O, T>) -> Self {
-        Self(value.into_dynamic().into_cloneable().into_local())
+impl<E: IntoReport<Local>> From<E> for MainReport {
+    fn from(value: E) -> Self {
+        Self(value.into_report().into_dynamic().into_cloneable())
     }
 }
 
