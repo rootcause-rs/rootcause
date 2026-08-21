@@ -214,18 +214,6 @@ where
     }
 }
 
-impl<T, C> IntoRootcause for Result<T, error_stack::Report<C>>
-where
-    C: core::error::Error + Send + Sync + 'static,
-{
-    type Output = Result<T, Report<error_stack::Report<C>>>;
-
-    #[inline(always)]
-    fn into_rootcause(self) -> Self::Output {
-        self.map_err(|e| e.into_rootcause())
-    }
-}
-
 /// A trait for converting rootcause [`Report`]s into [`error_stack::Report`].
 ///
 /// This trait provides the `.into_error_stack()` method for converting
