@@ -155,7 +155,21 @@ pub trait IntoRootcause {
     ///     Box::new(std::io::Error::from(std::io::ErrorKind::NotFound));
     /// let report: rootcause::Report = boxed.into_rootcause();
     /// ```
+    #[track_caller]
     fn into_rootcause(self) -> Self::Output;
+}
+
+impl<T, E: IntoRootcause> IntoRootcause for Result<T, E> {
+    type Output = Result<T, E::Output>;
+
+    #[inline]
+    fn into_rootcause(self) -> Self::Output {
+        // map_err doesn't work well with #[track_caller]
+        match self {
+            Self::Ok(t) => Ok(t),
+            Self::Err(e) => Err(e.into_rootcause()),
+        }
+    }
 }
 
 pub mod boxed_error;

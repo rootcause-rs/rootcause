@@ -372,21 +372,3 @@ impl IntoRootcause for Box<dyn Error> {
         Report::new_local_custom::<BoxedErrorHandler>(self).into_dynamic()
     }
 }
-
-impl<T> IntoRootcause for Result<T, Box<dyn Error + Send + Sync>> {
-    type Output = Result<T, Report>;
-
-    #[inline(always)]
-    fn into_rootcause(self) -> Self::Output {
-        self.map_err(|e| e.into_rootcause())
-    }
-}
-
-impl<T> IntoRootcause for Result<T, Box<dyn Error>> {
-    type Output = Result<T, Report<Dynamic, markers::Mutable, Local>>;
-
-    #[inline(always)]
-    fn into_rootcause(self) -> Self::Output {
-        self.map_err(|e| e.into_rootcause())
-    }
-}
