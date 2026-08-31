@@ -204,15 +204,6 @@ impl IntoRootcause for anyhow::Error {
     }
 }
 
-impl<T> IntoRootcause for anyhow::Result<T> {
-    type Output = Result<T, Report>;
-
-    #[inline(always)]
-    fn into_rootcause(self) -> Self::Output {
-        self.map_err(|e| e.into_rootcause())
-    }
-}
-
 /// A trait for converting rootcause [`Report`]s into [`anyhow::Error`].
 ///
 /// This trait provides the `.into_anyhow()` method for converting rootcause

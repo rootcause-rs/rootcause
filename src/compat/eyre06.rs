@@ -204,15 +204,6 @@ impl IntoRootcause for eyre::Report {
     }
 }
 
-impl<T> IntoRootcause for eyre::Result<T> {
-    type Output = Result<T, Report>;
-
-    #[inline(always)]
-    fn into_rootcause(self) -> Self::Output {
-        self.map_err(|e| e.into_rootcause())
-    }
-}
-
 /// A trait for converting rootcause [`Report`]s into [`eyre::Report`].
 ///
 /// This trait provides the `.into_eyre()` method for converting rootcause
